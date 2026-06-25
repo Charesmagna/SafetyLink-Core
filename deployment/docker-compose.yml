@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB:       safetylink
+      POSTGRES_USER:     safetylink
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/triggers.sql:/docker-entrypoint-initdb.d/02-triggers.sql
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U safetylink"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 10s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    environment:
+      NODE_ENV:           production
+      PORT:               3000
+      DATABASE_URL:       postgresql://safetylink:${DB_PASSWORD:-changeme}@postgres:5432/safetylink
+      REDIS_URL:          redis://redis:6379
+      JWT_SECRET:         ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      AES_KEY:            ${AES_KEY}
+      FCM_SERVER_KEY:     ${FCM_SERVER_KEY:-}
+      BACKEND_URL:        ${BACKEND_URL:-http://localhost}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL","wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../admin:/srv/admin:ro
+      - ../www:/srv/www:ro
+      - certs:/etc/letsencrypt:ro
+    depends_on: [backend]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  certs:

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Safety-Link — Platform Owner</title>
+  <link rel="stylesheet" href="assets/admin.css"/>
+</head>
+<body class="dark">
+<div id="login-overlay" class="overlay">
+  <div class="login-box">
+    <div class="logo">&#x1F6E1; SAFETY-LINK</div>
+    <h2>Platform Owner Dashboard</h2>
+    <input id="adm-email"    class="input" type="email"    placeholder="Platform Owner Email"/>
+    <input id="adm-password" class="input" type="password" placeholder="Password"/>
+    <button class="btn btn-red" onclick="OwnerAuth.login()">Sign In</button>
+    <p id="adm-err" class="err hidden"></p>
+  </div>
+</div>
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <span class="logo-sm">&#x1F6E1; PLATFORM OWNER</span>
+    <div class="topbar-right">
+      <button class="btn-sm" onclick="OwnerAuth.logout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="owner-body">
+    <div class="stats-grid" id="platform-stats"></div>
+    <div class="section-title">Organisations</div>
+    <div class="table-wrap">
+      <table class="data-table" id="org-table">
+        <thead><tr>
+          <th>Org Name</th><th>Code</th><th>Plan</th><th>Members</th><th>Status</th><th>Created</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="org-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="assets/admin.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  OwnerAuth.check();
+});
+</script>
+</body>
+</html>

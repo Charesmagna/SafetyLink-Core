@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Safety-Link — Command Centre</title>
+  <link rel="stylesheet" href="assets/admin.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+</head>
+<body class="dark">
+<div id="login-overlay" class="overlay">
+  <div class="login-box">
+    <div class="logo">&#x1F6E1; SAFETY-LINK</div>
+    <h2>Command Centre</h2>
+    <input id="adm-email"    class="input" type="email"    placeholder="Email"/>
+    <input id="adm-password" class="input" type="password" placeholder="Password"/>
+    <button class="btn btn-red" onclick="AdminAuth.login()">Sign In</button>
+    <p id="adm-err" class="err hidden"></p>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <span class="logo-sm">&#x1F6E1; COMMAND CENTRE</span>
+    <span id="org-label" class="org-label"></span>
+    <div class="topbar-right">
+      <span id="ws-dot" class="status-dot red" title="WebSocket"></span>
+      <span id="active-count" class="badge-count">0 active</span>
+      <button class="btn-sm" onclick="AdminAuth.logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <!-- MAP -->
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="alert-sound-btn" class="sound-toggle" onclick="CC.toggleSound()">&#x1F514; Sound: ON</div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-tabs">
+        <button class="stab active" onclick="CC.tab('alerts')">Alerts</button>
+        <button class="stab" onclick="CC.tab('responders')">Responders</button>
+        <button class="stab" onclick="CC.tab('pending')">Pending</button>
+      </div>
+
+      <div id="tab-alerts" class="tab-body">
+        <div id="filter-row" class="filter-row">
+          <button class="fbtn active" onclick="CC.filter('active')">Active</button>
+          <button class="fbtn" onclick="CC.filter('all')">All</button>
+          <button class="fbtn" onclick="CC.filter('resolved')">Resolved</button>
+        </div>
+        <div id="alert-list" class="scroll-list"></div>
+      </div>
+
+      <div id="tab-responders" class="tab-body hidden">
+        <div id="responder-list" class="scroll-list"></div>
+      </div>
+
+      <div id="tab-pending" class="tab-body hidden">
+        <div id="pending-list" class="scroll-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERT DETAIL PANEL -->
+  <div id="detail-panel" class="detail-panel hidden">
+    <button class="close-btn" onclick="CC.closeDetail()">&#x2715;</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<audio id="alert-sound" src="https://cdn.jsdelivr.net/gh/anars/blank-audio/250-milliseconds-of-silence.mp3" preload="auto"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>

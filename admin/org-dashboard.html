@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Safety-Link — Org Dashboard</title>
+  <link rel="stylesheet" href="assets/admin.css"/>
+</head>
+<body class="dark">
+<div id="login-overlay" class="overlay">
+  <div class="login-box">
+    <div class="logo">&#x1F6E1; SAFETY-LINK</div>
+    <h2>Organisation Dashboard</h2>
+    <input id="adm-email"    class="input" type="email"    placeholder="Email"/>
+    <input id="adm-password" class="input" type="password" placeholder="Password"/>
+    <button class="btn btn-red" onclick="AdminAuth.login()">Sign In</button>
+    <p id="adm-err" class="err hidden"></p>
+  </div>
+</div>
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <span class="logo-sm">&#x1F6E1; ORG DASHBOARD</span>
+    <span id="org-label" class="org-label"></span>
+    <div class="topbar-right">
+      <a href="command-centre.html" class="btn-sm">Command Centre</a>
+      <button class="btn-sm" onclick="AdminAuth.logout()">Sign Out</button>
+    </div>
+  </header>
+  <div class="owner-body">
+    <div class="stats-grid" id="org-stats-grid"></div>
+    <div class="section-title">Members</div>
+    <div class="table-wrap">
+      <table class="data-table" id="members-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+        <tbody id="members-tbody"></tbody>
+      </table>
+    </div>
+    <div class="section-title">Hardware</div>
+    <div id="hw-section" class="table-wrap">
+      <table class="data-table"><thead><tr><th>Name</th><th>Address</th><th>Assigned To</th><th>Actions</th></tr></thead>
+      <tbody id="hw-tbody"></tbody></table>
+    </div>
+    <div class="section-title">SMS / WhatsApp Config</div>
+    <div class="card" id="sms-config-card">
+      <div class="form-row">
+        <label>SMS Provider</label>
+        <select id="sms-provider" class="input" style="width:200px">
+          <option value="twilio">Twilio</option>
+          <option value="africastalking">Africa's Talking</option>
+        </select>
+      </div>
+      <textarea id="sms-config-json" class="input" rows="5" placeholder='{"TWILIO_ACCOUNT_SID":"...","TWILIO_AUTH_TOKEN":"...","TWILIO_FROM_NUMBER":"..."}'></textarea>
+      <button class="btn btn-red" onclick="OrgDash.saveSettings()">Save Configuration</button>
+    </div>
+  </div>
+</div>
+<script src="assets/admin.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => AdminAuth.check('org'));</script>
+</body>
+</html>

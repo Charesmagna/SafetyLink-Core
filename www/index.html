@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: gap: https://ssl.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; img-src 'self' data: *.openstreetmap.org blob:; connect-src *; font-src 'self' fonts.gstatic.com cdn.jsdelivr.net;"/>
+  <title>Safety-Link v5.0</title>
+  <link rel="stylesheet" href="css/app.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css"/>
+</head>
+<body>
+
+<!-- SCREEN: PROVISION -->
+<div id="screen-provision" class="screen active">
+  <div class="provision-wrap">
+    <div class="logo-block">
+      <div class="logo-icon">&#x1F6E1;</div>
+      <h1 class="logo-title">SAFETY-LINK</h1>
+      <p class="logo-sub">v5.0 &mdash; Community Emergency Network</p>
+    </div>
+    <div class="card">
+      <h2 data-i18n="provision.title">Join Your Organisation</h2>
+      <p data-i18n="provision.sub">Enter the Organisation Code provided by your group administrator.</p>
+      <input id="prov-code" class="input" type="text" placeholder="e.g. SL-5A93-KY" autocomplete="off" maxlength="12" style="text-transform:uppercase"/>
+      <button class="btn btn-primary" onclick="Provision.verify()">
+        <span data-i18n="provision.btn">Verify Code</span>
+      </button>
+      <p id="prov-error" class="error-msg hidden"></p>
+    </div>
+    <div class="lang-row">
+      <button onclick="App.setLang('en')" class="lang-btn">English</button>
+      <button onclick="App.setLang('zu')" class="lang-btn">isiZulu</button>
+      <button onclick="App.setLang('af')" class="lang-btn">Afrikaans</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: LOGIN -->
+<div id="screen-login" class="screen">
+  <div class="auth-wrap">
+    <div class="logo-block small"><div class="logo-icon">&#x1F6E1;</div><h2 id="login-org-name">Safety-Link</h2></div>
+    <div class="card">
+      <h3 data-i18n="login.title">Sign In</h3>
+      <input id="login-email"    class="input" type="email"    placeholder="Email address" autocomplete="email"/>
+      <input id="login-password" class="input" type="password" placeholder="Password" autocomplete="current-password"/>
+      <button class="btn btn-primary" onclick="Auth.login()"><span data-i18n="login.btn">Sign In</span></button>
+      <p id="login-error" class="error-msg hidden"></p>
+      <hr class="divider"/>
+      <button class="btn btn-ghost" onclick="App.showScreen('screen-register')"><span data-i18n="login.register">Create Account</span></button>
+      <button class="btn btn-ghost small" onclick="App.showScreen('screen-provision')"><span>Different organisation?</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: REGISTER -->
+<div id="screen-register" class="screen">
+  <div class="auth-wrap">
+    <div class="card">
+      <h3 data-i18n="reg.title">Create Account</h3>
+      <input id="reg-name"     class="input" type="text"     placeholder="Full name"/>
+      <input id="reg-email"    class="input" type="email"    placeholder="Email address"/>
+      <input id="reg-password" class="input" type="password" placeholder="Password (min 8 chars)"/>
+      <select id="reg-role" class="input">
+        <option value="member">Member (SOS only)</option>
+        <option value="responder">Responder (receives alerts)</option>
+      </select>
+      <button class="btn btn-primary" onclick="Auth.register()"><span data-i18n="reg.btn">Submit Registration</span></button>
+      <p id="reg-error" class="error-msg hidden"></p>
+      <button class="btn btn-ghost" onclick="App.showScreen('screen-login')">Back to Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: DASHBOARD -->
+<div id="screen-dashboard" class="screen">
+  <div class="screen-header">
+    <span id="dash-org-name" class="org-label"></span>
+    <span id="dash-status-dot" class="status-dot green"></span>
+    <button class="icon-btn" onclick="App.showScreen('screen-settings')">&#x2699;&#xFE0F;</button>
+  </div>
+  <div class="dash-body">
+    <div class="member-badge">
+      <div id="dash-avatar" class="avatar">&#x1F464;</div>
+      <div>
+        <div id="dash-name" class="member-name"></div>
+        <div id="dash-role-badge" class="role-badge"></div>
+      </div>
+    </div>
+    <div id="dash-pending-banner" class="banner warning hidden">
+      &#x23F3; <span data-i18n="dash.pending">Account pending admin approval</span>
+    </div>
+    <div id="sos-button-wrap" class="sos-area">
+      <div id="sos-btn" class="sos-btn"
+           onmousedown="SOS.startHold()" onmouseup="SOS.cancelHold()"
+           ontouchstart="SOS.startHold(event)" ontouchend="SOS.cancelHold()">
+        <span class="sos-label" data-i18n="sos.hold">HOLD FOR SOS</span>
+        <div class="sos-ring"></div>
+      </div>
+      <p class="sos-hint" data-i18n="sos.hint">Hold 2 seconds to trigger emergency</p>
+    </div>
+    <div class="dash-stats">
+      <div class="stat-chip" onclick="App.showScreen('screen-intel')">
+        <span class="stat-num" id="stat-active">0</span>
+        <span class="stat-lbl">Active</span>
+      </div>
+      <div class="stat-chip" onclick="App.showScreen('screen-hardware')">
+        <span class="stat-num" id="stat-hw">0</span>
+        <span class="stat-lbl">Devices</span>
+      </div>
+      <div class="stat-chip" onclick="App.showScreen('screen-analytics')">
+        <span class="stat-num" id="stat-resolved">0</span>
+        <span class="stat-lbl">Resolved</span>
+      </div>
+    </div>
+    <div id="pending-users-banner" class="banner info hidden">
+      <span id="pending-count"></span> member(s) awaiting approval
+      <button class="btn-inline" onclick="App.showScreen('screen-responder')">Review</button>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="App.showScreen('screen-dashboard')">&#x1F3E0;<span>Home</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-intel')">&#x26A1;<span>Intel</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-hardware')">&#x1F4E1;<span>Devices</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-profile')">&#x1F464;<span>Profile</span></button>
+  </nav>
+</div>
+
+<!-- SCREEN: COUNTDOWN -->
+<div id="screen-countdown" class="screen countdown-screen">
+  <div class="countdown-wrap">
+    <p class="countdown-title" data-i18n="cd.title">EMERGENCY ALERT</p>
+    <p class="countdown-sub" data-i18n="cd.sub">Sending in...</p>
+    <div id="countdown-timer" class="countdown-number">10</div>
+    <svg class="countdown-ring" viewBox="0 0 120 120">
+      <circle cx="60" cy="60" r="54" fill="none" stroke="#330000" stroke-width="8"/>
+      <circle id="cd-ring-fill" cx="60" cy="60" r="54" fill="none" stroke="#ff2222"
+              stroke-width="8" stroke-dasharray="339.3" stroke-dashoffset="0"
+              stroke-linecap="round" transform="rotate(-90 60 60)"/>
+    </svg>
+    <button class="btn btn-cancel" onclick="Countdown.cancel()">&#x2715; CANCEL</button>
+    <p class="countdown-status" id="countdown-status"></p>
+  </div>
+</div>
+
+<!-- SCREEN: INTEL -->
+<div id="screen-intel" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3 data-i18n="intel.title">Alert Intel</h3>
+    <button class="icon-btn" onclick="Intel.load()">&#x21BB;</button>
+  </div>
+  <div id="intel-filter" class="filter-row">
+    <button class="filter-btn active" onclick="Intel.filter('all')">All</button>
+    <button class="filter-btn" onclick="Intel.filter('active')">Active</button>
+    <button class="filter-btn" onclick="Intel.filter('resolved')">Resolved</button>
+  </div>
+  <div id="intel-list" class="scroll-list"></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="App.showScreen('screen-dashboard')">&#x1F3E0;<span>Home</span></button>
+    <button class="nav-btn active" onclick="App.showScreen('screen-intel')">&#x26A1;<span>Intel</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-hardware')">&#x1F4E1;<span>Devices</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-profile')">&#x1F464;<span>Profile</span></button>
+  </nav>
+</div>
+
+<!-- SCREEN: HARDWARE -->
+<div id="screen-hardware" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3 data-i18n="hw.title">BLE Devices</h3>
+    <button class="icon-btn" onclick="HardwareScreen.startScan()">&#xFF0B;</button>
+  </div>
+  <div id="hw-scan-status" class="scan-status hidden"><span class="pulse-dot"></span> Scanning...</div>
+  <div id="hw-scan-results" class="scroll-list hidden"></div>
+  <div id="hw-list" class="scroll-list"></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="App.showScreen('screen-dashboard')">&#x1F3E0;<span>Home</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-intel')">&#x26A1;<span>Intel</span></button>
+    <button class="nav-btn active" onclick="App.showScreen('screen-hardware')">&#x1F4E1;<span>Devices</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-profile')">&#x1F464;<span>Profile</span></button>
+  </nav>
+</div>
+
+<!-- SCREEN: PROFILE -->
+<div id="screen-profile" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3 data-i18n="prof.title">My Profile</h3>
+    <button class="icon-btn" onclick="Profile.save()">&#x1F4BE;</button>
+  </div>
+  <div class="scroll-body">
+    <div class="avatar-editor">
+      <div id="prof-avatar" class="avatar-lg">&#x1F464;</div>
+      <button class="btn-inline" onclick="Profile.pickPhoto()">Change Photo</button>
+    </div>
+    <input id="prof-name"  class="input" type="text" placeholder="Display name"/>
+    <input id="prof-bio"   class="input" type="text" placeholder="Bio / callsign (optional)"/>
+    <input id="prof-phone" class="input" type="tel"  placeholder="Primary phone"/>
+    <input id="prof-ph2"   class="input" type="tel"  placeholder="Phone 2 (optional)"/>
+    <input id="prof-ph3"   class="input" type="tel"  placeholder="Phone 3 (optional)"/>
+    <p id="prof-save-msg" class="success-msg hidden">Saved.</p>
+    <div class="section-header">Emergency Contacts</div>
+    <div id="contacts-list"></div>
+    <button class="btn btn-ghost" onclick="Profile.addContact()">+ Add Contact</button>
+    <hr class="divider"/>
+    <button class="btn btn-ghost" onclick="App.showScreen('screen-medical')">&#x1FA7A; Medical Profile</button>
+    <button class="btn btn-ghost" onclick="App.showScreen('screen-analytics')">&#x1F4CA; Analytics</button>
+    <button class="btn btn-ghost" onclick="App.showScreen('screen-responder')">&#x1F6A8; Responder Feed</button>
+    <button class="btn btn-danger" onclick="Auth.logout()">Sign Out</button>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="App.showScreen('screen-dashboard')">&#x1F3E0;<span>Home</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-intel')">&#x26A1;<span>Intel</span></button>
+    <button class="nav-btn" onclick="App.showScreen('screen-hardware')">&#x1F4E1;<span>Devices</span></button>
+    <button class="nav-btn active" onclick="App.showScreen('screen-profile')">&#x1F464;<span>Profile</span></button>
+  </nav>
+</div>
+
+<!-- SCREEN: MEDICAL -->
+<div id="screen-medical" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-profile')">&#x2190;</button>
+    <h3>Medical Profile</h3>
+    <button class="icon-btn" onclick="Medical.save()">&#x1F4BE;</button>
+  </div>
+  <div class="scroll-body">
+    <label class="field-label">Blood Type</label>
+    <select id="med-blood" class="input">
+      <option value="">Unknown</option>
+      <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+      <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+    </select>
+    <label class="field-label">Known Conditions</label>
+    <textarea id="med-conditions" class="input textarea" placeholder="e.g. Diabetes, Hypertension"></textarea>
+    <label class="field-label">Current Medications</label>
+    <textarea id="med-meds" class="input textarea" placeholder="Name, dosage"></textarea>
+    <label class="field-label">Allergies</label>
+    <textarea id="med-allergies" class="input textarea" placeholder="e.g. Penicillin, Latex"></textarea>
+    <label class="field-label">Emergency Notes</label>
+    <textarea id="med-notes" class="input textarea" placeholder="Additional info for first responders"></textarea>
+    <p id="med-save-msg" class="success-msg hidden">Saved.</p>
+  </div>
+</div>
+
+<!-- SCREEN: ANALYTICS -->
+<div id="screen-analytics" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3>Analytics</h3>
+    <button class="icon-btn" onclick="Analytics.load()">&#x21BB;</button>
+  </div>
+  <div class="scroll-body" id="analytics-body"><p class="muted center">Loading...</p></div>
+</div>
+
+<!-- SCREEN: RESPONDER -->
+<div id="screen-responder" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3>Responder Feed</h3>
+    <button class="icon-btn" onclick="Responder.load()">&#x21BB;</button>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" onclick="Responder.tab('active')">Active Alerts</button>
+    <button class="filter-btn" onclick="Responder.tab('pending')">Pending Members</button>
+  </div>
+  <div id="responder-list" class="scroll-list"></div>
+</div>
+
+<!-- SCREEN: SETTINGS -->
+<div id="screen-settings" class="screen">
+  <div class="screen-header">
+    <button class="icon-btn" onclick="App.showScreen('screen-dashboard')">&#x2190;</button>
+    <h3>Settings</h3>
+  </div>
+  <div class="scroll-body">
+    <div class="settings-section">
+      <h4>Language / Taal</h4>
+      <div class="lang-row">
+        <button class="btn btn-ghost" onclick="App.setLang('en')">&#x1F1FF;&#x1F1E6; English</button>
+        <button class="btn btn-ghost" onclick="App.setLang('zu')">isiZulu</button>
+        <button class="btn btn-ghost" onclick="App.setLang('af')">Afrikaans</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h4>Notifications</h4>
+      <label class="toggle-row">
+        <span>Push Alerts</span>
+        <input type="checkbox" id="set-push" checked onchange="Settings.togglePush(this.checked)"/>
+      </label>
+    </div>
+    <div class="settings-section">
+      <h4>Account</h4>
+      <button class="btn btn-ghost" onclick="App.showScreen('screen-profile')">Edit Profile</button>
+      <button class="btn btn-ghost" onclick="App.showScreen('screen-medical')">Medical Profile</button>
+      <button class="btn btn-danger" onclick="Auth.logout()">Sign Out</button>
+    </div>
+    <div class="settings-section">
+      <h4>About</h4>
+      <p class="muted">Safety-Link v5.0.0</p>
+      <p class="muted" id="set-org-code"></p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+<script src="js/offline.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/sos.js"></script>
+<script src="js/countdown.js"></script>
+<script src="js/intel.js"></script>
+<script src="js/hardware.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/medical.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/responder.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/widget.js"></script>
+<script src="js/app.js"></script>
+<script>
+  document.addEventListener('deviceready', () => App.init(), false);
+  document.addEventListener('DOMContentLoaded', () => { if (typeof cordova === 'undefined') App.init(); });
+</script>
+</body>
+</html>
