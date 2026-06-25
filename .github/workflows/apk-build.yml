@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build SafetyLink APK (Hardened)
+    name: Build SafetyLink APK (Capacitor)
     runs-on: ubuntu-latest
 
     env:
@@ -22,40 +22,29 @@ jobs:
       uses: actions/checkout@v4
 
     # -----------------------------
-    # 2. Setup Node (FIXED + STABLE)
+    # 2. Setup Node (Updated to match runner baseline)
     # -----------------------------
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
         cache: npm
 
     # -----------------------------
-    # 3. Cache npm (speed + stability)
+    # 3. Install Dependencies
     # -----------------------------
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
-    # -----------------------------
-    # 4. Install dependencies (SAFE MODE)
-    # -----------------------------
-    - name: Install Dependencies (Safe Install)
+    - name: Install Dependencies
       run: |
-        npm install --legacy-peer-deps
+        npm ci --legacy-peer-deps
 
     # -----------------------------
-    # 5. Build Web Layer
+    # 4. Build Web Layer
     # -----------------------------
     - name: Build Web App
       run: npm run build
 
     # -----------------------------
-    # 6. Setup Java (Android)
+    # 5. Setup Java (Required for Gradle)
     # -----------------------------
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -64,58 +53,40 @@ jobs:
         java-version: "17"
 
     # -----------------------------
-    # 7. Setup Android SDK
+    # 6. Setup Android SDK
     # -----------------------------
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
     # -----------------------------
-    # 8. Install Cordova globally
+    # 7. Sync Capacitor Bridge
     # -----------------------------
-    - name: Install Cordova CLI
-      run: npm install -g cordova
-
-    # -----------------------------
-    # 9. Ensure Android platform exists
-    # -----------------------------
-    - name: Prepare Android Platform
+    - name: Sync Web Assets to Android Container
       run: |
-        if [ ! -d "platforms/android" ]; then
-          cordova platform add android
-        fi
+        npx cap sync android
 
     # -----------------------------
-    # 10. Sync Web → Android
-    # -----------------------------
-    - name: Sync Capacitor/Cordova Assets
-      run: |
-        if [ -f "capacitor.config.ts" ] || [ -f "capacitor.config.json" ]; then
-          npx cap sync android || true
-        fi
-        cordova prepare android
-
-    # -----------------------------
-    # 11. Build Android APK
+    # 8. Build Android APK via Gradle
     # -----------------------------
     - name: Build Release APK
       run: |
-        cd platforms/android
-        chmod +x gradlew || true
+        cd android
+        chmod +x gradlew
         ./gradlew assembleRelease
 
     # -----------------------------
-    # 12. Upload APK (FIXED v4)
+    # 9. Upload Production Artifacts
     # -----------------------------
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: SafetyLink-APK
         path: |
-          platforms/android/app/build/outputs/apk/release/*.apk
-          platforms/android/app/build/outputs/bundle/release/*.aab
+          android/app/build/outputs/apk/release/*.apk
+          android/app/build/outputs/bundle/release/*.aab
 
     # -----------------------------
-    # 13. Optional Debug Logs (only if failure)
+    # 10. Upload Debug Logs on Failure
     # -----------------------------
     - name: Upload Build Logs (on failure)
       if: failure()
@@ -124,4 +95,4 @@ jobs:
         name: build-logs
         path: |
           ~/.npm/_logs/
-          platforms/android/build/**/*.log
+          android/app/build/reports/
