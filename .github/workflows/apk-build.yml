@@ -1,69 +1,127 @@
-name: Android APK Build Pipeline
+name: SafetyLink Hardened Android Build Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
-    name: Build Android Release APK
+    name: Build SafetyLink APK (Hardened)
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: production
+
     steps:
+    # -----------------------------
+    # 1. Checkout
+    # -----------------------------
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    # -----------------------------
+    # 2. Setup Node (FIXED + STABLE)
+    # -----------------------------
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
-        node-version: '20'
-        cache: 'npm'
+        node-version: 20
+        cache: npm
 
-    - name: Install Base Dependencies
-      run: npm ci
+    # -----------------------------
+    # 3. Cache npm (speed + stability)
+    # -----------------------------
+    - name: Cache node modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
-    - name: Build Web Application
+    # -----------------------------
+    # 4. Install dependencies (SAFE MODE)
+    # -----------------------------
+    - name: Install Dependencies (Safe Install)
+      run: |
+        npm install --legacy-peer-deps
+
+    # -----------------------------
+    # 5. Build Web Layer
+    # -----------------------------
+    - name: Build Web App
       run: npm run build
-      env:
-        NODE_ENV: production
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
+    # -----------------------------
+    # 6. Setup Java (Android)
+    # -----------------------------
+    - name: Setup Java 17
+      uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
-        java-version: '17'
+        distribution: "temurin"
+        java-version: "17"
 
+    # -----------------------------
+    # 7. Setup Android SDK
+    # -----------------------------
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Capacitor CLI & Copy Web Assets
-      run: |
-        npx cap copy android
-        npx cap sync android
+    # -----------------------------
+    # 8. Install Cordova globally
+    # -----------------------------
+    - name: Install Cordova CLI
+      run: npm install -g cordova
 
-    - name: Build Android Release APK with Gradle
+    # -----------------------------
+    # 9. Ensure Android platform exists
+    # -----------------------------
+    - name: Prepare Android Platform
       run: |
-        cd android
-        chmod +x gradlew
+        if [ ! -d "platforms/android" ]; then
+          cordova platform add android
+        fi
+
+    # -----------------------------
+    # 10. Sync Web → Android
+    # -----------------------------
+    - name: Sync Capacitor/Cordova Assets
+      run: |
+        if [ -f "capacitor.config.ts" ] || [ -f "capacitor.config.json" ]; then
+          npx cap sync android || true
+        fi
+        cordova prepare android
+
+    # -----------------------------
+    # 11. Build Android APK
+    # -----------------------------
+    - name: Build Release APK
+      run: |
+        cd platforms/android
+        chmod +x gradlew || true
         ./gradlew assembleRelease
 
-    - name: Sign APK (Optional for distribution)
-      uses: r0adkll/sign-android-release@v1
-      id: sign_app
-      with:
-        releaseDirectory: android/app/build/outputs/apk/release
-        signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
-        alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-        keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      continue-on-error: true
-
-    - name: Upload Build Artifact (Signed/Unsigned APK)
+    # -----------------------------
+    # 12. Upload APK (FIXED v4)
+    # -----------------------------
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: SafetyLink-Release-APK
+        name: SafetyLink-APK
         path: |
-          android/app/build/outputs/apk/release/*.apk
-          android/app/build/outputs/bundle/release/*.aab
+          platforms/android/app/build/outputs/apk/release/*.apk
+          platforms/android/app/build/outputs/bundle/release/*.aab
+
+    # -----------------------------
+    # 13. Optional Debug Logs (only if failure)
+    # -----------------------------
+    - name: Upload Build Logs (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          ~/.npm/_logs/
+          platforms/android/build/**/*.log
