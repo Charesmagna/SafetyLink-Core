@@ -35,8 +35,8 @@ export async function logCallResult(req, res) {
 }
 
 export async function twimlWebhook(req, res) {
-  const name    = req.query.name || 'a member';
-  const alertId = req.query.alertId || '';
+  const name = typeof req.query.name === 'string' ? req.query.name : 'a member';
+  const alertId = typeof req.query.alertId === 'string' ? req.query.alertId : '';
   res.type('text/xml');
   res.send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
