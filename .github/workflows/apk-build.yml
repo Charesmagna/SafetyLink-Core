@@ -61,7 +61,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload Build Artifact (Signed/Unsigned APK)
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: SafetyLink-Release-APK
         path: |
