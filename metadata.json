@@ -1,0 +1,6 @@
+{
+  "name": "SafetyLink Core",
+  "description": "Enterprise multi-tenant community emergency response platform featuring real-time interactive command centre maps, automated SOS escalation (SMS, WhatsApp, Voice), and BLE hardware simulators.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
