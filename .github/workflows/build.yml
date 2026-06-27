@@ -14,14 +14,14 @@ jobs:
     - name: Checkout Codebase
       uses: actions/checkout@v4
 
-    - name: Set up Node.js Environment
+    - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: 'npm'
 
     - name: Install Dependencies
-      run: npm install
+      run: npm ci   # Use ci instead of install for CI
 
     - name: Compile Web Assets
       run: npm run build
@@ -33,27 +33,24 @@ jobs:
       with:
         distribution: 'zulu'
         java-version: '17'
+        cache: 'gradle'   # Much better than manual wrapper restore
+
+    - name: Accept Android SDK Licenses
+      run: |
+        echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --licenses
+        echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --update
 
     - name: Sync Capacitor Native Android Assets
       run: npx cap sync android
 
-    - name: Restore Gradle Wrapper
-      run: |
-        GRADLE_VER=$(grep -oP '(?<=gradle-)[\d.]+(?=-(bin|all))' android/gradle/wrapper/gradle-wrapper.properties)
-        echo "Using Gradle version: $GRADLE_VER"
-        curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VER}-bin.zip" -o /tmp/gradle.zip
-        unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
-        /tmp/gradle-dist/gradle-${GRADLE_VER}/bin/gradle wrapper --gradle-version "$GRADLE_VER" --project-dir android/
-        chmod +x android/gradlew
-        
     - name: Build Android Release APK
       run: |
         cd android
-        ./gradlew assembleRelease --no-daemon
+        ./gradlew assembleRelease --no-daemon --stacktrace
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
         name: SafetyLink-Release-APK
         path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-        if-no-files-found: error...
+        if-no-files-found: error
