@@ -35,6 +35,7 @@ jobs:
         java-version: '17'
 
     - name: Sync Capacitor Native Android Assets
+<<<<<<< Updated upstream
       run: npx cap sync android
 
     - name: Restore Gradle Wrapper
@@ -49,6 +50,14 @@ jobs:
         /tmp/gradle-dist/gradle-${GRADLE_VER}/bin/gradle wrapper --gradle-version "$GRADLE_VER" --project-dir android/
         chmod +x android/gradlew
 
+=======
+      run: |
+        npx cap sync android
+        # Force a check of the build script structure
+        ls -la android/build.gradle
+        cat android/build.gradle
+
+>>>>>>> Stashed changes
     - name: Build Android Release APK
       run: |
         cd android
