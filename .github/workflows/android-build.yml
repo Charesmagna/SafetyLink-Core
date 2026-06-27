@@ -43,14 +43,15 @@ jobs:
 
     - name: Repair Corrupt Gradle Wrapper JAR
       run: |
-        cd android
-        [ -f settings.gradle ] && mv settings.gradle settings.gradle.bak || true
-        [ -f build.gradle ] && mv build.gradle build.gradle.bak || true
-        [ -f app/build.gradle ] && mv app/build.gradle app/build.gradle.bak || true
+        mkdir -p /tmp/gradle-repair
+        cd /tmp/gradle-repair
+        touch settings.gradle
         gradle wrapper --gradle-version 8.2.1
-        [ -f settings.gradle.bak ] && mv settings.gradle.bak settings.gradle || true
-        [ -f build.gradle.bak ] && mv build.gradle.bak build.gradle || true
-        [ -f app/build.gradle.bak ] && mv app/build.gradle.bak app/build.gradle || true
+        cd $GITHUB_WORKSPACE
+        mkdir -p android/gradle/wrapper
+        cp /tmp/gradle-repair/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar
+        cp /tmp/gradle-repair/gradle/wrapper/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
+        cp /tmp/gradle-repair/gradlew android/gradlew
 
     - name: Build Android Release APK via Gradle Wrapper
       run: |
