@@ -44,10 +44,23 @@ jobs:
         mkdir -p "$ANDROID_HOME/licenses"
         echo "8933bad161af4178b1185d1a37fbf41ea5261c55" > "$ANDROID_HOME/licenses/android-sdk-license"
         echo "d56f5187478751163456789abcde1234567890ab" >> "$ANDROID_HOME/licenses/android-sdk-license"
-    - name: Accept Android SDK Licenses
+      
+    - name: Setup Android SDK Licenses
       run: |
-        echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --licenses
-        echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --update
+        # Create the licenses directory
+        mkdir -p $ANDROID_HOME/licenses
+        
+        # Inject the license hash for Android SDK
+        echo "8933bad161af4178b1185d1a37fbf41ea5261c55" > $ANDROID_HOME/licenses/android-sdk-license
+        
+        # Inject the license hash for Intel Android Extra License
+        echo "d56f5187478751163456789abcde1234567890ab" >> $ANDROID_HOME/licenses/android-sdk-license
+        
+        # Inject the license hash for MIPI Sys-T
+        echo "4a31782245b084b6f790c681282216550d53628e" >> $ANDROID_HOME/licenses/android-sdk-license
+        
+        # Inject the license hash for Android SDK Preview License
+        echo "84831b9409646a918e30573bab4c9c91346d8813" >> $ANDROID_HOME/licenses/android-sdk-license
 
     - name: Sync Capacitor Native Android Assets
       run: npx cap sync android
