@@ -943,7 +943,7 @@ export default function App() {
                               </span>
                               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">1. Create your Security Group</h4>
                               <p className="text-[11px] text-slate-400 leading-relaxed">
-                                Go to the <b className="text-indigo-400">Platform Directory</b> tab first. Enter a name (e.g. <i>Cape Town Watch</i> or <i>Lenasia Patrol</i>) and click <b className="text-indigo-400">Provision Organization</b> to generate a unique license code.
+                                Go to the <button onClick={() => handleTabChange("owner-dashboard")} className="text-indigo-400 font-bold hover:underline cursor-pointer bg-transparent border-none p-0 inline align-baseline font-sans">Platform Directory</button> tab first. Enter a name (e.g. <i>Cape Town Watch</i> or <i>Lenasia Patrol</i>) and click <b className="text-indigo-400">Provision Organization</b> to generate a unique license code.
                               </p>
                             </div>
                           )}
@@ -954,7 +954,7 @@ export default function App() {
                               </span>
                               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">2. Provision Mobile Device</h4>
                               <p className="text-[11px] text-slate-400 leading-relaxed">
-                                Copy the generated organization code, return here to this <b className="text-emerald-400">Device Terminal</b>, paste it inside the phone screen, and click <b className="text-emerald-400">PROVISION CODE</b>. This locks the phone hardware to your firm!
+                                Copy the generated organization code, return here to this <button onClick={() => handleTabChange("simulator")} className="text-emerald-400 font-bold hover:underline cursor-pointer bg-transparent border-none p-0 inline align-baseline font-sans">Device Terminal</button>, paste it inside the phone screen, and click <b className="text-emerald-400">PROVISION CODE</b>. This locks the phone hardware to your firm!
                               </p>
                             </div>
                           )}
@@ -965,7 +965,7 @@ export default function App() {
                               </span>
                               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">3. Register & Approve Citizens</h4>
                               <p className="text-[11px] text-slate-400 leading-relaxed">
-                                Click <b className="text-slate-300">Join Org</b> on the login screen inside the mobile simulator. Register details, then return to the <b className="text-indigo-400">Platform Directory</b> tab to approve them in the verification queue.
+                                Click <b className="text-slate-300">Join Org</b> on the login screen inside the mobile simulator. Register details, then return to the <button onClick={() => handleTabChange("owner-dashboard")} className="text-indigo-400 font-bold hover:underline cursor-pointer bg-transparent border-none p-0 inline align-baseline font-sans">Platform Directory</button> tab to approve them in the verification queue.
                               </p>
                             </div>
                           )}

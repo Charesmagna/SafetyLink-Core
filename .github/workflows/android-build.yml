@@ -44,11 +44,8 @@ jobs:
     - name: Repair Corrupt Gradle Wrapper JAR
       run: |
         cd android
-        gradle wrapper --gradle-version 8.14.3 || {
-          echo "Preinstalled gradle wrapper generation failed, falling back to curl..."
-          mkdir -p gradle/wrapper
-          curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar
-        }
+        mkdir -p gradle/wrapper
+        curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.1/gradle/wrapper/gradle-wrapper.jar
 
     - name: Build Android Release APK via Gradle Wrapper
       run: |
