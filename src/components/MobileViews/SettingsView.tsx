@@ -3,6 +3,8 @@ import {
   Sliders, Lock, Shield, LayoutGrid, CheckCircle2, Languages, Download, 
   Terminal, RefreshCw, AlertTriangle, User, Phone, Trash2, Heart, Plus 
 } from "lucide-react";
+import PermissionsCentre from "../PermissionsCentre";
+import PushSettings from "../PushSettings";
 
 interface Contact {
   name: string;
@@ -13,6 +15,8 @@ interface Contact {
 interface SettingsViewProps {
   widgetLayout: "compact" | "dual" | "full";
   setWidgetLayout: (layout: "compact" | "dual" | "full") => void;
+  isWidgetAdded: boolean;
+  setIsWidgetAdded: (added: boolean) => void;
   currentUser: any;
   contacts: Contact[];
   onAddContact: (name: string, relationship: string, phone: string) => void;
@@ -32,6 +36,8 @@ const SA_LANGUAGES = [
 export default function SettingsView({
   widgetLayout,
   setWidgetLayout,
+  isWidgetAdded,
+  setIsWidgetAdded,
   currentUser,
   contacts,
   onAddContact,
@@ -145,6 +151,12 @@ export default function SettingsView({
         <h3 className="font-extrabold text-lg text-white font-sans uppercase tracking-tight">Client Hardening</h3>
         <p className="text-[10px] text-rose-400 font-semibold font-mono font-bold">NATIVE DAEMONS, LANGUAGES & CASCADE SETTINGS</p>
       </div>
+
+      {/* Permissions Centre moved to the settings tab as requested */}
+      <PermissionsCentre />
+
+      {/* Notification Management Centre in settings as requested */}
+      <PushSettings />
 
       {/* STICKY DAEMON AUTOSTART COUPLING (AdGuard-Style System Coupling) */}
       <div className="bg-slate-950 p-4 rounded-3xl border border-rose-500/30 space-y-3.5 shadow-lg relative overflow-hidden">
@@ -438,6 +450,29 @@ export default function SettingsView({
           >
             Tactical
           </button>
+        </div>
+
+        {/* Toggle to Add/Remove Widget on Home Screen */}
+        <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-850 mt-3">
+          <div className="text-left">
+            <h5 className="text-[10px] font-bold text-slate-200">Deploy Widget on Home Screen</h5>
+            <p className="text-[8px] text-slate-500 font-semibold">Bypasses app menu to render the big circle panic button directly on your phone launcher.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={isWidgetAdded}
+            onChange={(e) => {
+              setIsWidgetAdded(e.target.checked);
+              localStorage.setItem("safetylink-widget-added", String(e.target.checked));
+              showToast(
+                e.target.checked
+                  ? "SafetyLink big circle panic widget deployed to home screen."
+                  : "Widget removed from home screen.",
+                "success"
+              );
+            }}
+            className="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800 cursor-pointer focus:ring-0 focus:outline-none"
+          />
         </div>
       </div>
 

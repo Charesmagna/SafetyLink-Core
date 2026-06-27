@@ -12,6 +12,7 @@ import BleDeviceSimulator from "./components/BleDeviceSimulator";
 import IntegrationLogs from "./components/IntegrationLogs";
 import PermissionsCentre from "./components/PermissionsCentre";
 import PushSettings from "./components/PushSettings";
+import Logo from "./components/Logo";
 
 const getInitialTab = (): ViewTab => {
   const path = window.location.pathname;
@@ -123,9 +124,65 @@ export default function App() {
   const [voiceLogs, setVoiceLogs] = useState<VoiceLog[]>([]);
 
   // Current session client state
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentMedical, setCurrentMedical] = useState<MedicalProfile | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem("safetylink-current-user");
+    if (saved) {
+      if (saved === "logged_out") return null;
+      try { return JSON.parse(saved); } catch { return null; }
+    }
+    return null;
+  });
+  const [currentMedical, setCurrentMedical] = useState<MedicalProfile | null>(() => {
+    const saved = localStorage.getItem("safetylink-current-medical");
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return null; }
+    }
+    return null;
+  });
   const [activeAlertEvents, setActiveAlertEvents] = useState<AlertEvent[]>([]);
+
+  // Interactive profile/organization onboarding wizard states
+  const [obName, setObName] = useState("Tshilidzi Mukwevho");
+  const [obEmail, setObEmail] = useState("tshilidzi.mukwevho54@gmail.com");
+  const [obPhone, setObPhone] = useState("+27 82 999 8888");
+  const [obOrgName, setObOrgName] = useState("Gauteng Tactical Patrols");
+  const [obRole, setObRole] = useState("Platform Owner");
+  const [isOnboardingLoading, setIsOnboardingLoading] = useState(false);
+
+  const handleQuickOnboard = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsOnboardingLoading(true);
+    try {
+      const res = await fetch("/api/auth/quick-onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: obName,
+          email: obEmail,
+          phone: obPhone,
+          orgName: obOrgName,
+          role: obRole
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to onboard profile.");
+      }
+      const data = await res.json();
+      setCurrentUser(data.user);
+      setCurrentMedical(data.medicalProfile);
+      localStorage.setItem("safetylink-current-user", JSON.stringify(data.user));
+      if (data.medicalProfile) {
+        localStorage.setItem("safetylink-current-medical", JSON.stringify(data.medicalProfile));
+      }
+      fetchData();
+      showToast(`Welcome ${data.user.name}! Profile & Organization securely provisioned.`, "success");
+    } catch (err: any) {
+      showToast(err.message || "Onboarding failed.", "error");
+    } finally {
+      setIsOnboardingLoading(false);
+    }
+  };
 
   // Fetch latest state on startup
   useEffect(() => {
@@ -247,6 +304,12 @@ export default function App() {
       const payload = await res.json();
       setCurrentUser(payload.user);
       setCurrentMedical(payload.medicalProfile);
+      localStorage.setItem("safetylink-current-user", JSON.stringify(payload.user));
+      if (payload.medicalProfile) {
+        localStorage.setItem("safetylink-current-medical", JSON.stringify(payload.medicalProfile));
+      } else {
+        localStorage.removeItem("safetylink-current-medical");
+      }
       fetchData();
       showToast("Access granted: Establishing secure terminal.", "success");
       return payload;
@@ -259,6 +322,8 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentMedical(null);
+    localStorage.setItem("safetylink-current-user", "logged_out");
+    localStorage.removeItem("safetylink-current-medical");
     showToast("Session closed. Device de-authorized.", "info");
   };
 
@@ -481,27 +546,11 @@ export default function App() {
       <div className="bg-slate-900 border-b border-slate-800 text-white py-4 px-6 shadow-2xl shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-slate-950 border border-slate-800 text-emerald-400 rounded-xl shadow-inner">
-              <Shield className="w-7 h-7" />
-            </div>
-            <div>
-              <div className="flex items-center flex-wrap gap-2">
-                <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2 text-white font-mono">
-                  <svg className="w-6 h-6 inline-block shrink-0 animate-pulse" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M50 5 L15 20 V50 C15 75 50 95 50 95 C50 95 85 75 85 50 V20 L50 5 Z" fill="#020617" stroke="#10b981" strokeWidth="5" />
-                    <path d="M35 45 C35 39.5 39.5 35 45 35 C50.5 35 55 39.5 55 45 M65 55 C65 60.5 60.5 65 55 65 C49.5 65 45 60.5 45 55" stroke="#10b981" strokeWidth="8" strokeLinecap="round" />
-                    <line x1="45" y1="45" x2="55" y2="55" stroke="#10b981" strokeWidth="8" strokeLinecap="round" />
-                    <path d="M55 35 H65 V45" stroke="#10b981" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                    <line x1="45" y1="55" x2="65" y2="35" stroke="#10b981" strokeWidth="8" strokeLinecap="round" />
-                  </svg>
-                  SafetyLink - Intelligent Emergency Response System
-                </h1>
-                <span className="text-[9px] font-black tracking-widest bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">
-                  Powered by TM Media Solutions
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium mt-1">
-                Mission-Critical Dispatches | Founded by <b>Tshilidzi Mukwevho</b> under TM Media Solutions ®
+            <Logo size={46} />
+            <div className="border-l border-slate-850 pl-4 py-1">
+              <p className="text-[10px] font-black tracking-widest text-emerald-400 font-mono uppercase">Intelligent Emergency Response System</p>
+              <p className="text-[11px] text-slate-400 font-medium mt-1">
+                Mission-Critical Dispatches | Created under <b>TM Media Solutions</b>
               </p>
             </div>
           </div>
@@ -525,8 +574,162 @@ export default function App() {
       {/* Main Grid: Enterprise Sidebar + Content Workspace */}
       <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 py-4 flex-grow flex flex-col lg:flex-row gap-8">
         
-        {/* Modern Sidebar Menu Panel */}
-        <aside className="lg:w-72 shrink-0 flex flex-col gap-5">
+        {currentUser === null ? (
+          <div className="max-w-2xl mx-auto w-full py-12 flex-grow flex flex-col justify-center">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 relative overflow-hidden" id="onboarding-profile-card">
+              <div className="absolute inset-x-0 top-0 h-1.5 bg-emerald-500" />
+              
+              <div className="text-center space-y-3">
+                <Logo size={68} className="mx-auto" />
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono font-black text-emerald-400 bg-emerald-950/50 border border-emerald-900/30 px-3 py-1 rounded-full uppercase tracking-widest inline-block">
+                    NODE PROVISIONING UTILITY
+                  </span>
+                  <h3 className="text-xl font-black text-white font-sans tracking-tight uppercase">
+                    Initialize Your SafetyLink Profile
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                    Welcome to SafetyLink. To begin operating, please create your user profile and register your secure organization node.
+                  </p>
+                </div>
+              </div>
+
+              {/* Visual Tabs for Role Identification */}
+              <div className="bg-slate-950 p-1.5 rounded-2xl border border-slate-850 grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setObRole("Platform Owner");
+                    setObOrgName("Gauteng Tactical Patrols");
+                  }}
+                  className={`py-3 rounded-xl text-center flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                    obRole === "Platform Owner"
+                      ? "bg-slate-900 border border-emerald-500/30 text-emerald-400 font-extrabold shadow-lg"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-sm">👑</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Platform Owner</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setObRole("Responder");
+                    setObOrgName("Gauteng Tactical Patrols");
+                  }}
+                  className={`py-3 rounded-xl text-center flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                    obRole === "Responder"
+                      ? "bg-slate-900 border border-emerald-500/30 text-emerald-400 font-extrabold shadow-lg"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-sm">🛡️</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Responder</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setObRole("Member");
+                    setObOrgName("South African Citizens Group");
+                  }}
+                  className={`py-3 rounded-xl text-center flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                    obRole === "Member"
+                      ? "bg-slate-900 border border-emerald-500/30 text-emerald-400 font-extrabold shadow-lg"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <span className="text-sm">📱</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider">Standard User</span>
+                </button>
+              </div>
+
+              {/* Description of current role choice */}
+              <div className="bg-slate-950/50 p-3.5 rounded-2xl border border-slate-850/60 text-[11px] text-slate-400 font-sans leading-relaxed">
+                {obRole === "Platform Owner" && (
+                  <p>
+                    🌟 <strong>Platform Owner / Admin Role:</strong> Provides complete administrative access to all systems. You can manage organizations, assign field responders, oversee geo-clustering parameters, and review system-wide dispatches.
+                  </p>
+                )}
+                {obRole === "Responder" && (
+                  <p>
+                    🚨 <strong>Field Responder Role:</strong> Authorizes access to the active Control Tower monitor and BLE scanning systems. Designed for security patrols, neighborhood watch officers, and tactical supervisors on active shifts.
+                  </p>
+                )}
+                {obRole === "Member" && (
+                  <p>
+                    👤 <strong>Standard User Role:</strong> Configures a standard emergency notification profile. Authorized to trigger wearable iTAG buttons, manage emergency contacts, and test lockscreen widgets in the Device Terminal.
+                  </p>
+                )}
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleQuickOnboard} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">Full Name</label>
+                    <input
+                      type="text"
+                      value={obName}
+                      onChange={(e) => setObName(e.target.value)}
+                      placeholder="e.g. Tshilidzi Mukwevho"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">Email Address</label>
+                    <input
+                      type="email"
+                      value={obEmail}
+                      onChange={(e) => setObEmail(e.target.value)}
+                      placeholder="e.g. tshilidzi.mukwevho54@gmail.com"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">Phone Number</label>
+                    <input
+                      type="text"
+                      value={obPhone}
+                      onChange={(e) => setObPhone(e.target.value)}
+                      placeholder="e.g. +27 82 999 8888"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 font-mono">Organization Node</label>
+                    <input
+                      type="text"
+                      value={obOrgName}
+                      onChange={(e) => setObOrgName(e.target.value)}
+                      placeholder="e.g. Gauteng Tactical Patrols"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isOnboardingLoading}
+                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-[11px] uppercase tracking-wider py-3 rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isOnboardingLoading ? "Initializing Node..." : "🚀 Initialize SafetyLink Node"}
+                </button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Modern Sidebar Menu Panel */}
+            <aside className="lg:w-72 shrink-0 flex flex-col gap-5">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-4">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 font-mono flex justify-between items-center">
               <span>WORKSPACE MODULES</span>
@@ -633,96 +836,23 @@ export default function App() {
               </button>
             </nav>
           </div>
-
-          {/* SIDEBAR TACTICAL AI INTEL ADVISOR CHATBOT */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
-            <button
-              onClick={() => setIsAiChatExpanded(!isAiChatExpanded)}
-              className="w-full flex items-center justify-between text-left focus:outline-none cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-200 font-mono">
-                  SafetyLink AI Intel
-                </span>
-              </div>
-              <span className="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-900/40 font-mono font-bold">
-                {isAiChatExpanded ? "COLLAPSE" : "OPEN ADVISOR"}
-              </span>
-            </button>
-
-            {isAiChatExpanded ? (
-              <div className="space-y-3 pt-2 border-t border-slate-850">
-                <div className="max-h-48 overflow-y-auto space-y-2.5 p-2 rounded-xl bg-slate-950/80 border border-slate-850 text-[10.5px] leading-relaxed font-mono">
-                  {aiHistory.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 rounded-xl border ${
-                        item.role === "user"
-                          ? "bg-slate-900 border-slate-850 text-slate-300 text-right"
-                          : "bg-slate-900/40 border-emerald-950/40 text-emerald-300/90 text-left"
-                      }`}
-                    >
-                      <span className="text-[8px] font-black uppercase tracking-widest block mb-0.5 text-slate-500">
-                        {item.role === "user" ? "Citizen" : "SafetyLink AI"}
-                      </span>
-                      <p className="whitespace-pre-line text-xs font-sans leading-relaxed">{item.text}</p>
-                    </div>
-                  ))}
-                  {aiIsLoading && (
-                    <div className="p-2 rounded-xl bg-slate-900/20 border border-slate-850 text-slate-400 animate-pulse flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-spin" />
-                      <span>Drafting response...</span>
-                    </div>
-                  )}
-                </div>
-
-                <form onSubmit={handleSendAiMessage} className="flex gap-2">
-                  <input
-                    type="text"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    placeholder="Ask about iTAG UUIDs, VoIP cascades..."
-                    className="flex-grow bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-3 py-1.5 text-xs text-slate-200 outline-none"
-                    disabled={aiIsLoading}
-                  />
-                  <button
-                    type="submit"
-                    disabled={aiIsLoading || !aiQuery.trim()}
-                    className="p-2 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 rounded-xl transition cursor-pointer disabled:opacity-50"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
-                Real-time regional tactical analyzer powered by Gemini. Ask about beacon structures, Twilio dialer, or GP clusters.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 space-y-2 text-slate-400 text-[11px] leading-relaxed">
-            <span className="text-white font-bold block uppercase font-mono tracking-wider text-[10px]">Territory Info</span>
-            <p>Active cluster scanning the Johannesburg and Gauteng sectors. Real-time TWILIO VoIP, satellite backhauls, and Meta WhatsApp coordinate dispatches are active.</p>
-          </div>
         </aside>
 
         {/* Right Content Workspace Stage */}
         <div className="flex-grow flex flex-col space-y-6">
           {!hasTabAccess(activeTab, currentUser) ? (
-            <div className="bg-slate-950 border border-red-500/30 rounded-3xl p-8 py-16 text-center max-w-2xl mx-auto my-12 space-y-6 shadow-2xl relative overflow-hidden">
+            <div className="bg-slate-950 border border-red-500/30 rounded-3xl p-6 py-10 text-center max-w-2xl mx-auto my-8 space-y-6 shadow-2xl relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-1 bg-red-500 animate-[pulse_1.5s_infinite]" />
               
-              <div className="mx-auto w-16 h-16 bg-red-950/40 text-red-500 border border-red-500/20 rounded-2xl flex items-center justify-center animate-bounce">
-                <Lock className="w-8 h-8" />
+              <div className="mx-auto w-12 h-12 bg-red-950/40 text-red-500 border border-red-500/20 rounded-2xl flex items-center justify-center animate-pulse">
+                <Lock className="w-6 h-6" />
               </div>
 
               <div className="space-y-2">
                 <span className="text-[10px] font-mono font-black text-red-500 bg-red-950/40 border border-red-500/20 px-3 py-1 rounded-full uppercase tracking-widest">
                   SECURE PLATFORM CORE ACCESS REJECTED
                 </span>
-                <h3 className="text-xl font-extrabold text-white font-mono uppercase tracking-wider">
+                <h3 className="text-lg font-extrabold text-white font-mono uppercase tracking-wider">
                   Tactical Firewall Active
                 </h3>
                 <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
@@ -730,7 +860,7 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl text-left space-y-2 max-w-sm mx-auto font-mono text-xs">
+              <div className="bg-slate-900 border border-slate-850 p-4 rounded-2xl text-left space-y-2 max-w-md mx-auto font-mono text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-slate-500">SESSION IDENTIFIER:</span>
                   <span className="text-slate-300 font-bold">{currentUser?.name || "Unauthenticated Guest"}</span>
@@ -745,13 +875,12 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <p className="text-[10px] text-slate-500 font-mono leading-relaxed">
-                  To bypass: Provision or join your organization under the device simulator, and log in with an approved staff role (e.g. <b>Platform Owner</b> or <b>Supervisor</b>).
-                </p>
+
+
+              <div className="pt-2">
                 <button
                   onClick={() => handleTabChange("simulator")}
-                  className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 hover:text-emerald-400 text-slate-300 text-xs font-mono font-bold uppercase tracking-wider px-5 py-2.5 rounded-xl transition cursor-pointer"
+                  className="bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 hover:text-emerald-400 text-slate-400 text-[10px] font-mono font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer"
                 >
                   Return to Device Terminal
                 </button>
@@ -910,19 +1039,6 @@ export default function App() {
                         </button>
                       </div>
                     )}
-
-                    {/* System Notice - Tactical Green Panel */}
-                    <div className="bg-emerald-950/20 rounded-2xl p-5 border border-emerald-900/40 text-xs text-emerald-300 flex gap-3">
-                      <Info className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-bold text-slate-200 mb-1 uppercase tracking-widest font-mono">South African Dialing & Telemetry Staging</p>
-                        <p className="leading-relaxed font-sans">All emergency dialing cascades, WhatsApp dispatches, and geographical clustering filters dynamically scale to match any location in South Africa. Profiles can be registered as standard field responders or dispatched tactical supervisors.</p>
-                      </div>
-                    </div>
-
-                    {/* NATIVE SYSTEM CONTROLS (Phases 3 & 10) */}
-                    <PermissionsCentre />
-                    <PushSettings orgId="org-sa-tactical-01" />
                   </div>
 
                   {/* The high-fidelity mobile device mockup on the right side */}
@@ -1137,44 +1253,151 @@ export default function App() {
               </div>
 
             </div>
-          </>)}
-        </div>
+          )}
+        </>)}
+      </div>
+    </>)}
 
-        {/* BOTTOM PERFORMANCE & LIFE-CYCLE TELEMETRY DASHBOARD */}
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 mt-6 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-            <h4 className="text-xs uppercase tracking-widest font-mono font-bold text-slate-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              SafetyLink Cluster Telemetry & API Performance
-            </h4>
-            <span className="font-mono text-[10px] text-slate-500">v5.2.0 STABLE</span>
+        {/* BOTTOM OPERATIONS SUITE (TELEMETRY, AI INTEL, STAGING & TERRITORY) */}
+        <div className="space-y-6 mt-8">
+          
+          {/* SafetyLink Cluster Telemetry & API Performance */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 font-sans">
+              <h4 className="text-xs uppercase tracking-widest font-mono font-bold text-slate-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                SafetyLink Cluster Telemetry & API Performance
+              </h4>
+              <span className="font-mono text-[10px] text-slate-500">v5.2.0 STABLE</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs">
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">API Gateway Status</span>
+                <span className="font-bold text-emerald-400 block mt-1 uppercase tracking-wider">ONLINE (OK)</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">SMS Dispatcher (Twilio)</span>
+                <span className="text-slate-200 block mt-1 font-bold">Ready ({smsLogs.length} Sent)</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Meta WhatsApp API</span>
+                <span className="text-slate-200 block mt-1 font-bold">Ready ({whatsappLogs.length} Deliv)</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Voice Call Escalations</span>
+                <span className="text-slate-200 block mt-1 font-bold">Ready ({voiceLogs.length} Calls)</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">GATT BLE Scanning Rate</span>
+                <span className="text-blue-400 block mt-1 font-bold">250 ms (Polling)</span>
+              </div>
+              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
+                <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Durable Storage Sync</span>
+                <span className="text-emerald-400 block mt-1 font-bold uppercase tracking-wider">IndexedDB OK</span>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-xs">
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">API Gateway Status</span>
-              <span className="font-bold text-emerald-400 block mt-1 uppercase tracking-wider">ONLINE (OK)</span>
+
+          {/* AI Intel & Staging Staging Notice Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* AI Intel Advisor Chatbot - Takes 7 cols */}
+            <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 font-sans">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  <h4 className="text-sm font-black uppercase tracking-widest text-slate-200 font-mono">
+                    SafetyLink AI Intel Advisor
+                  </h4>
+                </div>
+                <span className="text-[9px] bg-emerald-950 text-emerald-400 px-2.5 py-1 rounded border border-emerald-900/40 font-mono font-bold">
+                  GEMINI 1.5 PRO CORE
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                <div className="max-h-56 overflow-y-auto space-y-3 p-3.5 rounded-xl bg-slate-950/80 border border-slate-850 text-xs leading-relaxed font-mono">
+                  {aiHistory.length === 0 ? (
+                    <p className="text-slate-500 italic text-center py-4 font-sans">No active briefing logs. Query the AI module below to generate tactical dispatches.</p>
+                  ) : (
+                    aiHistory.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-xl border ${
+                          item.role === "user"
+                            ? "bg-slate-900 border-slate-800 text-slate-300 text-right ml-6"
+                            : "bg-slate-900/40 border-emerald-950/30 text-emerald-300/90 text-left mr-6"
+                        }`}
+                      >
+                        <span className="text-[8px] font-black uppercase tracking-widest block mb-1 text-slate-500">
+                          {item.role === "user" ? "Citizen" : "SafetyLink AI"}
+                        </span>
+                        <p className="whitespace-pre-line font-sans leading-relaxed text-slate-200">{item.text}</p>
+                      </div>
+                    ))
+                  )}
+                  {aiIsLoading && (
+                    <div className="p-3 rounded-xl bg-slate-900/20 border border-slate-850 text-slate-400 animate-pulse flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" />
+                      <span className="font-sans text-xs">Drafting response...</span>
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleSendAiMessage} className="flex gap-2.5">
+                  <input
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    placeholder="Ask about iTAG UUIDs, VoIP cascades, South African security structures..."
+                    className="flex-grow bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl px-4 py-2 text-xs text-slate-200 outline-none"
+                    disabled={aiIsLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={aiIsLoading || !aiQuery.trim()}
+                    className="px-4 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 rounded-xl transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span className="text-xs uppercase tracking-wider font-extrabold hidden sm:inline font-sans">Ask AI</span>
+                  </button>
+                </form>
+              </div>
             </div>
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">SMS Dispatcher (Twilio)</span>
-              <span className="text-slate-200 block mt-1 font-bold">Ready ({smsLogs.length} Sent)</span>
+
+            {/* Right side: Staging Notice & API Territory - Takes 5 cols */}
+            <div className="lg:col-span-5 flex flex-col gap-6">
+              
+              {/* South African Dialing & Telemetry Staging Notice */}
+              <div className="bg-emerald-950/20 rounded-2xl p-5 border border-emerald-900/40 text-xs text-emerald-300 flex gap-3.5 shadow-xl font-sans">
+                <Info className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-slate-200 mb-1.5 uppercase tracking-widest font-mono">
+                    South African Dialing & Telemetry Staging
+                  </p>
+                  <p className="leading-relaxed text-[11px] text-slate-300">
+                    All emergency dialing cascades, WhatsApp dispatches, and geographical clustering filters dynamically scale to match any location in South Africa. Profiles can be registered as standard field responders or dispatched tactical supervisors.
+                  </p>
+                </div>
+              </div>
+
+              {/* API Territory Status Info */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-xl font-sans">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4.5 h-4.5 text-emerald-400" />
+                  <span className="text-white font-extrabold block uppercase font-mono tracking-wider text-xs">
+                    API Territory Scope
+                  </span>
+                </div>
+                <p className="text-slate-400 text-[11px] leading-relaxed">
+                  Active cluster scanning is currently mapping the Johannesburg and Gauteng sectors. Real-time TWILIO VoIP, satellite backhauls, and Meta WhatsApp coordinate dispatches are active and fully persistent across nodes.
+                </p>
+              </div>
+
             </div>
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Meta WhatsApp API</span>
-              <span className="text-slate-200 block mt-1 font-bold">Ready ({whatsappLogs.length} Deliv)</span>
-            </div>
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Voice Call Escalations</span>
-              <span className="text-slate-200 block mt-1 font-bold">Ready ({voiceLogs.length} Calls)</span>
-            </div>
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">GATT BLE Scanning Rate</span>
-              <span className="text-blue-400 block mt-1 font-bold">250 ms (Polling)</span>
-            </div>
-            <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/60 font-mono">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Durable Storage Sync</span>
-              <span className="text-emerald-400 block mt-1 font-bold uppercase tracking-wider">IndexedDB OK</span>
-            </div>
+
           </div>
+
         </div>
 
       </div>

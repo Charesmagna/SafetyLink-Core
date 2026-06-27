@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Bluetooth, Radio, Battery, ShieldAlert, CheckCircle, UserPlus, Trash2, Sliders, X, Search, Loader2, Signal, ShieldCheck, Play, RefreshCw, Power } from "lucide-react";
+import { Bluetooth, Radio, Battery, ShieldAlert, CheckCircle, UserPlus, Trash2, Sliders, X, Search, Loader2, Signal, ShieldCheck, Play, RefreshCw, Power, Smartphone, Check } from "lucide-react";
 import { HardwareDevice, User } from "../types";
 import DeviceHealthDashboard from "./DeviceHealthDashboard";
 import OfflineDashboard from "./OfflineDashboard";
@@ -23,13 +23,24 @@ export default function BleDeviceSimulator({
   onDeleteDevice,
   onTriggerHardwareSos
 }: BleDeviceSimulatorProps) {
-  const [name, setName] = useState("iTAG Alert Button");
+  const [name, setName] = useState("iTAG BLE Alert Button");
   const [mac, setMac] = useState("FF:E0:12:34:56:AB");
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [rssiVal, setRssiVal] = useState<Record<string, number>>({});
   const [batteryVal, setBatteryVal] = useState<Record<string, number>>({});
   const [warningMsg, setWarningMsg] = useState<string | null>(null);
+
+  // Real Web Bluetooth GATT Integration States
+  const [realBleDevice, setRealBleDevice] = useState<any | null>(null);
+  const [realGattServer, setRealGattServer] = useState<any | null>(null);
+  const [realCharacteristic, setRealCharacteristic] = useState<any | null>(null);
+  const [realBleStatus, setRealBleStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
+  const [realBleError, setRealBleError] = useState<string | null>(null);
+  const [realBattery, setRealBattery] = useState<number | null>(null);
+  const [isWebBleSupported] = useState<boolean>(() => {
+    return typeof navigator !== "undefined" && !!(navigator as any).bluetooth;
+  });
 
   // iTAG Scanner Overlay State
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -39,6 +50,16 @@ export default function BleDeviceSimulator({
   const [scanLogs, setScanLogs] = useState<string[]>([]);
   const [selectedUserForMac, setSelectedUserForMac] = useState<Record<string, string>>({});
   const [newlyRegisteredMacs, setNewlyRegisteredMacs] = useState<string[]>([]);
+
+  // RSSI to Meters Path Loss Model Estimator
+  // iTAG devices operate optimally between 12m and 30m before deep attenuation.
+  const estimateDistance = (rssi: number): number => {
+    const r = Math.abs(rssi);
+    if (r <= 50) return Number((0.1 + (50 - r) * 0.05).toFixed(1));
+    if (r <= 70) return Number((1.0 + (r - 50) * 0.55).toFixed(1)); // 1.0m to 12.0m range
+    if (r <= 90) return Number((12.0 + (r - 70) * 0.90).toFixed(1)); // 12.0m to 30.0m range
+    return Number((30.0 + (r - 90) * 1.5).toFixed(1)); // Beyond 30m signal degradation
+  };
 
   const playBeep = (freq = 800, duration = 0.08) => {
     try {
@@ -56,6 +77,115 @@ export default function BleDeviceSimulator({
     } catch (e) {
       // Ignored
     }
+  };
+
+  // Real Web Bluetooth Connection Logic
+  const connectRealPhysicalDevice = async () => {
+    if (!isWebBleSupported) {
+      setRealBleError("Web Bluetooth is not supported in this browser. Please use Google Chrome, Microsoft Edge, or a native Capacitor application.");
+      setRealBleStatus("error");
+      return;
+    }
+
+    setRealBleStatus("connecting");
+    setRealBleError(null);
+    setScanLogs(prev => [...prev, "[REAL-BLE] Initiating browser Bluetooth handshake request..."]);
+
+    try {
+      setScanLogs(prev => [...prev, "[REAL-BLE] Requesting BLE device scan filtering for Service UUID 0xFFE0..."]);
+      
+      const device = await (navigator as any).bluetooth.requestDevice({
+        filters: [
+          { services: [0xffe0] }
+        ],
+        optionalServices: [0xffe0, "battery_service"]
+      });
+
+      setScanLogs(prev => [...prev, `[REAL-BLE] Physical device bonded: ${device.name || "iTAG Keyfob"} [ID: ${device.id}]`]);
+      setRealBleDevice(device);
+
+      device.addEventListener("gattserverdisconnected", () => {
+        setRealBleStatus("idle");
+        setRealBleDevice(null);
+        setRealGattServer(null);
+        setRealCharacteristic(null);
+        setScanLogs(prev => [...prev, "⚠️ [REAL-BLE] GATT Server connection lost. Device disconnected."]);
+      });
+
+      setScanLogs(prev => [...prev, "[REAL-BLE] Establishing GATT link..."]);
+      const server = await device.gatt.connect();
+      setRealGattServer(server);
+      
+      setScanLogs(prev => [...prev, "[REAL-BLE] GATT link active. Retrieving service 0xFFE0..."]);
+      const service = await server.getPrimaryService(0xffe0);
+      
+      setScanLogs(prev => [...prev, "[REAL-BLE] Service 0xFFE0 resolved. Retrieving characteristic 0xFFE1..."]);
+      const characteristic = await service.getCharacteristic(0xffe1);
+      setRealCharacteristic(characteristic);
+
+      setScanLogs(prev => [...prev, "[REAL-BLE] Characteristic 0xFFE1 resolved. Activating GATT notify loop..."]);
+      await characteristic.startNotifications();
+      
+      setScanLogs(prev => [...prev, "✅ [REAL-BLE] Active listener registered on 0xFFE1! Press your physical iTAG button."]);
+      setRealBleStatus("connected");
+      playBeep(1000, 0.25);
+
+      characteristic.addEventListener("characteristicvaluechanged", (event: any) => {
+        const val = event.target.value;
+        const array = new Uint8Array(val.buffer);
+        const hex = Array.from(array).map(b => b.toString(16).padStart(2, "0")).join("");
+        
+        setScanLogs(prev => [
+          ...prev, 
+          `🚨 [GATT EVENT] Characteristic 0xFFE1 updated! Broadcast: 0x${hex} (Value: ${array[0] || 0})`
+        ]);
+
+        // Triggers the Panic Broadcast in the app
+        // We find if a device with this deviceId exists, otherwise auto-create it
+        const deviceIdVal = device.id || "physical-itag-fob";
+        const matched = hardware.find(h => h.deviceId === deviceIdVal);
+        
+        if (matched) {
+          onTriggerHardwareSos(matched.id);
+        } else {
+          // Add it automatically to organization pool to allow immediate assignment
+          onAddDevice(`Physical iTAG Keyfob`, deviceIdVal);
+          setScanLogs(prev => [...prev, `[REAL-BLE] Auto-registered ${device.name || "iTAG"} [${deviceIdVal}] in organization pool.`]);
+        }
+        playBeep(900, 0.15);
+      });
+
+      // Optional Battery Check
+      try {
+        const batService = await server.getPrimaryService("battery_service");
+        const batChar = await batService.getCharacteristic("battery_level");
+        const batVal = await batChar.readValue();
+        const level = batVal.getUint8(0);
+        setRealBattery(level);
+        setScanLogs(prev => [...prev, `[REAL-BLE] Current physical iTAG Battery: ${level}%`]);
+      } catch (bErr) {
+        // Battery service not critical
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setRealBleError(err.message || "User cancelled scan or Bluetooth link refused.");
+      setRealBleStatus("error");
+      setScanLogs(prev => [...prev, `❌ [REAL-BLE] Setup error: ${err.message || err}`]);
+    }
+  };
+
+  const disconnectRealPhysicalDevice = () => {
+    if (realGattServer) {
+      realGattServer.disconnect();
+    }
+    setRealBleDevice(null);
+    setRealGattServer(null);
+    setRealCharacteristic(null);
+    setRealBattery(null);
+    setRealBleStatus("idle");
+    setScanLogs(prev => [...prev, "[REAL-BLE] Closed active Bluetooth link gracefully."]);
+    playBeep(600, 0.1);
   };
 
   const DISCOVERABLE_BEACONS = [
@@ -169,12 +299,18 @@ export default function BleDeviceSimulator({
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* Provision new simulated device */}
-        <div className="lg:col-span-4 bg-slate-950 rounded-xl p-5 border border-slate-800/80 h-fit">
-          <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2 font-mono">
-            <Radio className="w-4 h-4 text-emerald-400" />
-            Provision Virtual BLE Button
-          </h3>
+        {/* Provision new simulated or physical device */}
+        <div className="lg:col-span-4 bg-slate-950 rounded-xl p-5 border border-slate-800/80 h-fit space-y-4">
+          <div className="border-b border-slate-800/80 pb-3">
+            <h3 className="font-bold text-xs uppercase tracking-widest text-slate-200 flex items-center gap-2 font-mono">
+              <Radio className="w-4 h-4 text-indigo-400" />
+              Bond iTAG Fob (0xFFE0)
+            </h3>
+            <p className="text-[10px] text-slate-500 mt-1 font-sans">
+              Type details for a physical keyfob or provision a virtual button to test.
+            </p>
+          </div>
+          
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 font-mono">Device Profile / Model</label>
@@ -186,30 +322,36 @@ export default function BleDeviceSimulator({
                 <option value="iTAG BLE Alert Button">iTAG Smart Button (v1.0)</option>
                 <option value="SafetyLink wearable wristband">SafetyLink Wristband (v2.1)</option>
                 <option value="SirenLink remote keyfob">SirenLink Keyfob (v3.0)</option>
+                <option value="Physical FFE0 Panic Button">Physical FFE0 Panic Button</option>
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 font-mono">Simulated MAC Address</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5 font-mono">
+                Hardware Address (MAC or UUID)
+              </label>
               <input 
                 type="text" 
                 value={mac} 
                 onChange={(e) => setMac(e.target.value)}
-                placeholder="E.g. FF:E0:12:34:56:78"
+                placeholder="E.g. FF:E0:12:34:56:78 or BLE UUID"
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 required
               />
+              <span className="text-[9px] text-slate-500 font-sans block mt-1 leading-normal">
+                💡 Enter your physical tag's MAC address or BLE UUID to pair it.
+              </span>
             </div>
             <button 
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 rounded-lg transition uppercase tracking-widest font-mono"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 rounded-lg transition uppercase tracking-widest font-mono cursor-pointer"
             >
-              Add to Organization Pool
+              Bond Keyfob to Pool
             </button>
           </form>
 
-          <div className="mt-6 border-t border-slate-800 pt-4 text-[10px] font-mono text-slate-500 space-y-2">
+          <div className="mt-4 border-t border-slate-850 pt-4 text-[10px] font-mono text-slate-500 space-y-2">
             <div className="flex justify-between">
-              <span>Service UUID:</span>
+              <span>GATT Service:</span>
               <span className="font-bold text-slate-400">0xFFE0</span>
             </div>
             <div className="flex justify-between">
@@ -218,7 +360,7 @@ export default function BleDeviceSimulator({
             </div>
             <div className="flex justify-between">
               <span>Trigger Payload:</span>
-              <span className="font-bold text-slate-400">0x01 (Panic)</span>
+              <span className="font-bold text-slate-400 text-emerald-400">0x01 (Panic)</span>
             </div>
           </div>
         </div>
@@ -233,7 +375,7 @@ export default function BleDeviceSimulator({
           {hardware.length === 0 ? (
             <div className="text-center py-12 bg-slate-950 rounded-xl border border-dashed border-slate-850 text-slate-500 text-xs italic font-mono">
               No physical BLE hardware devices are currently registered in this organization.
-              <p className="text-[10px] text-slate-600 mt-1 not-italic">Use the provision form on the left to add a simulated button.</p>
+              <p className="text-[10px] text-slate-600 mt-1 not-italic">Use the form on the left or the live scanner above to link a keyfob.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,6 +384,7 @@ export default function BleDeviceSimulator({
                 const battery = batteryVal[dev.id] !== undefined ? batteryVal[dev.id] : dev.batteryLevel;
                 const user = users.find(u => u.id === dev.assignedUserId);
                 const rssiInfo = getRssiStrength(rssi);
+                const estDistance = estimateDistance(rssi);
 
                 return (
                   <div 
@@ -299,7 +442,25 @@ export default function BleDeviceSimulator({
                             className="w-full accent-emerald-500 h-1 bg-slate-800 rounded-lg cursor-pointer"
                           />
                         </div>
-                        <p className="text-[9px] text-slate-600 mt-1">{rssiInfo.label}</p>
+                        
+                        {/* Live Attenuation & Proximity Alert */}
+                        <div className="flex justify-between items-center text-[9px] mt-1.5 pt-1.5 border-t border-slate-900/60">
+                          <span className="text-slate-500 uppercase font-mono">PROXIMITY RADAR:</span>
+                          <span className={`font-mono font-black ${
+                            estDistance > 30 
+                              ? "text-rose-400 bg-rose-950/30 px-1.5 py-0.5 rounded border border-rose-900/30" 
+                              : estDistance >= 12 
+                                ? "text-emerald-400 bg-emerald-950/30 px-1.5 py-0.5 rounded border border-emerald-900/30" 
+                                : "text-blue-400 bg-blue-950/30 px-1.5 py-0.5 rounded border border-blue-900/30"
+                          }`}>
+                            {estDistance}m {estDistance > 30 ? "⚠️ OUT OF RANGE" : "✓ OK (12m-30m)"}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-slate-500 mt-1 leading-normal">
+                          {estDistance > 30 
+                            ? "⚠️ Warning: Signal attenuated beyond 30m threshold. Panic button triggers will experience high packet loss." 
+                            : "Proximity range verified. Keyfob broadcasting within stable Bluetooth safety boundaries."}
+                        </p>
                       </div>
 
                       {/* Battery slider */}
@@ -415,6 +576,11 @@ export default function BleDeviceSimulator({
         <OfflineDashboard />
       </div>
 
+      {/* CAPACITOR & WEB BLUETOOTH PRODUCTION REFERENCE PROTOCOL (Phase 10) */}
+      <div className="mt-8 pt-8 border-t border-slate-800">
+        <CapacitorBleDocumentation />
+      </div>
+
       {/* iTAG OTC SIGNAL SCANNER OVERLAY MODAL */}
       {isScannerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-fade-in">
@@ -478,8 +644,8 @@ export default function BleDeviceSimulator({
                     )}
                   </div>
 
-                  {/* Scanner controls */}
-                  <div className="w-full text-center space-y-2">
+                  {/* Scanner controls with physical keyfob bypass */}
+                  <div className="w-full text-center space-y-3">
                     {isScanning ? (
                       <div className="space-y-1.5">
                         <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
@@ -494,13 +660,66 @@ export default function BleDeviceSimulator({
                         </div>
                       </div>
                     ) : (
-                      <button
-                        onClick={startScanning}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl transition shadow-lg shadow-blue-950/40 flex items-center justify-center gap-2 cursor-pointer border border-blue-500/30"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                        Start Airspace Scan
-                      </button>
+                      <div className="space-y-2.5 w-full">
+                        <button
+                          onClick={startScanning}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl transition shadow-lg shadow-blue-950/40 flex items-center justify-center gap-2 cursor-pointer border border-blue-500/30"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Start Simulated Scan
+                        </button>
+
+                        <div className="border-t border-slate-800/80 my-2 pt-2.5">
+                          {realBleStatus === "connected" ? (
+                            <div className="bg-emerald-950/40 border border-emerald-500/20 rounded-xl p-3 text-left space-y-2 font-mono text-[10px]">
+                              <div className="flex items-center justify-between font-bold text-emerald-400">
+                                <span className="flex items-center gap-1.5">
+                                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                  PHYSICAL iTAG LINKED
+                                </span>
+                                {realBattery !== null && (
+                                  <span className="flex items-center gap-1 bg-emerald-900/40 px-1.5 py-0.5 rounded">
+                                    <Battery className="w-3 h-3" />
+                                    {realBattery}%
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-slate-400 leading-normal text-[10px] font-sans">
+                                Connected to <span className="text-slate-100 font-bold">{realBleDevice?.name || "Physical Tracker"}</span>. Ready to handle characteristic notifications on 0xFFE1.
+                              </p>
+                              <button
+                                onClick={disconnectRealPhysicalDevice}
+                                className="w-full bg-slate-900 hover:bg-slate-800 text-rose-400 font-mono font-bold text-[9px] uppercase tracking-wider py-1.5 rounded-lg border border-slate-800 transition cursor-pointer"
+                              >
+                                Terminate Physical Link
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <button
+                                onClick={connectRealPhysicalDevice}
+                                disabled={realBleStatus === "connecting"}
+                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-mono font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl transition shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/30"
+                              >
+                                <Bluetooth className="w-4 h-4 animate-pulse" />
+                                {realBleStatus === "connecting" ? "Establishing Link..." : "⚡ Connect Real FFE0 iTAG"}
+                              </button>
+                              
+                              {realBleError && (
+                                <p className="text-[9px] text-rose-400 font-mono leading-tight mt-1 text-left">
+                                  ⚠️ {realBleError}
+                                </p>
+                              )}
+                              
+                              {!isWebBleSupported && (
+                                <p className="text-[9px] text-slate-500 font-mono text-left leading-normal font-sans">
+                                  Note: Web Bluetooth requires Chrome/Edge on Desktop/Android. Use the instructions panel below for Capacitor implementation on mobile.
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -698,6 +917,201 @@ export default function BleDeviceSimulator({
         </div>
       )}
 
+    </div>
+  );
+}
+
+// ==========================================
+// CAPACITOR & WEB BLUETOOTH DOCUMENTATION PANEL
+// ==========================================
+function CapacitorBleDocumentation() {
+  const [activeTab, setActiveTab] = useState<"capacitor" | "web-bluetooth">("capacitor");
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  const capacitorCode = `// 1. Install the Capacitor BLE Plugin:
+// npm install @capacitor-community/bluetooth-le
+
+import { BleClient, numbersToDataView } from '@capacitor-community/bluetooth-le';
+
+const ITAG_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
+const ITAG_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+async function initializeHardwarePanicButton() {
+  try {
+    // Initialize BLE client engine
+    await BleClient.initialize();
+    console.log('BLE Client initialized successfully.');
+
+    // Start scanning for nearby iTAG devices matching GATT Service FFE0
+    await BleClient.requestLEScan(
+      {
+        services: [ITAG_SERVICE_UUID],
+        allowDuplicates: false,
+      },
+      (result) => {
+        console.log(\`Discovered iTAG keyfob: \${result.device.name} [\${result.device.deviceId}]\`);
+        // Verify proximity RSSI before establishing bond (optimal threshold: 12m-30m)
+        if (result.rssi && result.rssi < -90) {
+          console.warn('iTAG peripheral signal too weak. High packet loss risk (>30 meters).');
+        }
+      }
+    );
+
+    // Stop scan after 5 seconds of scanning and connect to the selected device
+    setTimeout(async () => {
+      await BleClient.stopLEScan();
+    }, 5000);
+  } catch (error) {
+    console.error('BLE Initialization failed:', error);
+  }
+}
+
+async function bindPhysicalTag(deviceId: string) {
+  try {
+    // Establish persistent GATT connection to iTAG
+    await BleClient.connect(deviceId, (disconnectedId) => {
+      console.warn(\`⚠️ iTAG keyfob [\${disconnectedId}] disconnected. Out of range!\`);
+      triggerOutofRangeWarning(); // Warn user if they exceed 12m-30m proximity threshold
+    });
+
+    console.log('GATT Connected. Registering notification event listener on Characteristic 0xFFE1...');
+
+    // Register active notification listener on Characteristic 0xFFE1
+    await BleClient.startNotifications(
+      deviceId,
+      ITAG_SERVICE_UUID,
+      ITAG_CHARACTERISTIC_UUID,
+      (value: DataView) => {
+        const firstByte = value.getUint8(0);
+        console.log(\`🚨 Physical Button Click Detected! FFE1 Payload: 0x\${firstByte.toString(16)}\`);
+
+        if (firstByte === 0x01) {
+          dispatchImmediateSos(deviceId);
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Failed to bind GATT notifier:', error);
+  }
+}
+
+async function dispatchImmediateSos(deviceId: string) {
+  // Dispatches distress telemetry payload to SafetyLink gateway
+  const position = await getCurrentGPSCoordinates();
+  await fetch('/api/alerts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      deviceId: deviceId,
+      latitude: position.latitude,
+      longitude: position.longitude
+    })
+  });
+}`;
+
+  const webBleCode = `// Web Bluetooth Implementation (Chrome/Edge/Opera standard)
+const FFE0_SERVICE = 0xffe0; // or '0000ffe0-0000-1000-8000-00805f9b34fb'
+const FFE1_CHAR = 0xffe1;    // or '0000ffe1-0000-1000-8000-00805f9b34fb'
+
+async function connectWebBle() {
+  const device = await navigator.bluetooth.requestDevice({
+    filters: [{ services: [FFE0_SERVICE] }]
+  });
+
+  const server = await device.gatt.connect();
+  const service = await server.getPrimaryService(FFE0_SERVICE);
+  const characteristic = await service.getCharacteristic(FFE1_CHAR);
+
+  await characteristic.startNotifications();
+  
+  characteristic.addEventListener('characteristicvaluechanged', (event) => {
+    const value = event.target.value;
+    const array = new Uint8Array(value.buffer);
+    console.log('Button Pressed! Code:', array[0]);
+    if (array[0] === 0x01) {
+      triggerPanicSOS();
+    }
+  });
+}`;
+
+  return (
+    <div className="bg-slate-950 rounded-2xl border border-slate-850 p-5 space-y-4 text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
+        <div className="flex items-center gap-2">
+          <Smartphone className="w-5 h-5 text-indigo-400" />
+          <div>
+            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-200 font-mono">
+              Production BLE Peripheral Protocol Reference
+            </h4>
+            <p className="text-[10px] text-slate-500">How this hardware binds to Capacitor-compatible Android/iOS and Web apps</p>
+          </div>
+        </div>
+        
+        <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-1 text-[10px] font-mono">
+          <button
+            onClick={() => setActiveTab("capacitor")}
+            className={`px-3 py-1 rounded-md font-bold transition cursor-pointer ${activeTab === "capacitor" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"}`}
+          >
+            Capacitor BLE
+          </button>
+          <button
+            onClick={() => setActiveTab("web-bluetooth")}
+            className={`px-3 py-1 rounded-md font-bold transition cursor-pointer ${activeTab === "web-bluetooth" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-slate-200"}`}
+          >
+            Web Bluetooth
+          </button>
+        </div>
+      </div>
+
+      <div className="relative group">
+        <button
+          onClick={() => handleCopy(activeTab === "capacitor" ? capacitorCode : webBleCode)}
+          className="absolute right-3 top-3 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-md text-[10px] font-mono transition z-10 flex items-center gap-1 cursor-pointer"
+        >
+          {isCopied ? (
+            <>
+              <Check className="w-3 h-3 text-emerald-400 mr-1" />
+              Copied!
+            </>
+          ) : (
+            "Copy Code"
+          )}
+        </button>
+
+        <pre className="bg-black/60 border border-slate-850 p-4 rounded-xl overflow-x-auto text-[10.5px] font-mono text-slate-300 leading-relaxed scrollbar-thin max-h-[300px]">
+          <code>{activeTab === "capacitor" ? capacitorCode : webBleCode}</code>
+        </pre>
+      </div>
+
+      <div className="bg-slate-900/40 border border-slate-850/60 p-4 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans text-slate-400 leading-normal">
+        <div className="space-y-1.5">
+          <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px] font-mono text-indigo-400 block">Proximity Guard Limits</span>
+          <p>
+            iTAG peripheral trackers are battery-optimized BLE Beacons. Because of antenna constraints and the 10mW transceiver chip, range degradation is extreme past 30 meters.
+          </p>
+          <p className="text-[11px] font-mono text-slate-500">
+            * Recommended: Active connection watchdog triggers an auto-fallback SMS coordinate stream if connection status slips to "Disconnected".
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px] font-mono text-indigo-400 block">Hardware Specifications</span>
+          <p>
+            • Service UUID: <code className="text-slate-200 font-mono">0xFFE0</code> • GATT Characteristic: <code className="text-slate-200 font-mono">0xFFE1</code>
+          </p>
+          <p>
+            • Button Pressed Code: <code className="text-emerald-400 font-mono">0x01</code>
+          </p>
+          <p>
+            • Expected Broadcast: Periodic advertisements every 1000ms. Deep sleep enters after 15 minutes of unbonded inactivity.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

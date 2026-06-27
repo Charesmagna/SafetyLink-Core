@@ -1,153 +1,319 @@
-import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
-import crypto from "crypto";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 
-// Interfaces & In-Memory Database State
-const defaultOrgId = "org-sa-tactical-01";
-interface Organization {
-  id: string;
-  name: string;
-  code: string;
-  subscriptionPlan: string;
-  status: "active" | "suspended";
-  twilioSid?: string;
-  twilioToken?: string;
-  whatsappPhoneId?: string;
-  whatsappToken?: string;
-  voiceEscalationNumbers?: string;
-  createdAt: string;
-}
-
-interface User {
-  id: string;
-  organizationId: string | null;
-  name: string;
-  email: string;
-  role: string; // Member, Responder, Supervisor, Admin, Owner
-  status: "pending" | "approved" | "suspended";
-  phone: string;
-  bio?: string;
-  profilePhoto?: string; // base64
-  disabilityType?: string;
-  disabilityAids?: string[];
-  accessibilityHighContrast?: boolean;
-  downloadedLanguages?: string[];
-  createdAt: string;
-}
-
-interface MedicalProfile {
-  userId: string;
-  bloodType: string;
-  allergies: string;
-  medications: string;
-  notes: string;
-  emergencyContacts: Array<{ name: string; relationship: string; phone: string }>;
-}
-
-interface HardwareDevice {
-  id: string;
-  organizationId: string;
-  name: string;
-  deviceId: string; // MAC or UUID
-  assignedUserId: string | null;
-  batteryLevel: number;
-  connectionState: "connected" | "disconnected" | "scanning";
-  rssi: number;
-  mappedAction: "SOS" | "DRILL" | "CHECK_IN" | "CANCEL";
-  createdAt: string;
-}
-
-interface Alert {
-  id: string;
-  organizationId: string;
-  userId: string;
-  userName: string;
-  latitude: number;
-  longitude: number;
-  status: "active" | "escalated" | "resolved";
-  createdAt: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
-  medicalSummary?: string;
-}
-
-interface AlertEvent {
-  id: string;
-  alertId: string;
-  type: string; // 'trigger', 'sms_sent', 'whatsapp_sent', 'voice_call', 'fcm_broadcast', 'responder_assigned', 'status_changed', 'resolved'
-  message: string;
-  timestamp: string;
-}
-
-interface SMSLog {
-  id: string;
-  orgId: string;
-  alertId: string;
-  toNumber: string;
-  provider: "Twilio" | "AfricasTalking";
-  status: "delivered" | "failed";
-  messageId: string;
-  sentAt: string;
-  errorMessage?: string;
-}
-
-interface WhatsAppLog {
-  id: string;
-  orgId: string;
-  alertId: string;
-  toNumber: string;
-  status: "delivered" | "failed";
-  messageId: string;
-  sentAt: string;
-}
-
-interface VoiceLog {
-  id: string;
-  orgId: string;
-  alertId: string;
-  contactNumber: string;
-  contactName: string;
-  attemptNumber: number;
-  method: "twilio" | "native";
-  status: "answered" | "no-answer" | "busy" | "initiated";
-  initiatedAt: string;
-  errorMessage?: string;
-}
-
-// In-Memory DB
-const organizations: Organization[] = [];
-const users: User[] = [];
-const medicalProfiles: Record<string, MedicalProfile> = {};
-const hardwarePool: HardwareDevice[] = [];
-const alerts: Alert[] = [];
-const alertEvents: AlertEvent[] = [];
-const smsLogs: SMSLog[] = [];
-const whatsappLogs: WhatsAppLog[] = [];
-const voiceLogs: VoiceLog[] = [];
-
-// Enterprise In-Memory Database Collections (v5.2.0 Upgrade)
-const incidents: any[] = [];
-const shifts: any[] = [];
-const geofences: any[] = [];
-const heartbeats: any[] = [];
-const auditLogs: any[] = [];
-const geofenceAlerts: any[] = [];
-
-// No seed data. All clients, organizations, and platform owners will register directly at runtime.
-
-
-// No seed data. All clients and platform owners will register directly at runtime.
-
-// Helper to generate organization codes: SL-XXXX-YY
-function generateOrgCode(prefix: string = "SL"): string {
-  const hex = crypto.randomBytes(2).toString("hex").toUpperCase();
-  const suffix = crypto.randomBytes(1).toString("hex").toUpperCase();
+// server.ts
+var import_express = __toESM(require("express"), 1);
+var import_path = __toESM(require("path"), 1);
+var import_vite = require("vite");
+var import_genai = require("@google/genai");
+var import_crypto = __toESM(require("crypto"), 1);
+var organizations = [];
+var users = [];
+var medicalProfiles = {};
+var hardwarePool = [];
+var alerts = [];
+var alertEvents = [];
+var smsLogs = [];
+var whatsappLogs = [];
+var voiceLogs = [];
+var incidents = [];
+var shifts = [];
+var geofences = [];
+var heartbeats = [];
+var auditLogs = [];
+var geofenceAlerts = [];
+var defaultOrgId = "org-sa-tactical-01";
+var seedOrg = {
+  id: defaultOrgId,
+  name: "Gauteng Tactical Patrols",
+  code: "GP-TACT-99",
+  subscriptionPlan: "Enterprise",
+  status: "active",
+  twilioSid: "AC99887766554433221100abcdef",
+  twilioToken: "token_encrypted_0911_xyz",
+  whatsappPhoneId: "1098485294",
+  whatsappToken: "token_wa_meta_secure",
+  voiceEscalationNumbers: "+27829998888,+27715554444",
+  createdAt: new Date(Date.now() - 30 * 24 * 3600 * 1e3).toISOString()
+};
+organizations.push(seedOrg);
+var responderUser1 = {
+  id: "user-resp-01",
+  organizationId: defaultOrgId,
+  name: "Officer Sipho Dlamini",
+  email: "sipho@gptactical.co.za",
+  role: "Responder",
+  status: "approved",
+  phone: "+27 82 555 0192",
+  bio: "Senior Field Responder - Johannesburg North Sector",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+var responderUser2 = {
+  id: "user-resp-02",
+  organizationId: defaultOrgId,
+  name: "Officer Jaco Botha",
+  email: "jaco@gptactical.co.za",
+  role: "Responder",
+  status: "approved",
+  phone: "+27 71 555 4912",
+  bio: "Tactical Canine Unit - Midrand Sector",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+var supervisorUser = {
+  id: "user-sup-01",
+  organizationId: defaultOrgId,
+  name: "Dispatcher Leandra Naidoo",
+  email: "leandra@gptactical.co.za",
+  role: "Supervisor",
+  status: "approved",
+  phone: "+27 68 007 9911",
+  bio: "Lead Command Centre Controller",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+var standardMember = {
+  id: "user-member-01",
+  organizationId: defaultOrgId,
+  name: "Tshilidzi Mukwevho",
+  email: "tshilidzi.mukwevho54@gmail.com",
+  role: "Member",
+  status: "approved",
+  phone: "+27 82 999 8888",
+  bio: "SafetyLink Lead Developer",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+users.push(responderUser1, responderUser2, supervisorUser, standardMember);
+medicalProfiles[standardMember.id] = {
+  userId: standardMember.id,
+  bloodType: "O+",
+  allergies: "Penicillin, Sulfonamides",
+  medications: "Lisinopril 10mg daily",
+  notes: "Wearable safety wristband connected. Fast responder access required.",
+  emergencyContacts: [
+    { name: "Sipho Khumalo", relationship: "Spouse", phone: "+27829998888" },
+    { name: "Leandra Naidoo", relationship: "Sister", phone: "+27715554444" }
+  ]
+};
+var iTagDevice = {
+  id: "hw-itag-01",
+  organizationId: defaultOrgId,
+  name: "iTAG Wearable Wristband (v2.1)",
+  deviceId: "FF:E0:45:90:AB:12",
+  assignedUserId: standardMember.id,
+  batteryLevel: 94,
+  connectionState: "connected",
+  rssi: -58,
+  mappedAction: "SOS",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+var keyfobDevice = {
+  id: "hw-keyfob-02",
+  organizationId: defaultOrgId,
+  name: "SirenLink Keyfob (v3.0)",
+  deviceId: "FF:E0:11:22:33:44",
+  assignedUserId: responderUser1.id,
+  batteryLevel: 88,
+  connectionState: "connected",
+  rssi: -72,
+  mappedAction: "DRILL",
+  createdAt: (/* @__PURE__ */ new Date()).toISOString()
+};
+hardwarePool.push(iTagDevice, keyfobDevice);
+shifts.push(
+  {
+    id: "shift-01",
+    organizationId: defaultOrgId,
+    userId: responderUser1.id,
+    userName: responderUser1.name,
+    role: "Responder",
+    state: "Available",
+    startedAt: new Date(Date.now() - 4 * 3600 * 1e3).toISOString(),
+    currentTask: "Patrol"
+  },
+  {
+    id: "shift-02",
+    organizationId: defaultOrgId,
+    userId: responderUser2.id,
+    userName: responderUser2.name,
+    role: "Responder",
+    state: "Busy",
+    startedAt: new Date(Date.now() - 3 * 3600 * 1e3).toISOString(),
+    currentTask: "Emergency Response"
+  },
+  {
+    id: "shift-03",
+    organizationId: defaultOrgId,
+    userId: supervisorUser.id,
+    userName: supervisorUser.name,
+    role: "Supervisor",
+    state: "Online",
+    startedAt: new Date(Date.now() - 5 * 3600 * 1e3).toISOString(),
+    currentTask: "Monitoring"
+  }
+);
+geofences.push(
+  {
+    id: "geo-01",
+    organizationId: defaultOrgId,
+    name: "Lenasia Community Patrol Sector",
+    type: "Community Zone",
+    centerLat: -26.3085,
+    centerLng: 27.8344,
+    radiusMeters: 5e3
+  },
+  {
+    id: "geo-02",
+    organizationId: defaultOrgId,
+    name: "Sandton CBD Safe Zone",
+    type: "Patrol Zone",
+    centerLat: -26.1076,
+    centerLng: 28.0567,
+    radiusMeters: 3e3
+  },
+  {
+    id: "geo-03",
+    organizationId: defaultOrgId,
+    name: "Mitchells Plain Watch Boundary",
+    type: "Community Zone",
+    centerLat: -34.0485,
+    centerLng: 18.6052,
+    radiusMeters: 4e3
+  }
+);
+heartbeats.push(
+  {
+    id: "hb-01",
+    deviceId: iTagDevice.id,
+    organizationId: defaultOrgId,
+    userId: standardMember.id,
+    rssi: -58,
+    batteryPercent: 94,
+    connectionStatus: "Connected",
+    latitude: -26.3085,
+    longitude: 27.8344,
+    lastSeen: (/* @__PURE__ */ new Date()).toISOString()
+  },
+  {
+    id: "hb-02",
+    deviceId: keyfobDevice.id,
+    organizationId: defaultOrgId,
+    userId: responderUser1.id,
+    rssi: -92,
+    batteryPercent: 88,
+    connectionStatus: "Weak Signal",
+    latitude: -26.2041,
+    longitude: 28.0473,
+    lastSeen: new Date(Date.now() - 90 * 1e3).toISOString()
+  }
+);
+auditLogs.push(
+  {
+    id: "audit-01",
+    organizationId: defaultOrgId,
+    userId: supervisorUser.id,
+    userName: supervisorUser.name,
+    action: "API_CREDENTIAL_CHANGE",
+    category: "Config",
+    timestamp: new Date(Date.now() - 2 * 3600 * 1e3).toISOString(),
+    details: "Supervisors updated Twilio secure parameters for Gauteng clusters.",
+    ipAddress: "196.25.255.1"
+  },
+  {
+    id: "audit-02",
+    organizationId: defaultOrgId,
+    userId: standardMember.id,
+    userName: standardMember.name,
+    action: "HARDWARE_ASSIGN",
+    category: "Hardware",
+    timestamp: new Date(Date.now() - 1 * 3600 * 1e3).toISOString(),
+    details: "Assigned iTAG wristband FF:E0:45:90:AB:12 to lead emergency contact.",
+    ipAddress: "196.25.255.45"
+  }
+);
+var seedAlertId = "alt-seed-sos-01";
+var seedAlert = {
+  id: seedAlertId,
+  organizationId: defaultOrgId,
+  userId: standardMember.id,
+  userName: standardMember.name,
+  latitude: -26.3085,
+  longitude: 27.8344,
+  status: "escalated",
+  createdAt: new Date(Date.now() - 30 * 60 * 1e3).toISOString(),
+  medicalSummary: "Blood: O+ | Allergies: Penicillin, Sulfonamides"
+};
+alerts.push(seedAlert);
+alertEvents.push(
+  {
+    id: "evt-seed-1",
+    alertId: seedAlertId,
+    type: "trigger",
+    message: "SOS Emergency alarm initiated by Tshilidzi Mukwevho near Lenasia, GP",
+    timestamp: new Date(Date.now() - 30 * 60 * 1e3).toISOString()
+  },
+  {
+    id: "evt-seed-2",
+    alertId: seedAlertId,
+    type: "sms_sent",
+    message: "SMS Alert dispatched via Twilio to primary contacts.",
+    timestamp: new Date(Date.now() - 29 * 60 * 1e3).toISOString()
+  },
+  {
+    id: "evt-seed-3",
+    alertId: seedAlertId,
+    type: "voice_call",
+    message: "Twilio voice call failed with No-Answer. Cascading down to backup responders.",
+    timestamp: new Date(Date.now() - 28 * 60 * 1e3).toISOString()
+  }
+);
+incidents.push({
+  id: "inc-" + import_crypto.default.randomUUID(),
+  organizationId: defaultOrgId,
+  alertId: seedAlertId,
+  userName: standardMember.name,
+  userId: standardMember.id,
+  mode: "standard",
+  status: "Escalated",
+  createdAt: seedAlert.createdAt,
+  assignedResponderId: responderUser1.id,
+  assignedResponderName: responderUser1.name,
+  actionsTaken: ["GPS telemetry mapped", "Twilio automated fallback activated", "Officer Sipho Dlamini routed to Lenasia sector"],
+  notes: "Caller requires high priority medical response support. Officer Dlamini ETA 4 minutes.",
+  gpsTrail: [
+    { latitude: -26.3085, longitude: 27.8344, timestamp: new Date(Date.now() - 30 * 60 * 1e3).toISOString() },
+    { latitude: -26.308, longitude: 27.8342, timestamp: new Date(Date.now() - 25 * 60 * 1e3).toISOString() }
+  ],
+  timeline: [
+    { message: "SOS Alert received from GPS mobile tracker.", timestamp: new Date(Date.now() - 30 * 60 * 1e3).toISOString() },
+    { message: "Twilio SMS dispatches sent to primary contact.", timestamp: new Date(Date.now() - 29 * 60 * 1e3).toISOString() },
+    { message: "Escalation initiated. Shift Responder Sipho Dlamini assigned.", timestamp: new Date(Date.now() - 25 * 60 * 1e3).toISOString() }
+  ]
+});
+function generateOrgCode(prefix = "SL") {
+  const hex = import_crypto.default.randomBytes(2).toString("hex").toUpperCase();
+  const suffix = import_crypto.default.randomBytes(1).toString("hex").toUpperCase();
   return `${prefix}-${hex}-${suffix}`;
 }
-
-function getClosestSouthAfricanCity(lat: number, lng: number): string {
+function getClosestSouthAfricanCity(lat, lng) {
   const cities = [
     { name: "Johannesburg, GP", lat: -26.2041, lng: 28.0473 },
     { name: "Cape Town, WC", lat: -33.9249, lng: 18.4241 },
@@ -171,21 +337,11 @@ function getClosestSouthAfricanCity(lat: number, lng: number): string {
   }
   return closest.name;
 }
-
-// AES Encryption mock for credentials (per requirements, keep them secure)
-function encryptAES(text: string): string {
-  // Simple deterministic base64 encode as simple mock AES for in-memory safety
-  return Buffer.from(text).toString("base64");
-}
-
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
-
-  app.use(express.json({ limit: "10mb" }));
-
-  // Initialize Gemini Client Lazily as per guidelines to prevent startup crashes
-  let ai: GoogleGenAI | null = null;
+  const app = (0, import_express.default)();
+  const PORT = 3e3;
+  app.use(import_express.default.json({ limit: "10mb" }));
+  let ai = null;
   function getAI() {
     if (!ai) {
       const key = process.env.GEMINI_API_KEY;
@@ -193,14 +349,10 @@ async function startServer() {
         console.warn("GEMINI_API_KEY is not defined. AI analysis functions will return simulated responses.");
         return null;
       }
-      ai = new GoogleGenAI({ apiKey: key });
+      ai = new import_genai.GoogleGenAI({ apiKey: key });
     }
     return ai;
   }
-
-  // --- API ROUTES ---
-
-  // Health check
   app.get("/api/health", (req, res) => {
     res.json({
       status: "ok",
@@ -213,38 +365,29 @@ async function startServer() {
       }
     });
   });
-
-  // --- ORGANIZATIONS ENDPOINTS ---
   app.post("/api/organizations", (req, res) => {
     const { name, subscriptionPlan } = req.body;
     if (!name) {
       return res.status(400).json({ error: "Organization name is required." });
     }
-
     const prefix = name.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "SL";
     const code = generateOrgCode(prefix);
-
-    const newOrg: Organization = {
-      id: "org-" + crypto.randomUUID(),
+    const newOrg = {
+      id: "org-" + import_crypto.default.randomUUID(),
       name,
       code,
       subscriptionPlan: subscriptionPlan || "Enterprise",
       status: "active",
-      createdAt: new Date().toISOString()
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-
     organizations.push(newOrg);
-
-    // Automatically log this admin action
     console.log(`[AUDIT] Organization created: ${name} (${code})`);
-
     res.status(201).json(newOrg);
   });
-
   app.put("/api/organizations/:id/credentials", (req, res) => {
     const { id } = req.params;
     const { twilioSid, twilioToken, whatsappPhoneId, whatsappToken, voiceEscalationNumbers } = req.body;
-    const org = organizations.find(o => o.id === id);
+    const org = organizations.find((o) => o.id === id);
     if (!org) {
       return res.status(404).json({ error: "Organization not found." });
     }
@@ -256,14 +399,12 @@ async function startServer() {
     console.log(`[AUDIT] Organization API credentials updated for: ${org.name}`);
     res.json(org);
   });
-
   app.get("/api/organizations", (req, res) => {
     res.json(organizations);
   });
-
   app.get("/api/organizations/:code", (req, res) => {
     const { code } = req.params;
-    const org = organizations.find(o => o.code.toUpperCase() === code.toUpperCase());
+    const org = organizations.find((o) => o.code.toUpperCase() === code.toUpperCase());
     if (!org) {
       return res.status(404).json({ error: "Invalid organization code. Please verify and try again." });
     }
@@ -272,50 +413,37 @@ async function startServer() {
     }
     res.json(org);
   });
-
-  // --- AUTH ENDPOINTS ---
   app.post("/api/auth/register", (req, res) => {
-    const { name, email, password, phone, role, orgCode, disabilityType, disabilityAids } = req.body;
-
+    const { name, email, password, phone, role, orgCode } = req.body;
     if (!name || !email || !password || !phone || !role) {
       return res.status(400).json({ error: "Missing required registration parameters." });
     }
-
-    let orgId: string | null = null;
+    let orgId = null;
     if (role !== "Platform Owner") {
       if (!orgCode) {
         return res.status(400).json({ error: "Organization code is required for registration." });
       }
-      const org = organizations.find(o => o.code.toUpperCase() === orgCode.toUpperCase());
+      const org = organizations.find((o) => o.code.toUpperCase() === orgCode.toUpperCase());
       if (!org) {
         return res.status(404).json({ error: "Organization code not found." });
       }
       orgId = org.id;
     }
-
-    // Check if user exists
-    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
       return res.status(400).json({ error: "User with this email already exists." });
     }
-
-    const newUser: User = {
-      id: "usr-" + crypto.randomUUID(),
+    const newUser = {
+      id: "usr-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       name,
       email,
       role,
       phone,
-      status: role === "Platform Owner" ? "approved" : "pending", // Default standard users to pending as required
-      disabilityType: disabilityType || "none",
-      disabilityAids: disabilityAids || [],
-      accessibilityHighContrast: false,
-      downloadedLanguages: ["english"],
-      createdAt: new Date().toISOString()
+      status: role === "Platform Owner" ? "approved" : "pending",
+      // Default standard users to pending as required
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-
     users.push(newUser);
-
-    // Initialize Default Medical profile
     medicalProfiles[newUser.id] = {
       userId: newUser.id,
       bloodType: "Unknown",
@@ -324,122 +452,42 @@ async function startServer() {
       notes: "",
       emergencyContacts: []
     };
-
     console.log(`[AUDIT] User registered: ${name} (${role}), status: ${newUser.status}`);
-
     res.status(201).json({
       user: newUser,
       message: role === "Platform Owner" ? "Registered successfully." : "Registration submitted. Pending Admin approval."
     });
   });
-
   app.post("/api/auth/login", (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
-
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials." });
     }
-
     if (user.status === "pending") {
       return res.status(403).json({ error: "Your account is pending administrator approval." });
     }
-
     if (user.status === "suspended") {
       return res.status(403).json({ error: "Your account has been suspended." });
     }
-
-    // Return dummy token & user payload
     const token = "jwt-token-mock-" + user.id;
     console.log(`[AUDIT] User logged in: ${user.name}`);
-
     res.json({
       token,
       user,
       medicalProfile: medicalProfiles[user.id] || null
     });
   });
-
-  app.post("/api/auth/quick-onboard", (req, res) => {
-    const { name, email, phone, orgName, role } = req.body;
-    if (!name || !email || !phone || !orgName || !role) {
-      return res.status(400).json({ error: "All onboarding parameters are required." });
-    }
-
-    // 1. Find or Create Organization
-    let org = organizations.find(o => o.name.toLowerCase() === orgName.toLowerCase());
-    if (!org) {
-      const orgId = "org-" + crypto.randomUUID();
-      org = {
-        id: orgId,
-        name: orgName,
-        code: orgName.replace(/\s+/g, "-").toUpperCase().slice(0, 10) + "-ONB",
-        subscriptionPlan: "Enterprise",
-        status: "active",
-        createdAt: new Date().toISOString()
-      };
-      organizations.push(org);
-      console.log(`[ONBOARD] Auto-created organization: ${org.name}`);
-    }
-
-    // 2. Find or Create User
-    let user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user) {
-      // Update existing user to the new role and org
-      user.name = name;
-      user.phone = phone;
-      user.role = role;
-      user.organizationId = org.id;
-      user.status = "approved";
-      console.log(`[ONBOARD] Updated existing user session: ${user.name}`);
-    } else {
-      // Create new user
-      user = {
-        id: "usr-" + crypto.randomUUID(),
-        organizationId: org.id,
-        name,
-        email,
-        phone,
-        role,
-        status: "approved",
-        disabilityType: "none",
-        disabilityAids: [],
-        accessibilityHighContrast: false,
-        downloadedLanguages: ["english"],
-        createdAt: new Date().toISOString()
-      };
-      users.push(user);
-      console.log(`[ONBOARD] Created new user session: ${user.name}`);
-    }
-
-    // 3. Ensure medical profile exists
-    if (!medicalProfiles[user.id]) {
-      medicalProfiles[user.id] = {
-        userId: user.id,
-        bloodType: "O+",
-        allergies: "None reported",
-        medications: "None",
-        notes: "Auto-provisioned secure setup.",
-        emergencyContacts: []
-      };
-    }
-
-    res.json({
-      user,
-      medicalProfile: medicalProfiles[user.id]
-    });
-  });
-
   app.get("/api/auth/me", (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer jwt-token-mock-")) {
       return res.status(401).json({ error: "Unauthorized access." });
     }
     const userId = authHeader.replace("Bearer jwt-token-mock-", "");
-    const user = users.find(u => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
@@ -448,24 +496,21 @@ async function startServer() {
       medicalProfile: medicalProfiles[userId] || null
     });
   });
-
-  // Approved user list / Approval controls
   app.get("/api/users", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(users.filter(u => u.organizationId === orgId));
+      res.json(users.filter((u) => u.organizationId === orgId));
     } else {
       res.json(users);
     }
   });
-
   app.put("/api/users/:id/status", (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     if (!["approved", "suspended", "pending"].includes(status)) {
       return res.status(400).json({ error: "Invalid status value." });
     }
-    const user = users.find(u => u.id === id);
+    const user = users.find((u) => u.id === id);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
@@ -473,33 +518,19 @@ async function startServer() {
     console.log(`[AUDIT] User status changed for ${user.name} to ${status}`);
     res.json(user);
   });
-
-  // --- USER PROFILE & MEDICAL EDITORS ---
   app.put("/api/users/:id/profile", (req, res) => {
     const { id } = req.params;
-    const { 
-      name, phone, bio, profilePhoto, 
-      disabilityType, disabilityAids, 
-      accessibilityHighContrast, downloadedLanguages 
-    } = req.body;
-
-    const user = users.find(u => u.id === id);
+    const { name, phone, bio, profilePhoto } = req.body;
+    const user = users.find((u) => u.id === id);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
-
     if (name) user.name = name;
     if (phone) user.phone = phone;
-    if (bio !== undefined) user.bio = bio;
-    if (profilePhoto !== undefined) user.profilePhoto = profilePhoto;
-    if (disabilityType !== undefined) user.disabilityType = disabilityType;
-    if (disabilityAids !== undefined) user.disabilityAids = disabilityAids;
-    if (accessibilityHighContrast !== undefined) user.accessibilityHighContrast = accessibilityHighContrast;
-    if (downloadedLanguages !== undefined) user.downloadedLanguages = downloadedLanguages;
-
+    if (bio !== void 0) user.bio = bio;
+    if (profilePhoto !== void 0) user.profilePhoto = profilePhoto;
     res.json(user);
   });
-
   app.get("/api/users/:id/medical", (req, res) => {
     const { id } = req.params;
     const med = medicalProfiles[id];
@@ -508,11 +539,9 @@ async function startServer() {
     }
     res.json(med);
   });
-
   app.put("/api/users/:id/medical", (req, res) => {
     const { id } = req.params;
     const { bloodType, allergies, medications, notes, emergencyContacts } = req.body;
-
     if (!medicalProfiles[id]) {
       medicalProfiles[id] = {
         userId: id,
@@ -523,48 +552,35 @@ async function startServer() {
         emergencyContacts: []
       };
     }
-
     const med = medicalProfiles[id];
-    if (bloodType !== undefined) med.bloodType = bloodType;
-    if (allergies !== undefined) med.allergies = allergies;
-    if (medications !== undefined) med.medications = medications;
-    if (notes !== undefined) med.notes = notes;
-    if (emergencyContacts !== undefined) med.emergencyContacts = emergencyContacts;
-
+    if (bloodType !== void 0) med.bloodType = bloodType;
+    if (allergies !== void 0) med.allergies = allergies;
+    if (medications !== void 0) med.medications = medications;
+    if (notes !== void 0) med.notes = notes;
+    if (emergencyContacts !== void 0) med.emergencyContacts = emergencyContacts;
     res.json(med);
   });
-
-  // --- ALERTS (SOS WORKFLOW) ---
   app.post("/api/alerts", (req, res) => {
     const { userId, latitude, longitude, clientGeneratedId } = req.body;
-
     if (!userId || !latitude || !longitude) {
       return res.status(400).json({ error: "Missing alert location parameters." });
     }
-
-    const user = users.find(u => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (!user) {
       return res.status(404).json({ error: "Alert user not found." });
     }
-
     const orgId = user.organizationId;
     if (!orgId) {
       return res.status(400).json({ error: "User must belong to an organization to trigger an alert." });
     }
-
-    // Prevent duplicate processing via client generated ID
-    const existingAlert = clientGeneratedId ? alerts.find(a => a.id === clientGeneratedId) : null;
+    const existingAlert = clientGeneratedId ? alerts.find((a) => a.id === clientGeneratedId) : null;
     if (existingAlert) {
       return res.json(existingAlert);
     }
-
     const med = medicalProfiles[userId];
-    const medicalSummary = med
-      ? `Blood: ${med.bloodType} | Allergies: ${med.allergies || "None"} | Meds: ${med.medications || "None"} | Contacts Count: ${med.emergencyContacts?.length || 0}`
-      : "No medical information configured.";
-
-    const newAlert: Alert = {
-      id: clientGeneratedId || "alt-" + crypto.randomUUID(),
+    const medicalSummary = med ? `Blood: ${med.bloodType} | Allergies: ${med.allergies || "None"} | Meds: ${med.medications || "None"} | Contacts Count: ${med.emergencyContacts?.length || 0}` : "No medical information configured.";
+    const newAlert = {
+      id: clientGeneratedId || "alt-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       userId,
       userName: user.name,
@@ -572,81 +588,67 @@ async function startServer() {
       longitude,
       status: "active",
       medicalSummary,
-      createdAt: new Date().toISOString()
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-
     alerts.push(newAlert);
-
-    const org = organizations.find(o => o.id === orgId);
+    const org = organizations.find((o) => o.id === orgId);
     const twilioGate = org?.twilioSid ? `Custom Org SID [${org.twilioSid.slice(0, 8)}...]` : "System Default Gate";
     const waGate = org?.whatsappPhoneId ? `Custom Meta ID [${org.whatsappPhoneId}]` : "System Default Meta API";
-
-    // Create Initial Trigger Event
     alertEvents.push({
-      id: "evt-" + crypto.randomUUID(),
+      id: "evt-" + import_crypto.default.randomUUID(),
       alertId: newAlert.id,
       type: "trigger",
       message: `SOS Emergency alarm initiated by ${user.name} at coordinates: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}. Multi-Tenant Isolation Code: ${org?.code || "DEFAULT"}.`,
-      timestamp: new Date().toISOString()
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
-
-    // Escalation Steps Simulation
-    const timestampStr = new Date().toLocaleTimeString();
-    
-    // 1. WhatsApp Escalation
+    const timestampStr = (/* @__PURE__ */ new Date()).toLocaleTimeString();
     if (med && med.emergencyContacts && med.emergencyContacts.length > 0) {
       med.emergencyContacts.forEach((contact, idx) => {
-        const waMsgId = "wa-sim-" + crypto.randomBytes(4).toString("hex");
+        const waMsgId = "wa-sim-" + import_crypto.default.randomBytes(4).toString("hex");
         whatsappLogs.push({
-          id: "wa-log-" + crypto.randomUUID(),
+          id: "wa-log-" + import_crypto.default.randomUUID(),
           orgId,
           alertId: newAlert.id,
           toNumber: contact.phone,
           status: "delivered",
           messageId: waMsgId,
-          sentAt: new Date().toISOString()
+          sentAt: (/* @__PURE__ */ new Date()).toISOString()
         });
-        
         alertEvents.push({
-          id: "evt-" + crypto.randomUUID(),
+          id: "evt-" + import_crypto.default.randomUUID(),
           alertId: newAlert.id,
           type: "whatsapp_sent",
-          message: `🚨 WhatsApp Alert dispatched via ${waGate} to ${contact.name} (${contact.phone}): "SAFETY-LINK: Member ${user.name} triggered SOS. Location: https://maps.google.com/?q=${latitude},${longitude}"`,
-          timestamp: new Date().toISOString()
+          message: `\u{1F6A8} WhatsApp Alert dispatched via ${waGate} to ${contact.name} (${contact.phone}): "SAFETY-LINK: Member ${user.name} triggered SOS. Location: https://maps.google.com/?q=${latitude},${longitude}"`,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
       });
     }
-
-    // 2. SMS Escalation
     if (med && med.emergencyContacts && med.emergencyContacts.length > 0) {
       med.emergencyContacts.forEach((contact, idx) => {
-        const smsMsgId = "sms-sim-" + crypto.randomBytes(4).toString("hex");
+        const smsMsgId = "sms-sim-" + import_crypto.default.randomBytes(4).toString("hex");
         smsLogs.push({
-          id: "sms-log-" + crypto.randomUUID(),
+          id: "sms-log-" + import_crypto.default.randomUUID(),
           orgId,
           alertId: newAlert.id,
           toNumber: contact.phone,
           provider: "Twilio",
           status: "delivered",
           messageId: smsMsgId,
-          sentAt: new Date().toISOString()
+          sentAt: (/* @__PURE__ */ new Date()).toISOString()
         });
-
         alertEvents.push({
-          id: "evt-" + crypto.randomUUID(),
+          id: "evt-" + import_crypto.default.randomUUID(),
           alertId: newAlert.id,
           type: "sms_sent",
-          message: `💬 SMS Alert dispatched via ${twilioGate} to ${contact.name} (${contact.phone}): "Safety-Link Alert! ${user.name} needs help at ${latitude.toFixed(4)},${longitude.toFixed(4)}"`,
-          timestamp: new Date().toISOString()
+          message: `\u{1F4AC} SMS Alert dispatched via ${twilioGate} to ${contact.name} (${contact.phone}): "Safety-Link Alert! ${user.name} needs help at ${latitude.toFixed(4)},${longitude.toFixed(4)}"`,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
       });
     }
-
-    // 3. Voice Call Escalation simulation (First contact initiated, cascading if no answer)
     if (med && med.emergencyContacts && med.emergencyContacts.length > 0) {
       const primaryContact = med.emergencyContacts[0];
       voiceLogs.push({
-        id: "voice-log-" + crypto.randomUUID(),
+        id: "voice-log-" + import_crypto.default.randomUUID(),
         orgId,
         alertId: newAlert.id,
         contactNumber: primaryContact.phone,
@@ -654,176 +656,142 @@ async function startServer() {
         attemptNumber: 1,
         method: "twilio",
         status: "initiated",
-        initiatedAt: new Date().toISOString()
+        initiatedAt: (/* @__PURE__ */ new Date()).toISOString()
       });
-
       alertEvents.push({
-        id: "evt-" + crypto.randomUUID(),
+        id: "evt-" + import_crypto.default.randomUUID(),
         alertId: newAlert.id,
         type: "voice_call",
-        message: `📞 Twilio Automated Voice escalation initiated for ${primaryContact.name} (${primaryContact.phone}). TwiML: Reading out emergency alarm.`,
-        timestamp: new Date().toISOString()
+        message: `\u{1F4DE} Twilio Automated Voice escalation initiated for ${primaryContact.name} (${primaryContact.phone}). TwiML: Reading out emergency alarm.`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     } else {
-      // Fallback native loop event
       alertEvents.push({
-        id: "evt-" + crypto.randomUUID(),
+        id: "evt-" + import_crypto.default.randomUUID(),
         alertId: newAlert.id,
         type: "voice_call",
-        message: `⚠️ No emergency contacts available for voice escalation. Mobile client will prompt direct phone fallback.`,
-        timestamp: new Date().toISOString()
+        message: `\u26A0\uFE0F No emergency contacts available for voice escalation. Mobile client will prompt direct phone fallback.`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
-    // 4. FCM push notification to all responders and supervisors in the organization
-    const orgResponders = users.filter(u => u.organizationId === orgId && ["Responder", "Supervisor", "Admin"].includes(u.role));
+    const orgResponders = users.filter((u) => u.organizationId === orgId && ["Responder", "Supervisor", "Admin"].includes(u.role));
     if (orgResponders.length > 0) {
       const nearestCity = getClosestSouthAfricanCity(latitude, longitude);
       alertEvents.push({
-        id: "evt-" + crypto.randomUUID(),
+        id: "evt-" + import_crypto.default.randomUUID(),
         alertId: newAlert.id,
         type: "fcm_broadcast",
-        message: `📱 FCM Alert dispatched to ${orgResponders.length} active responders: "${user.name} triggered SOS near ${nearestCity}"`,
-        timestamp: new Date().toISOString()
+        message: `\u{1F4F1} FCM Alert dispatched to ${orgResponders.length} active responders: "${user.name} triggered SOS near ${nearestCity}"`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     console.log(`[AUDIT] Emergency SOS Triggered! Alert: ${newAlert.id}, User: ${user.name}`);
-
-    // Create Incident for the complete Incident Lifecycle (Phase 6)
-    const assignedResp = shifts.find(s => s.state === "Available" && s.role === "Responder");
+    const assignedResp = shifts.find((s) => s.state === "Available" && s.role === "Responder");
     const newIncident = {
-      id: "inc-" + crypto.randomUUID(),
+      id: "inc-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       alertId: newAlert.id,
       userName: user.name,
-      userId: userId,
-      mode: (req.body.mode || "standard") as any,
-      status: "Open" as const,
+      userId,
+      mode: req.body.mode || "standard",
+      status: "Open",
       createdAt: newAlert.createdAt,
-      assignedResponderId: assignedResp ? assignedResp.userId : undefined,
-      assignedResponderName: assignedResp ? assignedResp.userName : undefined,
+      assignedResponderId: assignedResp ? assignedResp.userId : void 0,
+      assignedResponderName: assignedResp ? assignedResp.userName : void 0,
       actionsTaken: ["Alert received by automated gateway"],
       notes: req.body.notes || "SOS alert triggered via device interface.",
-      gpsTrail: [{ latitude, longitude, timestamp: new Date().toISOString() }],
+      gpsTrail: [{ latitude, longitude, timestamp: (/* @__PURE__ */ new Date()).toISOString() }],
       timeline: [
-        { message: "SOS alert triggered. Emergency channels activated.", timestamp: new Date().toISOString() }
+        { message: "SOS alert triggered. Emergency channels activated.", timestamp: (/* @__PURE__ */ new Date()).toISOString() }
       ]
     };
     incidents.push(newIncident);
-
-    // Update the responder's shift state to 'Responding' (Phase 7)
     if (assignedResp) {
       assignedResp.state = "Responding";
       assignedResp.currentTask = "Emergency Response";
     }
-
-    // Write Audit Log (Phase 11)
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       userId,
       userName: user.name,
       action: "ALERT_STATUS_CHANGE",
       category: "Alert",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: `SOS Alarm triggered. Incident ${newIncident.id.slice(0, 8)} created for ${user.name} (${user.role}). Mode: ${newIncident.mode.toUpperCase()}`,
       ipAddress: "196.25.2.21"
     });
-
     res.status(201).json({
       alert: newAlert,
-      events: alertEvents.filter(e => e.alertId === newAlert.id),
+      events: alertEvents.filter((e) => e.alertId === newAlert.id),
       incident: newIncident
     });
   });
-
-  // Get alerts
   app.get("/api/alerts", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     let filteredAlerts = alerts;
     if (orgId) {
-      filteredAlerts = alerts.filter(a => a.organizationId === orgId);
+      filteredAlerts = alerts.filter((a) => a.organizationId === orgId);
     }
-    // Sort latest first
     filteredAlerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     res.json(filteredAlerts);
   });
-
-  // Get alert events
   app.get("/api/alerts/:id/events", (req, res) => {
     const { id } = req.params;
-    const events = alertEvents.filter(e => e.alertId === id);
+    const events = alertEvents.filter((e) => e.alertId === id);
     res.json(events);
   });
-
-  // Resolve alert
   app.put("/api/alerts/:id/resolve", (req, res) => {
     const { id } = req.params;
     const { resolvedBy } = req.body;
-
-    const alert = alerts.find(a => a.id === id);
+    const alert = alerts.find((a) => a.id === id);
     if (!alert) {
       return res.status(404).json({ error: "Alert not found." });
     }
-
     alert.status = "resolved";
-    alert.resolvedAt = new Date().toISOString();
+    alert.resolvedAt = (/* @__PURE__ */ new Date()).toISOString();
     alert.resolvedBy = resolvedBy || "Operator Control";
-
-    // Update Incident
-    const incident = incidents.find(i => i.alertId === id);
+    const incident = incidents.find((i) => i.alertId === id);
     if (incident) {
       incident.status = "Resolved";
       incident.resolvedAt = alert.resolvedAt;
       incident.actionsTaken.push(`Marked Resolved by ${alert.resolvedBy}`);
       incident.timeline.push({
-        message: `✅ Incident resolved by ${alert.resolvedBy}. Operations successfully closed.`,
-        timestamp: new Date().toISOString()
+        message: `\u2705 Incident resolved by ${alert.resolvedBy}. Operations successfully closed.`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     alertEvents.push({
-      id: "evt-" + crypto.randomUUID(),
+      id: "evt-" + import_crypto.default.randomUUID(),
       alertId: id,
       type: "resolved",
-      message: `✅ Alert marked RESOLVED by ${alert.resolvedBy}. Response operations closed.`,
-      timestamp: new Date().toISOString()
+      message: `\u2705 Alert marked RESOLVED by ${alert.resolvedBy}. Response operations closed.`,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
-
-    // Write Audit Log
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: alert.organizationId,
       action: "ALERT_STATUS_CHANGE",
       category: "Alert",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: `Alert ${alert.id.slice(0, 8)} successfully resolved by ${alert.resolvedBy}. Operations concluded.`,
       ipAddress: "196.25.2.22"
     });
-
     console.log(`[AUDIT] Alert ${id} resolved by ${alert.resolvedBy}`);
     res.json(alert);
   });
-
-  // Update alert status (escalate)
   app.put("/api/alerts/:id/status", (req, res) => {
     const { id } = req.params;
     const { status, operatorMessage } = req.body;
-
     if (!["active", "escalated", "resolved"].includes(status)) {
       return res.status(400).json({ error: "Invalid status." });
     }
-
-    const alert = alerts.find(a => a.id === id);
+    const alert = alerts.find((a) => a.id === id);
     if (!alert) {
       return res.status(404).json({ error: "Alert not found." });
     }
-
     alert.status = status;
-
-    // Update Incident
-    const incident = incidents.find(i => i.alertId === id);
+    const incident = incidents.find((i) => i.alertId === id);
     if (incident) {
       if (status === "escalated") {
         incident.status = "Escalated";
@@ -831,69 +799,57 @@ async function startServer() {
         incident.status = "Acknowledged";
       } else if (status === "resolved") {
         incident.status = "Resolved";
-        incident.resolvedAt = new Date().toISOString();
+        incident.resolvedAt = (/* @__PURE__ */ new Date()).toISOString();
       }
       if (operatorMessage) {
         incident.notes += ` | Operator Note: ${operatorMessage}`;
       }
       incident.timeline.push({
-        message: `🚨 Incident status changed to ${incident.status} by Command Centre operator.`,
-        timestamp: new Date().toISOString()
+        message: `\u{1F6A8} Incident status changed to ${incident.status} by Command Centre operator.`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     alertEvents.push({
-      id: "evt-" + crypto.randomUUID(),
+      id: "evt-" + import_crypto.default.randomUUID(),
       alertId: id,
       type: "status_changed",
-      message: `🚨 Alert status updated to ${status.toUpperCase()}. Operator note: "${operatorMessage || 'No notes added'}"`,
-      timestamp: new Date().toISOString()
+      message: `\u{1F6A8} Alert status updated to ${status.toUpperCase()}. Operator note: "${operatorMessage || "No notes added"}"`,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
-
-    // Write Audit Log
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: alert.organizationId,
       action: "ALERT_STATUS_CHANGE",
       category: "Alert",
-      timestamp: new Date().toISOString(),
-      details: `Alert ${alert.id.slice(0, 8)} status set to ${status.toUpperCase()}. Note: ${operatorMessage || 'None'}`,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      details: `Alert ${alert.id.slice(0, 8)} status set to ${status.toUpperCase()}. Note: ${operatorMessage || "None"}`,
       ipAddress: "196.25.2.22"
     });
-
     console.log(`[AUDIT] Alert ${id} status set to ${status}`);
     res.json(alert);
   });
-
-  // --- HARDWARE / BLE INTEGRATION ENDPOINTS ---
   app.get("/api/hardware", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(hardwarePool.filter(h => h.organizationId === orgId));
+      res.json(hardwarePool.filter((h) => h.organizationId === orgId));
     } else {
       res.json(hardwarePool);
     }
   });
-
   app.post("/api/hardware", (req, res) => {
     const { name, deviceId, orgId } = req.body;
     if (!name || !deviceId || !orgId) {
       return res.status(400).json({ error: "Missing hardware name, MAC address, or organization ID." });
     }
-
-    // Verify org
-    const org = organizations.find(o => o.id === orgId);
+    const org = organizations.find((o) => o.id === orgId);
     if (!org) {
       return res.status(404).json({ error: "Target organization not found." });
     }
-
-    // Check duplicates
-    if (hardwarePool.some(h => h.deviceId.toLowerCase() === deviceId.toLowerCase())) {
+    if (hardwarePool.some((h) => h.deviceId.toLowerCase() === deviceId.toLowerCase())) {
       return res.status(400).json({ error: "This physical BLE button MAC address is already registered in the system." });
     }
-
-    const newDevice: HardwareDevice = {
-      id: "hw-" + crypto.randomUUID(),
+    const newDevice = {
+      id: "hw-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       name,
       deviceId,
@@ -902,39 +858,32 @@ async function startServer() {
       connectionState: "disconnected",
       rssi: -75,
       mappedAction: "SOS",
-      createdAt: new Date().toISOString()
+      createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-
     hardwarePool.push(newDevice);
     console.log(`[AUDIT] BLE Device registered in Pool: ${name} (${deviceId})`);
     res.status(201).json(newDevice);
   });
-
   app.post("/api/hardware/assign", (req, res) => {
     const { deviceId, userId } = req.body;
-    const device = hardwarePool.find(h => h.id === deviceId);
+    const device = hardwarePool.find((h) => h.id === deviceId);
     if (!device) {
       return res.status(404).json({ error: "Hardware device not found." });
     }
-
-    const user = users.find(u => u.id === userId);
+    const user = users.find((u) => u.id === userId);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
     }
-
-    // Unassign user from other devices first to avoid mapping collusions
-    hardwarePool.forEach(h => {
+    hardwarePool.forEach((h) => {
       if (h.assignedUserId === userId) h.assignedUserId = null;
     });
-
     device.assignedUserId = userId;
     console.log(`[AUDIT] Hardware ${device.name} assigned to user ${user.name}`);
     res.json(device);
   });
-
   app.post("/api/hardware/unassign", (req, res) => {
     const { deviceId } = req.body;
-    const device = hardwarePool.find(h => h.id === deviceId);
+    const device = hardwarePool.find((h) => h.id === deviceId);
     if (!device) {
       return res.status(404).json({ error: "Hardware device not found." });
     }
@@ -943,10 +892,9 @@ async function startServer() {
     console.log(`[AUDIT] Hardware ${device.name} unassigned from user ${oldUser}`);
     res.json(device);
   });
-
   app.delete("/api/hardware/:id", (req, res) => {
     const { id } = req.params;
-    const idx = hardwarePool.findIndex(h => h.id === id);
+    const idx = hardwarePool.findIndex((h) => h.id === id);
     if (idx === -1) {
       return res.status(404).json({ error: "Device not found." });
     }
@@ -955,269 +903,230 @@ async function startServer() {
     console.log(`[AUDIT] Hardware ${dev.name} removed from registry`);
     res.json({ success: true, message: "Device removed." });
   });
-
-  // --- ESCALATION SIMULATOR SYSTEM LOGS ---
   app.get("/api/logs/sms", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(smsLogs.filter(l => l.orgId === orgId));
+      res.json(smsLogs.filter((l) => l.orgId === orgId));
     } else {
       res.json(smsLogs);
     }
   });
-
   app.get("/api/logs/whatsapp", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(whatsappLogs.filter(l => l.orgId === orgId));
+      res.json(whatsappLogs.filter((l) => l.orgId === orgId));
     } else {
       res.json(whatsappLogs);
     }
   });
-
   app.get("/api/logs/voice", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(voiceLogs.filter(l => l.orgId === orgId));
+      res.json(voiceLogs.filter((l) => l.orgId === orgId));
     } else {
       res.json(voiceLogs);
     }
   });
-
-  // Update voice log status (for testing call loop state transitions)
   app.put("/api/logs/voice/:id", (req, res) => {
     const { id } = req.params;
     const { status, errorMessage } = req.body;
-    const log = voiceLogs.find(l => l.id === id);
+    const log = voiceLogs.find((l) => l.id === id);
     if (!log) {
       return res.status(404).json({ error: "Voice log not found" });
     }
     log.status = status;
     if (errorMessage) log.errorMessage = errorMessage;
-
-    // Handle cascading voice trigger on fail/no-answer
     if (["no-answer", "busy"].includes(status)) {
-      const alert = alerts.find(a => a.id === log.alertId);
+      const alert = alerts.find((a) => a.id === log.alertId);
       if (alert) {
         const med = medicalProfiles[alert.userId];
         if (med && med.emergencyContacts && med.emergencyContacts.length > log.attemptNumber) {
           const nextContact = med.emergencyContacts[log.attemptNumber];
           const nextAttempt = log.attemptNumber + 1;
-
           const newCall = {
-            id: "voice-log-" + crypto.randomUUID(),
+            id: "voice-log-" + import_crypto.default.randomUUID(),
             orgId: log.orgId,
             alertId: log.alertId,
             contactNumber: nextContact.phone,
             contactName: nextContact.name,
             attemptNumber: nextAttempt,
-            method: "twilio" as const,
-            status: "initiated" as const,
-            initiatedAt: new Date().toISOString()
+            method: "twilio",
+            status: "initiated",
+            initiatedAt: (/* @__PURE__ */ new Date()).toISOString()
           };
           voiceLogs.push(newCall);
-
           alertEvents.push({
-            id: "evt-" + crypto.randomUUID(),
+            id: "evt-" + import_crypto.default.randomUUID(),
             alertId: alert.id,
             type: "voice_call",
-            message: `📞 Contact ${log.attemptNumber} (${log.contactName}) did not answer. Cascading escalation to Contact ${nextAttempt}: ${nextContact.name} (${nextContact.phone}).`,
-            timestamp: new Date().toISOString()
+            message: `\u{1F4DE} Contact ${log.attemptNumber} (${log.contactName}) did not answer. Cascading escalation to Contact ${nextAttempt}: ${nextContact.name} (${nextContact.phone}).`,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
           });
         } else {
           alertEvents.push({
-            id: "evt-" + crypto.randomUUID(),
+            id: "evt-" + import_crypto.default.randomUUID(),
             alertId: alert.id,
             type: "voice_call",
-            message: `🛑 Voice escalation chain completed. No further emergency contacts configured.`,
-            timestamp: new Date().toISOString()
+            message: `\u{1F6D1} Voice escalation chain completed. No further emergency contacts configured.`,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
           });
         }
       }
     } else if (status === "answered") {
       alertEvents.push({
-        id: "evt-" + crypto.randomUUID(),
+        id: "evt-" + import_crypto.default.randomUUID(),
         alertId: log.alertId,
         type: "voice_call",
-        message: `📞 Voice escalation ANSWERED by ${log.contactName}. Contact confirmed receipt of emergency coordinates.`,
-        timestamp: new Date().toISOString()
+        message: `\u{1F4DE} Voice escalation ANSWERED by ${log.contactName}. Contact confirmed receipt of emergency coordinates.`,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     res.json(log);
   });
-
-  // ==========================================
-  // --- ENTERPRISE UPGRADE REST ENDPOINTS ---
-  // ==========================================
-
-  // --- INCIDENTS MANAGEMENT (Phase 6) ---
   app.get("/api/incidents", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     let filtered = incidents;
     if (orgId) {
-      filtered = incidents.filter(i => i.organizationId === orgId);
+      filtered = incidents.filter((i) => i.organizationId === orgId);
     }
-    // Sort latest first
     filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     res.json(filtered);
   });
-
   app.post("/api/incidents", (req, res) => {
     const { orgId, alertId, userName, userId, mode, status, notes, assignedResponderId, assignedResponderName } = req.body;
     const newIncident = {
-      id: "inc-" + crypto.randomUUID(),
+      id: "inc-" + import_crypto.default.randomUUID(),
       organizationId: orgId || defaultOrgId,
-      alertId: alertId || "manual-" + crypto.randomBytes(3).toString("hex"),
+      alertId: alertId || "manual-" + import_crypto.default.randomBytes(3).toString("hex"),
       userName: userName || "Unknown Member",
       userId: userId || "manual-user",
       mode: mode || "standard",
       status: status || "Open",
-      createdAt: new Date().toISOString(),
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       assignedResponderId,
       assignedResponderName,
       actionsTaken: ["Incident manually initialized in command centre"],
       notes: notes || "Manual incident dispatch.",
       gpsTrail: [],
-      timeline: [{ message: "Incident record opened.", timestamp: new Date().toISOString() }]
+      timeline: [{ message: "Incident record opened.", timestamp: (/* @__PURE__ */ new Date()).toISOString() }]
     };
     incidents.push(newIncident);
     res.status(201).json(newIncident);
   });
-
   app.put("/api/incidents/:id", (req, res) => {
     const { id } = req.params;
     const { status, assignedResponderId, assignedResponderName, note, action, gpsUpdate } = req.body;
-
-    const inc = incidents.find(i => i.id === id);
+    const inc = incidents.find((i) => i.id === id);
     if (!inc) {
       return res.status(404).json({ error: "Incident record not found." });
     }
-
     if (status) {
       inc.status = status;
       inc.timeline.push({
         message: `Status transitioned to ${status}.`,
-        timestamp: new Date().toISOString()
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
-      // Log audit
       auditLogs.push({
-        id: "audit-" + crypto.randomUUID(),
+        id: "audit-" + import_crypto.default.randomUUID(),
         organizationId: inc.organizationId,
         action: "INCIDENT_STATUS_CHANGE",
         category: "Alert",
-        timestamp: new Date().toISOString(),
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
         details: `Incident ${inc.id.slice(0, 8)} transitioned to ${status}`,
         ipAddress: "196.25.1.50"
       });
     }
-
     if (assignedResponderId) {
       inc.assignedResponderId = assignedResponderId;
       inc.assignedResponderName = assignedResponderName || "Assigned Responder";
       inc.timeline.push({
         message: `Responder ${inc.assignedResponderName} dispatched to GPS trail coordinates.`,
-        timestamp: new Date().toISOString()
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
       inc.actionsTaken.push(`Responder ${inc.assignedResponderName} deployed`);
     }
-
     if (note) {
       inc.notes = (inc.notes ? inc.notes + " \n" : "") + note;
       inc.timeline.push({
         message: `Operator added dispatch logs: "${note}"`,
-        timestamp: new Date().toISOString()
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     if (action) {
       inc.actionsTaken.push(action);
       inc.timeline.push({
         message: `Action recorded: "${action}"`,
-        timestamp: new Date().toISOString()
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     if (gpsUpdate) {
       inc.gpsTrail.push({
         latitude: gpsUpdate.latitude,
         longitude: gpsUpdate.longitude,
-        timestamp: new Date().toISOString()
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
       });
     }
-
     res.json(inc);
   });
-
-  // --- SHIFT MANAGEMENT (Phase 7) ---
   app.get("/api/shifts", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(shifts.filter(s => s.organizationId === orgId));
+      res.json(shifts.filter((s) => s.organizationId === orgId));
     } else {
       res.json(shifts);
     }
   });
-
   app.post("/api/shifts", (req, res) => {
     const { userId, userName, role, organizationId, state, currentTask } = req.body;
     if (!userId || !userName) {
       return res.status(400).json({ error: "userId and userName are required to start shift" });
     }
-
-    // Check if active shift already exists for this user
-    const existing = shifts.find(s => s.userId === userId && !s.endedAt);
+    const existing = shifts.find((s) => s.userId === userId && !s.endedAt);
     if (existing) {
       return res.json(existing);
     }
-
     const newShift = {
-      id: "shift-" + crypto.randomUUID(),
+      id: "shift-" + import_crypto.default.randomUUID(),
       organizationId: organizationId || defaultOrgId,
       userId,
       userName,
       role: role || "Responder",
       state: state || "Available",
-      startedAt: new Date().toISOString(),
+      startedAt: (/* @__PURE__ */ new Date()).toISOString(),
       currentTask: currentTask || "Patrol"
     };
     shifts.push(newShift);
-
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: newShift.organizationId,
       userId,
       userName,
       action: "SHIFT_START",
       category: "Auth",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: `${userName} (${role}) started active responder shift. Task: ${newShift.currentTask}`,
       ipAddress: "196.25.1.12"
     });
-
     res.status(201).json(newShift);
   });
-
   app.put("/api/shifts/:id", (req, res) => {
     const { id } = req.params;
     const { state, currentTask, endShift } = req.body;
-
-    const shift = shifts.find(s => s.id === id);
+    const shift = shifts.find((s) => s.id === id);
     if (!shift) {
       return res.status(404).json({ error: "Shift record not found." });
     }
-
     if (endShift) {
-      shift.endedAt = new Date().toISOString();
+      shift.endedAt = (/* @__PURE__ */ new Date()).toISOString();
       shift.state = "Offline";
       auditLogs.push({
-        id: "audit-" + crypto.randomUUID(),
+        id: "audit-" + import_crypto.default.randomUUID(),
         organizationId: shift.organizationId,
         userId: shift.userId,
         userName: shift.userName,
         action: "SHIFT_END",
         category: "Auth",
-        timestamp: new Date().toISOString(),
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
         details: `${shift.userName} concluded responder shift. Duration calculated.`,
         ipAddress: "196.25.1.12"
       });
@@ -1225,104 +1134,87 @@ async function startServer() {
       if (state) shift.state = state;
       if (currentTask) shift.currentTask = currentTask;
     }
-
     res.json(shift);
   });
-
-  // --- GEOFENCING ENGINE (Phase 8) ---
   app.get("/api/geofences", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(geofences.filter(g => g.organizationId === orgId));
+      res.json(geofences.filter((g) => g.organizationId === orgId));
     } else {
       res.json(geofences);
     }
   });
-
   app.post("/api/geofences", (req, res) => {
     const { name, type, centerLat, centerLng, radiusMeters, orgId } = req.body;
     if (!name || !type) {
       return res.status(400).json({ error: "Missing geofence parameters" });
     }
     const newGeo = {
-      id: "geo-" + crypto.randomUUID(),
+      id: "geo-" + import_crypto.default.randomUUID(),
       organizationId: orgId || defaultOrgId,
       name,
       type,
       centerLat: Number(centerLat),
       centerLng: Number(centerLng),
-      radiusMeters: Number(radiusMeters) || 1000
+      radiusMeters: Number(radiusMeters) || 1e3
     };
     geofences.push(newGeo);
-
-    // Audit Log
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: newGeo.organizationId,
       action: "GEOFENCE_CREATE",
       category: "Config",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: `Created Geofence boundary [${newGeo.name}] - Type: ${newGeo.type} (${newGeo.radiusMeters}m radius)`,
       ipAddress: "196.25.3.1"
     });
-
     res.status(201).json(newGeo);
   });
-
   app.get("/api/geofences/alerts", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(geofenceAlerts.filter(g => g.organizationId === orgId));
+      res.json(geofenceAlerts.filter((g) => g.organizationId === orgId));
     } else {
       res.json(geofenceAlerts);
     }
   });
-
   app.post("/api/geofences/alerts", (req, res) => {
     const { geofenceId, geofenceName, responderName, triggerType, message, orgId } = req.body;
     const newAlert = {
-      id: "galt-" + crypto.randomUUID(),
+      id: "galt-" + import_crypto.default.randomUUID(),
       organizationId: orgId || defaultOrgId,
       geofenceId,
       geofenceName,
       responderName,
       triggerType,
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       message
     };
     geofenceAlerts.push(newAlert);
-
-    // Also push to alertEvents for live visibility
     alertEvents.push({
-      id: "evt-" + crypto.randomUUID(),
+      id: "evt-" + import_crypto.default.randomUUID(),
       alertId: "system-geofence",
       type: "geofence_breach",
-      message: `🚷 [GEOFENCE BREACH] ${message}`,
-      timestamp: new Date().toISOString()
+      message: `\u{1F6B7} [GEOFENCE BREACH] ${message}`,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
-
     res.status(201).json(newAlert);
   });
-
-  // --- DEVICE HEARTBEAT ENGINE (Phase 4) ---
   app.get("/api/heartbeats", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     if (orgId) {
-      res.json(heartbeats.filter(h => h.organizationId === orgId));
+      res.json(heartbeats.filter((h) => h.organizationId === orgId));
     } else {
       res.json(heartbeats);
     }
   });
-
   app.post("/api/heartbeats", (req, res) => {
     const { deviceId, batteryPercent, rssi, connectionStatus, latitude, longitude, orgId, userId } = req.body;
     if (!deviceId) return res.status(400).json({ error: "deviceId is required" });
-
-    // Update existing or create new
-    let hb = heartbeats.find(h => h.deviceId === deviceId);
+    let hb = heartbeats.find((h) => h.deviceId === deviceId);
     if (!hb) {
       hb = {
-        id: "hb-" + crypto.randomUUID(),
+        id: "hb-" + import_crypto.default.randomUUID(),
         deviceId,
         organizationId: orgId || defaultOrgId,
         userId: userId || "system",
@@ -1331,7 +1223,7 @@ async function startServer() {
         connectionStatus: connectionStatus || "Connected",
         latitude: latitude || -26.2041,
         longitude: longitude || 28.0473,
-        lastSeen: new Date().toISOString()
+        lastSeen: (/* @__PURE__ */ new Date()).toISOString()
       };
       heartbeats.push(hb);
     } else {
@@ -1340,95 +1232,77 @@ async function startServer() {
       hb.connectionStatus = connectionStatus || hb.connectionStatus;
       hb.latitude = latitude || hb.latitude;
       hb.longitude = longitude || hb.longitude;
-      hb.lastSeen = new Date().toISOString();
+      hb.lastSeen = (/* @__PURE__ */ new Date()).toISOString();
     }
-
-    // Also sync back to hardwarePool connection state and battery
-    const hw = hardwarePool.find(h => h.id === deviceId || h.deviceId === deviceId);
+    const hw = hardwarePool.find((h) => h.id === deviceId || h.deviceId === deviceId);
     if (hw) {
       hw.batteryLevel = hb.batteryPercent;
       hw.rssi = hb.rssi;
-      hw.connectionState = (hb.connectionStatus === "Connected" || hb.connectionStatus === "Weak Signal") ? "connected" : "disconnected";
+      hw.connectionState = hb.connectionStatus === "Connected" || hb.connectionStatus === "Weak Signal" ? "connected" : "disconnected";
     }
-
     res.json(hb);
   });
-
-  // --- SECURITY & AUDIT TRAIL LOGGING (Phase 11) ---
   app.get("/api/audit-logs", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     let filtered = auditLogs;
     if (orgId) {
-      filtered = auditLogs.filter(a => a.organizationId === orgId);
+      filtered = auditLogs.filter((a) => a.organizationId === orgId);
     }
-    // Sort latest first
     filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     res.json(filtered);
   });
-
   app.post("/api/audit-logs", (req, res) => {
     const { orgId, userId, userName, action, category, details } = req.body;
     const newLog = {
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: orgId || defaultOrgId,
       userId,
       userName,
       action,
       category: category || "Config",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: details || "System event occurred.",
       ipAddress: "196.25.1.1"
     };
     auditLogs.push(newLog);
     res.status(201).json(newLog);
   });
-
-  // CSV Audit Export (Phase 11 Requirement)
   app.get("/api/audit-logs/export", (req, res) => {
-    const orgId = req.query.orgId as string;
+    const orgId = req.query.orgId;
     let filtered = auditLogs;
     if (orgId) {
-      filtered = auditLogs.filter(a => a.organizationId === orgId);
+      filtered = auditLogs.filter((a) => a.organizationId === orgId);
     }
     filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
     let csvContent = "ID,Timestamp,User,Action,Category,IP Address,Details\n";
-    filtered.forEach(log => {
-      csvContent += `"${log.id}","${log.timestamp}","${log.userName || 'System'}","${log.action}","${log.category}","${log.ipAddress || '127.0.0.1'}","${(log.details || '').replace(/"/g, '""')}"\n`;
+    filtered.forEach((log) => {
+      csvContent += `"${log.id}","${log.timestamp}","${log.userName || "System"}","${log.action}","${log.category}","${log.ipAddress || "127.0.0.1"}","${(log.details || "").replace(/"/g, '""')}"
+`;
     });
-
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=safetylink-audit-trail.csv");
     res.status(200).send(csvContent);
   });
-
-  // --- SUBSCRIPTION & LICENSING (Phase 12) ---
   app.get("/api/licensing/:orgId", (req, res) => {
     const { orgId } = req.params;
-    const org = organizations.find(o => o.id === orgId);
+    const org = organizations.find((o) => o.id === orgId);
     if (!org) {
       return res.status(404).json({ error: "Organization not found." });
     }
-
-    // Count statistics from state caches
-    const activeUsers = users.filter(u => u.organizationId === orgId).length;
-    const activeDevices = hardwarePool.filter(h => h.organizationId === orgId).length;
-    const smsCount = smsLogs.filter(s => s.orgId === orgId).length;
-    const whatsappCount = whatsappLogs.filter(w => w.orgId === orgId).length;
-    const voiceCount = voiceLogs.filter(v => v.orgId === orgId).length;
-    const storageEst = activeUsers * 12400 + activeDevices * 10240; // Simulated DB sizes
-
-    // Plan limits mapping
+    const activeUsers = users.filter((u) => u.organizationId === orgId).length;
+    const activeDevices = hardwarePool.filter((h) => h.organizationId === orgId).length;
+    const smsCount = smsLogs.filter((s) => s.orgId === orgId).length;
+    const whatsappCount = whatsappLogs.filter((w) => w.orgId === orgId).length;
+    const voiceCount = voiceLogs.filter((v) => v.orgId === orgId).length;
+    const storageEst = activeUsers * 12400 + activeDevices * 10240;
     const planLimits = {
       Starter: { smsLimit: 100, waLimit: 50, voiceLimit: 25, devLimit: 10 },
-      Professional: { smsLimit: 1000, waLimit: 500, voiceLimit: 250, devLimit: 100 },
-      Enterprise: { smsLimit: 100000, waLimit: 50000, voiceLimit: 25000, devLimit: 1000 },
+      Professional: { smsLimit: 1e3, waLimit: 500, voiceLimit: 250, devLimit: 100 },
+      Enterprise: { smsLimit: 1e5, waLimit: 5e4, voiceLimit: 25e3, devLimit: 1e3 },
       Custom: { smsLimit: 9999999, waLimit: 9999999, voiceLimit: 9999999, devLimit: 99999 }
     };
-
-    const currentPlan = (org.subscriptionPlan || "Enterprise") as "Starter" | "Professional" | "Enterprise" | "Custom";
+    const currentPlan = org.subscriptionPlan || "Enterprise";
     const limits = planLimits[currentPlan] || planLimits["Enterprise"];
-
     res.json({
       organizationId: orgId,
       name: org.name,
@@ -1443,53 +1317,43 @@ async function startServer() {
       voiceLimit: limits.voiceLimit,
       storageUsageBytes: storageEst,
       monthlyActivityCount: smsCount + whatsappCount + voiceCount + alerts.length,
-      expiryDate: new Date(Date.now() + 180 * 24 * 3600 * 1000).toISOString().split("T")[0],
+      expiryDate: new Date(Date.now() + 180 * 24 * 3600 * 1e3).toISOString().split("T")[0],
       licenseStatus: "Active",
       deviceLimit: limits.devLimit
     });
   });
-
   app.put("/api/licensing/:orgId", (req, res) => {
     const { orgId } = req.params;
     const { plan } = req.body;
-    const org = organizations.find(o => o.id === orgId);
+    const org = organizations.find((o) => o.id === orgId);
     if (!org) {
       return res.status(404).json({ error: "Organization not found." });
     }
-
     const oldPlan = org.subscriptionPlan;
     org.subscriptionPlan = plan;
-
-    // Log administrative license upgrade (Phase 11)
     auditLogs.push({
-      id: "audit-" + crypto.randomUUID(),
+      id: "audit-" + import_crypto.default.randomUUID(),
       organizationId: orgId,
       action: "LICENSE_PLAN_UPDATE",
       category: "License",
-      timestamp: new Date().toISOString(),
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
       details: `Administrative license upgrade. Plan for ${org.name} changed from ${oldPlan} to ${plan}.`,
       ipAddress: "196.25.1.1"
     });
-
     res.json({ success: true, plan: org.subscriptionPlan });
   });
-
-  // --- GEMINI INCIDENT REPORT ANALYSIS ENDPOINT ---
   app.post("/api/ai/analyze", async (req, res) => {
     const { alertId } = req.body;
     if (!alertId) {
       return res.status(400).json({ error: "alertId is required." });
     }
-
-    const alert = alerts.find(a => a.id === alertId);
+    const alert = alerts.find((a) => a.id === alertId);
     if (!alert) {
       return res.status(404).json({ error: "Alert not found." });
     }
-
-    const events = alertEvents.filter(e => e.alertId === alertId);
-    const user = users.find(u => u.id === alert.userId);
+    const events = alertEvents.filter((e) => e.alertId === alertId);
+    const user = users.find((u) => u.id === alert.userId);
     const med = medicalProfiles[alert.userId];
-
     const incidentData = {
       incidentId: alert.id,
       triggerTime: alert.createdAt,
@@ -1503,9 +1367,8 @@ async function startServer() {
         allergies: med?.allergies || "N/A",
         medications: med?.medications || "N/A"
       },
-      events: events.map(e => `[${e.timestamp}] ${e.message}`)
+      events: events.map((e) => `[${e.timestamp}] ${e.message}`)
     };
-
     const promptText = `
 You are the Safety-Link Command Centre AI incident reviewer. Analyze the following emergency incident log and generate a professional incident debrief and analysis.
 Format your output as clean, scannable Markdown.
@@ -1519,14 +1382,11 @@ Provide:
 3. **Escalation Timeline Critique**: Evaluate the speed and effectiveness of the SMS, WhatsApp, and Voice calls.
 4. **Actionable Recommendations**: Give 3 constructive steps the neighborhood watch/security operators can take to improve the response or prevent future issues.
 `;
-
     const aiClient = getAI();
-
     if (!aiClient) {
-      // Return simulated beautiful markdown report if API key is not configured
       const nearestCity = getClosestSouthAfricanCity(alert.latitude, alert.longitude);
       const simulatedReport = `
-### 🚨 SAFETY-LINK SYSTEM INCIDENT ANALYSIS REPORT (SIMULATED)
+### \u{1F6A8} SAFETY-LINK SYSTEM INCIDENT ANALYSIS REPORT (SIMULATED)
 
 **Incident ID**: \`${alertId.slice(0, 8)}\`
 **Status**: **${alert.status.toUpperCase()}**
@@ -1555,106 +1415,34 @@ Emergency panic trigger registered for **${alert.userName}** in the **${nearestC
 `;
       return res.json({ analysis: simulatedReport });
     }
-
     try {
       console.log(`[AI] Dispatching incident analysis to Gemini...`);
       const response = await aiClient.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: promptText,
+        contents: promptText
       });
-
       res.json({ analysis: response.text });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Gemini API Error:", err);
       res.status(500).json({ error: "Failed to compile AI report: " + err.message });
     }
   });
-
-  // --- AI SECURITY CHATBOT ADVISOR ENDPOINT ---
-  app.post("/api/ai/chat", async (req, res) => {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: "Message is required." });
-    }
-
-    const systemPrompt = `
-You are the SafetyLink AI Security Advisor, created under TM Media Solutions.
-You are an expert on South African security operations, regional neighborhood watch dispatches (e.g., Cape Town Watch, Johannesburg Gauteng sector, Lenasia, Soweto, Sandton clusters), tactical geofencing, iTAG BLE beacon panic buttons, and multi-channel safety-critical alerts (SMS, WhatsApp, Twilio voice cascades).
-Provide professional, concise, tactical advice. Speak in a confident, supportive security specialist tone. Keep your response under 3 paragraphs and use bullet points where helpful.
-`;
-
-    const aiClient = getAI();
-    if (!aiClient) {
-      // High-quality simulated response matching South African security domain
-      const lower = message.toLowerCase();
-      let responseText = "";
-
-      if (lower.includes("itag") || lower.includes("beacon") || lower.includes("ble")) {
-        responseText = `
-### 🔵 iTAG BLE Beacon Mesh Protocol
-The SafetyLink platform integrates standard **iTAG BLE smart keyfobs** operating on the **2.4GHz ISM Band**.
-*   **Advertising Profile**: Emits GATT packages under service UUID \`0xFFE0\` with characteristic \`0xFFE1\`.
-*   **Pairing Mechanism**: Scan airspace using the *iTAG Beacon Mesh* terminal, select "Bond to Pool", and assign the physical device to an approved citizen/user.
-*   **SOS Trigger**: Holding the button down broadcasts a 1-byte alert flag, immediately triggering WebSockets dispatches, SMS notifications, and automatic WhatsApp cascading.
-`;
-      } else if (lower.includes("geofence") || lower.includes("boundary") || lower.includes("sector")) {
-        responseText = `
-### 📍 Tactical Geofencing & Dispatch Sectors
-SafetyLink supports hardware and software geofences specifically designed for South African residential clusters:
-*   **Active Zones**: Define customized safe boundaries (e.g., 500m to 2km radial sectors) around neighborhood watches.
-*   **Automatic Alarm Cascading**: If an active member leaves their designated safe sector while triggering an SOS, the system automatically tags the alert with GPS telemetry coordinates, cascading immediate voice dispatches to the nearest responder unit on shift.
-`;
-      } else if (lower.includes("twilio") || lower.includes("whatsapp") || lower.includes("voice") || lower.includes("sms")) {
-        responseText = `
-### 📞 Cascading VoIP & Gateway Communications
-Our mission-critical alert system is built on a resilient, multi-channel gateway pipeline:
-1.  **Immediate WebSockets Broadcast**: Updates control rooms in 250 milliseconds.
-2.  **SMS Warning Dispatches**: Delivered using Twilio or Africa's Talking API to first-line emergency contacts.
-3.  **Meta WhatsApp Triggers**: Sends encrypted, rich incident location templates directly to family loops.
-4.  **Cascading Voice Dialers**: If contacts fail to answer within 15 seconds, our Twilio cascade dials the next secondary contact, repeating the audio synthetic briefing.
-`;
-      } else {
-        responseText = `
-### 🛡️ SafetyLink AI Security Operations Advisor
-Welcome to SafetyLink. How can I assist with your sector operations?
-*   **iTAG Beacons**: Query about GATT FFE0/FFE1 button simulators or beacon pairing.
-*   **VoIP Cascades**: Ask about Twilio SMS, automated voice cascades, and secondary loop delays.
-*   **Admin Shielding**: Inquire about role-based authorization rules (e.g., restricting Member vs Platform Owner access).
-*   **South African Clusters**: Query about tactical neighborhood watch setups for Cape Town Watch or GP Security patrols.
-`;
-      }
-      return res.json({ reply: responseText + "\n\n*Note: GEMINI_API_KEY is not defined. Utilizing built-in simulated intelligence stream.*" });
-    }
-
-    try {
-      const response = await aiClient.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `${systemPrompt}\n\nUser: ${message}`,
-      });
-      res.json({ reply: response.text });
-    } catch (err: any) {
-      res.status(500).json({ reply: "Failed to compile AI response: " + err.message });
-    }
-  });
-
-  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
+    const vite = await (0, import_vite.createServer)({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "spa"
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    const distPath = import_path.default.join(process.cwd(), "dist");
+    app.use(import_express.default.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(import_path.default.join(distPath, "index.html"));
     });
   }
-
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`[SYSTEM] Safety-Link Full-Stack Server running on port ${PORT}`);
   });
 }
-
 startServer();
+//# sourceMappingURL=server.cjs.map

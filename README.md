@@ -118,4 +118,3 @@ The native project is pre-configured in `/android/app/src/main/AndroidManifest.x
 
 ### ⚙️ GitHub Actions CI/CD APK Build Pipeline
 An automated pipeline is configured in `.github/workflows/apk-build.yml` to compile production web assets, synchronize Capacitor, build a native debug APK using Gradle, and upload it as a downloadable release artifact on every push.
-

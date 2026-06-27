@@ -104,6 +104,10 @@ export default function MobileSimulator({
 
   // Widget Settings configuration
   const [widgetLayout, setWidgetLayout] = useState<"compact" | "dual" | "full">("full");
+  const [isWidgetAdded, setIsWidgetAdded] = useState<boolean>(() => {
+    const saved = localStorage.getItem("safetylink-widget-added");
+    return saved ? saved === "true" : true;
+  });
 
   // Auth / Provision states
   const [provOrg, setProvOrg] = useState<Organization | null>(null);
@@ -1080,6 +1084,8 @@ export default function MobileSimulator({
                       <SettingsView
                         widgetLayout={widgetLayout}
                         setWidgetLayout={setWidgetLayout}
+                        isWidgetAdded={isWidgetAdded}
+                        setIsWidgetAdded={setIsWidgetAdded}
                         currentUser={currentUser}
                         contacts={contacts}
                         onAddContact={handleAddContact}
@@ -1224,14 +1230,24 @@ export default function MobileSimulator({
                     </div>
 
                     {/* Integrated Configured Home Screen Widget */}
-                    <HomeScreenWidget
-                      widgetLayout={widgetLayout}
-                      isHoldingWidget={isHoldingWidget}
-                      widgetHoldProgress={widgetHoldProgress}
-                      onWidgetHoldStart={onWidgetHoldStart}
-                      onWidgetHoldEnd={onWidgetHoldEnd}
-                      onInstantTrigger={triggerEmergency}
-                    />
+                    {isWidgetAdded ? (
+                      <HomeScreenWidget
+                        widgetLayout={widgetLayout}
+                        isHoldingWidget={isHoldingWidget}
+                        widgetHoldProgress={widgetHoldProgress}
+                        onWidgetHoldStart={onWidgetHoldStart}
+                        onWidgetHoldEnd={onWidgetHoldEnd}
+                        onInstantTrigger={triggerEmergency}
+                      />
+                    ) : (
+                      <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 text-center space-y-2">
+                        <LayoutGrid className="w-8 h-8 text-slate-500 mx-auto animate-pulse" />
+                        <h4 className="text-xs font-bold text-slate-300">No active widgets deployed</h4>
+                        <p className="text-[10px] text-slate-500 max-w-xs mx-auto">
+                          Pin the big circle panic button widget on your home screen by enabling it in Settings &gt; Android Widget API.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Mock launcher dock */}

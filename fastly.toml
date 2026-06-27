@@ -1,0 +1,21 @@
+# Fastly configuration file for SafetyLink Core API Gateway
+# Reference: Fastly Agent Toolkit
+name = "safetylink-core-gateway"
+service_id = "" # To be supplied via environments
+version = 1
+
+[local_server]
+  port = 3000
+
+[setup]
+  [setup.backends]
+    [setup.backends.api]
+      address = "api.safetylink.co.za"
+      port = 443
+
+[manifest]
+  # Caching instructions for edge optimization
+  [manifest.headers]
+    "Surrogate-Control" = "max-age=10, stale-while-revalidate=60"
+    "Cache-Control" = "no-store, must-revalidate, private"
+    "X-Edge-Cached-By" = "Fastly"
