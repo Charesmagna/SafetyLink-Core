@@ -48,7 +48,7 @@ jobs:
         mkdir -p /tmp/gradle-repair
         cd /tmp/gradle-repair
         touch settings.gradle
-        gradle wrapper --gradle-version 8.2.1
+        gradle wrapper --gradle-version 8.10.2
         cd $GITHUB_WORKSPACE
         mkdir -p android/gradle/wrapper
         cp /tmp/gradle-repair/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar
