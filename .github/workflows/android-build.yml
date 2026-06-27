@@ -1,4 +1,4 @@
-name: Android APK Build (SafetyLink Production-Ready)
+name: SafetyLink Production Pipeline
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build Android APK via GitHub Actions
+    name: Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -20,10 +20,10 @@ jobs:
         node-version: '22'
         cache: 'npm'
 
-    - name: Install Application Dependencies
+    - name: Install Dependencies
       run: npm install
 
-    - name: Compile and Build Web Assets
+    - name: Compile Web Assets
       run: npm run build
       env:
         NODE_ENV: production
@@ -34,20 +34,27 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Setup Android SDK Build Tools
-      uses: android-actions/setup-android@v3
-
     - name: Sync Capacitor Native Android Assets
-      run: |
-        npx cap sync android
+      run: npx cap sync android
 
-    - name: Build Android Release APK via Gradle Wrapper
+    - name: Restore Gradle Wrapper
+      run: |
+        # Ensure we have the correct gradle-wrapper.jar
+        GRADLE_VER=$(grep -oP '(?<=gradle-)[\d.]+(?=-(bin|all))' android/gradle/wrapper/gradle-wrapper.properties)
+        echo "Using Gradle version: $GRADLE_VER"
+        
+        # Download and regenerate the wrapper
+        curl -fsSL "https://services.gradle.org/distributions/gradle-${GRADLE_VER}-bin.zip" -o /tmp/gradle.zip
+        unzip -q /tmp/gradle.zip -d /tmp/gradle-dist
+        /tmp/gradle-dist/gradle-${GRADLE_VER}/bin/gradle wrapper --gradle-version "$GRADLE_VER" --project-dir android/
+        chmod +x android/gradlew
+
+    - name: Build Android Release APK
       run: |
         cd android
-        chmod +x gradlew
         ./gradlew assembleRelease --no-daemon
 
-    - name: Upload Release APK as Run Artifact
+    - name: Upload Release APK
       uses: actions/upload-artifact@v4
       with:
         name: SafetyLink-Release-APK
