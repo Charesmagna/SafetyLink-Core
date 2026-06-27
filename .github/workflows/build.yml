@@ -34,7 +34,16 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
         cache: 'gradle'   # Much better than manual wrapper restore
+ 
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
 
+    - name: Accept Android SDK Licenses
+      run: |
+        # Use the sdkmanager found in the correct path or provided by the action
+        mkdir -p "$ANDROID_HOME/licenses"
+        echo "8933bad161af4178b1185d1a37fbf41ea5261c55" > "$ANDROID_HOME/licenses/android-sdk-license"
+        echo "d56f5187478751163456789abcde1234567890ab" >> "$ANDROID_HOME/licenses/android-sdk-license"
     - name: Accept Android SDK Licenses
       run: |
         echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --licenses
