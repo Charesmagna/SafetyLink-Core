@@ -46,8 +46,13 @@ jobs:
     - name: Repair Corrupt Gradle Wrapper JAR
       run: |
         cd android
-        mkdir -p gradle/wrapper
-        curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.1/gradle/wrapper/gradle-wrapper.jar
+        [ -f settings.gradle ] && mv settings.gradle settings.gradle.bak || true
+        [ -f build.gradle ] && mv build.gradle build.gradle.bak || true
+        [ -f app/build.gradle ] && mv app/build.gradle app/build.gradle.bak || true
+        gradle wrapper --gradle-version 8.2.1
+        [ -f settings.gradle.bak ] && mv settings.gradle.bak settings.gradle || true
+        [ -f build.gradle.bak ] && mv build.gradle.bak build.gradle || true
+        [ -f app/build.gradle.bak ] && mv app/build.gradle.bak app/build.gradle || true
 
     - name: Build Android Release APK via Gradle
       run: |
