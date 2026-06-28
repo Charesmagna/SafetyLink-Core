@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.tmml.safetylink',
-  appName: 'SafetyLink Core',
+  appId: 'com.safetylink.app',
+  appName: 'SafetyLink',
   webDir: 'dist',
   server: {
     androidScheme: 'https'
