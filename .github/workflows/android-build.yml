@@ -2,62 +2,78 @@ name: SafetyLink Android APK Build Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-apk:
-    name: Build SafetyLink Signed Android APK
+    name: Build SafetyLink Android APK
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: production
+
     steps:
+      # 1. Checkout full repo
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js Environment
+      # 2. Node setup
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
 
-      - name: Install Frontend Dependencies
+      # 3. Install JS dependencies
+      - name: Install Dependencies
         run: npm ci || npm install
 
-      - name: Compile React Frontend SPA
+      # 4. Build web assets (Capacitor input)
+      - name: Build Web App
         run: npm run build
 
-      - name: Set up JDK 17
+      # 5. Java setup (required for Gradle 8.13 + AGP 8.8)
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: zulu
+          java-version: 17
+          cache: gradle
 
-      - name: Set up Gradle 8.13
+      # 6. Explicit Gradle 8.13 enforcement (CRITICAL FIX)
+      - name: Setup Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: 8.13
 
-      - name: Sync Capacitor Native Assets
-        run: |
-          npx cap sync android
+      # 7. Capacitor sync (MUST happen before Android build)
+      - name: Sync Capacitor Android
+        run: npx cap sync android
 
-      - name: Configure Gradle Wrapper Permissions
-        run: |
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-          fi
+      # 8. Ensure wrapper is executable (fixes runner permission issues)
+      - name: Fix Gradle Wrapper Permissions
+        run: chmod +x android/gradlew
 
-      - name: Build Android Release APK
+      # 9. Debug verification (optional but stabilizes CI visibility)
+      - name: Verify Gradle Wrapper
         run: |
           cd android
-          if [ -f "gradlew" ]; then
-            ./gradlew assembleRelease --no-daemon
-          fi
+          ./gradlew --version
 
-      - name: Archive Production APK Artifact
+      # 10. Build APK (FORCED WRAPPER USAGE)
+      - name: Build Release APK
+        run: |
+          cd android
+          ./gradlew clean
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      # 11. Upload artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: safetylink-release-apk
+          name: SafetyLink-Release-APK
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-          retention-days: 14
+          if-no-files-found: error
