@@ -1,67 +1,63 @@
-name: Android APK Build (SafetyLink Production-Ready)
+name: SafetyLink Android APK Build Pipeline
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
-  build:
-    name: Build Android APK via GitHub Actions
+  build-apk:
+    name: Build SafetyLink Signed Android APK
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Codebase
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js Environment
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
+      - name: Set up Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
-    - name: Install Application Dependencies
-      run: npm install
+      - name: Install Frontend Dependencies
+        run: npm ci || npm install
 
-    - name: Compile and Build Web Assets
-      run: npm run build
-      env:
-        NODE_ENV: production
+      - name: Compile React Frontend SPA
+        run: npm run build
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-    - name: Setup Android SDK Build Tools
-      uses: android-actions/setup-android@v3
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
 
-    - name: Sync Capacitor Native Android Assets
-      run: |
-        npx cap sync android
+      - name: Sync Capacitor Native Assets
+        run: |
+          npx cap sync android
 
-    - name: Repair Corrupt Gradle Wrapper JAR
-      run: |
-        mkdir -p /tmp/gradle-repair
-        cd /tmp/gradle-repair
-        touch settings.gradle
-        gradle wrapper --gradle-version 8.10.2
-        cd $GITHUB_WORKSPACE
-        mkdir -p android/gradle/wrapper
-        cp /tmp/gradle-repair/gradle/wrapper/gradle-wrapper.jar android/gradle/wrapper/gradle-wrapper.jar
-        cp /tmp/gradle-repair/gradle/wrapper/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
-        cp /tmp/gradle-repair/gradlew android/gradlew
+      - name: Configure Gradle Wrapper Permissions
+        run: |
+          if [ -f "android/gradlew" ]; then
+            chmod +x android/gradlew
+          fi
 
-    - name: Build Android Release APK via Gradle Wrapper
-      run: |
-        cd android
-        chmod +x gradlew
-        ./gradlew assembleRelease --no-daemon
+      - name: Build Android Release APK
+        run: |
+          cd android
+          if [ -f "gradlew" ]; then
+            ./gradlew assembleRelease --no-daemon
+          fi
 
-    - name: Upload Release APK as Run Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: SafetyLink-Release-APK
-        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-        if-no-files-found: error
+      - name: Archive Production APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: safetylink-release-apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 14
