@@ -1,10 +1,50 @@
-          npm ci
-          npx cap sync android
+name: SafetyLink CI/CD Pipeline
 
-      - name: Make gradlew executable
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 'latest'
+
+      - name: Setup Node.js & Cordova
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies & Prepare Cordova
+        run: |
+          rm -rf node_modules package-lock.json .git/hooks
+          npm cache clean --force
+          npm ci --ignore-scripts
+          npm install -g cordova
+          cordova prepare android
+
+      - name: Make Gradle executable
         run: chmod +x gradlew
 
-      - name: Setup .env
+      - name: Copy .env
         run: cp .env.example .env || true
 
       - name: Build Debug APK
@@ -12,15 +52,11 @@
         env:
           GRADLE_OPTS: "-Xmx4g"
 
-      - name: Upload APK
+      - name: Upload Debug APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: safetylink-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
-
-
-
-
 
