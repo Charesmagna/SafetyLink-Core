@@ -26,6 +26,11 @@
       },
       "mx.ferreyra.callnumber": {}
     },
-    "platforms": []
+    "platforms": [
+      "android"
+    ]
+  },
+  "devDependencies": {
+    "cordova-android": "^13.0.0"
   }
 }

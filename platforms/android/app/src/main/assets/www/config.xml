@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="io.github.charesmagna.safetylink" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>Safety-Link Terminal</name>
+    <description>Tactical isolated communication utility network platform.</description>
+    <author email="support@tmmedia.co.za" href="https://charesmagna.github.io/Safety-Link-/">Tshilidzi Mukwevho</author>
+    
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="whatsapp:*" />
+    
+    <preference name="Orientation" value="portrait" />
+    <preference name="BackgroundColor" value="#020617" />
+    <preference name="Fullscreen" value="false" />
+
+    <!-- Native Hardware Pipeline Core Plugin Injection Bindings -->
+    <plugin name="cordova-plugin-geolocation" spec="^5.0.0" />
+    <plugin name="cordova-plugin-vibration" spec="^3.1.1" />
+    <plugin name="cordova-plugin-sms" spec="^1.0.1" />
+    <plugin name="call-number" spec="^1.0.1" />
+
+    <platform name="android">
+        <icon src="Icons/icon-512.png" />
+        <preference name="AndroidXEnabled" value="true" />
+        
+        <!-- Injecting Android OS Telephony Radio Intercept Direct Permissions -->
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.SEND_SMS" />
+            <uses-permission android:name="android.permission.CALL_PHONE" />
+        </config-file>
+    </platform>
+</widget>
