@@ -1,0 +1,22 @@
+{
+  "prepare_queue": {
+    "installed": [],
+    "uninstalled": []
+  },
+  "config_munge": {
+    "files": {}
+  },
+  "installed_plugins": {
+    "cordova-plugin-sms": {
+      "PACKAGE_NAME": "io.github.charesmagna.safetylink"
+    },
+    "cordova-plugin-geolocation": {
+      "GPS_REQUIRED": "true",
+      "PACKAGE_NAME": "io.github.charesmagna.safetylink"
+    },
+    "mx.ferreyra.callnumber": {
+      "PACKAGE_NAME": "io.github.charesmagna.safetylink"
+    }
+  },
+  "dependent_plugins": {}
+}
