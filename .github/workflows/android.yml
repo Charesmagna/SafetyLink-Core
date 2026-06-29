@@ -35,7 +35,9 @@ jobs:
 
       - name: Install Dependencies & Prepare Cordova
         run: |
-          rm -rf node_modules package-lock.json .git/hooks
+          run: |
+            rm -rf node_modules
+          npm install
           npm cache clean --force
           npm ci --ignore-scripts
           npm install -g cordova
