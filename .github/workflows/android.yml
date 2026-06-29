@@ -1,13 +1,14 @@
-name: SafetyLink Build & CI Pipeline
+name: SafetyLink CI/CD Pipeline
 
 on:
   push:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-debug:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,23 +22,40 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3   # Handles SDK, platforms, build-tools
+        with:
+          cmdline-tools-version: 'latest'
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          validate-wrappers: false   # Safe for now
+          validate-wrappers: false
 
-      - name: Make Gradle executable
+      - name: Install Node.js & Sync Capacitor
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: |
+          npm ci
+          npx cap sync android
+
+      - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Copy .env
+      - name: Setup .env
         run: cp .env.example .env || true
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Xmx4g"
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: safetylink-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          retention-days: 14
