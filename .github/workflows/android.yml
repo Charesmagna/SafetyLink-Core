@@ -27,30 +27,26 @@ jobs:
         with:
           cmdline-tools-version: 'latest'
 
-      - name: Setup Node.js & Cordova
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies & Prepare Cordova
-        run: |
-          run: |
-            rm -rf node_modules
-          npm install
-          npm cache clean --force
-          npm ci --ignore-scripts
-          npm install -g cordova
-          cordova prepare android
+      - name: Install Cordova globally
+        run: npm install -g cordova@latest
 
-      - name: Make Gradle executable
-        run: chmod +x gradlew
+      - name: Install project dependencies
+        run: npm install
 
-      - name: Copy .env
-        run: cp .env.example .env || true
+      - name: Add Android platform
+        run: cordova platform add android@latest
+
+      - name: Prepare Cordova
+        run: cordova prepare android
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: cordova build android --debug
         env:
           GRADLE_OPTS: "-Xmx4g"
 
@@ -59,6 +55,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: safetylink-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
-
