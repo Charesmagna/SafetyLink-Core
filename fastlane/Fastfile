@@ -1,0 +1,51 @@
+default_platform(:android)
+
+platform :android do
+  desc "Local debug build of SafetyLink Core APK"
+  lane :debug do
+    gradle(
+      task: "assembleDebug"
+    )
+  end
+
+  desc "Sign release APK and deploy to Firebase/Internal testing"
+  lane :beta do
+    # Decodes keystore, registers secrets and builds release signed APK
+    gradle(
+      task: "assembleRelease",
+      properties: {
+        "android.injected.signing.store.file" => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["STORE_PASSWORD"],
+        "android.injected.signing.key.alias" => "upload",
+        "android.injected.signing.key.password" => ENV["KEY_PASSWORD"]
+      }
+    )
+
+    # Uploads to Firebase App Distribution
+    firebase_app_distribution(
+      app: ENV["FIREBASE_APP_ID"],
+      apk_path: "app/build/outputs/apk/release/app-release.apk",
+      groups: "internal-security-testers",
+      release_notes: "SafetyLink Core v5.0 Internal Beta Build - Offline Map Caching and iTAG BLE Keyfob support."
+    )
+  end
+
+  desc "Build signed production Android App Bundle (AAB)"
+  lane :release do
+    gradle(
+      task: "bundleRelease",
+      properties: {
+        "android.injected.signing.store.file" => ENV["KEYSTORE_PATH"],
+        "android.injected.signing.store.password" => ENV["STORE_PASSWORD"],
+        "android.injected.signing.key.alias" => "upload",
+        "android.injected.signing.key.password" => ENV["KEY_PASSWORD"]
+      }
+    )
+    
+    # Ready for upload to Google Play Store
+    upload_to_play_store(
+      track: "production",
+      aab: "app/build/outputs/bundle/release/app-release.aab"
+    )
+  end
+end
