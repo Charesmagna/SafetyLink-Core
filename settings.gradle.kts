@@ -22,6 +22,10 @@ dependencyResolutionManagement {
   }
 }
 
+<<<<<<< HEAD
 rootProject.name = "SafetyLink"
+=======
+rootProject.name = "My Application"
+>>>>>>> 61ed3387fc28ed4d6f4b8a8b945da72fffc2bab0
 
 include(":app")
