@@ -1,5 +1,4 @@
 {
-<<<<<<< HEAD
   "name": "safetylink-core",
   "private": true,
   "version": "1.0.0",
@@ -9,7 +8,6 @@
     "build": "tsc && vite build",
     "build:prod": "npm run build && npx cap sync android",
     "cap:sync": "npx cap sync android",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -35,40 +33,5 @@
     "tailwindcss": "^3.4.4",
     "typescript": "^5.2.2",
     "vite": "^5.3.1"
-=======
-  "name": "io.github.charesmagna.safetylink",
-  "displayName": "SafetyLink",
-  "version": "1.0.0",
-  "description": "A sample Apache Cordova application that responds to the deviceready event.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "ecosystem:cordova"
-  ],
-  "author": "Apache Cordova Team",
-  "license": "Apache-2.0",
-  "dependencies": {
-    "call-number": "^1.0.1",
-    "cordova-plugin-geolocation": "^5.0.0",
-    "cordova-plugin-sms": "^1.0.5"
-  },
-  "cordova": {
-    "plugins": {
-      "cordova-plugin-sms": {},
-      "call-number": {},
-      "cordova-plugin-geolocation": {
-        "GPS_REQUIRED": "true"
-      },
-      "mx.ferreyra.callnumber": {}
-    },
-    "platforms": [
-      "android"
-    ]
-  },
-  "devDependencies": {
-    "cordova-android": "^13.0.0"
->>>>>>> 61ed3387fc28ed4d6f4b8a8b945da72fffc2bab0
   }
 }
