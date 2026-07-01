@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization } from '../types';
+import { NativeDispatchService } from '../services/NativeDispatchService';
 
 interface AppState {
   contacts: Contact[];
@@ -326,16 +327,44 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'SEVERE', 'Escalating Dispatch Chain', 'Initiating sequential alerts to prioritized emergency contacts.');
 
     const loc = get().userLocation || { lat: -26.1912, lng: 28.0264 };
+    const isDrill = get().drillMode;
+
     get().contacts.forEach((contact, index) => {
-      setTimeout(() => {
-        if (get().activeSOSState === 'IDLE') return; 
+      setTimeout(async () => {
+        if (get().activeSOSState === 'IDLE') return;
         const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
-        
+
+        if (isDrill) {
+          get().addAuditLog(
+            'DISPATCH',
+            'SEVERE',
+            `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
+            `[DRILL SIMULATION] message: "${message}"`
+          );
+          return;
+        }
+
+        // Live dispatch -- actually reaches the device's SMS/telephony/WhatsApp layer.
+        let ok = false;
+        switch (contact.channelType) {
+          case 'SMS':
+          case 'GROUP':
+            ok = await NativeDispatchService.sendSms(contact.phone, message);
+            break;
+          case 'CALL':
+          case 'POLICE':
+            ok = await NativeDispatchService.placeCall(contact.phone);
+            break;
+          case 'WHATSAPP':
+            ok = await NativeDispatchService.openWhatsApp(contact.phone, message);
+            break;
+        }
+
         get().addAuditLog(
-          'DISPATCH', 
-          'SEVERE', 
-          `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`, 
-          get().drillMode ? `[DRILL SIMULATION] message: "${message}"` : `[LIVE BROADCASTED] message: "${message}"`
+          'DISPATCH',
+          ok ? 'SEVERE' : 'WARN',
+          `[Contact #${contact.priority}] ${ok ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
+          `[LIVE BROADCASTED] message: "${message}"`
         );
       }, (index + 1) * 1000);
     });
