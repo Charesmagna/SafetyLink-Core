@@ -1,0 +1,11 @@
+export {
+  ADMIN_MASTER_KEY,
+  ADMIN_ORG_ID,
+  BLE_CONFIG,
+  ANDROID_BLE_PERMISSIONS,
+  MAX_CONCURRENT_BLE_TRIGGERS,
+  BLE_CONNECTION_TIMEOUT_MS,
+  DEMO_MODE_ENABLED,
+} from './config';
+
+export { default as CONFIG } from './config';
