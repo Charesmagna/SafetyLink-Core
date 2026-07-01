@@ -36,6 +36,7 @@ interface AppState {
   addAuditLog: (category: AuditLog['category'], severity: AuditLog['severity'], message: string, details?: string) => void;
   clearAuditLogs: () => void;
   triggerPanic: (description: string) => Promise<void>;
+  triggerFromMasterKey: (submittedKey: string) => Promise<boolean>;
   cancelSOS: () => void;
   resolvePanic: (id: string) => void;
   updateContact: (id: string, updated: Partial<Contact>) => void;
@@ -60,6 +61,15 @@ const DEFAULT_CONTACTS: Contact[] = [
 const DEFAULT_BLE_DEVICES: BleDevice[] = [
   { macAddress: '00:1A:7D:DA:71:0F', friendlyName: 'Primary HST-01 Panic Tracker', deviceType: 'iTAG', batteryLevel: 89, rssi: -62, connectionState: 'CONNECTED', lastSeen: Date.now() }
 ];
+
+// TIER-1 STATIC INTERCEPTOR
+// Hardcoded master key used as an instant showcase panic trigger across all
+// devices/installs. Kept in for now per explicit request while this is a
+// demo/showcase build. SECURITY NOTE: because this repo is public, anyone
+// who reads this constant can trigger a real emergency dispatch on any
+// install. Remove this before real community members rely on this app —
+// wire real triggers through per-user/per-device auth instead.
+export const STATIC_INTERCEPTOR_MASTER_KEY = 'SL-MASTER-INTERCEPT-0000';
 
 const MOCK_ORGANIZATIONS: Organization[] = [
   { id: 'SL-ORG-8492', name: 'Apex Student Housing', contactName: 'Mpho Lekota', contactEmail: 'mpho@apexhousing.co.za', createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000 },
@@ -293,6 +303,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   clearAuditLogs: () => set({ auditLogs: [] }),
+
+  triggerFromMasterKey: async (submittedKey) => {
+    if (submittedKey !== STATIC_INTERCEPTOR_MASTER_KEY) return false;
+    get().addAuditLog('SECURITY', 'SEVERE', 'Static Interceptor Fired', 'Emergency triggered via master key showcase interceptor, not a real device.');
+    await get().triggerPanic('Triggered via Tier-1 Static Interceptor (showcase master key)');
+    return true;
+  },
 
   triggerPanic: async (description) => {
     if (get().activeSOSState !== 'IDLE') return;

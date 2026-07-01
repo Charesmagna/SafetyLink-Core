@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { UserProfile } from '../types';
+import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const OrgDashboard: React.FC = () => {
   const { currentOrg, users, logout, updateUserProfile, deleteUserProfile, panicEvents, resolvePanic } = useAppStore();
@@ -61,9 +62,7 @@ export const OrgDashboard: React.FC = () => {
       <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative">
         <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500 opacity-60" />
         <div className="flex items-center gap-3 text-left">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold font-mono">
-            🏢
-          </div>
+          <SafetyLinkLogo size={32} />
           <div>
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono">
               {currentOrg.name}

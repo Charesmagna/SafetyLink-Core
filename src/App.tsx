@@ -11,6 +11,7 @@ import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 
 type TabId = 'home' | 'contacts' | 'ble' | 'map' | 'settings';
 
@@ -75,11 +76,7 @@ const App: React.FC = () => {
       {/* Header bar */}
       <header className="bg-slate-900/60 backdrop-blur-md border-b border-slate-900 py-3.5 px-6 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-2.5">
-          <div className="relative w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-md shadow-red-900/20">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
+          <SafetyLinkLogo size={28} />
           <div className="text-left">
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-1.5">
               SafetyLink <span className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal lowercase">v2.0</span>
