@@ -11,6 +11,8 @@ import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 import { AdminPanel } from './components/AdminPanel';
+import { ddsetup } from './utils/ddsetup';
+import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 
 type TabId = 'home' | 'contacts' | 'ble' | 'map' | 'settings';
 
@@ -25,8 +27,12 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showApkPopup, setShowApkPopup] = useState<boolean>(true);
+  const [adminToggleToStandard, setAdminToggleToStandard] = useState<boolean>(false);
 
   useEffect(() => {
+    // Initialize DataDog SDK for telemetry, heartbeat monitor & crash reports
+    ddsetup();
+
     // Bootstrap tracking and simulated BLE hardware listeners on mount
     const geoService = GeolocationService.getInstance();
     geoService.startTracking();
@@ -45,21 +51,38 @@ const App: React.FC = () => {
     };
   }, []);
 
+  const effectiveUser = currentUser || (superAdminActive ? { fullName: 'Super Administrator', username: 'SafetyLink', orgCode: 'SL-ADMIN-000' } : null);
+
   // Secure routing conditional renders
-  if (superAdminActive) {
-    return <AdminPanel />;
+  if (superAdminActive && !adminToggleToStandard) {
+    return <AdminPanel onToggleView={() => setAdminToggleToStandard(true)} />;
   }
 
   if (currentOrg) {
     return <OrgDashboard />;
   }
 
-  if (!currentUser) {
+  if (!effectiveUser) {
     return <AuthScreen />;
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
+      {superAdminActive && adminToggleToStandard && (
+        <div className="w-full bg-gradient-to-r from-purple-800 via-indigo-800 to-blue-800 text-white font-mono text-[10px] font-black text-center py-2 px-4 flex items-center justify-between border-b border-purple-500/30 z-50 shadow-md">
+          <div className="flex items-center gap-2 text-left">
+            <span className="w-2 h-2 rounded-full bg-red-400 animate-ping shrink-0" />
+            <span>👑 UMBRELLA ADMIN LIVE PREVIEW ROUTE ACTIVE</span>
+          </div>
+          <button
+            onClick={() => setAdminToggleToStandard(false)}
+            className="px-2.5 py-1 bg-white hover:bg-slate-100 text-purple-900 font-extrabold text-[9px] rounded-full uppercase tracking-wider shadow-sm transition-all whitespace-nowrap"
+          >
+            ↩️ BACK TO COMMAND CENTER
+          </button>
+        </div>
+      )}
+
       {/* Top Banner Alert during SOS Distress Broadcast */}
       {activeSOSState !== 'IDLE' ? (
         <div className="w-full bg-red-600 text-slate-100 font-mono text-xs font-bold text-center py-2 px-4 tracking-wider uppercase animate-pulse border-b border-red-500/50 flex items-center justify-center gap-2 relative z-50">
@@ -73,26 +96,14 @@ const App: React.FC = () => {
       )}
 
       {/* Header bar */}
-      <header className="bg-slate-900/60 backdrop-blur-md border-b border-slate-900 py-3.5 px-6 flex justify-between items-center shadow-md">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-7 h-7 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-md shadow-red-900/20">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <div className="text-left">
-            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-1.5">
-              SafetyLink <span className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal lowercase">v2.0</span>
-            </h1>
-            <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Google Safety Layout</p>
-          </div>
-        </div>
+      <header className="bg-slate-900/60 backdrop-blur-md border-b border-slate-900 py-3 px-6 flex justify-between items-center shadow-md">
+        <SafetyLinkLogo size={32} showText={true} />
 
         {/* Personalized Account Actions */}
         <div className="flex items-center gap-3">
           <div className="hidden md:flex flex-col items-end text-right">
-            <span className="text-xs font-bold text-slate-200">{currentUser.fullName}</span>
-            <span className="text-[9px] font-mono text-slate-500 uppercase">@{currentUser.username}</span>
+            <span className="text-xs font-bold text-slate-200">{effectiveUser?.fullName}</span>
+            <span className="text-[9px] font-mono text-slate-500 uppercase">@{effectiveUser?.username}</span>
           </div>
 
           <button
@@ -116,10 +127,10 @@ const App: React.FC = () => {
                   🛡️
                 </div>
                 <div className="space-y-1 text-left">
-                  <h2 className="text-sm font-bold text-slate-100">Welcome, {currentUser.fullName}!</h2>
-                  {currentUser.orgCode && (
+                  <h2 className="text-sm font-bold text-slate-100">Welcome, {effectiveUser?.fullName}!</h2>
+                  {effectiveUser?.orgCode && (
                     <span className="inline-block text-[8px] font-mono font-black text-blue-400 border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider mb-1">
-                      Linked Org ID: {currentUser.orgCode}
+                      Linked Org ID: {effectiveUser?.orgCode}
                     </span>
                   )}
                   <p className="text-xs text-slate-400 leading-relaxed">

@@ -670,6 +670,29 @@ class SafetyViewModel(application: Application) : AndroidViewModel(application) 
             repository.insertIncident(newIncident)
             selectIncident(newIncidentId)
 
+            // Trigger Twilio SMS and CockroachDB logging via EmergencyService
+            val primaryContact = _emergencyContacts.value.firstOrNull { it.channelType == "SMS" } ?: _emergencyContacts.value.firstOrNull()
+            val recipientPhone = primaryContact?.phone ?: "+27839119112"
+            val customMessage = "EMERGENCY ALERT: SafetyLink distress active! Incident #$newIncidentId. Location: https://maps.google.com/?q=-26.1912,28.0264"
+            
+            com.example.EmergencyService.getInstance().executeEmergencyTransaction(
+                newIncidentId,
+                -26.1912,
+                28.0264,
+                "$customDesc - Live streaming telemetry.",
+                recipientPhone,
+                customMessage,
+                object : com.example.EmergencyService.DispatchCallback {
+                    override fun onSuccess(responseMessage: String?) {
+                        addTelemetry("EMERGENCY_SERVICE", "EmergencyService successfully notified Twilio & logged to CockroachDB: $responseMessage", "INFO")
+                    }
+
+                    override fun onFailure(error: Exception?) {
+                        addTelemetry("EMERGENCY_SERVICE", "EmergencyService transaction error: ${error?.message}", "ERROR")
+                    }
+                }
+            )
+
             _escalationLogs.value = _escalationLogs.value + listOf("13:16:11 - Firebase Firestore write OK. Incident #$newIncidentId created.", "13:16:12 - Multi-tenant push broadcast executed to Dispatch Command Center")
             _sosState.value = SOSState.DISPATCHED
 

@@ -47,15 +47,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-<<<<<<< HEAD
 
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[SafetyViewModel::class.java]
         if (intent?.action == "com.example.action.TRIGGER_SOS") {
             viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut.")
         }
 
-=======
->>>>>>> 61ed3387fc28ed4d6f4b8a8b945da72fffc2bab0
         setContent {
             MyApplicationTheme {
                 Scaffold(
@@ -63,18 +60,13 @@ class MainActivity : ComponentActivity() {
                     contentWindowInsets = WindowInsets.safeDrawing
                 ) { innerPadding ->
                     MainScreenOrchestrator(
-<<<<<<< HEAD
                         modifier = Modifier.padding(innerPadding),
                         viewModel = viewModel
-=======
-                        modifier = Modifier.padding(innerPadding)
->>>>>>> 61ed3387fc28ed4d6f4b8a8b945da72fffc2bab0
                     )
                 }
             }
         }
     }
-<<<<<<< HEAD
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
@@ -84,8 +76,6 @@ class MainActivity : ComponentActivity() {
             viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut.")
         }
     }
-=======
->>>>>>> 61ed3387fc28ed4d6f4b8a8b945da72fffc2bab0
 }
 
 @Composable

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization } from '../types';
+import { EmergencyService } from '../services/EmergencyService';
 
 interface AppState {
   contacts: Contact[];
@@ -46,6 +47,8 @@ interface AppState {
   connectBleDevice: (mac: string) => void;
   disconnectBleDevice: (mac: string) => void;
   removeDevice: (mac: string) => void;
+  addBleDevice: (device: BleDevice) => void;
+  setPairingProgress: (progress: string | null) => void;
 }
 
 // Initial Demo Data
@@ -98,7 +101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentPanicEvent: null,
   drillMode: true, // Default to drill mode for safety testing
   userLocation: { lat: -26.1912, lng: 28.0264 }, // Default Johannesburg (Wits)
-  bleDevices: DEFAULT_BLE_DEVICES,
+  bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   auditLogs: [
     { id: '1', timestamp: Date.now() - 60000, category: 'SYSTEM', severity: 'INFO', message: 'SafetyLink Core initialized', details: 'All modular services ready.' },
     { id: '2', timestamp: Date.now() - 30000, category: 'BLE', severity: 'INFO', message: 'Primary HST-01 tracker bound', details: 'Connected & listening for single/triple hardware clicks.' }
@@ -163,18 +166,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   login: (username, orgCode) => {
-    if (orgCode === 'SL-admin-0000' || username === 'SL-admin-0000') {
+    const cleanUsername = username.trim();
+    const cleanOrgCode = orgCode.trim();
+
+    if (
+      cleanOrgCode === 'SL-admin-0000' || 
+      cleanUsername === 'SL-admin-0000' ||
+      (cleanUsername.toUpperCase() === 'SAFETYLINK' && cleanOrgCode.toUpperCase() === 'SL-ADMIN-000')
+    ) {
       set({ currentUser: null, currentOrg: null, superAdminActive: true });
       setStoredJSON('sl_current_user', null);
       setStoredJSON('sl_current_org', null);
       setStoredJSON('sl_super_admin', true);
       
-      get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', 'Access granted using SL-admin-0000 key.');
+      get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', `Access granted for ${cleanUsername} using Master Key override.`);
       return { success: true, role: 'ADMIN' };
     }
 
     const lowerUsername = username.trim().toLowerCase();
-    const cleanOrgCode = orgCode.trim();
 
     const matchedOrg = get().organizations.find(o => o.id === cleanOrgCode);
     if (matchedOrg && (matchedOrg.contactName.toLowerCase() === lowerUsername || matchedOrg.id.toLowerCase() === lowerUsername)) {
@@ -309,6 +318,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'SEVERE', 'Escalating Dispatch Chain', 'Initiating sequential alerts to prioritized emergency contacts.');
 
     const loc = get().userLocation || { lat: -26.1912, lng: 28.0264 };
+    
+    // Simultaneously trigger background Emergency Service (Twilio and CockroachDB transaction)
+    EmergencyService.getInstance().dispatchEmergency(loc.lat, loc.lng, description, get().contacts);
+
     get().contacts.forEach((contact, index) => {
       setTimeout(() => {
         if (get().activeSOSState === 'IDLE') return; 
@@ -414,11 +427,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         connectionState: 'CONNECTED',
         lastSeen: Date.now()
       };
-      set(state => ({
-        bleDevices: [...state.bleDevices, newDev],
+      const updated = [...get().bleDevices.filter(d => d.macAddress !== newDev.macAddress), newDev];
+      set({
+        bleDevices: updated,
         isScanning: false,
         pairingProgress: null
-      }));
+      });
+      setStoredJSON('sl_ble_devices', updated);
       get().addAuditLog('BLE', 'INFO', 'BLE Device Paired', 'HST-01 Wearable Keyfob successfully bonded to tactical emergency bus.');
     }, 4500);
   },
@@ -426,23 +441,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   stopBleScan: () => set({ isScanning: false, pairingProgress: null }),
 
   connectBleDevice: (mac) => {
-    set(state => ({
-      bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTED', rssi: -55 } : d)
-    }));
+    const updated: BleDevice[] = get().bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTED' as const, rssi: -55 } : d);
+    set({ bleDevices: updated });
+    setStoredJSON('sl_ble_devices', updated);
     get().addAuditLog('BLE', 'INFO', 'BLE Device Reconnected', `MAC: ${mac}`);
   },
 
   disconnectBleDevice: (mac) => {
-    set(state => ({
-      bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
-    }));
+    const updated: BleDevice[] = get().bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED' as const, rssi: -100 } : d);
+    set({ bleDevices: updated });
+    setStoredJSON('sl_ble_devices', updated);
     get().addAuditLog('BLE', 'SEVERE', 'BLE Wearable Connection Severed', `Hardware link to ${mac} was terminated. Action fallback recommended.`);
   },
 
   removeDevice: (mac) => {
-    set(state => ({
-      bleDevices: state.bleDevices.filter(d => d.macAddress !== mac)
-    }));
+    const updated = get().bleDevices.filter(d => d.macAddress !== mac);
+    set({ bleDevices: updated });
+    setStoredJSON('sl_ble_devices', updated);
     get().addAuditLog('BLE', 'WARN', 'BLE Wearable Device Forgotten', `MAC: ${mac}`);
+  },
+
+  addBleDevice: (device) => {
+    const filtered = get().bleDevices.filter(d => d.macAddress !== device.macAddress);
+    const updated = [...filtered, device];
+    set({ bleDevices: updated });
+    setStoredJSON('sl_ble_devices', updated);
+    get().addAuditLog('BLE', 'INFO', 'BLE Device Bonded', `MAC: ${device.macAddress}, Type: ${device.deviceType}`);
+  },
+
+  setPairingProgress: (progress) => {
+    set({ pairingProgress: progress });
   }
 }));

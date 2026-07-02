@@ -4,7 +4,11 @@ import { UserProfile, Organization } from '../types';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS';
 
-export const AdminPanel: React.FC = () => {
+interface AdminPanelProps {
+  onToggleView?: () => void;
+}
+
+export const AdminPanel: React.FC<AdminPanelProps> = ({ onToggleView }) => {
   const { 
     users, 
     organizations, 
@@ -98,12 +102,22 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="px-4 py-1.5 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full"
-        >
-          SIGNOUT SECURE LINK
-        </button>
+        <div className="flex items-center gap-2">
+          {onToggleView && (
+            <button
+              onClick={onToggleView}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 border border-indigo-450 text-white transition-all text-[10px] font-mono font-black rounded-full shadow shadow-indigo-950 uppercase"
+            >
+              👁️ Preview User Workspace
+            </button>
+          )}
+          <button
+            onClick={logout}
+            className="px-4 py-1.5 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full uppercase"
+          >
+            SIGNOUT SECURE LINK
+          </button>
+        </div>
       </header>
 
       {/* Admin Nav Bar */}
