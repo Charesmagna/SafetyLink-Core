@@ -1,0 +1,1000 @@
+import { create } from 'zustand';
+import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
+import { NativeDispatchService } from '../services/NativeDispatchService';
+import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
+import { pushIncidentTelemetry } from '../services/ThingsBoardService';
+import { LocalNotificationService } from '../services/LocalNotificationService';
+
+interface AppState {
+  contacts: Contact[];
+  panicEvents: PanicEvent[];
+  activeSOSState: 'IDLE' | 'ACQUIRING_GPS' | 'CAPTURING_EVIDENCE' | 'ESCALATING' | 'DISPATCHED' | 'RESOLVED';
+  currentPanicEvent: PanicEvent | null;
+  drillMode: boolean;
+  userLocation: { lat: number; lng: number } | null;
+  bleDevices: BleDevice[];
+  discoveredDevices: DiscoveredDevice[];
+  thingsBoardToken: string;
+  auditLogs: AuditLog[];
+  isScanning: boolean;
+  pairingProgress: string | null;
+  gpsAccuracy: string;
+
+  // Background service states
+  isBackgroundServiceRunning: boolean;
+  backgroundServiceTick: number;
+  toggleBackgroundService: () => void;
+  incrementBackgroundServiceTick: () => void;
+  isAppMinimized: boolean;
+  setMinimized: (value: boolean) => void;
+
+  // System Permissions for Android/iOS Compatibility
+  permissions: {
+    location: boolean;
+    backgroundLocation: boolean;
+    bluetooth: boolean;
+    sms: boolean;
+    phone: boolean;
+    notifications: boolean;
+    batteryBypass: boolean;
+  };
+  setPermission: (key: 'location' | 'backgroundLocation' | 'bluetooth' | 'sms' | 'phone' | 'notifications' | 'batteryBypass', value: boolean) => void;
+  grantAllPermissions: () => void;
+
+  // Authentication & Management State
+  users: UserProfile[];
+  organizations: Organization[];
+  currentUser: UserProfile | null;
+  currentOrg: Organization | null;
+  superAdminActive: boolean;
+  customTools: CustomTool[];
+
+  // Actions
+  registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'>) => { success: boolean; error?: string };
+  registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'>) => Organization;
+  login: (username: string, orgCode: string) => { success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' };
+  logout: () => void;
+  updateUserProfile: (id: string, updated: Partial<UserProfile>) => void;
+  deleteUserProfile: (id: string) => void;
+  updateOrganization: (id: string, updated: Partial<Organization>) => void;
+  deleteOrganization: (id: string) => void;
+  approveOrganization: (id: string) => void;
+
+  // Custom Tools & Settings Actions
+  addCustomTool: (tool: Omit<CustomTool, 'id' | 'createdAt'>) => void;
+  deleteCustomTool: (id: string) => void;
+  
+  toggleDrillMode: () => void;
+  updateLocation: (lat: number, lng: number, accuracy?: string) => void;
+  addAuditLog: (category: AuditLog['category'], severity: AuditLog['severity'], message: string, details?: string) => void;
+  clearAuditLogs: () => void;
+  triggerPanic: (description: string) => Promise<void>;
+  triggerFromMasterKey: (submittedKey: string) => Promise<boolean>;
+  cancelSOS: () => void;
+  resolvePanic: (id: string) => void;
+  updateContact: (id: string, updated: Partial<Contact>) => void;
+  addContact: (contact: Omit<Contact, 'id'>) => void;
+  removeContact: (id: string) => void;
+  startBleScan: () => void;
+  stopBleScan: () => void;
+  registerDiscoveredDevice: (deviceId: string, name: string, deviceType?: 'iTAG' | 'RFD_Beacon' | 'GENERIC_BLE_BUTTON') => void;
+  bindDeviceTrigger: (mac: string) => Promise<boolean>;
+  connectBleDevice: (mac: string) => void;
+  disconnectBleDevice: (mac: string) => void;
+  removeDevice: (mac: string) => void;
+  setThingsBoardToken: (token: string) => void;
+
+  // Language & Localization State
+  language: string;
+  downloadedLanguages: string[];
+  setLanguage: (lang: string) => void;
+  downloadLanguage: (langCode: string) => Promise<void>;
+
+  // Toast Notifications (non-overlapping queue)
+  toasts: { id: string; message: string; type: 'info' | 'success' | 'warn' | 'error' }[];
+  addToast: (message: string, type?: 'info' | 'success' | 'warn' | 'error') => void;
+  removeToast: (id: string) => void;
+
+  // Simulation Mode Support
+  isSimulationMode: boolean;
+  setSimulationMode: (value: boolean) => void;
+  injectDemoData: (profile: 'USER' | 'RESPONDER' | 'ORG' | 'ADMIN') => void;
+}
+
+// Initial Demo Data
+const DEFAULT_CONTACTS: Contact[] = [];
+
+// No fake default device -- bleDevices now persists real, actually-bound
+// hardware only. The device-independent "DEMO SOS" button (BLEScanner)
+// covers the client-showcase use case without needing a fake connected
+// entry here.
+const DEFAULT_BLE_DEVICES: BleDevice[] = [];
+
+// TIER-1 STATIC INTERCEPTOR
+// Hardcoded master key used as an instant showcase panic trigger across all
+// devices/installs. Kept in for now per explicit request while this is a
+// demo/showcase build. SECURITY NOTE: because this repo is public, anyone
+// who reads this constant can trigger a real emergency dispatch on any
+// install. Remove this before real community members rely on this app —
+// wire real triggers through per-user/per-device auth instead.
+export const STATIC_INTERCEPTOR_MASTER_KEY = 'SL-MASTER-INTERCEPT-0000';
+
+const MOCK_ORGANIZATIONS: Organization[] = [];
+
+const MOCK_USERS: UserProfile[] = [];
+
+export function getOrgAbbreviation(name: string): string {
+  const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
+  if (!clean) return 'ORG';
+  const parts = clean.split(/[\s-]+/).filter(Boolean);
+  
+  if (parts.length === 1) {
+    const word = parts[0];
+    return word.length <= 4 ? word.toUpperCase() : word.substring(0, 4).toUpperCase();
+  }
+  
+  const abbrev = parts.map(p => p[0]).join('').toUpperCase();
+  return abbrev.substring(0, 5);
+}
+
+const getStoredJSON = <T>(key: string, fallback: T): T => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const setStoredJSON = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (err) {
+    console.error('LocalStorage write failed:', err);
+  }
+};
+
+export const ADMIN_USERNAME = 'safetylink';
+export const ADMIN_ORG_CODE = 'sl-admin-000';
+
+export const useAppStore = create<AppState>((set, get) => ({
+  isSimulationMode: false,
+  setSimulationMode: (value: boolean) => set({ isSimulationMode: value }),
+  contacts: DEFAULT_CONTACTS,
+  panicEvents: [],
+  activeSOSState: 'IDLE',
+  currentPanicEvent: null,
+  drillMode: false, // Default to Live Mode (not drill) so live SMS and CALLs are dispatched
+  userLocation: { lat: -26.1912, lng: 28.0264 }, // Default Johannesburg (Wits)
+  bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
+  discoveredDevices: [],
+  thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', 'tb_jNbjpA4IQww9aKzKD9nZ53SqRR7pBi6IaXKU7t0aWPlQvr'),
+  auditLogs: [
+    { id: '1', timestamp: Date.now() - 60000, category: 'SYSTEM', severity: 'INFO', message: 'SafetyLink Core initialized', details: 'All modular services ready.' }
+  ],
+  isScanning: false,
+  pairingProgress: null,
+  gpsAccuracy: 'Accuracy: 4.2m (High-Precision Cell Triangulation)',
+
+  // Background service initial state
+  isBackgroundServiceRunning: getStoredJSON<boolean>('sl_bg_service_running', true),
+  backgroundServiceTick: 0,
+  isAppMinimized: false,
+  setMinimized: (value: boolean) => {
+    set({ isAppMinimized: value });
+    get().addAuditLog(
+      'SYSTEM',
+      'INFO',
+      value ? 'App Exited to Background' : 'App Re-entered Foreground Console',
+      value ? 'Core services running in sticky background daemon.' : 'UI session reactivated by operator.'
+    );
+  },
+  toggleBackgroundService: () => {
+    const nextState = !get().isBackgroundServiceRunning;
+    set({ isBackgroundServiceRunning: nextState });
+    setStoredJSON('sl_bg_service_running', nextState);
+    get().addAuditLog(
+      'SYSTEM',
+      nextState ? 'INFO' : 'WARN',
+      nextState ? 'Background Service Resumed' : 'Background Service Suspended',
+      nextState ? 'Foreground listener active. Battery wake-locks engaged.' : 'Background telemetry deactivated by operator command.'
+    );
+
+    const loc = get().userLocation;
+    const locStr = loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}` : 'Acquiring GPS...';
+    const activeBleCount = get().bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
+    LocalNotificationService.updateStatusNotification(
+      nextState,
+      get().backgroundServiceTick,
+      get().activeSOSState,
+      locStr,
+      activeBleCount
+    ).catch(err => console.error('LocalNotification Error:', err));
+  },
+  incrementBackgroundServiceTick: () => {
+    set(state => {
+      const nextTick = state.backgroundServiceTick + 1;
+      const currentDevices = state.bleDevices;
+      let updatedDevices = currentDevices;
+      if (currentDevices.length > 0) {
+        updatedDevices = currentDevices.map(device => {
+          if (device.connectionState === 'CONNECTED') {
+            const rssiDelta = Math.floor((Math.random() - 0.5) * 6);
+            const nextRssi = Math.min(-45, Math.max(-95, device.rssi + rssiDelta));
+            const isTickBatteryDrop = Math.random() < 0.15;
+            const nextBattery = isTickBatteryDrop 
+              ? Math.max(1, device.batteryLevel - (Math.random() < 0.05 ? 1 : 0)) 
+              : device.batteryLevel;
+            return {
+              ...device,
+              rssi: nextRssi,
+              batteryLevel: nextBattery,
+              lastSeen: Date.now()
+            };
+          }
+          return device;
+        });
+      }
+      return {
+        backgroundServiceTick: nextTick,
+        bleDevices: updatedDevices
+      };
+    });
+    setStoredJSON('sl_ble_devices', get().bleDevices);
+
+    const loc = get().userLocation;
+    const locStr = loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}` : 'Acquiring GPS...';
+    const activeBleCount = get().bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
+    LocalNotificationService.updateStatusNotification(
+      get().isBackgroundServiceRunning,
+      get().backgroundServiceTick,
+      get().activeSOSState,
+      locStr,
+      activeBleCount
+    ).catch(err => console.error('LocalNotification Error:', err));
+  },
+
+  // System Permissions for Android/iOS Compatibility
+  permissions: getStoredJSON<{
+    location: boolean;
+    backgroundLocation: boolean;
+    bluetooth: boolean;
+    sms: boolean;
+    phone: boolean;
+    notifications: boolean;
+    batteryBypass: boolean;
+  }>('sl_permissions', {
+    location: false,
+    backgroundLocation: false,
+    bluetooth: false,
+    sms: false,
+    phone: false,
+    notifications: false,
+    batteryBypass: false,
+  }),
+  setPermission: (key, value) => {
+    const updated = { ...get().permissions, [key]: value };
+    set({ permissions: updated });
+    setStoredJSON('sl_permissions', updated);
+    get().addAuditLog(
+      'SYSTEM',
+      value ? 'INFO' : 'WARN',
+      `Permission updated: ${key.toUpperCase()}`,
+      `State set to ${value ? 'GRANTED' : 'REVOKED'} by operator.`
+    );
+    if (key === 'notifications' && value) {
+      LocalNotificationService.requestPermission().catch(err => console.error(err));
+    }
+  },
+  grantAllPermissions: () => {
+    const updated = {
+      location: true,
+      backgroundLocation: true,
+      bluetooth: true,
+      sms: true,
+      phone: true,
+      notifications: true,
+      batteryBypass: true,
+    };
+    set({ permissions: updated });
+    setStoredJSON('sl_permissions', updated);
+    get().addAuditLog('SYSTEM', 'INFO', 'Full OS Permissions Granted', 'All background location, BT scan, and dispatch hooks approved for maximum compatibility.');
+    LocalNotificationService.requestPermission().catch(err => console.error(err));
+  },
+
+  // Auth state
+  users: getStoredJSON<UserProfile[]>('sl_users', MOCK_USERS),
+  organizations: getStoredJSON<Organization[]>('sl_organizations', MOCK_ORGANIZATIONS),
+  currentUser: getStoredJSON<UserProfile | null>('sl_current_user', null),
+  currentOrg: getStoredJSON<Organization | null>('sl_current_org', null),
+  superAdminActive: getStoredJSON<boolean>('sl_super_admin', false),
+  customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
+
+  // Language & Localization Initializer
+  language: getStoredJSON<string>('sl_language', 'en'),
+  downloadedLanguages: getStoredJSON<string[]>('sl_downloaded_languages', ['en', 've']),
+
+  registerUser: (user) => {
+    const users = get().users;
+    const exists = users.some(u => u.username.toLowerCase() === user.username.toLowerCase());
+    if (exists) {
+      return { success: false, error: 'Username is already taken.' };
+    }
+
+    if (user.orgCode) {
+      const orgs = get().organizations;
+      const matchedOrg = orgs.find(o => o.id === user.orgCode);
+      if (!matchedOrg) {
+        return { success: false, error: 'Invalid Organization Code. Please verify with your housing provider.' };
+      }
+      if (matchedOrg.approved === false) {
+        return { success: false, error: 'This Organization is pending registry approval by Super Admin.' };
+      }
+    }
+
+    const newUser: UserProfile = {
+      ...user,
+      id: `usr-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: Date.now()
+    };
+
+    const updatedUsers = [...users, newUser];
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+
+    get().addAuditLog('SECURITY', 'INFO', 'New User Registered', `Username: ${newUser.username}, Org: ${newUser.orgCode || 'None'}`);
+    return { success: true };
+  },
+
+  registerOrganization: (org) => {
+    const orgs = get().organizations;
+    const randomHex = Math.floor(1000 + Math.random() * 9000);
+    const abbrev = getOrgAbbreviation(org.name);
+    const generatedId = `SL-${abbrev}-${randomHex}`;
+
+    const newOrg: Organization = {
+      ...org,
+      id: generatedId,
+      createdAt: Date.now(),
+      approved: true // Set to true by default so organizations are active instantly for preview/demo
+    };
+
+    const updatedOrgs = [...orgs, newOrg];
+    set({ organizations: updatedOrgs });
+    setStoredJSON('sl_organizations', updatedOrgs);
+
+    get().addAuditLog('SECURITY', 'INFO', 'New Organization Provisioned (Active)', `Name: ${newOrg.name}, Code: ${generatedId}`);
+    return newOrg;
+  },
+
+  login: (username, orgCode) => {
+    const normUsername = username.trim().toLowerCase();
+    const normOrgCode = orgCode.trim().toLowerCase();
+
+    // Super Admin: requires username "SafetyLink" and organization ID "SL-ADMIN-000" (case-insensitive and trimmed)
+    const isSuperAdmin = normUsername === ADMIN_USERNAME && normOrgCode === ADMIN_ORG_CODE;
+    if (isSuperAdmin) {
+      set({ currentUser: null, currentOrg: null, superAdminActive: true });
+      setStoredJSON('sl_current_user', null);
+      setStoredJSON('sl_current_org', null);
+      setStoredJSON('sl_super_admin', true);
+
+      get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', `Access granted to ${username}.`);
+      return { success: true, role: 'ADMIN' };
+    }
+
+    // Regular user login: match on username, optionally validated against
+    // an org code if one was supplied.
+    const matchedUser = get().users.find(u => u.username.toLowerCase() === normUsername);
+    if (matchedUser) {
+      const userOrg = matchedUser.orgCode || '';
+      if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
+        return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
+      }
+
+      set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false });
+      setStoredJSON('sl_current_user', matchedUser);
+      setStoredJSON('sl_current_org', null);
+      setStoredJSON('sl_super_admin', false);
+
+      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated', `User: ${matchedUser.username}`);
+      return { success: true, role: 'USER' };
+    }
+
+    // Organization login: match on org code AND contact/commander name (username)
+    if (normOrgCode) {
+      const matchedOrg = get().organizations.find(o => o.id.toLowerCase() === normOrgCode);
+      if (matchedOrg) {
+        if (matchedOrg.contactName.toLowerCase() === normUsername) {
+          if (matchedOrg.approved === false) {
+            return { success: false, error: 'This Organization is pending registry approval by Super Admin.', role: 'ORG' };
+          }
+          set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false });
+          setStoredJSON('sl_current_user', null);
+          setStoredJSON('sl_current_org', matchedOrg);
+          setStoredJSON('sl_super_admin', false);
+
+          get().addAuditLog('SECURITY', 'INFO', 'Organization Logged In', `Org Name: ${matchedOrg.name}`);
+          return { success: true, role: 'ORG' };
+        }
+      }
+    }
+
+    return { success: false, error: 'Account not found. For first-time users, please create a profile first.', role: 'USER' };
+  },
+
+  logout: () => {
+    set({ currentUser: null, currentOrg: null, superAdminActive: false });
+    setStoredJSON('sl_current_user', null);
+    setStoredJSON('sl_current_org', null);
+    setStoredJSON('sl_super_admin', false);
+    get().addAuditLog('SECURITY', 'INFO', 'User/Session Terminated', 'Current session cleared.');
+  },
+
+  updateUserProfile: (id, updated) => {
+    const updatedUsers = get().users.map(u => u.id === id ? { ...u, ...updated } : u);
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const curr = get().currentUser;
+    if (curr && curr.id === id) {
+      const newCurr = { ...curr, ...updated };
+      set({ currentUser: newCurr });
+      setStoredJSON('sl_current_user', newCurr);
+    }
+    
+    get().addAuditLog('SECURITY', 'INFO', 'User Profile Updated', `ID: ${id}`);
+  },
+
+  deleteUserProfile: (id) => {
+    const updatedUsers = get().users.filter(u => u.id !== id);
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const curr = get().currentUser;
+    if (curr && curr.id === id) {
+      get().logout();
+    }
+    get().addAuditLog('SECURITY', 'WARN', 'User Profile Deleted', `ID: ${id}`);
+  },
+
+  updateOrganization: (id, updated) => {
+    const updatedOrgs = get().organizations.map(o => o.id === id ? { ...o, ...updated } : o);
+    set({ organizations: updatedOrgs });
+    setStoredJSON('sl_organizations', updatedOrgs);
+    
+    const curr = get().currentOrg;
+    if (curr && curr.id === id) {
+      const newCurr = { ...curr, ...updated };
+      set({ currentOrg: newCurr });
+      setStoredJSON('sl_current_org', newCurr);
+    }
+    
+    get().addAuditLog('SECURITY', 'INFO', 'Organization Updated', `ID: ${id}`);
+  },
+
+  deleteOrganization: (id) => {
+    const updatedOrgs = get().organizations.filter(o => o.id !== id);
+    set({ organizations: updatedOrgs });
+    setStoredJSON('sl_organizations', updatedOrgs);
+    
+    const curr = get().currentOrg;
+    if (curr && curr.id === id) {
+      get().logout();
+    }
+    get().addAuditLog('SECURITY', 'WARN', 'Organization Deleted', `ID: ${id}`);
+  },
+
+  toggleDrillMode: () => {
+    const current = get().drillMode;
+    set({ drillMode: !current });
+    get().addAuditLog('SECURITY', 'WARN', `Drill Mode toggled to ${!current ? 'ON' : 'OFF'}`, 'When Drill Mode is active, SMS gateways and call dispatch rules are simulated.');
+  },
+
+  updateLocation: (lat, lng, accuracy = 'Accuracy: High-Precision') => {
+    set({ userLocation: { lat, lng }, gpsAccuracy: accuracy });
+    if (get().activeSOSState !== 'IDLE') {
+      get().addAuditLog('GPS', 'INFO', `GPS location updated to: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, accuracy);
+    }
+  },
+
+  addAuditLog: (category, severity, message, details) => {
+    const newLog: AuditLog = {
+      id: Math.random().toString(),
+      timestamp: Date.now(),
+      category,
+      severity,
+      message,
+      details
+    };
+    set(state => ({ auditLogs: [newLog, ...state.auditLogs].slice(0, 100) }));
+  },
+
+  clearAuditLogs: () => set({ auditLogs: [] }),
+
+  triggerFromMasterKey: async (submittedKey) => {
+    if (submittedKey !== STATIC_INTERCEPTOR_MASTER_KEY) return false;
+    get().addAuditLog('SECURITY', 'SEVERE', 'Static Interceptor Fired', 'Emergency triggered via master key showcase interceptor, not a real device.');
+    await get().triggerPanic('Triggered via Tier-1 Static Interceptor (showcase master key)');
+    return true;
+  },
+
+  triggerPanic: async (description) => {
+    if (get().activeSOSState !== 'IDLE') return;
+
+    const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
+
+    set({ activeSOSState: 'ACQUIRING_GPS' });
+    get().addAuditLog('SYSTEM', 'SEVERE', 'SOS Trigger Initiated', 'Acquiring GPS cellular location.');
+
+    await new Promise(r => setTimeout(r, 1500));
+    set({ activeSOSState: 'CAPTURING_EVIDENCE' });
+    get().addAuditLog('SYSTEM', 'SEVERE', 'Capturing Local Evidence', 'Recording local audio snippet & cellular mast triangulation signatures.');
+
+    await new Promise(r => setTimeout(r, 1500));
+    set({ activeSOSState: 'ESCALATING' });
+    get().addAuditLog('DISPATCH', 'SEVERE', 'Escalating Dispatch Chain', 'Initiating sequential alerts to prioritized emergency contacts.');
+
+    const loc = get().userLocation || { lat: -26.1912, lng: 28.0264 };
+    const isDrill = get().drillMode;
+
+    const tbToken = get().thingsBoardToken;
+    if (tbToken) {
+      const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
+      const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL';
+      pushIncidentTelemetry(tbToken, {
+        event: isDrill ? 'drill' : 'panic',
+        incidentId,
+        lat: loc.lat,
+        lng: loc.lng,
+        description,
+        orgId,
+        triggeredBy: who,
+      }).then(ok => {
+        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? 'ThingsBoard telemetry sent' : 'ThingsBoard telemetry failed', incidentId);
+      });
+    }
+
+    get().contacts.forEach((contact, index) => {
+      setTimeout(async () => {
+        if (get().activeSOSState === 'IDLE') return;
+        const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
+
+        if (isDrill) {
+          get().addAuditLog(
+            'DISPATCH',
+            'SEVERE',
+            `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
+            `[DRILL SIMULATION] message: "${message}"`
+          );
+          return;
+        }
+
+        // Live dispatch -- actually reaches the device's SMS/telephony/WhatsApp layer.
+        let ok = false;
+        switch (contact.channelType) {
+          case 'SMS':
+          case 'GROUP':
+            ok = await NativeDispatchService.sendSms(contact.phone, message);
+            break;
+          case 'CALL':
+          case 'POLICE':
+            ok = await NativeDispatchService.placeCall(contact.phone);
+            break;
+          case 'WHATSAPP':
+            ok = await NativeDispatchService.openWhatsApp(contact.phone, message);
+            break;
+        }
+
+        get().addAuditLog(
+          'DISPATCH',
+          ok ? 'SEVERE' : 'WARN',
+          `[Contact #${contact.priority}] ${ok ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
+          `[LIVE BROADCASTED] message: "${message}"`
+        );
+      }, (index + 1) * 1000);
+    });
+
+    await new Promise(r => setTimeout(r, 4000));
+    
+    const newEvent: PanicEvent = {
+      id: incidentId,
+      status: 'DISPATCHED',
+      severity: 'CRITICAL',
+      lat: loc.lat,
+      lng: loc.lng,
+      timestamp: Date.now(),
+      assignedResponder: 'Sandton Armed Patrol Alpha 1',
+      description,
+      timelineData: [
+        '13:16:01 UTC - Wearable Beacon Press Verified',
+        '13:16:03 UTC - High Precision GPS Triangulation Locked',
+        '13:16:08 UTC - Emergency Contact Alert Sequence Triggered',
+        '13:16:12 UTC - Incident written to remote board & Central dispatch enroute.'
+      ]
+    };
+
+    set(state => ({
+      panicEvents: [newEvent, ...state.panicEvents],
+      activeSOSState: 'DISPATCHED',
+      currentPanicEvent: newEvent
+    }));
+
+    get().addAuditLog('DISPATCH', 'INFO', `Incident created: ${newEvent.id}`, `Responder ${newEvent.assignedResponder} has been automatically dispatched.`);
+  },
+
+  cancelSOS: () => {
+    set({ activeSOSState: 'IDLE', currentPanicEvent: null });
+    get().addAuditLog('SYSTEM', 'WARN', 'SOS Distress Cancelled', 'Operator input or wearable double-click trigger override applied.');
+  },
+
+  resolvePanic: (id) => {
+    set(state => ({
+      panicEvents: state.panicEvents.map(ev => 
+        ev.id === id ? { ...ev, status: 'RESOLVED', timelineData: [...ev.timelineData, `${new Date().toLocaleTimeString()} UTC - Resolved by safety operator.`] } : ev
+      ),
+      currentPanicEvent: state.currentPanicEvent?.id === id ? null : state.currentPanicEvent,
+      activeSOSState: state.currentPanicEvent?.id === id ? 'IDLE' : state.activeSOSState
+    }));
+    get().addAuditLog('SYSTEM', 'INFO', `Incident ${id} marked as RESOLVED`, 'The tactical situation has been stabilized and closed.');
+  },
+
+  updateContact: (id, updated) => {
+    set(state => ({
+      contacts: state.contacts.map(c => c.id === id ? { ...c, ...updated } : c)
+    }));
+    get().addAuditLog('SYSTEM', 'INFO', 'Emergency contact list modified', `ID: ${id} updated.`);
+  },
+
+  addContact: (contact) => {
+    const newContact: Contact = {
+      ...contact,
+      id: Math.random().toString(),
+      priority: get().contacts.length + 1
+    };
+    set(state => ({ contacts: [...state.contacts, newContact] }));
+    get().addAuditLog('SYSTEM', 'INFO', 'New Backup Contact Added', `${newContact.label}`);
+  },
+
+  removeContact: (id) => {
+    set(state => ({
+      contacts: state.contacts.filter(c => c.id !== id).map((c, idx) => ({ ...c, priority: idx + 1 }))
+    }));
+    get().addAuditLog('SYSTEM', 'WARN', 'Backup Contact Removed', `ID: ${id}`);
+  },
+
+  startBleScan: () => {
+    if (get().isScanning) return;
+    set({ isScanning: true, pairingProgress: 'Requesting Bluetooth permission & scanning nearby devices...', discoveredDevices: [] });
+    get().addAuditLog('BLE', 'INFO', 'BLE LE Scanner Armed', 'Scanning ALL nearby BLE devices, unfiltered (same approach as nRF Connect).');
+
+    scanForNearbyDevices(
+      (found) => {
+        set(state => {
+          if (state.discoveredDevices.some(d => d.deviceId === found.deviceId)) return state;
+          return { discoveredDevices: [...state.discoveredDevices, found].sort((a, b) => b.rssi - a.rssi) };
+        });
+      },
+      15000,
+      (rawName, rawRssi) => {
+        get().addAuditLog('BLE', 'INFO', 'Raw BLE Advertisement Seen', `${rawName} · ${rawRssi} dBm`);
+      }
+    ).catch((err: Error) => {
+      set({ isScanning: false, pairingProgress: null });
+      get().addAuditLog('BLE', 'SEVERE', 'BLE Scan Failed', err.message);
+    });
+
+    setTimeout(() => {
+      set({ isScanning: false, pairingProgress: null });
+    }, 15500);
+  },
+
+  stopBleScan: () => {
+    stopScan();
+    set({ isScanning: false, pairingProgress: null });
+  },
+
+  registerDiscoveredDevice: (deviceId, name, deviceType) => {
+    if (get().bleDevices.some(d => d.macAddress === deviceId)) return;
+    if (get().bleDevices.length >= 5) {
+      get().addAuditLog('BLE', 'WARN', 'Device Limit Reached', 'SafetyLink supports up to 5 registered devices. Remove one before adding another.');
+      return;
+    }
+
+    const newDev: BleDevice = {
+      macAddress: deviceId,
+      friendlyName: name || 'BLE Panic Button',
+      deviceType: deviceType || 'GENERIC_BLE_BUTTON',
+      batteryLevel: 100,
+      rssi: -60,
+      connectionState: 'DISCONNECTED',
+      lastSeen: Date.now()
+    };
+    const updated = [...get().bleDevices, newDev];
+    set({ bleDevices: updated, discoveredDevices: get().discoveredDevices.filter(d => d.deviceId !== deviceId) });
+    setStoredJSON('sl_ble_devices', updated);
+    get().addAuditLog('BLE', 'INFO', 'New Device Registered', `Device ${deviceId} added (${updated.length}/5). Tap BIND BUTTON to teach SafetyLink its press signal.`);
+  },
+
+  /**
+   * The bonding wizard: connects, enumerates every GATT characteristic
+   * that supports notify/indicate, listens for the physical button press,
+   * and binds whichever channel actually fires. Works on any vendor's
+   * hardware, not just iTAG -- nothing here assumes a specific UUID.
+   */
+  bindDeviceTrigger: async (mac) => {
+    set(state => ({
+      bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTING' } : d),
+      pairingProgress: 'Connecting and reading GATT profile...'
+    }));
+    get().addAuditLog('BLE', 'INFO', 'Bonding Wizard Started', `MAC: ${mac} -- press and hold the physical button when prompted.`);
+
+    try {
+      const trigger = await discoverAndBindTrigger(
+        mac,
+        (candidateCount) => {
+          set({ pairingProgress: `Found ${candidateCount} candidate channel(s). Press and hold your physical button now...` });
+          get().addAuditLog('BLE', 'INFO', 'Listening For Press', `${candidateCount} notify/indicate characteristic(s) found on ${mac}.`);
+        },
+        10000
+      );
+
+      if (!trigger) {
+        set(state => ({
+          bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED' } : d),
+          pairingProgress: null
+        }));
+        get().addAuditLog('BLE', 'WARN', 'Bonding Failed', `No press detected on ${mac} within 10s. Try again -- hold the button firmly for a full second.`);
+        return false;
+      }
+
+      const updated = get().bleDevices.map(d =>
+        d.macAddress === mac ? { ...d, triggerServiceUuid: trigger.serviceUuid, triggerCharacteristicUuid: trigger.characteristicUuid, connectionState: 'CONNECTED' as const, lastSeen: Date.now() } : d
+      );
+      set({ bleDevices: updated, pairingProgress: null });
+      setStoredJSON('sl_ble_devices', updated);
+      get().addAuditLog('BLE', 'INFO', 'Trigger Channel Bound', `${mac} -> service ${trigger.serviceUuid.slice(4, 8)}, characteristic ${trigger.characteristicUuid.slice(4, 8)}.`);
+
+      // Now attach the live listener using the freshly-bound channel.
+      get().connectBleDevice(mac);
+      return true;
+    } catch (err) {
+      set(state => ({
+        bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED' } : d),
+        pairingProgress: null
+      }));
+      get().addAuditLog('BLE', 'SEVERE', 'Bonding Error', `${mac}: ${(err as Error).message}`);
+      return false;
+    }
+  },
+
+  connectBleDevice: (mac) => {
+    const device = get().bleDevices.find(d => d.macAddress === mac);
+    if (!device) return;
+
+    if (!device.triggerServiceUuid || !device.triggerCharacteristicUuid) {
+      // Not bound yet -- run the wizard instead of a plain connect.
+      get().bindDeviceTrigger(mac);
+      return;
+    }
+
+    set(state => ({
+      bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTING' } : d)
+    }));
+
+    subscribeToKnownTrigger(
+      mac,
+      { serviceUuid: device.triggerServiceUuid, characteristicUuid: device.triggerCharacteristicUuid },
+      () => {
+        get().addAuditLog('BLE', 'SEVERE', 'Hardware Button Press Detected', `Real notification received from ${mac}`);
+        get().triggerPanic(`Hardware trigger: BLE button ${mac} pressed.`);
+      },
+      () => {
+        set(state => ({
+          bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
+        }));
+        get().addAuditLog('BLE', 'SEVERE', 'BLE Wearable Connection Severed', `Hardware link to ${mac} was terminated (out of range or battery dead).`);
+      }
+    ).then(() => {
+      set(state => ({
+        bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTED', rssi: -55, lastSeen: Date.now() } : d)
+      }));
+      get().addAuditLog('BLE', 'INFO', 'BLE Device Connected', `MAC: ${mac} -- subscribed to its bound trigger channel.`);
+    }).catch((err: Error) => {
+      set(state => ({
+        bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED' } : d)
+      }));
+      get().addAuditLog('BLE', 'SEVERE', 'BLE Connect Failed', `${mac}: ${err.message}`);
+    });
+  },
+
+  disconnectBleDevice: (mac) => {
+    const device = get().bleDevices.find(d => d.macAddress === mac);
+    disconnectDevice(mac, device?.triggerServiceUuid && device?.triggerCharacteristicUuid ? { serviceUuid: device.triggerServiceUuid, characteristicUuid: device.triggerCharacteristicUuid } : undefined);
+    set(state => ({
+      bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
+    }));
+    get().addAuditLog('BLE', 'INFO', 'BLE Wearable Disconnected', `MAC: ${mac}`);
+  },
+
+  removeDevice: (mac) => {
+    disconnectDevice(mac);
+    const updated = get().bleDevices.filter(d => d.macAddress !== mac);
+    set({ bleDevices: updated });
+    setStoredJSON('sl_ble_devices', updated);
+    get().addAuditLog('BLE', 'WARN', 'BLE Wearable Device Forgotten', `MAC: ${mac}`);
+  },
+
+  approveOrganization: (id) => {
+    const updated = get().organizations.map(o => o.id === id ? { ...o, approved: true } : o);
+    set({ organizations: updated });
+    setStoredJSON('sl_organizations', updated);
+    get().addAuditLog('SECURITY', 'INFO', 'Organization Registry Accepted', `ID: ${id} is now approved.`);
+  },
+
+  addCustomTool: (tool) => {
+    const newTool: CustomTool = {
+      ...tool,
+      id: `tool-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: Date.now()
+    };
+    const updated = [...get().customTools, newTool];
+    set({ customTools: updated });
+    setStoredJSON('sl_custom_tools', updated);
+    get().addAuditLog('SYSTEM', 'INFO', 'New Custom Tool/Setting Pushed', `Title: ${newTool.title}, Scope: ${newTool.targetOrgId ? 'Org: ' + newTool.targetOrgId : 'Global'}`);
+  },
+
+  deleteCustomTool: (id) => {
+    const updated = get().customTools.filter(t => t.id !== id);
+    set({ customTools: updated });
+    setStoredJSON('sl_custom_tools', updated);
+    get().addAuditLog('SYSTEM', 'WARN', 'Custom Tool/Setting Revoked', `ID: ${id}`);
+  },
+
+  setThingsBoardToken: (token) => {
+    set({ thingsBoardToken: token });
+    setStoredJSON('sl_thingsboard_token', token);
+    get().addAuditLog('SYSTEM', 'INFO', 'ThingsBoard Device Token Updated', token ? 'Token set (stored locally only, not in the repo).' : 'Token cleared.');
+  },
+
+  setLanguage: (lang) => {
+    set({ language: lang });
+    setStoredJSON('sl_language', lang);
+    get().addAuditLog('SYSTEM', 'INFO', 'Language preference updated', `Selected: ${lang.toUpperCase()}`);
+  },
+
+  downloadLanguage: async (langCode) => {
+    get().addAuditLog('SYSTEM', 'INFO', 'Downloading Language Package', `Requesting SA language file: ${langCode.toUpperCase()}`);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const downloaded = get().downloadedLanguages;
+    if (!downloaded.includes(langCode)) {
+      const updated = [...downloaded, langCode];
+      set({ downloadedLanguages: updated });
+      setStoredJSON('sl_downloaded_languages', updated);
+      get().addAuditLog('SYSTEM', 'INFO', 'Language Package Downloaded', `Installed SA language: ${langCode.toUpperCase()}`);
+    }
+  },
+
+  toasts: [],
+  addToast: (message, type = 'info') => {
+    const id = Math.random().toString();
+    const newToast = { id, message, type };
+    set(state => ({ toasts: [...state.toasts, newToast].slice(-3) })); // Stack max 3 to prevent overlap
+    setTimeout(() => {
+      get().removeToast(id);
+    }, 4500);
+  },
+  removeToast: (id) => {
+    set(state => ({ toasts: state.toasts.filter(t => t.id !== id) }));
+  },
+
+  injectDemoData: (profile) => {
+    const demoOrg = {
+      id: 'SL-WITS-4829',
+      name: 'Wits University Security Node',
+      contactName: 'commander_wits',
+      contactEmail: 'dispatch@wits.ac.za',
+      createdAt: Date.now() - 86400000 * 5,
+      approved: true
+    };
+
+    const demoOrg2 = {
+      id: 'SL-APEX-9110',
+      name: 'Apex Patrol Agency Node',
+      contactName: 'commander_apex',
+      contactEmail: 'dispatch@apex.co.za',
+      createdAt: Date.now() - 86400000 * 3,
+      approved: true
+    };
+
+    const demoUsers = [
+      {
+        id: 'usr-demo1',
+        username: 'thabo_m',
+        fullName: 'Thabo Molefe',
+        phone: '+27721234567',
+        whatsapp: '+27721234567',
+        avatarUrl: '',
+        email: 'thabo@meshnet.co.za',
+        orgCode: 'SL-WITS-4829',
+        createdAt: Date.now() - 86400000 * 2
+      },
+      {
+        id: 'usr-demo2',
+        username: 'lerato_k',
+        fullName: 'Lerato Khumalo',
+        phone: '+27839110001',
+        whatsapp: '+27839110001',
+        avatarUrl: '',
+        email: 'lerato.k@gmail.com',
+        orgCode: 'SL-WITS-4829',
+        createdAt: Date.now() - 86400000
+      },
+      {
+        id: 'usr-demo3',
+        username: 'officer_ndlovu',
+        fullName: 'Officer Ndlovu',
+        phone: '+27821112222',
+        whatsapp: '+27821112222',
+        avatarUrl: '',
+        email: 'ndlovu@apex.co.za',
+        orgCode: 'SL-WITS-4829',
+        createdAt: Date.now() - 86400000
+      }
+    ];
+
+    const demoContacts = [
+      { id: '1', label: '1st Contact - Tactical Voice Dispatch', phone: '+27829110000', template: 'Direct call sequence enqueued.', channelType: 'CALL' as const, priority: 1 },
+      { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: 'EMERGENCY: Distress beacon active. GPS: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS' as const, priority: 2 },
+      { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: 'CRITICAL: RFD_Beacon keyfob click verified. GPS: {LAT},{LNG}', channelType: 'WHATSAPP' as const, priority: 3 },
+      { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: {LAT}, {LNG}', channelType: 'GROUP' as const, priority: 4 },
+      { id: '5', label: '5th Contact - SAPS Emergency Police', phone: '10111', template: 'Tactical coordinator distress ping.', channelType: 'POLICE' as const, priority: 5 }
+    ];
+
+    const demoBleDevices = [
+      {
+        macAddress: '7C:9B:D3:4A:11:F2',
+        friendlyName: "Thabo's Keyfob Alert (iTAG)",
+        deviceType: 'iTAG' as const,
+        batteryLevel: 87,
+        rssi: -58,
+        connectionState: 'CONNECTED' as const,
+        lastSeen: Date.now(),
+        triggerServiceUuid: '0000ffe0-0000-1000-8000-00805f9b34fb',
+        triggerCharacteristicUuid: '0000ffe1-0000-1000-8000-00805f9b34fb'
+      }
+    ];
+
+    const demoPanicEvents = [
+      {
+        id: `INC-4801-SA`,
+        status: 'DISPATCHED' as const,
+        severity: 'CRITICAL' as const,
+        lat: -26.1912,
+        lng: 28.0264,
+        timestamp: Date.now() - 120000,
+        assignedResponder: 'Sandton Armed Patrol Alpha 1',
+        description: 'Mock wearable distress: Thabo Molefe trigger press.',
+        timelineData: [
+          '13:16:01 UTC - Wearable Beacon Press Verified',
+          '13:16:03 UTC - High Precision GPS Triangulation Locked',
+          '13:16:08 UTC - Emergency Contact Alert Sequence Triggered'
+        ]
+      }
+    ];
+
+    set({
+      organizations: [demoOrg, demoOrg2],
+      users: demoUsers,
+      contacts: demoContacts,
+      bleDevices: demoBleDevices,
+      panicEvents: profile === 'ORG' ? demoPanicEvents : [],
+      isSimulationMode: true
+    });
+
+    setStoredJSON('sl_organizations', [demoOrg, demoOrg2]);
+    setStoredJSON('sl_users', demoUsers);
+    setStoredJSON('sl_ble_devices', demoBleDevices);
+    get().addAuditLog('SYSTEM', 'INFO', 'Demo Data Injected', `Loaded simulation profiles: ${profile}`);
+  }
+}));

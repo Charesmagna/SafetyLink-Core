@@ -1,0 +1,1 @@
+I've been constantly dealing with my AIstudio messing up my splash 3d logo, main app logo header logo and footer logo(which is BTW the same logo(Polish_20260605_085234209.jpg) for which should've been erased white background and then Integrated throughout the app.
