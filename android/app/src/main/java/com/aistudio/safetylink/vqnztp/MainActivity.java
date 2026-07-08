@@ -22,20 +22,12 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onStop() {
+    public void onStop() {
         super.onStop();
         // App went to background / screen locked – make sure service is running
         // so the "Device Locked" notification banner appears in the shade.
         startSafelinkService();
         Log.i(TAG, "App backgrounded – foreground service ensured running");
-    }
-
-    @Override
-    public void onTaskRemoved(Intent rootIntent) {
-        // User swiped the app out of Recents – service restart is handled by
-        // SafelinkForegroundService.onTaskRemoved() via AlarmManager.
-        super.onTaskRemoved(rootIntent);
-        Log.w(TAG, "App removed from Recents");
     }
 
     // -----------------------------------------------------------------------
