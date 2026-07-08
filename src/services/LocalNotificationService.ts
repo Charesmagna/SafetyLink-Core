@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import logoPolish from '../components/assets/Polish_20260620_014530309.jpg';
+// Use the official transparent SafetyLink logo for all notification icons
+import logoTransparent from '../components/assets/logo_transparent.png';
 
 export class LocalNotificationService {
   private static isNative = Capacitor.isNativePlatform();
@@ -35,28 +36,29 @@ export class LocalNotificationService {
     let silent = true;
 
     if (!isRunning) {
-      title = "⚠️ SafetyLink Monitoring Suspended";
-      body = "Hardware panic gestures and background tracking are offline! Click to reactivate.";
+      title = '⚠️ SafetyLink Monitoring Suspended';
+      body = 'Hardware panic gestures and background tracking are offline! Click to reactivate.';
     } else if (activeSOSState !== 'IDLE') {
-      title = "🚨 SafetyLink EMERGENCY ACTIVE";
+      title = '🚨 SafetyLink EMERGENCY ACTIVE';
       body = `Distress signal broadcasting! coordinates: [${locationStr}] • Contact chain alerted.`;
       silent = false;
     } else {
-      const devicesStr = activeBleDevicesCount > 0 ? `${activeBleDevicesCount} paired hardware(s)` : 'No iTAG bound';
-      title = "🛡️ SafetyLink Active Connection";
-      body = `Continuous Link Active • ${devicesStr} • Location: [${locationStr}]`;
+      const devicesStr =
+        activeBleDevicesCount > 0 ? `${activeBleDevicesCount} paired hardware(s)` : 'No iTAG bound';
+      title = '🛡️ SafetyLink Active Connection';
+      body = `Device Locked – Continuous Link Active • ${devicesStr} • Location: [${locationStr}]`;
     }
 
-    // 1. Browser HTML5 Notifications API
+    // 1. Browser HTML5 Notifications API (web / PWA)
     if (typeof window !== 'undefined' && 'Notification' in window) {
       if (window.Notification.permission === 'granted') {
         try {
           new window.Notification(title, {
             body: body,
             tag: 'safetylink-status',
-            icon: logoPolish,
-            requireInteraction: isRunning && (activeSOSState !== 'IDLE'),
-            silent: silent
+            icon: logoTransparent,   // ← correct transparent logo
+            requireInteraction: isRunning && activeSOSState !== 'IDLE',
+            silent: silent,
           });
         } catch (err) {
           console.warn('[LocalNotificationService] Failed to show HTML5 notification:', err);
@@ -64,19 +66,17 @@ export class LocalNotificationService {
       }
     }
 
-    // 2. Capacitor Local Notifications for Native Mobile Devices
+    // 2. Capacitor Local Notifications for native Android
     if (!this.isNative) {
       console.log(
-        `[LocalNotificationService:web-sim] Device tray notification update (Real Device Notification Pushed): running=${isRunning}, tick=${tickCount}, SOS=${activeSOSState}, location=${locationStr}, paired=${activeBleDevicesCount}`
+        `[LocalNotificationService:web-sim] Device tray notification update: running=${isRunning}, tick=${tickCount}, SOS=${activeSOSState}, location=${locationStr}, paired=${activeBleDevicesCount}`
       );
       return;
     }
 
     try {
-      // Always cancel the previous specific notification ID to update cleanly
-      await LocalNotifications.cancel({
-        notifications: [{ id: 8801 }]
-      }).catch(() => {});
+      // Cancel the previous notification so we update cleanly (no stale card)
+      await LocalNotifications.cancel({ notifications: [{ id: 8801 }] }).catch(() => {});
 
       const notificationInput: any = {
         id: 8801,
@@ -85,13 +85,12 @@ export class LocalNotificationService {
         ongoing: true,
         autoCancel: false,
         schedule: { at: new Date(Date.now() + 100) },
-        channelId: activeSOSState !== 'IDLE' ? "safetylink_emergency_channel" : "safetylink_channel",
-        smallIcon: "res://ic_stat_name"
+        channelId:
+          activeSOSState !== 'IDLE' ? 'safetylink_emergency_channel' : 'safetylink_channel',
+        smallIcon: 'res://ic_stat_name',
       };
 
-      await LocalNotifications.schedule({
-        notifications: [notificationInput]
-      });
+      await LocalNotifications.schedule({ notifications: [notificationInput] });
     } catch (e) {
       console.error('[LocalNotificationService] Error scheduling local notification:', e);
     }
@@ -100,9 +99,7 @@ export class LocalNotificationService {
   public static async cancelNotification() {
     if (!this.isNative) return;
     try {
-      await LocalNotifications.cancel({
-        notifications: [{ id: 8801 }]
-      });
+      await LocalNotifications.cancel({ notifications: [{ id: 8801 }] });
     } catch (e) {
       console.error('[LocalNotificationService] Error canceling local notification:', e);
     }
