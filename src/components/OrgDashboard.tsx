@@ -1,14 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { UserProfile } from '../types';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { motion, AnimatePresence } from 'motion/react';
-
-import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
-import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
-import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
-import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
+import { GlowingHeartBackground } from './GlowingHeartBackground';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -27,17 +21,6 @@ export const OrgDashboard: React.FC = () => {
     localOfflineQueue,
     syncOfflineQueue
   } = useAppStore();
-
-  // Background slideshow logic
-  const orgSlides = [slide4, slide5, slide1, slide2, slide3];
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % orgSlides.length);
-    }, 5500);
-    return () => clearInterval(timer);
-  }, [orgSlides.length]);
 
   const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio'>('dispatch');
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,27 +125,11 @@ export const OrgDashboard: React.FC = () => {
 
   return (
     <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-4 relative">
-      {/* Background Slideshow animation */}
+      {/* Background with Glowing Heart and Heartbeat Pulse */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0, scale: 1.03 }}
-            animate={{ opacity: 0.18 }} // Subtle 18% opacity for dashboard legibility
-            exit={{ opacity: 0, scale: 0.97 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="absolute inset-0 w-full h-full"
-          >
-            <img
-              src={orgSlides[currentSlide]}
-              alt="SafetyLink Operational Background"
-              className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1] saturate-[0.8]"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950" />
-          </motion.div>
-        </AnimatePresence>
-        <div className="absolute inset-0 digital-grid opacity-[0.05]" />
+        <GlowingHeartBackground />
+        {/* Transparent dark overlay to keep foreground text highly readable */}
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]" />
       </div>
       {/* Active Org Alerts Banner */}
       {activeOrgPanics.length > 0 && (
@@ -178,16 +145,16 @@ export const OrgDashboard: React.FC = () => {
           style={{ backgroundImage: `linear-gradient(to right, ${brandPrimaryColor}, ${brandSecondaryColor})` }}
         />
         
-        <div className="flex items-center gap-3 text-left">
+        <div className="flex items-center gap-4 text-left">
           {brandLogoUrl ? (
             <img 
               src={brandLogoUrl} 
               alt="Org Logo" 
-              className="w-10 h-10 rounded-xl border object-cover border-slate-700 shadow-md"
+              className="w-16 h-16 rounded-2xl border object-cover border-slate-700 shadow-md"
               onError={() => setBrandLogoUrl('')}
             />
           ) : (
-            <SafetyLinkLogo size={32} />
+            <SafetyLinkLogo size={68} />
           )}
           <div>
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">

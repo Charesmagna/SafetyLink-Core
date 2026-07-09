@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
+import { encryptFileData, decryptFileData } from '../utils/crypto';
 
 export const ConfidentialVault: React.FC = () => {
   const {
@@ -46,6 +47,116 @@ export const ConfidentialVault: React.FC = () => {
   const [newFileSize, setNewFileSize] = useState('1.2 MB');
   const [newAppName, setNewAppName] = useState('');
   const [newAppPackage, setNewAppPackage] = useState('');
+
+  // Cryptographic File States & Drag-and-Drop
+  const [isEncrypting, setIsEncrypting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    await processAndEncryptFile(file);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await processAndEncryptFile(file);
+    if (e.target) {
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  const processAndEncryptFile = async (file: File) => {
+    setIsEncrypting(true);
+    addToast(`Encrypting ${file.name} (Zero-Knowledge)...`, 'info');
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const { ciphertext, iv, salt } = await encryptFileData(arrayBuffer, vaultPassword);
+          
+          addVaultFile({
+            name: file.name,
+            size: `${(file.size / 1024).toFixed(1)} KB`,
+            type: file.name.split('.').pop()?.toUpperCase() || 'BIN',
+            ciphertext,
+            iv,
+            salt,
+            isEncrypted: true
+          });
+
+          addToast(`File cryptographically sealed: ${file.name}`, 'success');
+          addAuditLog('SECURITY', 'INFO', `File added to Zero-Knowledge Vault: ${file.name}`, 'AES-GCM 256-bit sealed.');
+        } catch (err: any) {
+          addToast(`Encryption failed: ${err.message}`, 'error');
+        } finally {
+          setIsEncrypting(false);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err: any) {
+      addToast(`Failed to read file: ${err.message}`, 'error');
+      setIsEncrypting(false);
+    }
+  };
+
+  const handleDecryptAndDownload = async (file: any) => {
+    if (!file.ciphertext || !file.iv || !file.salt) {
+      // Mock files originally populated on init do not have ciphertext, trigger warning & simulated download
+      addToast(`Decrypting mock file: ${file.name}`, 'info');
+      setTimeout(() => {
+        const blob = new Blob([`Decrypted mock payload for ${file.name}`], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        addToast(`Mock file decrypted & downloaded!`, 'success');
+      }, 500);
+      return;
+    }
+
+    addToast(`Decrypting cryptographic node: ${file.name}...`, 'info');
+
+    try {
+      const arrayBuffer = await decryptFileData(file.ciphertext, file.iv, file.salt, vaultPassword);
+      const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      addToast(`File verified & decrypted: ${file.name}`, 'success');
+      addAuditLog('SECURITY', 'INFO', `Decrypted and downloaded file: ${file.name}`, 'Integrity check passed.');
+    } catch (err: any) {
+      addToast(`Decryption failed: Integrity check failed or incorrect key.`, 'error');
+      addAuditLog('SECURITY', 'SEVERE', `Failed decryption attempt on file: ${file.name}`, err.message);
+    }
+  };
 
   const handleSetupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -447,30 +558,82 @@ export const ConfidentialVault: React.FC = () => {
 
       {/* Secure File System Directory */}
       <div className="p-5 midnight-glass text-left space-y-4">
-        <div className="border-b border-slate-900 pb-2">
-          <h3 className="text-xs font-mono font-black uppercase text-slate-300 tracking-wider">Secure File block directory</h3>
-          <p className="text-[8px] font-mono text-slate-500">Confidential nodes and logs locked under vault</p>
+        <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
+          <div>
+            <h3 className="text-xs font-mono font-black uppercase text-slate-300 tracking-wider">Secure File block directory</h3>
+            <p className="text-[8px] font-mono text-slate-500">Confidential nodes and logs locked under ZK vault</p>
+          </div>
+          <span className="text-[8px] font-mono bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold px-2 py-0.5 rounded uppercase">
+            AES-GCM 256-Bit
+          </span>
+        </div>
+
+        {/* Drag & Drop Zone */}
+        <div
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border border-dashed p-5 rounded-xl cursor-pointer text-center transition-all ${
+            dragActive
+              ? "border-cyan-500 bg-cyan-500/5"
+              : "border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-950/70"
+          }`}
+        >
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <span className="text-xl block mb-1">📥</span>
+          <p className="text-[9px] font-mono text-slate-300 font-bold uppercase tracking-wider">
+            Drag & drop files here, or <span className="text-cyan-400 underline">browse</span>
+          </p>
+          <p className="text-[7.5px] font-mono text-slate-500 uppercase mt-1">
+            {isEncrypting ? "Encrypting node..." : "Files are immediately encrypted client-side using Zero-Knowledge keys"}
+          </p>
         </div>
 
         <div className="space-y-2 font-mono text-[9px]">
           {vaultFiles.map((file) => (
             <div key={file.id} className="p-2.5 bg-slate-950/80 border border-slate-900 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <span className="text-base">📄</span>
-                <div>
-                  <span className="font-bold text-slate-200 block">{file.name}</span>
+              <div className="flex items-center gap-2.5 flex-1 min-w-0 mr-3">
+                <span className="text-base flex-shrink-0">📄</span>
+                <div className="truncate">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-200 truncate">{file.name}</span>
+                    {file.ciphertext ? (
+                      <span className="text-[6.5px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-1 rounded uppercase font-black tracking-widest flex-shrink-0">
+                        ZK-AES
+                      </span>
+                    ) : (
+                      <span className="text-[6.5px] bg-slate-900 border border-slate-800 text-slate-500 px-1 rounded uppercase font-black tracking-widest flex-shrink-0">
+                        Default
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[7.5px] text-slate-500 block uppercase tracking-wider">{file.type} · {file.size}</span>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  removeVaultFile(file.id);
-                  addToast('File deleted securely.', 'info');
-                }}
-                className="text-red-500 hover:text-red-400 font-bold text-[8px] uppercase tracking-wider"
-              >
-                Delete
-              </button>
+              <div className="flex items-center gap-2.5 flex-shrink-0">
+                <button
+                  onClick={() => handleDecryptAndDownload(file)}
+                  className="text-cyan-400 hover:text-cyan-300 font-bold text-[8px] uppercase tracking-wider px-2 py-1 bg-cyan-950/40 hover:bg-cyan-950/80 border border-cyan-900/30 rounded-lg transition-all"
+                >
+                  Decrypt & Download
+                </button>
+                <button
+                  onClick={() => {
+                    removeVaultFile(file.id);
+                    addToast('File deleted securely from vault.', 'info');
+                  }}
+                  className="text-red-500 hover:text-red-400 font-bold text-[8px] uppercase tracking-wider px-2 py-1 bg-red-950/10 hover:bg-red-950/30 border border-red-900/10 rounded-lg transition-all"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           ))}
 
@@ -480,7 +643,8 @@ export const ConfidentialVault: React.FC = () => {
         </div>
 
         {/* Add File Form */}
-        <form onSubmit={handleAddFile} className="space-y-2 pt-2">
+        <form onSubmit={handleAddFile} className="space-y-2 pt-2 border-t border-slate-900/40">
+          <p className="text-[8px] font-mono text-slate-500 uppercase tracking-wider font-bold">Inject Plaintext Placeholder Block (Manual Setup):</p>
           <div className="flex gap-2">
             <input
               type="text"

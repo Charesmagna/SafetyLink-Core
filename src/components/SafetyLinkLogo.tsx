@@ -39,7 +39,7 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 1 0 0 0 0
                 0 1 0 0 0
                 0 0 1 0 0
-                -2 -2 -2 3 -0.1
+                -3 -3 -3 4.5 -0.15
               "
             />
           </filter>

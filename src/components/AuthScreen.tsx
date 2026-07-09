@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore, getOrgAbbreviation } from '../utils/store';
-import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { CinematicLogoSmash } from './CinematicLogoSmash';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -222,10 +222,10 @@ export const AuthScreen: React.FC = () => {
       >
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-blue-500 to-emerald-500 neon-glow-blue" />
 
-        {/* Branding Header */}
-        <div className="text-center mb-6 mt-2">
+        {/* Branding Header with 3D Cinematic Smash and Zoom Animation */}
+        <div className="text-center mb-4 -mt-2">
           <div className="inline-flex items-center justify-center">
-            <SafetyLinkLogo size={64} showText={true} />
+            <CinematicLogoSmash size={120} />
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { NativeDispatchService } from '../services/NativeDispatchService';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { pushIncidentTelemetry } from '../services/ThingsBoardService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
+import { TwilioService } from '../services/TwilioService';
 
 interface AppState {
   contacts: Contact[];
@@ -120,7 +121,7 @@ interface AppState {
   vaultPassword: string;
   vaultSecurityQuestion: string;
   vaultSecurityAnswer: string;
-  vaultFiles: { id: string; name: string; size: string; type: string }[];
+  vaultFiles: { id: string; name: string; size: string; type: string; ciphertext?: string; iv?: string; salt?: string; isEncrypted?: boolean }[];
   vaultApps: { id: string; name: string; packageName: string }[];
   silenceAlerts: boolean;
   firestoreSync: boolean;
@@ -131,7 +132,7 @@ interface AppState {
   setVaultPassword: (password: string, question: string, answer: string) => void;
   setSilenceAlerts: (value: boolean) => void;
   setFirestoreSync: (value: boolean) => void;
-  addVaultFile: (file: { name: string; size: string; type: string }) => void;
+  addVaultFile: (file: { name: string; size: string; type: string; ciphertext?: string; iv?: string; salt?: string; isEncrypted?: boolean }) => void;
   removeVaultFile: (id: string) => void;
   addVaultApp: (app: { name: string; packageName: string }) => void;
   removeVaultApp: (id: string) => void;
@@ -841,13 +842,36 @@ export const useAppStore = create<AppState>((set, get) => ({
     const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
     const hasTwilio = !!(userOrg && userOrg.twilio && userOrg.twilio.accountSid);
 
-    if (hasTwilio && userOrg) {
+    if (hasTwilio && userOrg && userOrg.twilio) {
+      const { accountSid, authToken, fromNumber } = userOrg.twilio;
+      const ctrlRoom = userOrg.controlRoomNumber || '+27829110000';
+      const msgText = `SafetyLink EMERGENCY ALERT from ${get().currentUser?.fullName || 'Anonymous'}. Coordinates: https://maps.google.com/?q=${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}. Reason: ${description}`;
+
       get().addAuditLog(
         'DISPATCH',
         'SEVERE',
         `[Twilio Dispatch Layer] Active Twilio Connection Triggered`,
-        `Organization ${userOrg.name} has configured Twilio SID: ${userOrg.twilio?.accountSid}. Automatically initiating Twilio Cloud SMS & Voice Dispatch Call to Control Room: ${userOrg.controlRoomNumber || '+27829110000'} via Twilio Number: ${userOrg.twilio?.fromNumber}`
+        `Organization ${userOrg.name} has configured Twilio SID: ${accountSid}. Automatically initiating Twilio Cloud SMS & Voice Dispatch Call to Control Room: ${ctrlRoom} via Twilio Number: ${fromNumber}`
       );
+
+      // Async send SMS and trigger voice call using Twilio REST API
+      TwilioService.sendSms(accountSid, authToken, fromNumber, ctrlRoom, msgText)
+        .then(ok => {
+          get().addAuditLog(
+            'DISPATCH',
+            ok ? 'INFO' : 'WARN',
+            `[Twilio Dispatch Layer] SMS ${ok ? 'Sent' : 'FAILED'} to ${ctrlRoom}`
+          );
+        });
+
+      TwilioService.triggerVoiceCall(accountSid, authToken, fromNumber, ctrlRoom, loc.lat, loc.lng, description)
+        .then(ok => {
+          get().addAuditLog(
+            'DISPATCH',
+            ok ? 'INFO' : 'WARN',
+            `[Twilio Dispatch Layer] Automated Voice Call ${ok ? 'Dispatched' : 'FAILED'} to ${ctrlRoom}`
+          );
+        });
     }
 
     const tLines = [

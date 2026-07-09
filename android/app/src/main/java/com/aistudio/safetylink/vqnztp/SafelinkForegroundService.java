@@ -116,6 +116,9 @@ public class SafelinkForegroundService extends Service {
                                            String locationStr,
                                            int connectedBleCount,
                                            String sosState) {
+        // Touch the wake lock on status changes to keep the CPU awake for the transition
+        touchWakeLock(ctx);
+
         NotificationManager nm =
                 (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
@@ -210,8 +213,22 @@ public class SafelinkForegroundService extends Service {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
-            wakeLock.acquire(); // held for service lifetime
-            Log.d(TAG, "Wake lock acquired");
+            // Limit to 10 minutes maximum per acquisition block to prevent Samsung/Xiaomi battery drain warnings
+            wakeLock.acquire(10 * 60 * 1000L); 
+            Log.d(TAG, "Wake lock acquired with 10 minute timeout");
+        }
+    }
+
+    public static void touchWakeLock(Context ctx) {
+        try {
+            PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
+                wl.acquire(5 * 60 * 1000L); // Hold for another 5 minutes on event/update
+                Log.d(TAG, "Wake lock touched/refreshed for 5 minutes");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to touch wake lock: " + e.getMessage());
         }
     }
 

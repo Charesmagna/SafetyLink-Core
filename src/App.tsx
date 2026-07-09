@@ -251,7 +251,7 @@ const App: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-2.5">
-            <SafetyLinkLogo size={44} />
+            <SafetyLinkLogo size={68} />
             <div className="text-left">
               <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>

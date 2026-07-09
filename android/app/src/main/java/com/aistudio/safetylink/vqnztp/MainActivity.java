@@ -5,6 +5,11 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import java.util.concurrent.TimeUnit;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -19,6 +24,12 @@ public class MainActivity extends BridgeActivity {
 
         // Start the persistent foreground service so BLE + GPS stay alive
         startSafelinkService();
+
+        // Enqueue unique 15-minute keepalive work to survive aggressive OEM memory sweeps
+        scheduleKeepAlive();
+
+        // Prompt the user to whitelist the app from battery optimizations
+        requestBatteryOptimizationBypass();
     }
 
     @Override
@@ -40,6 +51,44 @@ public class MainActivity extends BridgeActivity {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
+        }
+    }
+
+    private void scheduleKeepAlive() {
+        try {
+            PeriodicWorkRequest keepAliveRequest = new PeriodicWorkRequest.Builder(
+                    SafetyKeepAliveWorker.class,
+                    15, TimeUnit.MINUTES
+            ).build();
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                    "SafetyLinkKeepAlive",
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    keepAliveRequest
+            );
+            Log.i(TAG, "Unique Periodic KeepAlive scheduled successfully");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to schedule KeepAlive WorkManager: " + e.getMessage());
+        }
+    }
+
+    private void requestBatteryOptimizationBypass() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(android.content.Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(getPackageName())) {
+                try {
+                    Intent intent = new Intent();
+                    intent.setAction(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(android.net.Uri.parse("package:" + getPackageName()));
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                    Log.i(TAG, "Launched ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS prompt");
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to prompt for battery optimization bypass: " + e.getMessage());
+                }
+            } else {
+                Log.i(TAG, "Battery optimizations already ignored");
+            }
         }
     }
 }
