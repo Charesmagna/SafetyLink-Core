@@ -42,6 +42,38 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
+        <!-- Headless ghost PanicService for quick-actions and system overlays -->
+        <service
+            android:name=".PanicService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- System widgets -->
+        <receiver
+            android:name=".PanicWidgetProvider"
+            android:label="SafetyLink Instant SOS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/panic_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".StatusWidgetProvider"
+            android:label="SafetyLink System Status"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_info" />
+        </receiver>
+
         <!-- Restart service after device reboot -->
         <receiver
             android:name=".BootReceiver"
@@ -59,6 +91,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <!-- Bluetooth LE: scanning for and connecting to iTAG keyfobs -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

@@ -4,7 +4,17 @@ import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AndroidWidgetSimulator: React.FC = () => {
-  const { triggerPanic, addAuditLog, activeSOSState, userLocation } = useAppStore();
+  const { 
+    triggerPanic, 
+    addAuditLog, 
+    activeSOSState, 
+    userLocation,
+    silenceAlerts,
+    setSilenceAlerts,
+    decoyActive,
+    setDecoyActive,
+    addToast
+  } = useAppStore();
   
   const userLat = userLocation?.lat ?? -26.1912;
   const userLng = userLocation?.lng ?? 28.0264;
@@ -56,6 +66,11 @@ export const AndroidWidgetSimulator: React.FC = () => {
   };
 
   const handleWidgetTrigger = () => {
+    // Play haptic vibration sequence
+    if (navigator.vibrate) {
+      navigator.vibrate([80, 40, 80]);
+    }
+
     if (!isArmed) {
       triggerLocalNotification('Widget Error', 'SafetyLink widget is disarmed. Please open main console to authenticate.');
       return;
@@ -77,6 +92,10 @@ export const AndroidWidgetSimulator: React.FC = () => {
   };
 
   const handleDisarmGrace = () => {
+    // Play quick tap haptic vibration
+    if (navigator.vibrate) {
+      navigator.vibrate(20);
+    }
     setCountdown(null);
     addAuditLog('BLE', 'INFO', 'Widget SOS disarmed by user during 10s grace period', 'Coordinated broadcast enqueuer stopped.');
     triggerLocalNotification('SOS Aborted', 'Emergency broadcast sequence successfully disarmed.');
@@ -172,12 +191,30 @@ export const AndroidWidgetSimulator: React.FC = () => {
         <div className="flex items-center gap-2">
           <SafetyLinkLogo size={18} glowColor="rgba(239, 68, 68, 0.4)" />
           <h2 className="text-xs font-black tracking-widest font-mono uppercase text-slate-100">
-            SafetyLink Home Screen Widget
+            SafetyLink AppWidget System
           </h2>
         </div>
-        <span className="text-[8px] font-mono font-black px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded uppercase">
-          Direct SOS
-        </span>
+        <div className="flex gap-1.5">
+          <span className="text-[8.5px] font-mono font-black px-2 py-0.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded uppercase">
+            Ghost Service
+          </span>
+          <span className="text-[8.5px] font-mono font-black px-2 py-0.5 bg-red-500/10 border border-red-500/20 text-red-400 rounded uppercase">
+            Decoupled
+          </span>
+        </div>
+      </div>
+
+      <div className="text-[9.5px] text-slate-400 leading-relaxed font-mono bg-slate-950/40 p-3 rounded-xl border border-slate-900/60">
+        <p className="text-cyan-400 font-bold mb-1">🛠️ NATIVE ANDROID SUBSYSTEM CONNECTED:</p>
+        <p className="mb-1">
+          • <span className="text-slate-200">PanicService.java</span> operates as a headless, native daemon process running independently of the WebView context.
+        </p>
+        <p className="mb-1">
+          • Two <span className="text-slate-200">AppWidgetProvider</span> classes expose the <span className="text-red-400 font-bold">Instant SOS Actuator</span> and the <span className="text-emerald-400 font-bold">System Status HUD</span> widgets.
+        </p>
+        <p>
+          • Hardware iTAG presses send a system Intent directly to the background service, displaying a global overlay countdown over lockscreens.
+        </p>
       </div>
 
       {/* The Widget Body, rendered directly as a clean high-contrast card */}
@@ -201,11 +238,48 @@ export const AndroidWidgetSimulator: React.FC = () => {
           </span>
         </motion.button>
 
-        <div className="text-center space-y-0.5 font-mono">
-          <span className="text-[9.5px] font-black text-slate-300 uppercase">Interactive Widget Gateway</span>
-          <p className="text-[8px] text-slate-500 uppercase leading-relaxed max-w-xs">
-            Uplink: Active • Delay: 10s Grace Period
-          </p>
+        <div className="text-center space-y-2.5 font-mono w-full">
+          <div>
+            <span className="text-[9.5px] font-black text-slate-300 uppercase">Interactive Widget Gateway</span>
+            <p className="text-[8px] text-slate-500 uppercase leading-relaxed max-w-xs mx-auto">
+              Uplink: Active • Delay: 10s Grace Period
+            </p>
+          </div>
+
+          {/* Quick interactive toggles */}
+          <div className="flex justify-center items-center gap-3 pt-2 border-t border-slate-900/40 max-w-[240px] mx-auto">
+            <button
+              onClick={() => {
+                setSilenceAlerts(!silenceAlerts);
+                addToast(silenceAlerts ? 'Siren mode armed.' : 'Silence SOS mode armed.', 'info');
+                if (navigator.vibrate) navigator.vibrate(15);
+              }}
+              className={`flex-1 py-1 px-2 rounded-xl text-[8px] font-bold border transition-all uppercase flex items-center justify-center gap-1 ${
+                silenceAlerts
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                  : 'bg-slate-950/60 border-slate-900 text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <span>🔕</span>
+              <span>{silenceAlerts ? 'Silent' : 'Siren'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setDecoyActive(!decoyActive);
+                addToast(decoyActive ? 'Calculator disguise disarmed.' : 'Calculator disguise armed.', 'info');
+                if (navigator.vibrate) navigator.vibrate(15);
+              }}
+              className={`flex-1 py-1 px-2 rounded-xl text-[8px] font-bold border transition-all uppercase flex items-center justify-center gap-1 ${
+                decoyActive
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-slate-950/60 border-slate-900 text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <span>🎛️</span>
+              <span>{decoyActive ? 'Decoy' : 'Disarm'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

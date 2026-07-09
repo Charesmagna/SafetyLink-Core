@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#020617"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#0f172a"
+        android:layout_centerInParent="true">
+
+        <ImageView
+            android:id="@+id/widget_panic_btn"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:contentDescription="Panic trigger button" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ACTIVATE SOS"
+            android:textColor="#f8fafc"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp"
+            android:fontFamily="sans-serif-condensed" />
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SafetyLink Quick Trigger"
+            android:textColor="#64748b"
+            android:textSize="8sp"
+            android:layout_marginTop="1dp" />
+    </LinearLayout>
+</RelativeLayout>

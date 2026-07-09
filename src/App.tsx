@@ -25,13 +25,15 @@ import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { AdvancedSubsystems } from './components/AdvancedSubsystems';
+import { DecoyCalculator } from './components/DecoyCalculator';
+import { ConfidentialVault } from './components/ConfidentialVault';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
 import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
 import slide3 from './assets/images/regenerated_image_1783360733591.jpg';
 
-type TabId = 'home' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
 
 const App: React.FC = () => {
   const { 
@@ -49,10 +51,16 @@ const App: React.FC = () => {
     backgroundServiceTick,
     bleDevices,
     isAppMinimized,
-    setMinimized
+    setMinimized,
+    decoyActive,
+    demoMode
   } = useAppStore();
   
-  const t = (key: string) => translate(language, key);
+  const t = (key: string) => {
+    if (key === 'tab.deck') return 'Control Deck';
+    if (key === 'tab.vault') return 'Confidential Vault';
+    return translate(language, key);
+  };
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -182,6 +190,10 @@ const App: React.FC = () => {
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
+    if (decoyActive) {
+      return <DecoyCalculator />;
+    }
+
     if (superAdminActive) {
       return <AdminPanel />;
     }
@@ -272,6 +284,8 @@ const App: React.FC = () => {
           {/* Active View Indicator Badge */}
           <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase bg-slate-950 px-2.5 py-1 rounded-full border ${
             activeTab === 'home' ? 'text-red-400 border-red-500/10' :
+            activeTab === 'deck' ? 'text-cyan-400 border-cyan-500/10' :
+            activeTab === 'vault' ? 'text-emerald-400 border-emerald-500/10' :
             activeTab === 'contacts' ? 'text-blue-400 border-blue-500/10' :
             activeTab === 'ble' ? 'text-emerald-400 border-emerald-500/10' :
             activeTab === 'map' ? 'text-amber-400 border-amber-500/10' :
@@ -288,9 +302,9 @@ const App: React.FC = () => {
         <div className="max-w-md mx-auto p-4 space-y-5">
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
-            <div className="space-y-5 animate-fadeIn">
+            <div className="space-y-6 animate-fadeIn text-center flex flex-col items-center justify-center py-4">
               {/* SafetyLink Reassurance Header Card */}
-              <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex items-start gap-4">
+              <div className="w-full bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-slate-800/60 flex items-center justify-center text-xl shrink-0">
                   🛡️
                 </div>
@@ -308,8 +322,14 @@ const App: React.FC = () => {
               </div>
 
               {/* Central Core Panic Trigger Button */}
-              <PanicButton />
+              <div className="w-full flex items-center justify-center py-6">
+                <PanicButton />
+              </div>
+            </div>
+          )}
 
+          {activeTab === 'deck' && (
+            <div className="space-y-5 animate-fadeIn">
               {/* Location telemetry display */}
               <LocationDisplay />
 
@@ -388,6 +408,12 @@ const App: React.FC = () => {
                   </div>
                 );
               })()}
+            </div>
+          )}
+
+          {activeTab === 'vault' && (
+            <div className="animate-fadeIn">
+              <ConfidentialVault />
             </div>
           )}
 
@@ -521,6 +547,36 @@ const App: React.FC = () => {
                     <div className="text-left">
                       <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.home')}</p>
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Control cockpit & beacon</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('deck'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'deck'
+                        ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🎛️</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.deck')}</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Support tools & telemetry</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('vault'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'vault'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🛡️</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.vault')}</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Secure files & app locking</p>
                     </div>
                   </button>
 
@@ -674,8 +730,31 @@ const App: React.FC = () => {
     );
   };
 
+  const getThemeClass = () => {
+    if (superAdminActive) return 'theme-admin';
+    if (currentOrg) return 'theme-org';
+    if (currentUser) {
+      return currentUser.orgCode ? 'theme-responder' : 'theme-personal';
+    }
+    return 'theme-personal';
+  };
+
   return (
-    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden">
+    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      {/* High fidelity cyber background lighting elements */}
+      <div className="police-wash pointer-events-none" />
+      
+      <div className="flare-line-container pointer-events-none">
+        <div className="flare-line flare-line-1" />
+        <div className="flare-line flare-line-2" />
+      </div>
+
+      {demoMode && (
+        <div className="demo-simulated-overlay select-none pointer-events-none">
+          <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
+        </div>
+      )}
+
       {/* Persistent System Status Bar & Background Notification Tray */}
       <BackgroundNotificationPanel />
 

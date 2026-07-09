@@ -112,6 +112,29 @@ interface AppState {
   floatingWidgetSize: number;
   setFloatingWidgetDeployed: (value: boolean) => void;
   setFloatingWidgetSize: (value: number) => void;
+
+  // Decoy Mode & Vault states
+  decoyActive: boolean;
+  decoyCode: string;
+  decoyDistressCode: string;
+  vaultPassword: string;
+  vaultSecurityQuestion: string;
+  vaultSecurityAnswer: string;
+  vaultFiles: { id: string; name: string; size: string; type: string }[];
+  vaultApps: { id: string; name: string; packageName: string }[];
+  silenceAlerts: boolean;
+  firestoreSync: boolean;
+
+  setDecoyActive: (value: boolean) => void;
+  setDecoyCode: (code: string) => void;
+  setDecoyDistressCode: (code: string) => void;
+  setVaultPassword: (password: string, question: string, answer: string) => void;
+  setSilenceAlerts: (value: boolean) => void;
+  setFirestoreSync: (value: boolean) => void;
+  addVaultFile: (file: { name: string; size: string; type: string }) => void;
+  removeVaultFile: (id: string) => void;
+  addVaultApp: (app: { name: string; packageName: string }) => void;
+  removeVaultApp: (id: string) => void;
 }
 
 // Initial Demo Data
@@ -355,6 +378,75 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFloatingWidgetSize: (value) => {
     set({ floatingWidgetSize: value });
     setStoredJSON('sl_floating_widget_size', value);
+  },
+
+  // Decoy Mode & Vault Initial States
+  decoyActive: getStoredJSON<boolean>('sl_decoy_active', false),
+  decoyCode: getStoredJSON<string>('sl_decoy_code', '1911'),
+  decoyDistressCode: getStoredJSON<string>('sl_decoy_distress_code', '9111'),
+  vaultPassword: getStoredJSON<string>('sl_vault_password', ''),
+  vaultSecurityQuestion: getStoredJSON<string>('sl_vault_security_question', ''),
+  vaultSecurityAnswer: getStoredJSON<string>('sl_vault_security_answer', ''),
+  vaultFiles: getStoredJSON<any[]>('sl_vault_files', [
+    { id: 'f1', name: 'covert_mesh_route_v2.pdf', size: '2.4 MB', type: 'PDF' },
+    { id: 'f2', name: 'patrol_telemetry_manifest.json', size: '15.1 KB', type: 'JSON' },
+    { id: 'f3', name: 'personnel_clearance_saps.xlsx', size: '412 KB', type: 'XLSX' }
+  ]),
+  vaultApps: getStoredJSON<any[]>('sl_vault_apps', [
+    { id: 'a1', name: 'Signal Private Messenger', packageName: 'org.thoughtcrime.securesms' },
+    { id: 'a2', name: 'Tor Browser Client', packageName: 'org.torproject.torbrowser' }
+  ]),
+  silenceAlerts: getStoredJSON<boolean>('sl_silence_alerts', false),
+  firestoreSync: getStoredJSON<boolean>('sl_firestore_sync', false),
+
+  setDecoyActive: (value) => {
+    set({ decoyActive: value });
+    setStoredJSON('sl_decoy_active', value);
+    get().addAuditLog('SECURITY', 'INFO', `Decoy mode ${value ? 'ARMED' : 'DISARMED'}`, 'App launches directly into normal calculator disguise.');
+  },
+  setDecoyCode: (code) => {
+    set({ decoyCode: code });
+    setStoredJSON('sl_decoy_code', code);
+  },
+  setDecoyDistressCode: (code) => {
+    set({ decoyDistressCode: code });
+    setStoredJSON('sl_decoy_distress_code', code);
+  },
+  setVaultPassword: (password, question, answer) => {
+    set({ vaultPassword: password, vaultSecurityQuestion: question, vaultSecurityAnswer: answer });
+    setStoredJSON('sl_vault_password', password);
+    setStoredJSON('sl_vault_security_question', question);
+    setStoredJSON('sl_vault_security_answer', answer);
+    get().addAuditLog('SECURITY', 'INFO', 'Confidential Vault Password set/updated', 'Encrypted local key-store initialized.');
+  },
+  setSilenceAlerts: (value) => {
+    set({ silenceAlerts: value });
+    setStoredJSON('sl_silence_alerts', value);
+  },
+  setFirestoreSync: (value) => {
+    set({ firestoreSync: value });
+    setStoredJSON('sl_firestore_sync', value);
+    get().addAuditLog('SYSTEM', 'INFO', `Firestore Backup Link ${value ? 'ENABLED' : 'DISABLED'}`, 'Real-time synchronization with remote cloud clusters.');
+  },
+  addVaultFile: (file) => {
+    const nextFiles = [...get().vaultFiles, { ...file, id: Math.random().toString(36).substring(2, 9) }];
+    set({ vaultFiles: nextFiles });
+    setStoredJSON('sl_vault_files', nextFiles);
+  },
+  removeVaultFile: (id) => {
+    const nextFiles = get().vaultFiles.filter(f => f.id !== id);
+    set({ vaultFiles: nextFiles });
+    setStoredJSON('sl_vault_files', nextFiles);
+  },
+  addVaultApp: (app) => {
+    const nextApps = [...get().vaultApps, { ...app, id: Math.random().toString(36).substring(2, 9) }];
+    set({ vaultApps: nextApps });
+    setStoredJSON('sl_vault_apps', nextApps);
+  },
+  removeVaultApp: (id) => {
+    const nextApps = get().vaultApps.filter(a => a.id !== id);
+    set({ vaultApps: nextApps });
+    setStoredJSON('sl_vault_apps', nextApps);
   },
 
   // Language & Localization Initializer

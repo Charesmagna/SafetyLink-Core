@@ -11,7 +11,11 @@ export const FloatingPanicWidget: React.FC = () => {
     activeSOSState,
     startMultiStagePanic,
     cancelSOS,
-    addToast
+    addToast,
+    silenceAlerts,
+    setSilenceAlerts,
+    decoyActive,
+    setDecoyActive
   } = useAppStore();
 
   const [showControls, setShowControls] = useState(false);
@@ -19,13 +23,13 @@ export const FloatingPanicWidget: React.FC = () => {
   
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  // Auto-close control slider after 5 seconds of inactivity
+  // Auto-close control slider after 10 seconds of inactivity to allow enough time for toggles
   useEffect(() => {
     if (showControls) {
-      const timer = setTimeout(() => setShowControls(false), 5000);
+      const timer = setTimeout(() => setShowControls(false), 10000);
       return () => clearTimeout(timer);
     }
-  }, [showControls, floatingWidgetSize, opacity]);
+  }, [showControls, floatingWidgetSize, opacity, silenceAlerts, decoyActive]);
 
   if (!isFloatingWidgetDeployed) return null;
 
@@ -35,15 +39,20 @@ export const FloatingPanicWidget: React.FC = () => {
   // Handle single tap or double tap
   let lastTap = 0;
   const handleTap = (e: React.MouseEvent) => {
-    // Avoid double trigger from dragging
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
+    
+    // Simulate tactile haptic vibration feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(now - lastTap < DOUBLE_TAP_DELAY ? [40, 20, 40] : 15);
+    }
+
     if (now - lastTap < DOUBLE_TAP_DELAY) {
       // Double tap -> Toggle sizing controls
       setShowControls(!showControls);
       e.stopPropagation();
     } else {
-      // Single tap -> Trigger / Cancel SOS (with delay to see if it's a double tap)
+      // Single tap -> Trigger / Cancel SOS
       setTimeout(() => {
         const doubleTapped = Date.now() - lastTap < DOUBLE_TAP_DELAY;
         if (!doubleTapped) {
@@ -165,6 +174,36 @@ export const FloatingPanicWidget: React.FC = () => {
                   onChange={(e) => setOpacity(Number(e.target.value))}
                   className="w-full accent-emerald-400 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
                 />
+              </div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono font-black pt-1 border-t border-slate-900">
+                <span className="text-slate-400">SILENT SOS:</span>
+                <button
+                  onClick={() => {
+                    setSilenceAlerts(!silenceAlerts);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-black border uppercase ${
+                    silenceAlerts ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                  }`}
+                >
+                  {silenceAlerts ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono font-black pb-1">
+                <span className="text-slate-400">DECOY MODE:</span>
+                <button
+                  onClick={() => {
+                    setDecoyActive(!decoyActive);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-black border uppercase ${
+                    decoyActive ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                  }`}
+                >
+                  {decoyActive ? 'ACTIVE' : 'DISABLED'}
+                </button>
               </div>
 
               <div className="text-[8px] text-center text-slate-500 font-mono italic leading-none">

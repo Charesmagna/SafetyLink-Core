@@ -22,12 +22,15 @@ public class BootReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
                 || "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
-            Log.i(TAG, "Boot detected – starting SafelinkForegroundService");
+            Log.i(TAG, "Boot detected – starting background services");
             Intent serviceIntent = new Intent(context, SafelinkForegroundService.class);
+            Intent panicIntent = new Intent(context, PanicService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);
+                context.startForegroundService(panicIntent);
             } else {
                 context.startService(serviceIntent);
+                context.startService(panicIntent);
             }
         }
     }
