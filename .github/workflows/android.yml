@@ -27,23 +27,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Verify core branding asset
-        run: |
-          if [ -f "public/Polish_20260620_014530309.jpg" ]; then
-            echo "✨ Verified Polish_20260620_014530309.jpg is present in public/ directory."
-          elif [ -f "Polish_20260620_014530309.jpg" ]; then
-            echo "✨ Verified Polish_20260620_014530309.jpg is present in root. Copying to public/."
-            cp Polish_20260620_014530309.jpg public/ || true
-          else
-            echo "⚠️ Warning: Core branding asset Polish_20260620_014530309.jpg not found in expected paths. Continuing with fallback."
-          fi
-
-      - name: Setup environment config
-        run: cp .env.example .env || true
-
-      - name: Run code linter
-        run: npm run lint || echo "Linter warning bypassed"
-
       - name: Build web assets
         run: npm run build
 
@@ -63,12 +46,6 @@ jobs:
         run: cd android && ./gradlew assembleDebug --no-daemon
         env:
           GRADLE_OPTS: "-Xmx4g"
-
-      - name: Log build statistics
-        run: |
-          echo "✨ SafetyLink APK compilation completed successfully."
-          echo "Output package details:"
-          ls -la android/app/build/outputs/apk/debug/ || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
