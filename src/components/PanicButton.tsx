@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const PanicButton: React.FC = () => {
-  const { activeSOSState, triggerPanic, cancelSOS, drillMode } = useAppStore();
+  const { activeSOSState, cancelSOS, drillMode, panicCountdown, startMultiStagePanic } = useAppStore();
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<number | null>(null);
@@ -83,7 +83,7 @@ export const PanicButton: React.FC = () => {
         clearInterval(holdIntervalRef.current!);
         setIsHolding(false);
         setHoldProgress(0);
-        triggerPanic("Critical panic beacon initiated manually via interactive mission-control cockpit trigger.");
+        startMultiStagePanic("Critical panic beacon initiated manually via interactive mission-control cockpit trigger.");
       }
     }, 30);
   };
@@ -404,17 +404,81 @@ export const PanicButton: React.FC = () => {
             {drillMode ? "Simulated escalation nodes" : "Sequential escalation chain active"}
           </span>
         </div>
-        <button
-          onClick={() => useAppStore.getState().toggleDrillMode()}
-          className={`px-3.5 py-1.5 rounded-full text-[9px] font-mono font-bold tracking-wider border uppercase transition-all duration-300 ${
-            drillMode
-              ? 'bg-slate-800/60 text-amber-400 border-amber-500/20 hover:bg-slate-800 hover:border-amber-400/40'
-              : 'bg-red-950/20 text-red-400 border-red-500/20 hover:bg-red-950/40 hover:border-red-500/40'
-          }`}
-        >
-          {drillMode ? "DRILL TEST" : "LIVE PROTOCOL"}
-        </button>
+        <div className="flex items-center gap-2">
+          {activeSOSState === 'IDLE' && panicCountdown === null && (
+            <button
+              onClick={() => startMultiStagePanic("Manual fast-tap testing alert")}
+              className="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900 border border-red-500/20 rounded-full text-[8px] font-mono font-bold text-red-400 uppercase tracking-wider"
+            >
+              ⏳ Test 5s
+            </button>
+          )}
+          <button
+            onClick={() => useAppStore.getState().toggleDrillMode()}
+            className={`px-3.5 py-1.5 rounded-full text-[9px] font-mono font-bold tracking-wider border uppercase transition-all duration-300 ${
+              drillMode
+                ? 'bg-slate-800/60 text-amber-400 border-amber-500/20 hover:bg-slate-800 hover:border-amber-400/40'
+                : 'bg-red-950/20 text-red-400 border-red-500/20 hover:bg-red-950/40 hover:border-red-500/40'
+            }`}
+          >
+            {drillMode ? "DRILL TEST" : "LIVE PROTOCOL"}
+          </button>
+        </div>
       </div>
+
+      {/* Fullscreen Pre-Distress Countdown Overlay */}
+      <AnimatePresence>
+        {panicCountdown !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center select-none"
+          >
+            <div className="absolute inset-0 digital-grid opacity-20 pointer-events-none" />
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-center font-mono text-[8px] text-slate-500 uppercase">
+              <span>SECURITY CHANNEL SECURE-LINK-V4</span>
+              <span className="text-red-500 animate-pulse">● PRE-PANIC BUFFER</span>
+            </div>
+
+            <div className="space-y-6 max-w-xs relative z-10">
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-mono font-black text-red-500 uppercase tracking-[0.2em] mb-2 animate-pulse">
+                  ⚠️ IMMINENT TRANSMISSION ⚠️
+                </span>
+                <p className="text-[10px] text-slate-400 leading-relaxed font-mono">
+                  Broadcasting multi-stage distress signals in:
+                </p>
+              </div>
+
+              {/* Animated Countdown Ring */}
+              <div className="relative w-40 h-40 mx-auto flex items-center justify-center">
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  className="absolute inset-0 rounded-full bg-red-650/10 border-2 border-red-500/40 filter blur-xs"
+                />
+                <span className="text-7xl font-display font-black text-white leading-none relative">
+                  {panicCountdown}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[10px] text-slate-400 leading-relaxed font-mono">
+                  If this is a false alarm or drill, depress the abort link below immediately to suspend dispatch pipelines.
+                </p>
+
+                <button
+                  onClick={cancelSOS}
+                  className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-mono font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg border border-red-500/20 transition-all cursor-pointer hover:scale-102 active:scale-98"
+                >
+                  🛑 ABORT DISPATCH
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

@@ -3,36 +3,37 @@ import { useAppStore, getOrgAbbreviation } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { motion, AnimatePresence } from 'motion/react';
 
+import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
+import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
+import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
+import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
+
 export const AuthScreen: React.FC = () => {
   const { 
     login, 
     registerUser, 
     registerOrganization,
-    organizations,
-    addToast,
-    isSimulationMode,
-    setSimulationMode,
-    injectDemoData
+    demoMode,
+    toggleDemoMode
   } = useAppStore();
   const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG'>('LOGIN');
 
-  // QR Code Scanner States
-  const [isScanningQr, setIsScanningQr] = useState(false);
-  const [qrScanTarget, setQrScanTarget] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  // Background slideshow logic
+  const authSlides = [slide5, slide4, slide3, slide1, slide2];
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % authSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [authSlides.length]);
 
   // Login States
   const [loginUsername, setLoginUsername] = useState('');
   const [loginOrgCode, setLoginOrgCode] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
-
-  // Load remembered credentials on mount
-  useEffect(() => {
-    const savedUser = localStorage.getItem('sl_remembered_username');
-    const savedOrg = localStorage.getItem('sl_remembered_org_code');
-    if (savedUser) setLoginUsername(savedUser);
-    if (savedOrg) setLoginOrgCode(savedOrg);
-  }, []);
 
   // User Register States
   const [userUsername, setUserUsername] = useState('');
@@ -66,15 +67,7 @@ export const AuthScreen: React.FC = () => {
     }
 
     const res = login(loginUsername, loginOrgCode);
-    if (res.success) {
-      if (rememberMe) {
-        localStorage.setItem('sl_remembered_username', loginUsername.trim());
-        localStorage.setItem('sl_remembered_org_code', loginOrgCode.trim());
-      } else {
-        localStorage.removeItem('sl_remembered_username');
-        localStorage.removeItem('sl_remembered_org_code');
-      }
-    } else {
+    if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     }
   };
@@ -154,32 +147,72 @@ export const AuthScreen: React.FC = () => {
     const newOrg = registerOrganization({
       name: orgName,
       contactName: orgContactName,
-      contactEmail: orgEmail
+      contactEmail: orgEmail,
+      id: generatedOrgId
     });
 
-    newOrg.id = generatedOrgId;
+    if (newOrg.approved === false) {
+      setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Awaiting registry approval from Super Admin...`);
+      const prefillContactName = orgContactName;
+      const prefillOrgId = generatedOrgId;
+      setTimeout(() => {
+        setView('LOGIN');
+        setLoginUsername(prefillContactName);
+        setLoginOrgCode(prefillOrgId);
+        setOrgSuccessMsg('');
+        setOrgName('');
+        setOrgContactName('');
+        setOrgEmail('');
+        setGeneratedOrgId('');
+        setShowIdApplication(false);
+      }, 4000);
+    } else {
+      setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Logging you in...`);
+      const registeredContactName = orgContactName;
+      const registeredOrgId = generatedOrgId;
 
-    setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Logging you in...`);
-    const registeredContactName = orgContactName;
-    const registeredOrgId = generatedOrgId;
-
-    setTimeout(() => {
-      login(registeredContactName, registeredOrgId);
-      setOrgSuccessMsg('');
-      setOrgName('');
-      setOrgContactName('');
-      setOrgEmail('');
-      setGeneratedOrgId('');
-      setShowIdApplication(false);
-    }, 1500);
+      setTimeout(() => {
+        login(registeredContactName, registeredOrgId);
+        setOrgSuccessMsg('');
+        setOrgName('');
+        setOrgContactName('');
+        setOrgEmail('');
+        setGeneratedOrgId('');
+        setShowIdApplication(false);
+      }, 1500);
+    }
   };
 
   return (
     <div className="h-full bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-y-auto select-none scanlines">
+      {/* Background Slideshow animation */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0, scale: 1.04 }}
+            animate={{ opacity: 0.45 }} // Subtle 45% opacity for auth background to keep form text legible
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full"
+          >
+            <img
+              src={authSlides[currentSlide]}
+              alt="SafetyLink Background"
+              className="w-full h-full object-cover filter brightness-[0.35] contrast-[1.1] saturate-[0.8]"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950" />
+          </motion.div>
+        </AnimatePresence>
+        {/* HUD Overlay Scanlines and grid */}
+        <div className="absolute inset-0 digital-grid opacity-[0.08]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-red-500/5 mix-blend-color" />
+      </div>
+
       {/* Background Accents */}
-      <div className="absolute top-[-10%] left-[-20%] w-[60%] h-[60%] rounded-full bg-blue-500/10 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] rounded-full bg-red-500/5 blur-[130px] pointer-events-none" />
-      <div className="absolute inset-0 digital-grid opacity-15 pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-20%] w-[60%] h-[60%] rounded-full bg-blue-500/10 blur-[130px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] rounded-full bg-red-500/5 blur-[130px] pointer-events-none z-0" />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
@@ -194,6 +227,25 @@ export const AuthScreen: React.FC = () => {
           <div className="inline-flex items-center justify-center">
             <SafetyLinkLogo size={64} showText={true} />
           </div>
+        </div>
+
+        {/* Demo Mode Toggle Banner */}
+        <div className="mb-5 bg-slate-950/50 p-3 rounded-2xl border border-slate-900 flex items-center justify-between font-mono">
+          <div className="text-left">
+            <span className="text-[9.5px] font-black tracking-wide text-slate-300 block uppercase">Demo Showcase Mode</span>
+            <span className="text-[7.5px] text-slate-500 block leading-tight">Instantly populates mock networks and active supervisor nodes.</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleDemoMode}
+            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0 ${
+              demoMode 
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 shadow-md shadow-amber-950/40' 
+                : 'bg-slate-950 text-slate-500 border-slate-900 hover:text-slate-300'
+            }`}
+          >
+            {demoMode ? 'ENABLED' : 'DISABLED'}
+          </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -231,16 +283,7 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               <div className="flex flex-col">
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Organizational Mesh Code</label>
-                  <button
-                    type="button"
-                    onClick={() => { setQrScanTarget('LOGIN'); setIsScanningQr(true); }}
-                    className="text-[9.5px] font-mono font-extrabold text-emerald-400 hover:text-emerald-300 transition-colors uppercase flex items-center gap-1.5"
-                  >
-                    📷 Scan Node Badge
-                  </button>
-                </div>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Organizational Mesh Code</label>
                 <input
                   type="text"
                   value={loginOrgCode}
@@ -251,102 +294,89 @@ export const AuthScreen: React.FC = () => {
                 <span className="text-[9px] text-slate-500 mt-1 pl-1">Leave blank for standalone mesh profile mode.</span>
               </div>
 
-              <div className="flex items-center gap-2 py-1 select-none">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-800 bg-slate-950 text-blue-500 focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer accent-blue-600"
-                />
-                <label htmlFor="rememberMe" className="text-[9px] text-slate-400 font-bold select-none cursor-pointer uppercase tracking-wider">
-                  Remember my credentials
-                </label>
-              </div>
-
-              {/* Simulation Mode Toggle */}
-              <div className="flex items-center justify-between border-t border-b border-slate-900/60 py-2.5 my-1">
-                <div className="flex items-center gap-2 select-none">
-                  <input
-                    type="checkbox"
-                    id="simulationMode"
-                    checked={isSimulationMode}
-                    onChange={e => {
-                      setSimulationMode(e.target.checked);
-                      if (!e.target.checked) {
-                        localStorage.removeItem('sl_organizations');
-                        localStorage.removeItem('sl_users');
-                        localStorage.removeItem('sl_ble_devices');
-                        window.location.reload();
-                      }
-                    }}
-                    className="rounded border-slate-800 bg-slate-950 text-emerald-500 focus:ring-0 focus:ring-offset-0 w-4 h-4 cursor-pointer accent-emerald-600"
-                  />
-                  <label htmlFor="simulationMode" className="text-[10px] text-emerald-400 font-black select-none cursor-pointer uppercase tracking-wider flex items-center gap-1">
-                    <span>⚡ Simulation Mode</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  </label>
-                </div>
-                <span className="text-[8px] text-slate-500 font-mono">SANDBOX ACTIVE</span>
-              </div>
-
-              {isSimulationMode && (
-                <div className="p-3 bg-slate-900/40 border border-slate-850 rounded-2xl space-y-2 text-left">
-                  <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider mb-1 font-mono">
-                    Select Quick Preview Profile:
+              {/* DEMO MODE QUICK LOGIN CHANNELS (Excluding Super Admin) */}
+              {demoMode && (
+                <div className="bg-slate-950/40 border border-slate-900 rounded-2.5xl p-4.5 space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+                    <span className="text-[8.5px] font-black tracking-widest text-amber-400 uppercase">Exemplary Live Demo Profiles</span>
+                    <span className="text-[7.5px] font-mono text-slate-500 uppercase">Excludes Admin</span>
+                  </div>
+                  <p className="text-[8.5px] text-slate-400 leading-normal mb-1">
+                    Select a simulated role to automatically configure the console telemetry and log in directly:
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        injectDemoData('USER');
-                        login('thabo_m', 'SL-WITS-4829');
-                        addToast('Simulated login: Resident Client (Thabo Molefe)', 'success');
-                      }}
-                      className="p-2 bg-slate-950 hover:bg-emerald-950/10 border border-slate-850 hover:border-emerald-500/30 rounded-xl transition-all text-left"
-                    >
-                      <span className="text-[10px] font-bold text-slate-200 block">👤 CLIENT</span>
-                      <span className="text-[8px] text-slate-500 block truncate font-mono">thabo_m (Wits Node)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        injectDemoData('RESPONDER');
-                        login('officer_ndlovu', 'SL-WITS-4829');
-                        addToast('Simulated login: Security Officer Ndlovu', 'success');
-                      }}
-                      className="p-2 bg-slate-950 hover:bg-emerald-950/10 border border-slate-850 hover:border-emerald-500/30 rounded-xl transition-all text-left"
-                    >
-                      <span className="text-[10px] font-bold text-slate-200 block">👮 RESPONDER</span>
-                      <span className="text-[8px] text-slate-500 block truncate font-mono">officer_ndlovu</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        injectDemoData('ORG');
-                        login('commander_wits', 'SL-WITS-4829');
-                        addToast('Simulated login: Security Commander Deck', 'success');
-                      }}
-                      className="p-2 bg-slate-950 hover:bg-emerald-950/10 border border-slate-850 hover:border-emerald-500/30 rounded-xl transition-all text-left"
-                    >
-                      <span className="text-[10px] font-bold text-slate-200 block">🏢 DISPATCHER</span>
-                      <span className="text-[8px] text-slate-500 block truncate font-mono">commander_wits</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        injectDemoData('ADMIN');
-                        login('safetylink', 'sl-admin-000');
-                        addToast('Simulated login: Super Admin Console', 'success');
-                      }}
-                      className="p-2 bg-slate-950 hover:bg-emerald-950/10 border border-slate-850 hover:border-emerald-500/30 rounded-xl transition-all text-left"
-                    >
-                      <span className="text-[10px] font-bold text-slate-200 block">⚙️ SUPER ADMIN</span>
-                      <span className="text-[8px] text-slate-500 block truncate font-mono">safetylink (Global)</span>
-                    </button>
+                  
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {[
+                      {
+                        name: 'Wits Security Commander',
+                        role: 'Organization Deck (ORG)',
+                        username: 'commander_wits',
+                        orgCode: 'SL-WITS-4829',
+                        badge: 'Campus Security',
+                        icon: '🏫',
+                        color: 'hover:bg-emerald-500/5 hover:border-emerald-500/30 text-emerald-400 border-emerald-500/10 bg-emerald-500/2'
+                      },
+                      {
+                        name: 'City Patrol Dispatcher',
+                        role: 'Organization Deck (ORG)',
+                        username: 'chief_patrol',
+                        orgCode: 'SL-CITY-2810',
+                        badge: 'Armed Response',
+                        icon: '🚓',
+                        color: 'hover:bg-red-500/5 hover:border-red-500/30 text-red-400 border-red-500/10 bg-red-500/2'
+                      },
+                      {
+                        name: 'Thabo Molefe (Wits)',
+                        role: 'Safety Hub (USER)',
+                        username: 'thabo_m',
+                        orgCode: 'SL-WITS-4829',
+                        badge: 'Bound Student',
+                        icon: '👤',
+                        color: 'hover:bg-blue-500/5 hover:border-blue-500/30 text-blue-400 border-blue-500/10 bg-blue-500/2'
+                      },
+                      {
+                        name: 'Lerato Khumalo (Private)',
+                        role: 'Safety Hub (USER)',
+                        username: 'lerato_k',
+                        orgCode: '',
+                        badge: 'Independent Client',
+                        icon: '🏡',
+                        color: 'hover:bg-purple-500/5 hover:border-purple-500/30 text-purple-400 border-purple-500/10 bg-purple-500/2'
+                      }
+                    ].map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setLoginUsername(p.username);
+                          setLoginOrgCode(p.orgCode);
+                          setLoginError('');
+                          const res = login(p.username, p.orgCode);
+                          if (!res.success) {
+                            setLoginError(res.error || 'Failed to auto-authenticate.');
+                          }
+                        }}
+                        className={`w-full text-left p-3 rounded-2xl border flex items-start gap-3 transition-all ${p.color}`}
+                      >
+                        <span className="text-base pt-0.5">{p.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-[10px] font-black tracking-wide truncate text-slate-200 block">
+                              {p.name}
+                            </span>
+                            <span className="text-[7.5px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-850 uppercase shrink-0">
+                              {p.badge}
+                            </span>
+                          </div>
+                          <span className="text-[8.5px] text-slate-400 block mt-0.5">
+                            Role: {p.role}
+                          </span>
+                          <span className="text-[7.5px] text-slate-500 font-mono block mt-1">
+                            Callsign: <strong className="text-slate-300">{p.username}</strong> {p.orgCode && <>· Mesh: <strong className="text-slate-300">{p.orgCode}</strong></>}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -468,35 +498,37 @@ export const AuthScreen: React.FC = () => {
                 </div>
 
                 {/* Quick Presets */}
-                <div className="space-y-1">
-                  <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-bold">Or select identity role:</span>
-                  <div className="flex gap-1.5">
-                    {[
-                      { emoji: '🛡️', bg: 'bg-purple-900/30 border-purple-500/30' },
-                      { emoji: '🚨', bg: 'bg-red-900/30 border-red-500/30' },
-                      { emoji: '⚡', bg: 'bg-amber-900/30 border-amber-500/30' },
-                      { emoji: '🛰️', bg: 'bg-blue-900/30 border-blue-500/30' },
-                      { emoji: '❇️', bg: 'bg-emerald-900/30 border-emerald-500/30' }
-                    ].map((preset, idx) => {
-                      const selectPreset = () => {
-                        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="#0f172a"/><circle cx="50" cy="50" r="40" fill="#1e293b" stroke="#6366f1" stroke-width="2"/><text x="50" y="58" font-size="36" text-anchor="middle">${preset.emoji}</text></svg>`;
-                        const b64 = `data:image/svg+xml;base64,${btoa(svgString)}`;
-                        setUserAvatar(b64);
-                      };
+                {demoMode && (
+                  <div className="space-y-1">
+                    <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-bold">Or select identity role:</span>
+                    <div className="flex gap-1.5">
+                      {[
+                        { emoji: '🛡️', bg: 'bg-purple-900/30 border-purple-500/30' },
+                        { emoji: '🚨', bg: 'bg-red-900/30 border-red-500/30' },
+                        { emoji: '⚡', bg: 'bg-amber-900/30 border-amber-500/30' },
+                        { emoji: '🛰️', bg: 'bg-blue-900/30 border-blue-500/30' },
+                        { emoji: '❇️', bg: 'bg-emerald-900/30 border-emerald-500/30' }
+                      ].map((preset, idx) => {
+                        const selectPreset = () => {
+                          const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="#0f172a"/><circle cx="50" cy="50" r="40" fill="#1e293b" stroke="#6366f1" stroke-width="2"/><text x="50" y="58" font-size="36" text-anchor="middle">${preset.emoji}</text></svg>`;
+                          const b64 = `data:image/svg+xml;base64,${btoa(svgString)}`;
+                          setUserAvatar(b64);
+                        };
 
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={selectPreset}
-                          className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs hover:scale-105 transition-all bg-slate-900 border-slate-900"
-                        >
-                          {preset.emoji}
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={selectPreset}
+                            className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs hover:scale-105 transition-all bg-slate-900 border-slate-900"
+                          >
+                            {preset.emoji}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -563,16 +595,7 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               <div className="flex flex-col">
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Mesh Node Code Binding (Optional)</label>
-                  <button
-                    type="button"
-                    onClick={() => { setQrScanTarget('REGISTER'); setIsScanningQr(true); }}
-                    className="text-[9.5px] font-mono font-extrabold text-emerald-400 hover:text-emerald-300 transition-colors uppercase flex items-center gap-1.5"
-                  >
-                    📷 Scan Node Badge
-                  </button>
-                </div>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Mesh Node Code Binding (Optional)</label>
                 <input
                   type="text"
                   value={userOrgCode}
@@ -727,115 +750,12 @@ export const AuthScreen: React.FC = () => {
         </AnimatePresence>
       </motion.div>
 
-      {/* Fututistic Interactive QR Code Scanner overlay */}
-      <AnimatePresence>
-        {isScanningQr && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-left"
-          >
-            <div className="w-full max-w-md bg-slate-900 border border-emerald-500/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.15)] flex flex-col relative font-mono text-xs">
-              {/* Holographic scanner layout header */}
-              <div className="p-4 border-b border-slate-800 bg-slate-950/40 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                    Tactical QR Beacon Receiver
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsScanningQr(false)}
-                  className="text-[9.5px] font-bold text-slate-500 hover:text-slate-300 transition-colors uppercase border border-slate-800 px-2.5 py-1 bg-slate-950 rounded-lg"
-                >
-                  Abort [ESC]
-                </button>
-              </div>
-
-              {/* Scanner Camera Viewfinder Container */}
-              <div className="p-6 flex flex-col items-center justify-center bg-slate-950/40 relative min-h-[250px] overflow-hidden">
-                {/* Corner brackets */}
-                <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-emerald-500" />
-                <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-emerald-500" />
-                <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-emerald-500" />
-                <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-emerald-500" />
-
-                {/* Red Laser scan line */}
-                <div className="absolute left-6 right-6 h-[2px] bg-emerald-500/85 shadow-[0_0_12px_#10b981] animate-[scanline_2s_ease-in-out_infinite] z-20 pointer-events-none" />
-
-                {/* Coordinates overlay tickers */}
-                <div className="absolute top-6 left-6 text-[7.5px] text-slate-500 space-y-0.5">
-                  <p>LAT: -26.19120</p>
-                  <p>LNG: 28.02640</p>
-                  <p>ALT: 1764.2M</p>
-                </div>
-
-                <div className="absolute top-6 right-6 text-[7.5px] text-slate-500 text-right space-y-0.5">
-                  <p>FREQ: 433.92MHZ</p>
-                  <p>RSSI: -54DBM</p>
-                  <p>SAT: 11_GNSS</p>
-                </div>
-
-                {/* Floating target focus */}
-                <div className="w-32 h-32 border border-dashed border-emerald-500/30 rounded-full flex items-center justify-center animate-[spin_30s_linear_infinite] pointer-events-none">
-                  <div className="w-16 h-16 border border-emerald-500/20 rounded-full" />
-                </div>
-                
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none p-4 text-center">
-                  <span className="text-[10px] font-black text-emerald-400 bg-slate-950/90 border border-emerald-500/20 px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse shadow-md">
-                    Align QR Code inside Viewport
-                  </span>
-                </div>
-              </div>
-
-              {/* Simulated Badge Selection */}
-              <div className="p-5 border-t border-slate-800 space-y-3 bg-slate-950/20">
-                <div className="space-y-0.5">
-                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest block">
-                    Simulated QR Onboarding Badge Scanner
-                  </span>
-                  <p className="text-[9.5px] text-slate-400 leading-normal font-sans">
-                    Click any active Safety Node below to simulate placing their physical onboarding QR badge in front of your device's camera sensor:
-                  </p>
-                </div>
-
-                <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
-                  {organizations.map((org) => (
-                    <button
-                      key={org.id}
-                      type="button"
-                      onClick={() => {
-                        if (qrScanTarget === 'LOGIN') {
-                          setLoginOrgCode(org.id);
-                        } else {
-                          setUserOrgCode(org.id);
-                        }
-                        addToast(`Successfully bound to node ${org.name}!`, 'success');
-                        setIsScanningQr(false);
-                      }}
-                      className="w-full p-2.5 bg-slate-950 hover:bg-emerald-950/20 border border-slate-850 hover:border-emerald-500/30 rounded-xl transition-all text-left flex items-center justify-between gap-2 text-slate-200"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-slate-100 truncate">{org.name}</p>
-                        <p className="text-[9px] text-slate-500">Code ID: {org.id}</p>
-                      </div>
-                      <span className="text-[10px] font-mono font-black text-emerald-400 bg-emerald-950/40 border border-emerald-500/25 px-2 py-0.5 rounded uppercase">
-                        Scan Badge
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="mt-6 text-center">
+      <div className="mt-6 text-center space-y-1">
         <p className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em]">
           SECURE ENCRYPTED MESH MATRIX // DEEPMIND SECURITY Blueprints
+        </p>
+        <p className="text-[8px] text-amber-500/60 font-mono uppercase tracking-[0.25em] font-black">
+          POWERED BY TM MEDIA SOLUTIONS
         </p>
       </div>
     </div>

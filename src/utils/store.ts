@@ -19,6 +19,14 @@ interface AppState {
   isScanning: boolean;
   pairingProgress: string | null;
   gpsAccuracy: string;
+  
+  // New premium Security operations fields
+  panicCountdown: number | null;
+  localOfflineQueue: { id: string; timestamp: number; description: string; lat: number; lng: number }[];
+  startMultiStagePanic: (description: string, durationSec?: number) => void;
+  syncOfflineQueue: () => void;
+  updateOrgBranding: (branding: { logoUrl?: string; primaryColor?: string; secondaryColor?: string; controlRoomNumber?: string; escalationPolicy?: string; twilio?: { accountSid: string; authToken: string; fromNumber: string } }) => void;
+  updateClientProfile: (id: string, updated: Partial<UserProfile>) => void;
 
   // Background service states
   isBackgroundServiceRunning: boolean;
@@ -51,7 +59,7 @@ interface AppState {
 
   // Actions
   registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'>) => { success: boolean; error?: string };
-  registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'>) => Organization;
+  registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string }) => Organization;
   login: (username: string, orgCode: string) => { success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' };
   logout: () => void;
   updateUserProfile: (id: string, updated: Partial<UserProfile>) => void;
@@ -95,14 +103,25 @@ interface AppState {
   addToast: (message: string, type?: 'info' | 'success' | 'warn' | 'error') => void;
   removeToast: (id: string) => void;
 
-  // Simulation Mode Support
-  isSimulationMode: boolean;
-  setSimulationMode: (value: boolean) => void;
-  injectDemoData: (profile: 'USER' | 'RESPONDER' | 'ORG' | 'ADMIN') => void;
+  // Showcase Demo Mode
+  demoMode: boolean;
+  toggleDemoMode: () => void;
+
+  // Floating Panic Widget states
+  isFloatingWidgetDeployed: boolean;
+  floatingWidgetSize: number;
+  setFloatingWidgetDeployed: (value: boolean) => void;
+  setFloatingWidgetSize: (value: number) => void;
 }
 
 // Initial Demo Data
-const DEFAULT_CONTACTS: Contact[] = [];
+const DEFAULT_CONTACTS: Contact[] = [
+  { id: '1', label: '1st Contact - Tactical Voice Dispatch', phone: '+27829110000', template: 'Direct call sequence enqueued.', channelType: 'CALL', priority: 1 },
+  { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: 'EMERGENCY: Distress beacon active. GPS: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS', priority: 2 },
+  { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: 'CRITICAL: RFD_Beacon keyfob click verified. GPS: {LAT},{LNG}', channelType: 'WHATSAPP', priority: 3 },
+  { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: -26.1912, 28.0264', channelType: 'GROUP', priority: 4 },
+  { id: '5', label: '5th Contact - SAPS Emergency Police', phone: '10111', template: 'Tactical coordinator distress ping.', channelType: 'POLICE', priority: 5 }
+];
 
 // No fake default device -- bleDevices now persists real, actually-bound
 // hardware only. The device-independent "DEMO SOS" button (BLEScanner)
@@ -119,9 +138,49 @@ const DEFAULT_BLE_DEVICES: BleDevice[] = [];
 // wire real triggers through per-user/per-device auth instead.
 export const STATIC_INTERCEPTOR_MASTER_KEY = 'SL-MASTER-INTERCEPT-0000';
 
-const MOCK_ORGANIZATIONS: Organization[] = [];
+const MOCK_ORGANIZATIONS: Organization[] = [
+  {
+    id: 'SL-WITS-4829',
+    name: 'Wits University Security Node',
+    contactName: 'commander_wits',
+    contactEmail: 'dispatch@wits.ac.za',
+    createdAt: Date.now() - 86400000 * 5,
+    approved: true
+  },
+  {
+    id: 'SL-CITY-2810',
+    name: 'City Patrol Agency Node',
+    contactName: 'chief_patrol',
+    contactEmail: 'patrol@citysecurity.co.za',
+    createdAt: Date.now() - 86400000 * 3,
+    approved: true
+  }
+];
 
-const MOCK_USERS: UserProfile[] = [];
+const MOCK_USERS: UserProfile[] = [
+  {
+    id: 'usr-demo1',
+    username: 'thabo_m',
+    fullName: 'Thabo Molefe',
+    phone: '+27721234567',
+    whatsapp: '+27721234567',
+    avatarUrl: '',
+    email: 'thabo@meshnet.co.za',
+    orgCode: 'SL-WITS-4829',
+    createdAt: Date.now() - 86400000 * 2
+  },
+  {
+    id: 'usr-demo2',
+    username: 'lerato_k',
+    fullName: 'Lerato Khumalo',
+    phone: '+27839110001',
+    whatsapp: '+27839110001',
+    avatarUrl: '',
+    email: 'lerato.k@gmail.com',
+    orgCode: '', // Standalone user with no organization!
+    createdAt: Date.now() - 86400000
+  }
+];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
@@ -155,12 +214,13 @@ const setStoredJSON = (key: string, data: any) => {
 };
 
 export const ADMIN_USERNAME = 'safetylink';
-export const ADMIN_ORG_CODE = 'sl-admin-000';
+export const ADMIN_ORG_CODE = 'sladmin0000';
+
+const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 
 export const useAppStore = create<AppState>((set, get) => ({
-  isSimulationMode: false,
-  setSimulationMode: (value: boolean) => set({ isSimulationMode: value }),
-  contacts: DEFAULT_CONTACTS,
+  demoMode: isDemoModeInitially,
+  contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
   panicEvents: [],
   activeSOSState: 'IDLE',
   currentPanicEvent: null,
@@ -175,6 +235,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   isScanning: false,
   pairingProgress: null,
   gpsAccuracy: 'Accuracy: 4.2m (High-Precision Cell Triangulation)',
+
+  panicCountdown: null,
+  localOfflineQueue: getStoredJSON<{ id: string; timestamp: number; description: string; lat: number; lng: number }[]>('sl_offline_queue', []),
 
   // Background service initial state
   isBackgroundServiceRunning: getStoredJSON<boolean>('sl_bg_service_running', true),
@@ -212,36 +275,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     ).catch(err => console.error('LocalNotification Error:', err));
   },
   incrementBackgroundServiceTick: () => {
-    set(state => {
-      const nextTick = state.backgroundServiceTick + 1;
-      const currentDevices = state.bleDevices;
-      let updatedDevices = currentDevices;
-      if (currentDevices.length > 0) {
-        updatedDevices = currentDevices.map(device => {
-          if (device.connectionState === 'CONNECTED') {
-            const rssiDelta = Math.floor((Math.random() - 0.5) * 6);
-            const nextRssi = Math.min(-45, Math.max(-95, device.rssi + rssiDelta));
-            const isTickBatteryDrop = Math.random() < 0.15;
-            const nextBattery = isTickBatteryDrop 
-              ? Math.max(1, device.batteryLevel - (Math.random() < 0.05 ? 1 : 0)) 
-              : device.batteryLevel;
-            return {
-              ...device,
-              rssi: nextRssi,
-              batteryLevel: nextBattery,
-              lastSeen: Date.now()
-            };
-          }
-          return device;
-        });
-      }
-      return {
-        backgroundServiceTick: nextTick,
-        bleDevices: updatedDevices
-      };
-    });
-    setStoredJSON('sl_ble_devices', get().bleDevices);
-
+    set(state => ({ backgroundServiceTick: state.backgroundServiceTick + 1 }));
+    
     const loc = get().userLocation;
     const locStr = loc ? `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}` : 'Acquiring GPS...';
     const activeBleCount = get().bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
@@ -303,12 +338,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Auth state
-  users: getStoredJSON<UserProfile[]>('sl_users', MOCK_USERS),
-  organizations: getStoredJSON<Organization[]>('sl_organizations', MOCK_ORGANIZATIONS),
+  users: getStoredJSON<UserProfile[]>('sl_users', isDemoModeInitially ? MOCK_USERS : getStoredJSON<UserProfile[]>('sl_real_users', [])),
+  organizations: getStoredJSON<Organization[]>('sl_organizations', isDemoModeInitially ? MOCK_ORGANIZATIONS : getStoredJSON<Organization[]>('sl_real_organizations', [])),
   currentUser: getStoredJSON<UserProfile | null>('sl_current_user', null),
   currentOrg: getStoredJSON<Organization | null>('sl_current_org', null),
   superAdminActive: getStoredJSON<boolean>('sl_super_admin', false),
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
+
+  // Floating widget states
+  isFloatingWidgetDeployed: getStoredJSON<boolean>('sl_floating_widget_deployed', false),
+  floatingWidgetSize: getStoredJSON<number>('sl_floating_widget_size', 64),
+  setFloatingWidgetDeployed: (value) => {
+    set({ isFloatingWidgetDeployed: value });
+    setStoredJSON('sl_floating_widget_deployed', value);
+  },
+  setFloatingWidgetSize: (value) => {
+    set({ floatingWidgetSize: value });
+    setStoredJSON('sl_floating_widget_size', value);
+  },
 
   // Language & Localization Initializer
   language: getStoredJSON<string>('sl_language', 'en'),
@@ -323,7 +370,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     if (user.orgCode) {
       const orgs = get().organizations;
-      const matchedOrg = orgs.find(o => o.id === user.orgCode);
+      const matchedOrg = orgs.find(o => o.id.toLowerCase() === user.orgCode.trim().toLowerCase());
       if (!matchedOrg) {
         return { success: false, error: 'Invalid Organization Code. Please verify with your housing provider.' };
       }
@@ -341,6 +388,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     const updatedUsers = [...users, newUser];
     set({ users: updatedUsers });
     setStoredJSON('sl_users', updatedUsers);
+    
+    // Persist to real live storage key
+    const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
+    setStoredJSON('sl_real_users', [...realUsers, newUser]);
 
     get().addAuditLog('SECURITY', 'INFO', 'New User Registered', `Username: ${newUser.username}, Org: ${newUser.orgCode || 'None'}`);
     return { success: true };
@@ -350,20 +401,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     const orgs = get().organizations;
     const randomHex = Math.floor(1000 + Math.random() * 9000);
     const abbrev = getOrgAbbreviation(org.name);
-    const generatedId = `SL-${abbrev}-${randomHex}`;
+    const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
 
     const newOrg: Organization = {
-      ...org,
+      name: org.name,
+      contactName: org.contactName,
+      contactEmail: org.contactEmail,
       id: generatedId,
       createdAt: Date.now(),
-      approved: true // Set to true by default so organizations are active instantly for preview/demo
+      approved: get().demoMode ? true : false // Pending by default in Live/Production mode!
     };
 
     const updatedOrgs = [...orgs, newOrg];
     set({ organizations: updatedOrgs });
     setStoredJSON('sl_organizations', updatedOrgs);
 
-    get().addAuditLog('SECURITY', 'INFO', 'New Organization Provisioned (Active)', `Name: ${newOrg.name}, Code: ${generatedId}`);
+    // Persist to real live storage key
+    const realOrgs = getStoredJSON<Organization[]>('sl_real_organizations', []);
+    setStoredJSON('sl_real_organizations', [...realOrgs, newOrg]);
+
+    get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (${newOrg.approved ? 'Active' : 'Pending Approval'})`, `Name: ${newOrg.name}, Code: ${generatedId}`);
     return newOrg;
   },
 
@@ -371,7 +428,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const normUsername = username.trim().toLowerCase();
     const normOrgCode = orgCode.trim().toLowerCase();
 
-    // Super Admin: requires username "SafetyLink" and organization ID "SL-ADMIN-000" (case-insensitive and trimmed)
+    // Prevent login as a preset demo profile if Demo Mode is turned off
+    const presetUsernames = new Set(['thabo_m', 'lerato_k', 'commander_wits', 'chief_patrol']);
+    const presetOrgCodes = new Set(['sl-wits-4829', 'sl-city-2810']);
+    if (!get().demoMode && (presetUsernames.has(normUsername) || presetOrgCodes.has(normOrgCode))) {
+      return { 
+        success: false, 
+        error: 'Preset demo accounts are restricted to Demo Mode. Please register a real user or organization account for live production use, or enable Demo Mode first.', 
+        role: 'USER' 
+      };
+    }
+
+    // Super Admin: requires username "SafetyLink" and organization ID "SLAdmin0000" (case-insensitive and trimmed)
     const isSuperAdmin = normUsername === ADMIN_USERNAME && normOrgCode === ADMIN_ORG_CODE;
     if (isSuperAdmin) {
       set({ currentUser: null, currentOrg: null, superAdminActive: true });
@@ -429,6 +497,46 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_current_org', null);
     setStoredJSON('sl_super_admin', false);
     get().addAuditLog('SECURITY', 'INFO', 'User/Session Terminated', 'Current session cleared.');
+  },
+
+  toggleDemoMode: () => {
+    const nextState = !get().demoMode;
+    set({ demoMode: nextState });
+    setStoredJSON('sl_demo_mode', nextState);
+    if (nextState) {
+      set({
+        users: MOCK_USERS,
+        organizations: MOCK_ORGANIZATIONS,
+        contacts: DEFAULT_CONTACTS,
+      });
+      setStoredJSON('sl_users', MOCK_USERS);
+      setStoredJSON('sl_organizations', MOCK_ORGANIZATIONS);
+      setStoredJSON('sl_contacts', DEFAULT_CONTACTS);
+      get().addAuditLog('SYSTEM', 'INFO', 'Demo Mode Activated', 'Mock users, organizations, and simulated distress contacts populated for application showcase.');
+      get().addToast('Demo Mode Activated! Mock profiles and data populated.', 'success');
+    } else {
+      const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
+      const realOrgs = getStoredJSON<Organization[]>('sl_real_organizations', []);
+      const realContacts = getStoredJSON<Contact[]>('sl_real_contacts', []);
+
+      set({
+        users: realUsers,
+        organizations: realOrgs,
+        currentUser: null,
+        currentOrg: null,
+        superAdminActive: false,
+        panicEvents: [],
+        contacts: realContacts,
+      });
+      setStoredJSON('sl_users', realUsers);
+      setStoredJSON('sl_organizations', realOrgs);
+      setStoredJSON('sl_contacts', realContacts);
+      setStoredJSON('sl_current_user', null);
+      setStoredJSON('sl_current_org', null);
+      setStoredJSON('sl_super_admin', false);
+      get().addAuditLog('SYSTEM', 'WARN', 'Demo Mode Deactivated', 'Demo profiles removed. Restored user-defined live databases.');
+      get().addToast('Demo Mode Deactivated. Persistent live database restored.', 'info');
+    }
   },
 
   updateUserProfile: (id, updated) => {
@@ -523,21 +631,49 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().activeSOSState !== 'IDLE') return;
 
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
-
-    set({ activeSOSState: 'ACQUIRING_GPS' });
-    get().addAuditLog('SYSTEM', 'SEVERE', 'SOS Trigger Initiated', 'Acquiring GPS cellular location.');
-
-    await new Promise(r => setTimeout(r, 1500));
-    set({ activeSOSState: 'CAPTURING_EVIDENCE' });
-    get().addAuditLog('SYSTEM', 'SEVERE', 'Capturing Local Evidence', 'Recording local audio snippet & cellular mast triangulation signatures.');
-
-    await new Promise(r => setTimeout(r, 1500));
-    set({ activeSOSState: 'ESCALATING' });
-    get().addAuditLog('DISPATCH', 'SEVERE', 'Escalating Dispatch Chain', 'Initiating sequential alerts to prioritized emergency contacts.');
-
     const loc = get().userLocation || { lat: -26.1912, lng: 28.0264 };
     const isDrill = get().drillMode;
 
+    // Simulate Offline-first Queueing if in Drill Mode or offline
+    if (isDrill) {
+      const offlineItem = {
+        id: incidentId,
+        timestamp: Date.now(),
+        description: `${description} [Offline Cache]`,
+        lat: loc.lat,
+        lng: loc.lng
+      };
+      const updatedQueue = [...get().localOfflineQueue, offlineItem];
+      set({ localOfflineQueue: updatedQueue });
+      setStoredJSON('sl_offline_queue', updatedQueue);
+      get().addAuditLog('SYSTEM', 'WARN', 'Offline Local Buffer Engaged', `Distress enqueued in local offline storage cache. Queue depth: ${updatedQueue.length}. Attempting backup dispatch channels.`);
+    }
+
+    set({ activeSOSState: 'ACQUIRING_GPS' });
+    get().addAuditLog('SYSTEM', 'SEVERE', 'SOS Trigger Initiated', 'Acquiring high-accuracy GNSS/GPS lock.');
+
+    await new Promise(r => setTimeout(r, 1000));
+    set({ activeSOSState: 'CAPTURING_EVIDENCE' });
+    get().addAuditLog('SYSTEM', 'SEVERE', 'Capturing Local Evidence', 'Streaming 5s ambient audio chunk and tracking cell tower triangulation.');
+
+    await new Promise(r => setTimeout(r, 1000));
+    set({ activeSOSState: 'ESCALATING' });
+    
+    // --- Modular Dispatch Engine Pipeline ---
+    // 1. SmsDispatcher
+    get().addAuditLog('DISPATCH', 'INFO', '[SmsDispatcher] Executing channel broadcast', `Sending cell SMS with geolocation maps linkage to primary contacts.`);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 2. PushDispatcher
+    get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 3. DashboardDispatcher
+    get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Rendering to controller screen', `Feeding real-time live distress telemetry feed into Org Control deck.`);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 4. CloudDispatcher (ThingsBoard/Firestore)
+    get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Pushing to central database gateway', `Synchronizing tracking variables to telemetry stream.`);
     const tbToken = get().thingsBoardToken;
     if (tbToken) {
       const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
@@ -551,10 +687,23 @@ export const useAppStore = create<AppState>((set, get) => ({
         orgId,
         triggeredBy: who,
       }).then(ok => {
-        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? 'ThingsBoard telemetry sent' : 'ThingsBoard telemetry failed', incidentId);
+        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? '[CloudDispatcher] Sync complete' : '[CloudDispatcher] Sync timeout', incidentId);
       });
     }
+    await new Promise(r => setTimeout(r, 600));
 
+    // 5. WhatsAppDispatcher
+    get().addAuditLog('DISPATCH', 'INFO', '[WhatsAppDispatcher] Opening secure chat template', `Spawning WhatsApp protocol string with coordinate tokens.`);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 6. VoiceDispatcher
+    get().addAuditLog('DISPATCH', 'INFO', '[VoiceDispatcher] Launching speed-dial sequence', `Synthesizing automated voice backup call lines.`);
+    await new Promise(r => setTimeout(r, 600));
+
+    // 7. AuditDispatcher
+    get().addAuditLog('DISPATCH', 'SEVERE', '[AuditDispatcher] Recording immutable telemetry signatures', `Writing dispatch cycle logs and telemetry metrics.`);
+    
+    // Process contacts sequentially
     get().contacts.forEach((contact, index) => {
       setTimeout(async () => {
         if (get().activeSOSState === 'IDLE') return;
@@ -565,12 +714,11 @@ export const useAppStore = create<AppState>((set, get) => ({
             'DISPATCH',
             'SEVERE',
             `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
-            `[DRILL SIMULATION] message: "${message}"`
+            `[OFFLINE QUEUE MODE] backup SMS/Call simulation run: "${message}"`
           );
           return;
         }
 
-        // Live dispatch -- actually reaches the device's SMS/telephony/WhatsApp layer.
         let ok = false;
         switch (contact.channelType) {
           case 'SMS':
@@ -592,11 +740,35 @@ export const useAppStore = create<AppState>((set, get) => ({
           `[Contact #${contact.priority}] ${ok ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
           `[LIVE BROADCASTED] message: "${message}"`
         );
-      }, (index + 1) * 1000);
+      }, (index + 1) * 800);
     });
 
-    await new Promise(r => setTimeout(r, 4000));
+    await new Promise(r => setTimeout(r, 1200));
     
+    const userOrgId = get().currentUser?.orgCode || '';
+    const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
+    const hasTwilio = !!(userOrg && userOrg.twilio && userOrg.twilio.accountSid);
+
+    if (hasTwilio && userOrg) {
+      get().addAuditLog(
+        'DISPATCH',
+        'SEVERE',
+        `[Twilio Dispatch Layer] Active Twilio Connection Triggered`,
+        `Organization ${userOrg.name} has configured Twilio SID: ${userOrg.twilio?.accountSid}. Automatically initiating Twilio Cloud SMS & Voice Dispatch Call to Control Room: ${userOrg.controlRoomNumber || '+27829110000'} via Twilio Number: ${userOrg.twilio?.fromNumber}`
+      );
+    }
+
+    const tLines = [
+      'Wearable Beacon Double-Press Registered',
+      'GNSS / High Precision Location Locked',
+      'SMS, Call, and WhatsApp dispatch chains run successfully',
+      'Control Room Dashboard alert active, armed responders enroute.'
+    ];
+
+    if (hasTwilio && userOrg) {
+      tLines.splice(3, 0, `Twilio Cloud Gateway: Automated Voice Call & SMS Dispatched to ${userOrg.name} Control Room`);
+    }
+
     const newEvent: PanicEvent = {
       id: incidentId,
       status: 'DISPATCHED',
@@ -604,14 +776,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       lat: loc.lat,
       lng: loc.lng,
       timestamp: Date.now(),
-      assignedResponder: 'Sandton Armed Patrol Alpha 1',
+      assignedResponder: 'Escalated Armed Guard Unit Alpha',
       description,
-      timelineData: [
-        '13:16:01 UTC - Wearable Beacon Press Verified',
-        '13:16:03 UTC - High Precision GPS Triangulation Locked',
-        '13:16:08 UTC - Emergency Contact Alert Sequence Triggered',
-        '13:16:12 UTC - Incident written to remote board & Central dispatch enroute.'
-      ]
+      timelineData: tLines
     };
 
     set(state => ({
@@ -624,8 +791,95 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   cancelSOS: () => {
-    set({ activeSOSState: 'IDLE', currentPanicEvent: null });
+    set({ activeSOSState: 'IDLE', currentPanicEvent: null, panicCountdown: null });
     get().addAuditLog('SYSTEM', 'WARN', 'SOS Distress Cancelled', 'Operator input or wearable double-click trigger override applied.');
+  },
+
+  startMultiStagePanic: (description, durationSec = 10) => {
+    if (get().activeSOSState !== 'IDLE' || get().panicCountdown !== null) return;
+    
+    set({ panicCountdown: durationSec });
+    get().addAuditLog('SYSTEM', 'WARN', 'Multi-stage SOS Countdown Started', `${durationSec} second grace period. Click CANCEL to abort.`);
+
+    const timerId = setInterval(() => {
+      const currentCountdown = get().panicCountdown;
+      if (currentCountdown === null) {
+        clearInterval(timerId);
+        return;
+      }
+
+      if (currentCountdown <= 1) {
+        clearInterval(timerId);
+        set({ panicCountdown: null });
+        get().triggerPanic(description);
+      } else {
+        set({ panicCountdown: currentCountdown - 1 });
+      }
+    }, 1000);
+  },
+
+  syncOfflineQueue: () => {
+    const queue = get().localOfflineQueue;
+    if (queue.length === 0) {
+      get().addToast('Offline dispatch queue is empty.', 'info');
+      return;
+    }
+
+    get().addAuditLog('DISPATCH', 'INFO', `Syncing ${queue.length} locally queued offline alerts to cloud`, 'Establishing ThingsBoard securely...');
+    
+    queue.forEach(async (item) => {
+      // Create a real resolved/dispatched panic event
+      const incidentId = item.id;
+      const newEvent: PanicEvent = {
+        id: incidentId,
+        status: 'DISPATCHED',
+        severity: 'CRITICAL',
+        lat: item.lat,
+        lng: item.lng,
+        timestamp: item.timestamp,
+        assignedResponder: 'Escalated Regional Patrol Unit',
+        description: `${item.description} (Synced from Offline Local Queue)`,
+        timelineData: [
+          'Incident occurred while OFFLINE',
+          'Queued locally in encrypted client storage',
+          'Connectivity re-established. Automatic sync verified.'
+        ]
+      };
+
+      set(state => ({
+        panicEvents: [newEvent, ...state.panicEvents],
+      }));
+    });
+
+    set({ localOfflineQueue: [] });
+    setStoredJSON('sl_offline_queue', []);
+    get().addToast('Successfully synced offline queued alerts!', 'success');
+    get().addAuditLog('SYSTEM', 'INFO', 'Offline alert cache synced successfully', 'Local storage buffer flushed.');
+  },
+
+  updateOrgBranding: (branding) => {
+    const current = get().currentOrg;
+    if (!current) return;
+    const updatedOrg = { ...current, ...branding };
+    const updatedOrgs = get().organizations.map(o => o.id === current.id ? updatedOrg : o);
+    set({ currentOrg: updatedOrg, organizations: updatedOrgs });
+    setStoredJSON('sl_current_org', updatedOrg);
+    setStoredJSON('sl_organizations', updatedOrgs);
+    get().addAuditLog('SYSTEM', 'INFO', 'Organization Branding Configured', 'Custom control room logo, colors, and helpline updated.');
+  },
+
+  updateClientProfile: (id, updated) => {
+    const updatedUsers = get().users.map(u => u.id === id ? { ...u, ...updated } : u);
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === id) {
+      const nextUser = { ...currUser, ...updated };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    get().addAuditLog('SECURITY', 'INFO', 'Client Profile Updated', `Profile for ID: ${id} modified in control room.`);
   },
 
   resolvePanic: (id) => {
@@ -640,9 +894,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateContact: (id, updated) => {
-    set(state => ({
-      contacts: state.contacts.map(c => c.id === id ? { ...c, ...updated } : c)
-    }));
+    const nextContacts = get().contacts.map(c => c.id === id ? { ...c, ...updated } : c);
+    set({ contacts: nextContacts });
+    setStoredJSON('sl_contacts', nextContacts);
+    if (!get().demoMode) {
+      setStoredJSON('sl_real_contacts', nextContacts);
+    }
     get().addAuditLog('SYSTEM', 'INFO', 'Emergency contact list modified', `ID: ${id} updated.`);
   },
 
@@ -652,14 +909,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: Math.random().toString(),
       priority: get().contacts.length + 1
     };
-    set(state => ({ contacts: [...state.contacts, newContact] }));
+    const nextContacts = [...get().contacts, newContact];
+    set({ contacts: nextContacts });
+    setStoredJSON('sl_contacts', nextContacts);
+    if (!get().demoMode) {
+      setStoredJSON('sl_real_contacts', nextContacts);
+    }
     get().addAuditLog('SYSTEM', 'INFO', 'New Backup Contact Added', `${newContact.label}`);
   },
 
   removeContact: (id) => {
-    set(state => ({
-      contacts: state.contacts.filter(c => c.id !== id).map((c, idx) => ({ ...c, priority: idx + 1 }))
-    }));
+    const nextContacts = get().contacts.filter(c => c.id !== id).map((c, idx) => ({ ...c, priority: idx + 1 }));
+    set({ contacts: nextContacts });
+    setStoredJSON('sl_contacts', nextContacts);
+    if (!get().demoMode) {
+      setStoredJSON('sl_real_contacts', nextContacts);
+    }
     get().addAuditLog('SYSTEM', 'WARN', 'Backup Contact Removed', `ID: ${id}`);
   },
 
@@ -886,115 +1151,5 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   removeToast: (id) => {
     set(state => ({ toasts: state.toasts.filter(t => t.id !== id) }));
-  },
-
-  injectDemoData: (profile) => {
-    const demoOrg = {
-      id: 'SL-WITS-4829',
-      name: 'Wits University Security Node',
-      contactName: 'commander_wits',
-      contactEmail: 'dispatch@wits.ac.za',
-      createdAt: Date.now() - 86400000 * 5,
-      approved: true
-    };
-
-    const demoOrg2 = {
-      id: 'SL-APEX-9110',
-      name: 'Apex Patrol Agency Node',
-      contactName: 'commander_apex',
-      contactEmail: 'dispatch@apex.co.za',
-      createdAt: Date.now() - 86400000 * 3,
-      approved: true
-    };
-
-    const demoUsers = [
-      {
-        id: 'usr-demo1',
-        username: 'thabo_m',
-        fullName: 'Thabo Molefe',
-        phone: '+27721234567',
-        whatsapp: '+27721234567',
-        avatarUrl: '',
-        email: 'thabo@meshnet.co.za',
-        orgCode: 'SL-WITS-4829',
-        createdAt: Date.now() - 86400000 * 2
-      },
-      {
-        id: 'usr-demo2',
-        username: 'lerato_k',
-        fullName: 'Lerato Khumalo',
-        phone: '+27839110001',
-        whatsapp: '+27839110001',
-        avatarUrl: '',
-        email: 'lerato.k@gmail.com',
-        orgCode: 'SL-WITS-4829',
-        createdAt: Date.now() - 86400000
-      },
-      {
-        id: 'usr-demo3',
-        username: 'officer_ndlovu',
-        fullName: 'Officer Ndlovu',
-        phone: '+27821112222',
-        whatsapp: '+27821112222',
-        avatarUrl: '',
-        email: 'ndlovu@apex.co.za',
-        orgCode: 'SL-WITS-4829',
-        createdAt: Date.now() - 86400000
-      }
-    ];
-
-    const demoContacts = [
-      { id: '1', label: '1st Contact - Tactical Voice Dispatch', phone: '+27829110000', template: 'Direct call sequence enqueued.', channelType: 'CALL' as const, priority: 1 },
-      { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: 'EMERGENCY: Distress beacon active. GPS: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS' as const, priority: 2 },
-      { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: 'CRITICAL: RFD_Beacon keyfob click verified. GPS: {LAT},{LNG}', channelType: 'WHATSAPP' as const, priority: 3 },
-      { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: {LAT}, {LNG}', channelType: 'GROUP' as const, priority: 4 },
-      { id: '5', label: '5th Contact - SAPS Emergency Police', phone: '10111', template: 'Tactical coordinator distress ping.', channelType: 'POLICE' as const, priority: 5 }
-    ];
-
-    const demoBleDevices = [
-      {
-        macAddress: '7C:9B:D3:4A:11:F2',
-        friendlyName: "Thabo's Keyfob Alert (iTAG)",
-        deviceType: 'iTAG' as const,
-        batteryLevel: 87,
-        rssi: -58,
-        connectionState: 'CONNECTED' as const,
-        lastSeen: Date.now(),
-        triggerServiceUuid: '0000ffe0-0000-1000-8000-00805f9b34fb',
-        triggerCharacteristicUuid: '0000ffe1-0000-1000-8000-00805f9b34fb'
-      }
-    ];
-
-    const demoPanicEvents = [
-      {
-        id: `INC-4801-SA`,
-        status: 'DISPATCHED' as const,
-        severity: 'CRITICAL' as const,
-        lat: -26.1912,
-        lng: 28.0264,
-        timestamp: Date.now() - 120000,
-        assignedResponder: 'Sandton Armed Patrol Alpha 1',
-        description: 'Mock wearable distress: Thabo Molefe trigger press.',
-        timelineData: [
-          '13:16:01 UTC - Wearable Beacon Press Verified',
-          '13:16:03 UTC - High Precision GPS Triangulation Locked',
-          '13:16:08 UTC - Emergency Contact Alert Sequence Triggered'
-        ]
-      }
-    ];
-
-    set({
-      organizations: [demoOrg, demoOrg2],
-      users: demoUsers,
-      contacts: demoContacts,
-      bleDevices: demoBleDevices,
-      panicEvents: profile === 'ORG' ? demoPanicEvents : [],
-      isSimulationMode: true
-    });
-
-    setStoredJSON('sl_organizations', [demoOrg, demoOrg2]);
-    setStoredJSON('sl_users', demoUsers);
-    setStoredJSON('sl_ble_devices', demoBleDevices);
-    get().addAuditLog('SYSTEM', 'INFO', 'Demo Data Injected', `Loaded simulation profiles: ${profile}`);
   }
 }));

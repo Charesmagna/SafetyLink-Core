@@ -1,11 +1,15 @@
-# Binary files - never let git touch these as text
+# Enforce proper line-ending management for cross-platform developers
+* text=auto
+
+# Enforce unix line-endings (LF) for shell scripts so gradlew runs correctly on Linux/macOS
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Explicitly mark binary files as binary to prevent Git from converting line endings and corrupting them
+*.jar binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.webp binary
 *.gif binary
 *.ico binary
-*.svg text eol=lf
-*.jar binary
-*.keystore binary
-*.apk binary

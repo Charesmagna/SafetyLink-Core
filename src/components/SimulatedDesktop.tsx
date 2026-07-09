@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { ConsolidatedStatus } from './ConsolidatedStatus';
+import { AndroidWidgetSimulator } from './AndroidWidgetSimulator';
 import { 
   Smartphone, 
   Wifi, 
@@ -33,46 +33,12 @@ export const SimulatedDesktop: React.FC = () => {
   const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
   const [diagStep, setDiagStep] = useState<number>(0);
   const [diagnosticLogs, setDiagnosticLogs] = useState<string[]>([]);
-  const [isIntegrityOpen, setIsIntegrityOpen] = useState(false);
-  const [startY, setStartY] = useState<number | null>(null);
 
   // Time ticker
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setStartY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startY === null) return;
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-    if (diff > 65 && startY < 300) {
-      window.dispatchEvent(new CustomEvent('open-notification-shade'));
-      setStartY(null);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setStartY(e.clientY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (startY === null) return;
-    const currentY = e.clientY;
-    const diff = currentY - startY;
-    if (diff > 65 && startY < 300) {
-      window.dispatchEvent(new CustomEvent('open-notification-shade'));
-      setStartY(null);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setStartY(null);
-  };
 
   const hasBleConnection = bleDevices.some(d => d.connectionState === 'CONNECTED');
   const hasGps = !!userLocation;
@@ -154,17 +120,7 @@ export const SimulatedDesktop: React.FC = () => {
   };
 
   return (
-    <div 
-      className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-slate-950 font-mono text-left relative select-none" 
-      style={{ backgroundImage: 'radial-gradient(circle at 50% 20%, #1e1b4b 0%, #020617 70%)' }} 
-      id="simulated-desktop-viewport"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
+    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-slate-950 font-mono text-left relative" style={{ backgroundImage: 'radial-gradient(circle at 50% 20%, #1e1b4b 0%, #020617 70%)' }} id="simulated-desktop-viewport">
       {/* Dynamic wallpaper glow effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(16,185,129,0.03)_0%,transparent_50%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_75%,rgba(59,130,246,0.03)_0%,transparent_50%)] pointer-events-none" />
@@ -329,68 +285,99 @@ export const SimulatedDesktop: React.FC = () => {
           </div>
         </motion.div>
 
+        {/* ANDROID HOME SCREEN WIDGET (Big Red Button Forced out to Home Screen) */}
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: 'spring', delay: 0.15 }}
+          className="relative z-20"
+        >
+          <AndroidWidgetSimulator />
+        </motion.div>
+
         {/* GRID OF LAUNCHER APPS (For high immersive design) */}
-        <div className="grid grid-cols-5 gap-4 py-4 px-1 relative z-10 select-none">
+        <div className="grid grid-cols-5 gap-3.5 py-4 px-1.5 relative z-10 select-none">
           {/* Main SafetyLink Re-enter launcher */}
           <button
-            onClick={() => setMinimized(false)}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'home' }));
+              setMinimized(false);
+            }}
             className="flex flex-col items-center gap-1.5 group"
           >
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all relative">
+            <div className="w-12 h-12 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all relative">
               <SafetyLinkLogo size={28} />
               {/* Notification badge */}
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 border border-slate-950 rounded-full flex items-center justify-center text-[8px] font-black text-white">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 border border-slate-950 rounded-full flex items-center justify-center text-[7.5px] font-black text-white">
                 1
               </span>
             </div>
-            <span className="text-[8px] sm:text-[8.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
+            <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
               SafetyLink
             </span>
           </button>
 
-          {/* App 2: Consolidated Status Checklist */}
-          <button
-            onClick={() => setIsIntegrityOpen(true)}
-            className="flex flex-col items-center gap-1.5 group animate-pulse"
+          {/* Simulated App 2: Guard Monitor / Dispatch */}
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'contacts' }));
+              setMinimized(false);
+            }}
+            className="flex flex-col items-center gap-1.5 group"
           >
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/40 flex items-center justify-center shadow-lg transition-all relative">
-              <span className="text-xl sm:text-2xl">📊</span>
-              {/* New notification badge */}
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 border border-slate-950 rounded-full flex items-center justify-center text-[7.5px] font-black text-white">
-                29
-              </span>
+            <div className="w-12 h-12 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all">
+              <span className="text-xl">🚨</span>
             </div>
-            <span className="text-[8px] sm:text-[8.5px] font-black text-blue-400 group-hover:text-blue-300 uppercase tracking-wider text-center truncate max-w-[55px]">
-              Integrity
-            </span>
-          </button>
-
-          {/* Simulated App 3: Guard Monitor */}
-          <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-85 transition-opacity">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] bg-slate-900 border border-slate-850 flex items-center justify-center shadow-lg">
-              <span className="text-xl sm:text-2xl">🚨</span>
-            </div>
-            <span className="text-[8px] sm:text-[8.5px] font-bold text-slate-400 uppercase tracking-wider text-center truncate max-w-[55px]">
+            <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
               Dispatch
             </span>
           </button>
 
-          {/* Simulated App 4: BLE Beacons */}
-          <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-85 transition-opacity">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] bg-slate-900 border border-slate-850 flex items-center justify-center shadow-lg">
-              <span className="text-xl sm:text-2xl">📟</span>
+          {/* Simulated App 3: BLE Beacons */}
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'ble' }));
+              setMinimized(false);
+            }}
+            className="flex flex-col items-center gap-1.5 group"
+          >
+            <div className="w-12 h-12 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all">
+              <span className="text-xl">📟</span>
             </div>
-            <span className="text-[8px] sm:text-[8.5px] font-bold text-slate-400 uppercase tracking-wider text-center truncate max-w-[55px]">
+            <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
               BLE Hub
             </span>
           </button>
 
-          {/* Simulated App 5: Settings */}
-          <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-85 transition-opacity">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] bg-slate-900 border border-slate-850 flex items-center justify-center shadow-lg">
-              <span className="text-xl sm:text-2xl">⚙️</span>
+          {/* Simulated App 4: Chaos Sandbox */}
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'subsystems' }));
+              setMinimized(false);
+            }}
+            className="flex flex-col items-center gap-1.5 group"
+          >
+            <div className="w-12 h-12 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all relative">
+              <span className="text-xl animate-pulse">💻</span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full animate-ping" />
             </div>
-            <span className="text-[8px] sm:text-[8.5px] font-bold text-slate-400 uppercase tracking-wider text-center truncate max-w-[55px]">
+            <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
+              Chaos
+            </span>
+          </button>
+
+          {/* Simulated App 5: Settings */}
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'settings' }));
+              setMinimized(false);
+            }}
+            className="flex flex-col items-center gap-1.5 group"
+          >
+            <div className="w-12 h-12 rounded-[18px] bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 flex items-center justify-center shadow-lg transition-all">
+              <span className="text-xl">⚙️</span>
+            </div>
+            <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-wider text-center group-hover:text-white truncate max-w-[55px]">
               Settings
             </span>
           </button>
@@ -405,10 +392,6 @@ export const SimulatedDesktop: React.FC = () => {
         </div>
 
       </div>
-
-      {/* Global Consolidated Status overlay */}
-      <ConsolidatedStatus isOpen={isIntegrityOpen} onClose={() => setIsIntegrityOpen(false)} />
-
     </div>
   );
 };

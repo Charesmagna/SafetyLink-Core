@@ -127,6 +127,9 @@ public class EmergencyDispatchPlugin extends Plugin {
         }
         try {
             String cleanPhone = phone.replaceAll("[^0-9]", "");
+            if (cleanPhone.startsWith("0") && cleanPhone.length() == 10) {
+                cleanPhone = "27" + cleanPhone.substring(1);
+            }
             Uri uri = Uri.parse("https://wa.me/" + cleanPhone + "?text=" + Uri.encode(message));
             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

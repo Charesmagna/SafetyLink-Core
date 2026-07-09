@@ -8,6 +8,14 @@ export interface UserProfile {
   email: string;
   orgCode: string; // empty or matches Organization.id
   createdAt: number;
+  // Premium customer profile extensions for Security Operations
+  accountNumber?: string;
+  medicalInfo?: string;
+  riskNotes?: string;
+  assignedResponseOfficer?: string;
+  preferredHospital?: string;
+  homeAddress?: string;
+  emergencyContactsList?: string; // custom contact numbers comma-separated
 }
 
 export interface Organization {
@@ -17,6 +25,21 @@ export interface Organization {
   contactEmail: string;
   createdAt: number;
   approved?: boolean; // pending approval if false
+  // Professional branding and control room configurations
+  logoUrl?: string;
+  primaryColor?: string; // hex
+  secondaryColor?: string; // hex
+  controlRoomNumber?: string;
+  escalationPolicy?: string;
+  // Live analytics counters
+  monthlyAlerts?: number;
+  falseAlarms?: number;
+  averageResponseTimeSec?: number;
+  twilio?: {
+    accountSid: string;
+    authToken: string;
+    fromNumber: string;
+  };
 }
 
 export interface CustomTool {

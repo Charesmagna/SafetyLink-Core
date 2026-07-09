@@ -17,7 +17,11 @@ export const Settings: React.FC = () => {
     toggleBackgroundService,
     backgroundServiceTick,
     bleDevices,
-    userLocation
+    userLocation,
+    isFloatingWidgetDeployed,
+    setFloatingWidgetDeployed,
+    floatingWidgetSize,
+    setFloatingWidgetSize
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
@@ -331,6 +335,58 @@ export const Settings: React.FC = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Sizable Movable Deployed Floating Widget Toggle */}
+          <div className="pt-3.5 border-t border-slate-900/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5 text-left pr-4">
+                <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
+                  Movable Floating SOS Button
+                </span>
+                <span className="text-[9px] text-slate-500 block leading-normal font-sans">
+                  Deploy a sizing-adjustable, movable "breathing" SOS overlay. Works on top of standard interfaces. Double-tap the overlay to resize!
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={isFloatingWidgetDeployed}
+                  onChange={(e) => {
+                    setFloatingWidgetDeployed(e.target.checked);
+                    useAppStore.getState().addAuditLog(
+                      'SYSTEM',
+                      'INFO',
+                      `Movable Floating Widget ${e.target.checked ? 'Deployed' : 'Undeployed'}`,
+                      'Floating tactical SOS shortcut layer synchronized on device screen.'
+                    );
+                    useAppStore.getState().addToast(
+                      `Floating SOS Shortcut ${e.target.checked ? 'deployed on-screen' : 'removed'}!`,
+                      e.target.checked ? 'success' : 'info'
+                    );
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-900 border border-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-500 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+
+            {isFloatingWidgetDeployed && (
+              <div className="bg-slate-950/50 p-3 rounded-xl border border-slate-900 space-y-2.5 font-mono text-[9px]">
+                <div className="flex justify-between items-center text-slate-400">
+                  <span>WIDGET SIZE PRESET:</span>
+                  <span className="text-emerald-400 font-bold">{floatingWidgetSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="48"
+                  max="140"
+                  value={floatingWidgetSize}
+                  onChange={(e) => setFloatingWidgetSize(Number(e.target.value))}
+                  className="w-full accent-emerald-400 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

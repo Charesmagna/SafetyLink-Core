@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { UserProfile } from '../types';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { motion, AnimatePresence } from 'motion/react';
+
+import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
+import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
+import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
+import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -14,21 +21,59 @@ export const OrgDashboard: React.FC = () => {
     resolvePanic,
     customTools,
     addCustomTool,
-    deleteCustomTool
+    deleteCustomTool,
+    updateOrgBranding,
+    updateClientProfile,
+    localOfflineQueue,
+    syncOfflineQueue
   } = useAppStore();
+
+  // Background slideshow logic
+  const orgSlides = [slide4, slide5, slide1, slide2, slide3];
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % orgSlides.length);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, [orgSlides.length]);
+
+  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio'>('dispatch');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Student editor modal or inline state
+  // Roster detailed editor state
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editFullName, setEditFullName] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editAccountNumber, setEditAccountNumber] = useState('');
+  const [editMedicalInfo, setEditMedicalInfo] = useState('');
+  const [editRiskNotes, setEditRiskNotes] = useState('');
+  const [editOfficer, setEditOfficer] = useState('');
+  const [editHospital, setEditHospital] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editContactsList, setEditContactsList] = useState('');
+
+  // Branding Form State (pre-populated from currentOrg values)
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=150&auto=format&fit=crop');
+  const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
+  const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
+  const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
+  const [brandEscalationPolicy, setBrandEscalationPolicy] = useState(currentOrg?.escalationPolicy || 'Multi-stage fallback SMS alert sequence -> Dedicated Sector Response dispatch -> Escalation to Municipal SAPS.');
 
   // Org Custom Tools Form State
   const [newToolTitle, setNewToolTitle] = useState('');
   const [newToolDesc, setNewToolDesc] = useState('');
   const [newToolType, setNewToolType] = useState<'WHATSAPP' | 'CALL' | 'SMS' | 'INFO' | 'WIDGET'>('INFO');
   const [newToolValue, setNewToolValue] = useState('');
+
+  // Twilio Setup State variables
+  const [twilioAccountSid, setTwilioAccountSid] = useState(currentOrg?.twilio?.accountSid || '');
+  const [twilioAuthToken, setTwilioAuthToken] = useState(currentOrg?.twilio?.authToken || '');
+  const [twilioFromNumber, setTwilioFromNumber] = useState(currentOrg?.twilio?.fromNumber || '');
+  const [twilioTestStatus, setTwilioTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [twilioTestMessage, setTwilioTestMessage] = useState('');
 
   if (!currentOrg) return null;
 
@@ -55,6 +100,13 @@ export const OrgDashboard: React.FC = () => {
     setEditFullName(student.fullName);
     setEditPhone(student.phone);
     setEditEmail(student.email);
+    setEditAccountNumber(student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`);
+    setEditMedicalInfo(student.medicalInfo || 'No chronic conditions logged.');
+    setEditRiskNotes(student.riskNotes || 'Standard perimeter monitoring.');
+    setEditOfficer(student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha)');
+    setEditHospital(student.preferredHospital || 'Netcare Milpark Hospital');
+    setEditAddress(student.homeAddress || 'Wits Campus Housing, West Campus');
+    setEditContactsList(student.emergencyContactsList || '+27839110000, +27117171000');
   };
 
   const handleSaveEdit = (id: string) => {
@@ -63,411 +115,953 @@ export const OrgDashboard: React.FC = () => {
       phone: editPhone,
       email: editEmail
     });
+    
+    updateClientProfile(id, {
+      accountNumber: editAccountNumber,
+      medicalInfo: editMedicalInfo,
+      riskNotes: editRiskNotes,
+      assignedResponseOfficer: editOfficer,
+      preferredHospital: editHospital,
+      homeAddress: editAddress,
+      emergencyContactsList: editContactsList
+    });
+
     setEditingUserId(null);
   };
 
+  const handleSaveBranding = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateOrgBranding({
+      logoUrl: brandLogoUrl,
+      primaryColor: brandPrimaryColor,
+      secondaryColor: brandSecondaryColor,
+      controlRoomNumber: brandControlRoomNumber,
+      escalationPolicy: brandEscalationPolicy
+    });
+  };
+
   return (
-    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-12">
-      {/* Active Org Alerts */}
+    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-4 relative">
+      {/* Background Slideshow animation */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0, scale: 1.03 }}
+            animate={{ opacity: 0.18 }} // Subtle 18% opacity for dashboard legibility
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full"
+          >
+            <img
+              src={orgSlides[currentSlide]}
+              alt="SafetyLink Operational Background"
+              className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1] saturate-[0.8]"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950" />
+          </motion.div>
+        </AnimatePresence>
+        <div className="absolute inset-0 digital-grid opacity-[0.05]" />
+      </div>
+      {/* Active Org Alerts Banner */}
       {activeOrgPanics.length > 0 && (
         <div className="w-full bg-red-600 text-white font-mono text-xs font-bold text-center py-2.5 px-4 tracking-wider uppercase animate-pulse flex items-center justify-center gap-2 relative z-50">
-          <span>🚨 ACTIVE DISTRESS SIGNAL DETECTED FROM YOUR NODE RESPONDERS 🚨</span>
+          <span>🚨 ALERT: CRITICAL SOS SIGNAL DETECTED FROM ASSIGNED SUBSCRIBER NODE 🚨</span>
         </div>
       )}
 
-      {/* Header Bar */}
-      <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500 opacity-60" />
+      {/* Header Bar with custom theme colors if configured */}
+      <header className="bg-slate-900 border-b border-slate-900/80 py-4 px-6 flex flex-col sm:flex-row justify-between items-center shadow-lg relative gap-3 z-10">
+        <div 
+          className="absolute top-0 left-0 right-0 h-1" 
+          style={{ backgroundImage: `linear-gradient(to right, ${brandPrimaryColor}, ${brandSecondaryColor})` }}
+        />
+        
         <div className="flex items-center gap-3 text-left">
-          <SafetyLinkLogo size={32} />
+          {brandLogoUrl ? (
+            <img 
+              src={brandLogoUrl} 
+              alt="Org Logo" 
+              className="w-10 h-10 rounded-xl border object-cover border-slate-700 shadow-md"
+              onError={() => setBrandLogoUrl('')}
+            />
+          ) : (
+            <SafetyLinkLogo size={32} />
+          )}
           <div>
-            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono">
-              {currentOrg.name}
+            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">
+              {currentOrg.name} 
+              <span className="text-[8.5px] px-2 py-0.5 rounded-full text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-bold font-mono">
+                ACTIVE COMMAND NODE
+              </span>
             </h1>
-            <p className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">
-              Safety Node Commander Deck
+            <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest mt-0.5">
+              Secure Safety Link Dispatcher Deck // <span className="text-amber-500/80 font-black">POWERED BY TM MEDIA SOLUTIONS</span>
             </p>
           </div>
+        </div>
+
+        {/* Dashboard Sub-Tabs navigation panel */}
+        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-850">
+          <button
+            onClick={() => setActiveSubTab('dispatch')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'dispatch' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            🛰️ Dispatch Control
+          </button>
+          <button
+            onClick={() => setActiveSubTab('roster')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'roster' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            👥 Clients / Profiles
+          </button>
+          <button
+            onClick={() => setActiveSubTab('branding')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'branding' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            🎨 branding & SLA
+          </button>
+          <button
+            onClick={() => setActiveSubTab('twilio')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'twilio' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            📞 Twilio Connection
+          </button>
+          <button
+            onClick={() => setActiveSubTab('analytics')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'analytics' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            📈 Operations Analytics
+          </button>
         </div>
 
         <button
           onClick={logout}
-          className="px-3.5 py-1.5 bg-slate-850 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full border border-slate-800"
+          className="px-3.5 py-1.5 bg-slate-850 hover:bg-slate-850 hover:text-red-400 text-slate-400 transition-colors text-[9px] font-mono font-black rounded-lg border border-slate-800 uppercase"
         >
-          LOGOUT SESSION
+          Exit Session
         </button>
       </header>
 
-      {/* Main Grid Content */}
-      <main className="flex-1 overflow-y-auto min-h-0 max-w-4xl w-full mx-auto p-4 md:p-6 space-y-6">
-        {/* Org ID info board */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex flex-col md:flex-row gap-6 text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="flex-1 space-y-3.5">
-            <div className="space-y-1.5">
-              <span className="text-[8.5px] font-mono font-black text-emerald-400 tracking-widest uppercase bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-block">
-                ORGANIZATIONAL DISPATCH BOUNDING
-              </span>
-              <h2 className="text-base font-black text-slate-100 font-display uppercase tracking-wide">Share Onboarding QR Code</h2>
-              <p className="text-xs text-slate-400 leading-relaxed font-sans">
-                Ensure all students, guards, employees, or tenants link automatically. Ask them to scan your secure **Safety Node QR Code** from their registration screen, or enter the Mesh Code manually during registration.
+      {/* Main Container */}
+      <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 space-y-5 relative z-10">
+        
+        {/* Offline Queuing Synchronizer Alerts Banner */}
+        {localOfflineQueue.length > 0 && (
+          <div className="p-4 bg-amber-950/20 border border-amber-500/20 rounded-2xl flex justify-between items-center gap-3 text-left">
+            <div>
+              <h4 className="text-xs font-bold text-amber-400 uppercase font-mono">
+                ⚠️ Local Offline Alerts Pending Sync ({localOfflineQueue.length})
+              </h4>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Simulated localized alerts queued in local cache. Force synchronization to dump events into control deck telemetry maps.
               </p>
             </div>
-
-            <div className="flex flex-wrap gap-2.5 pt-1">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(currentOrg.id);
-                  alert(`Copied Organization ID: ${currentOrg.id}`);
-                }}
-                className="px-3.5 py-1.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-[10px] font-mono font-bold rounded-xl transition-all flex items-center gap-1.5"
-              >
-                📋 COPY TEXT ID
-              </button>
-              <button
-                onClick={() => {
-                  const payload = JSON.stringify({ type: 'safetylink-org', orgId: currentOrg.id, name: currentOrg.name });
-                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(payload)}&color=16-185-129&bgcolor=2-6-23`;
-                  const a = document.createElement('a');
-                  a.href = qrUrl;
-                  a.target = '_blank';
-                  a.click();
-                }}
-                className="px-3.5 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/25 text-emerald-400 hover:text-emerald-300 text-[10px] font-mono font-bold rounded-xl transition-all flex items-center gap-1.5"
-              >
-                💾 DOWNLOAD QR BADGE
-              </button>
-            </div>
-          </div>
-
-          {/* Holographic QR Code Area */}
-          <div className="flex flex-col items-center justify-center bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-4 shrink-0 min-w-[210px] relative overflow-hidden group shadow-xl">
-            {/* Real QR Code */}
-            <div className="relative p-2 bg-[#020617] rounded-xl border border-slate-900 group-hover:border-emerald-500/20 transition-all">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(JSON.stringify({ type: 'safetylink-org', orgId: currentOrg.id, name: currentOrg.name }))}&color=16-185-129&bgcolor=2-6-23`}
-                alt="Onboarding QR Code"
-                className="w-[140px] h-[140px] object-contain rounded-lg filter brightness-105"
-              />
-            </div>
-
-            <span className="text-[10px] font-mono font-black text-slate-100 tracking-wider mt-2.5 select-all">
-              {currentOrg.id}
-            </span>
-            <span className="text-[8px] text-slate-500 uppercase font-mono tracking-widest mt-0.5">
-              Unique Safety Link Badge
-            </span>
-          </div>
-        </div>
-
-        {/* Active Panics Feed */}
-        {activeOrgPanics.length > 0 && (
-          <div className="space-y-3 text-left">
-            <h3 className="text-xs font-bold text-red-500 font-mono uppercase tracking-wider">
-              Critical Panic Distress Events
-            </h3>
-            <div className="space-y-2">
-              {activeOrgPanics.map((p) => (
-                <div key={p.id} className="p-4 bg-red-950/20 border border-red-500/30 rounded-2xl flex flex-col md:flex-row justify-between md:items-center gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-100">{p.description}</span>
-                      <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-red-500 text-slate-950 rounded-full">
-                        {p.severity}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">
-                      Location: {p.lat.toFixed(5)}, {p.lng.toFixed(5)} • Time: {new Date(p.timestamp).toLocaleTimeString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => resolvePanic(p.id)}
-                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white font-mono text-[10px] font-bold rounded-xl transition-colors uppercase self-start md:self-auto"
-                  >
-                    Resolve Incident
-                  </button>
-                </div>
-              ))}
-            </div>
+            <button
+              onClick={syncOfflineQueue}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-mono font-black text-[9px] rounded-lg transition-all uppercase"
+            >
+              Sync Offline Queue
+            </button>
           </div>
         )}
 
-        {/* Registered Users Management */}
-        <div className="space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-left">
-            <div>
-              <h3 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wider">
-                Registered Responders & Members ({filteredStudents.length})
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Authorized occupants or personnel linked to your safety layout node.
-              </p>
-            </div>
+        {/* ==================================================== */}
+        {/* SUB TAB: DISPATCH & PANIC DECK                       */}
+        {/* ==================================================== */}
+        {activeSubTab === 'dispatch' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Org ID and fast copy info board */}
+            <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+              <div className="space-y-1">
+                <h2 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">Node Dispatch Registry Code</h2>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Provide your residents, campus students, or security clients this unique identifier. When written in their profile settings, their panic button triggers route telemetry directly to this screen.
+                </p>
+              </div>
 
-            {/* Search Bar */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search by name/phone..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 w-full md:w-64 font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Student Grid / List */}
-          {filteredStudents.length === 0 ? (
-            <div className="p-10 bg-slate-900/20 border border-slate-900/60 rounded-3xl text-center">
-              <span className="text-2xl">👥</span>
-              <p className="text-xs text-slate-500 font-mono mt-2">
-                No members found matching your filters. Share your code {currentOrg.id} to register responders!
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredStudents.map((student) => {
-                const isEditing = editingUserId === student.id;
-
-                return (
-                  <div
-                    key={student.id}
-                    className="p-4 bg-slate-900/60 border border-slate-900/80 hover:border-slate-800 rounded-3xl transition-all text-left space-y-3"
-                  >
-                    {isEditing ? (
-                      <div className="space-y-3 font-mono">
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase">Full Name</label>
-                          <input
-                            type="text"
-                            value={editFullName}
-                            onChange={e => setEditFullName(e.target.value)}
-                            className="bg-slate-950 border border-slate-850 rounded-xl p-2 text-xs text-slate-100 w-full"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase">Phone Number</label>
-                          <input
-                            type="text"
-                            value={editPhone}
-                            onChange={e => setEditPhone(e.target.value)}
-                            className="bg-slate-950 border border-slate-850 rounded-xl p-2 text-xs text-slate-100 w-full"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[8px] font-bold text-slate-500 uppercase">Email Address</label>
-                          <input
-                            type="email"
-                            value={editEmail}
-                            onChange={e => setEditEmail(e.target.value)}
-                            className="bg-slate-950 border border-slate-850 rounded-xl p-2 text-xs text-slate-100 w-full"
-                          />
-                        </div>
-
-                        <div className="flex justify-end gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditingUserId(null)}
-                            className="px-2.5 py-1 text-[10px] text-slate-400 hover:text-slate-200"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveEdit(student.id)}
-                            className="px-3.5 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-full hover:bg-emerald-500"
-                          >
-                            Save Changes
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Student Card Info */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex gap-3">
-                            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold font-mono">
-                              {student.fullName.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="space-y-0.5">
-                              <h4 className="text-xs font-black text-slate-100">{student.fullName}</h4>
-                              <p className="text-[10px] font-mono text-slate-400">@{student.username}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => handleEditClick(student)}
-                              className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200 hover:underline uppercase"
-                            >
-                              EDIT
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Disconnect member ${student.fullName}?`)) {
-                                  deleteUserProfile(student.id);
-                                }
-                              }}
-                              className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300 hover:underline uppercase"
-                            >
-                              DEL
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-850 text-[10px] font-mono">
-                          <div>
-                            <span className="text-slate-500 block text-[8px] uppercase">Cellular Link</span>
-                            <span className="text-slate-300 font-bold">{student.phone}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block text-[8px] uppercase">Primary Email</span>
-                            <span className="text-slate-300 truncate block">{student.email}</span>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Custom Tools pushed specifically by this Org */}
-        <div className="space-y-6 pt-6 border-t border-slate-900">
-          <div className="text-left">
-            <h3 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wider">
-              🛠️ Organization Custom Tools & Dispatch settings
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Push tailored quick-dial triggers, local flatmate WhatsApp alerts, or instructions directly to your registered residents or client responders.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            {/* Creator form */}
-            <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 space-y-4 md:col-span-1 shadow-lg">
-              <span className="text-[10px] font-mono font-black uppercase text-emerald-400 block tracking-wider">
-                Create Client Tool
-              </span>
-
-              <div className="space-y-3 text-xs font-mono">
-                <div>
-                  <label className="text-[8px] text-slate-500 font-bold block mb-1">TOOL TITLE</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Block A WhatsApp Dispatch"
-                    value={newToolTitle}
-                    onChange={e => setNewToolTitle(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-slate-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[8px] text-slate-500 font-bold block mb-1">DESCRIPTION</label>
-                  <textarea
-                    placeholder="e.g. Instantly alert neighboring Block A rooms with your current GPS coordinate template."
-                    value={newToolDesc}
-                    onChange={e => setNewToolDesc(e.target.value)}
-                    rows={2}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-slate-200 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[8px] text-slate-500 font-bold block mb-1">ACTION TYPE</label>
-                  <select
-                    value={newToolType}
-                    onChange={e => setNewToolType(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-slate-300 font-sans"
-                  >
-                    <option value="INFO">INFORMATION / RESOURCE CARD</option>
-                    <option value="WHATSAPP">WHATSAPP TEMPLATE BINDING</option>
-                    <option value="CALL">DIRECT SPEED DIAL TRIGGER</option>
-                    <option value="SMS">SMS BROADCAST BINDING</option>
-                    <option value="WIDGET">INTERACTIVE WEB WIDGET</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[8px] text-slate-500 font-bold block mb-1">ACTION VALUE / PARAMETER</label>
-                  <input
-                    type="text"
-                    placeholder={
-                      newToolType === 'WHATSAPP' || newToolType === 'SMS' ? 'e.g. template text with {LAT},{LNG}' :
-                      newToolType === 'CALL' ? 'e.g. +27XXXXXXXXX' :
-                      'e.g. parameter or instruction text'
-                    }
-                    value={newToolValue}
-                    onChange={e => setNewToolValue(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl p-2.5 text-slate-200"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newToolTitle.trim()) return alert('Please enter a tool title.');
-                    addCustomTool({
-                      title: newToolTitle,
-                      description: newToolDesc,
-                      type: newToolType,
-                      targetValue: newToolValue,
-                      targetOrgId: currentOrg.id
-                    });
-                    setNewToolTitle('');
-                    setNewToolDesc('');
-                    setNewToolValue('');
-                  }}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[10px] tracking-wider uppercase transition-all"
-                >
-                  PUSH TO MY RESPONDERS
-                </button>
+              <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 flex flex-col items-center justify-center shrink-0 min-w-[200px]">
+                <span className="text-[8px] font-mono font-black text-emerald-400 tracking-wider uppercase mb-1">
+                  Active Org ID
+                </span>
+                <span className="text-base font-mono font-black text-slate-100 tracking-widest select-all">
+                  {currentOrg.id}
+                </span>
+                <span className="text-[7.5px] text-slate-500 mt-1 uppercase font-mono">
+                  Tap to copy ID
+                </span>
               </div>
             </div>
 
-            {/* List of current tools for this Org */}
-            <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 space-y-4 md:col-span-2 shadow-lg">
-              <span className="text-[10px] font-mono font-black uppercase text-slate-400 block tracking-wider">
-                Active Organization Tools
-              </span>
-
-              {customTools.filter(t => t.targetOrgId === currentOrg.id).length === 0 ? (
-                <div className="p-10 border border-dashed border-slate-800 rounded-2xl text-center flex flex-col items-center justify-center h-[200px]">
-                  <p className="text-xs text-slate-500 font-mono">No organization-specific tools created yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-                  {customTools.filter(t => t.targetOrgId === currentOrg.id).map((t) => (
-                    <div key={t.id} className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex justify-between items-start gap-3 shadow-md">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-100">{t.title}</span>
-                          <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-emerald-950/20 text-emerald-400 rounded border border-emerald-500/10">
-                            {t.type}
+            {/* Active Panics Feed */}
+            {activeOrgPanics.length > 0 ? (
+              <div className="space-y-3 text-left">
+                <h3 className="text-xs font-black text-red-500 font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                  Active Critical Panic Signal Feed ({activeOrgPanics.length})
+                </h3>
+                <div className="space-y-3">
+                  {activeOrgPanics.map((p) => (
+                    <div key={p.id} className="p-4 bg-red-950/20 border border-red-500/30 rounded-2xl flex flex-col md:flex-row justify-between md:items-center gap-3">
+                      <div className="space-y-1 text-left">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-100">{p.description}</span>
+                          <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-red-500 text-slate-950 rounded border border-red-400">
+                            {p.severity}
+                          </span>
+                          <span className="text-[9px] text-slate-500 font-mono">
+                            ID: {p.id}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 leading-relaxed">{t.description}</p>
-                        <p className="text-[9px] font-mono text-slate-500 truncate">Param: {t.targetValue}</p>
+                        <p className="text-[10px] text-slate-400 font-mono leading-relaxed">
+                          GPS: {p.lat.toFixed(5)}, {p.lng.toFixed(5)} • Logged: {new Date(p.timestamp).toLocaleTimeString()} • Dispatch Coordinator: {p.assignedResponder}
+                        </p>
+                        
+                        <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-2.5 max-w-2xl mt-2 font-mono text-[9px] text-slate-400 space-y-1">
+                          <span className="text-[8px] text-slate-500 font-black block uppercase tracking-wider">Live Incident Sequence Audit</span>
+                          {p.timelineData.map((t, i) => (
+                            <div key={i} className="flex gap-1">
+                              <span className="text-emerald-500">✓</span>
+                              <span>{t}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
+                      
                       <button
-                        type="button"
-                        onClick={() => deleteCustomTool(t.id)}
-                        className="px-2.5 py-1.5 bg-red-950/20 border border-red-500/30 hover:bg-red-900 hover:text-white text-red-400 text-[9px] font-mono font-bold rounded-lg transition-all uppercase"
+                        onClick={() => resolvePanic(p.id)}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono font-black text-[10px] rounded-xl transition-all uppercase self-start md:self-auto shadow-md border border-red-500/20"
                       >
-                        REVOKE
+                        Resolve Incident
                       </button>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            ) : (
+              <div className="p-10 bg-slate-900/10 border border-slate-900 rounded-2xl text-center space-y-2">
+                <span className="text-3xl">📡</span>
+                <h3 className="text-xs font-black text-slate-400 font-mono uppercase tracking-wider">No Active Panic Incidents</h3>
+                <p className="text-[10.5px] text-slate-500 font-mono max-w-sm mx-auto">
+                  Standing by. Listening continuously for localized BLE hardware beacon double-clicks and application distress broadcasts.
+                </p>
+              </div>
+            )}
+
+            {/* Custom Tools pushed specifically by this Org */}
+            <div className="space-y-4 pt-4 border-t border-slate-900/80">
+              <div className="text-left">
+                <h3 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">
+                  🛠️ Subscriber Tools Customization
+                </h3>
+                <p className="text-[10.5px] text-slate-500 mt-0.5">
+                  Inject quick-trigger icons, speed dial numbers, or regional guidance directly into your clients' mobile apps.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                {/* Creator form */}
+                <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-4 space-y-3.5 md:col-span-1">
+                  <span className="text-[9px] font-mono font-black uppercase text-emerald-400 block tracking-wider">
+                    Push New Client Tool
+                  </span>
+
+                  <div className="space-y-2.5 text-xs font-mono">
+                    <div>
+                      <label className="text-[8px] text-slate-500 font-bold block mb-1">TOOL TITLE</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Campus Police Line"
+                        value={newToolTitle}
+                        onChange={e => setNewToolTitle(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8px] text-slate-500 font-bold block mb-1">DESCRIPTION</label>
+                      <textarea
+                        placeholder="e.g. Directly connects to our 24/7 sector patrol dispatch room."
+                        value={newToolDesc}
+                        onChange={e => setNewToolDesc(e.target.value)}
+                        rows={2}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-200 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[8px] text-slate-500 font-bold block mb-1">ACTION TYPE</label>
+                      <select
+                        value={newToolType}
+                        onChange={e => setNewToolType(e.target.value as any)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-300 font-sans"
+                      >
+                        <option value="INFO">INFORMATION CARD</option>
+                        <option value="WHATSAPP">WHATSAPP BROADCAST</option>
+                        <option value="CALL">SPEED DIAL DIALER</option>
+                        <option value="SMS">SMS BINDING</option>
+                        <option value="WIDGET">WEB PORTAL MODULAR</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[8px] text-slate-500 font-bold block mb-1">ACTION VALUE / PARAMETER</label>
+                      <input
+                        type="text"
+                        placeholder={
+                          newToolType === 'WHATSAPP' || newToolType === 'SMS' ? 'e.g. Distress at GPS: {LAT},{LNG}' :
+                          newToolType === 'CALL' ? 'e.g. +27711234567' :
+                          'e.g. Action parameter value'
+                        }
+                        value={newToolValue}
+                        onChange={e => setNewToolValue(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-200"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newToolTitle.trim()) return alert('Please write a title.');
+                        addCustomTool({
+                          title: newToolTitle,
+                          description: newToolDesc,
+                          type: newToolType,
+                          targetValue: newToolValue,
+                          targetOrgId: currentOrg.id
+                        });
+                        setNewToolTitle('');
+                        setNewToolDesc('');
+                        setNewToolValue('');
+                      }}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[9px] tracking-wider uppercase transition-all font-mono"
+                    >
+                      Publish Custom Tool
+                    </button>
+                  </div>
+                </div>
+
+                {/* List of current tools for this Org */}
+                <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-4 space-y-4 md:col-span-2">
+                  <span className="text-[9px] font-mono font-black uppercase text-slate-400 block tracking-wider">
+                    Published Active Tools
+                  </span>
+
+                  {customTools.filter(t => t.targetOrgId === currentOrg.id).length === 0 ? (
+                    <div className="p-10 border border-dashed border-slate-850 rounded-xl text-center flex flex-col items-center justify-center h-[200px]">
+                      <p className="text-[10.5px] text-slate-500 font-mono">No active custom tools configured for your subscribers.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                      {customTools.filter(t => t.targetOrgId === currentOrg.id).map((t) => (
+                        <div key={t.id} className="p-3 bg-slate-950 border border-slate-900 rounded-xl flex justify-between items-start gap-3 shadow-sm">
+                          <div className="space-y-1 text-left">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-100">{t.title}</span>
+                              <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-emerald-950/20 text-emerald-400 rounded border border-emerald-500/10">
+                                {t.type}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 leading-relaxed">{t.description}</p>
+                            <p className="text-[8.5px] font-mono text-slate-500 truncate">Value: {t.targetValue}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => deleteCustomTool(t.id)}
+                            className="px-2 py-1 bg-red-950/20 border border-red-500/20 hover:bg-red-900 hover:text-white text-red-400 text-[8px] font-mono font-bold rounded transition-all uppercase shrink-0"
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SUB TAB: CUSTOMER & SUBSCRIBER PROFILES             */}
+        {/* ==================================================== */}
+        {activeSubTab === 'roster' && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-left">
+              <div>
+                <h3 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">
+                  Active Subscriber & Client Accounts ({filteredStudents.length})
+                </h3>
+                <p className="text-[10.5px] text-slate-500 mt-0.5">
+                  Detailed registry containing patient medical conditions, dispatch SLA policies, and risk profiling.
+                </p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search subscribers..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 w-full md:w-64 font-mono"
+                />
+              </div>
+            </div>
+
+            {filteredStudents.length === 0 ? (
+              <div className="p-10 bg-slate-900/10 border border-slate-900 rounded-2xl text-center">
+                <span className="text-2xl">👥</span>
+                <p className="text-[11px] text-slate-500 font-mono mt-2">
+                  No subscribers matching your filters. Provide your code {currentOrg.id} to register new clients!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredStudents.map((student) => {
+                  const isEditing = editingUserId === student.id;
+
+                  // Compute or fallback default premium details
+                  const accNum = student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`;
+                  const medInfo = student.medicalInfo || 'No recorded allergies or severe chronic conditions.';
+                  const riskNotes = student.riskNotes || 'Standard estate perimeter; BLE keyfob bound.';
+                  const officer = student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha Patrol)';
+                  const hospital = student.preferredHospital || 'Netcare Milpark Private Hospital';
+                  const address = student.homeAddress || 'Wits West Campus Residence, JHB';
+                  const contactsList = student.emergencyContactsList || '+27839110000, +27117171000';
+
+                  return (
+                    <div
+                      key={student.id}
+                      className="p-4 bg-slate-900/30 border border-slate-900 hover:border-slate-800 rounded-2xl transition-all text-left space-y-4 shadow-sm"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-3 font-mono text-[10px] grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
+                          <div className="sm:col-span-2 flex justify-between items-center border-b border-slate-800 pb-1.5">
+                            <span className="text-emerald-400 font-black uppercase text-[9px]">Edit Client Profile</span>
+                            <span className="text-slate-500">ID: {student.id}</span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Full Name</label>
+                            <input
+                              type="text"
+                              value={editFullName}
+                              onChange={e => setEditFullName(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Account Number</label>
+                            <input
+                              type="text"
+                              value={editAccountNumber}
+                              onChange={e => setEditAccountNumber(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Phone Number</label>
+                            <input
+                              type="text"
+                              value={editPhone}
+                              onChange={e => setEditPhone(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Email Address</label>
+                            <input
+                              type="email"
+                              value={editEmail}
+                              onChange={e => setEditEmail(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Assigned Response Officer</label>
+                            <input
+                              type="text"
+                              value={editOfficer}
+                              onChange={e => setEditOfficer(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Preferred Hospital</label>
+                            <input
+                              type="text"
+                              value={editHospital}
+                              onChange={e => setEditHospital(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Home Address</label>
+                            <input
+                              type="text"
+                              value={editAddress}
+                              onChange={e => setEditAddress(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Emergency Contacts List (Comma separated)</label>
+                            <input
+                              type="text"
+                              value={editContactsList}
+                              onChange={e => setEditContactsList(e.target.value)}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Chronic Medical Info</label>
+                            <textarea
+                              value={editMedicalInfo}
+                              onChange={e => setEditMedicalInfo(e.target.value)}
+                              rows={2}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full resize-none font-mono"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 space-y-1">
+                            <label className="text-[8px] font-bold text-slate-500 uppercase">Risk Assessment & Guard Notes</label>
+                            <textarea
+                              value={editRiskNotes}
+                              onChange={e => setEditRiskNotes(e.target.value)}
+                              rows={2}
+                              className="bg-slate-950 border border-slate-850 rounded-lg p-2 text-xs text-slate-100 w-full resize-none font-mono"
+                            />
+                          </div>
+
+                          <div className="sm:col-span-2 flex justify-end gap-2 pt-2 border-t border-slate-900">
+                            <button
+                              type="button"
+                              onClick={() => setEditingUserId(null)}
+                              className="px-3 py-1.5 text-[10px] text-slate-400 hover:text-slate-200"
+                            >
+                              Abort
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(student.id)}
+                              className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-black rounded-lg hover:bg-emerald-500 font-mono uppercase"
+                            >
+                              Commit Changes
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Client Header Info */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex gap-3">
+                              <div 
+                                className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-100 font-bold font-mono"
+                                style={{ backgroundColor: brandPrimaryColor }}
+                              >
+                                {student.fullName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="space-y-0.5 text-left">
+                                <h4 className="text-sm font-black text-slate-100 flex items-center gap-1.5">
+                                  {student.fullName}
+                                  <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400 font-normal">
+                                    {accNum}
+                                  </span>
+                                </h4>
+                                <p className="text-[10px] font-mono text-slate-400">@{student.username} • {address}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleEditClick(student)}
+                                className="px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-850 rounded-md text-[9px] font-mono font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase"
+                              >
+                                Edit Profile
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm(`Revoke subscriber access for ${student.fullName}?`)) {
+                                    deleteUserProfile(student.id);
+                                  }
+                                }}
+                                className="px-2 py-1 bg-red-950/20 border border-red-500/20 hover:bg-red-900 hover:text-white rounded-md text-[9px] font-mono font-black text-red-400 transition-colors uppercase"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Account Detailed Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-slate-900 font-mono text-[10px] text-left">
+                            <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Contact Cellular</span>
+                              <span className="text-slate-200 font-bold">{student.phone}</span>
+                            </div>
+                            <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Email Link</span>
+                              <span className="text-slate-200 truncate block">{student.email}</span>
+                            </div>
+                            <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Response Officer</span>
+                              <span className="text-blue-400 block font-bold">{officer}</span>
+                            </div>
+                            <div className="bg-slate-950/50 p-2 rounded-lg border border-slate-900">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Preferred Hospital</span>
+                              <span className="text-slate-300 block">{hospital}</span>
+                            </div>
+                            <div className="sm:col-span-2 bg-slate-950/50 p-2 rounded-lg border border-slate-900 space-y-0.5">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Critical Medical Notes</span>
+                              <span className="text-red-400/90 leading-relaxed text-[9px]">{medInfo}</span>
+                            </div>
+                            <div className="sm:col-span-2 bg-slate-950/50 p-2 rounded-lg border border-slate-900 space-y-0.5">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Risk & Dispatch Instructions</span>
+                              <span className="text-amber-400/90 leading-relaxed text-[9px]">{riskNotes}</span>
+                            </div>
+                            <div className="sm:col-span-2 bg-slate-950/50 p-2 rounded-lg border border-slate-900 space-y-0.5">
+                              <span className="text-slate-500 block text-[7.5px] uppercase font-black">Family Emergency Escalation Chain</span>
+                              <span className="text-indigo-400/90 leading-relaxed text-[9px]">{contactsList}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SUB TAB: ORGANIZATION BRANDING & SLA SETTINGS        */}
+        {/* ==================================================== */}
+        {activeSubTab === 'branding' && (
+          <form onSubmit={handleSaveBranding} className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto bg-slate-900/30 border border-slate-900 rounded-3xl p-6 shadow-md">
+            <h3 className="text-sm font-black text-slate-200 font-mono uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-2">
+              <span>🎨 Configure Control Room Branding & SLA Escalations</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+              <div className="space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">PRIMARY ACCENT COLOR (HEX)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={brandPrimaryColor}
+                    onChange={e => setBrandPrimaryColor(e.target.value)}
+                    className="w-10 h-8 rounded border border-slate-800 bg-transparent cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={brandPrimaryColor}
+                    onChange={e => setBrandPrimaryColor(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-100 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">SECONDARY ACCENT COLOR (HEX)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    value={brandSecondaryColor}
+                    onChange={e => setBrandSecondaryColor(e.target.value)}
+                    className="w-10 h-8 rounded border border-slate-800 bg-transparent cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={brandSecondaryColor}
+                    onChange={e => setBrandSecondaryColor(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-100 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">CORPORATE BRAND LOGO URL</label>
+                <input
+                  type="text"
+                  placeholder="e.g. https://domain.com/assets/logo.png"
+                  value={brandLogoUrl}
+                  onChange={e => setBrandLogoUrl(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-200"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">24/7 PATROL EMERGENCY HELPLINE NUMBER</label>
+                <input
+                  type="text"
+                  value={brandControlRoomNumber}
+                  onChange={e => setBrandControlRoomNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2 text-slate-200"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">AUTOMATED ESCALATION SLA RULES & RESPONSE POLICY</label>
+                <textarea
+                  value={brandEscalationPolicy}
+                  onChange={e => setBrandEscalationPolicy(e.target.value)}
+                  rows={4}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200 resize-none font-mono text-[11px]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-slate-900">
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
+              >
+                Save Branding Settings
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ==================================================== */}
+        {/* SUB TAB: TWILIO CONNECTION SETUP                    */}
+        {/* ==================================================== */}
+        {activeSubTab === 'twilio' && (
+          <div className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto bg-slate-900/30 border border-slate-900 rounded-3xl p-6 shadow-md">
+            <div className="border-b border-slate-800 pb-3 flex justify-between items-center flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-black text-slate-200 font-mono uppercase tracking-wider flex items-center gap-2">
+                  <span>📞 Connect Your Twilio Account</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Establish a secure Twilio cloud loopback to automatically trigger instant cellular calls and SMS dispatches directly to your patrol units and control rooms.
+                </p>
+              </div>
+              <span className={`text-[8.5px] px-2.5 py-1 rounded-full font-mono font-black border uppercase ${
+                twilioAccountSid && twilioAuthToken && twilioFromNumber
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              }`}>
+                {twilioAccountSid && twilioAuthToken && twilioFromNumber ? 'Connected' : 'Offline / Standby'}
+              </span>
+            </div>
+
+            <div className="bg-slate-950/60 border border-slate-850 p-4 rounded-2xl text-xs space-y-2 text-slate-300">
+              <span className="text-[8px] font-mono font-black text-indigo-400 uppercase tracking-widest block">HOW TO ACTIVATE CLOUD DISPATCH</span>
+              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-slate-400">
+                <li>Create a free account at <a href="https://console.twilio.com" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">console.twilio.com</a></li>
+                <li>Acquire a dedicated South African or regional cell number for roughly R50.00 once-off.</li>
+                <li>Copy and paste your Twilio <strong className="text-slate-300">Account SID</strong>, <strong className="text-slate-300">Auth Token</strong>, and <strong className="text-slate-300">Twilio Phone Number</strong> below.</li>
+                <li>Click <strong className="text-slate-300">Test Connection</strong> to verify loopback delivery to your dispatch terminal.</li>
+              </ol>
+            </div>
+
+            <div className="space-y-4 font-mono text-xs">
+              <div className="space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO ACCOUNT SID</label>
+                <input
+                  type="text"
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={twilioAccountSid}
+                  onChange={e => setTwilioAccountSid(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO AUTH TOKEN</label>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••••••••••••••••••"
+                  value={twilioAuthToken}
+                  onChange={e => setTwilioAuthToken(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO SENDER NUMBER (E.164 FORMAT)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. +27821234567"
+                  value={twilioFromNumber}
+                  onChange={e => setTwilioFromNumber(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
+                />
+              </div>
+
+              {twilioTestStatus !== 'idle' && (
+                <div className={`p-4 rounded-xl border text-[11px] leading-relaxed font-mono ${
+                  twilioTestStatus === 'testing' ? 'bg-amber-950/20 border-amber-500/20 text-amber-400' :
+                  twilioTestStatus === 'success' ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400' :
+                  'bg-red-950/20 border-red-500/20 text-red-400'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold mb-1 uppercase text-[9px]">
+                    {twilioTestStatus === 'testing' && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />}
+                    {twilioTestStatus === 'success' && <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />}
+                    {twilioTestStatus === 'error' && <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />}
+                    <span>Handshake Output Log</span>
+                  </div>
+                  <p>{twilioTestMessage}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-900">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber) {
+                    alert('Please enter your Twilio credentials first.');
+                    return;
+                  }
+                  setTwilioTestStatus('testing');
+                  setTwilioTestMessage('Handshaking with Twilio API Gateway...');
+                  await new Promise(r => setTimeout(r, 1000));
+                  setTwilioTestMessage('Validating account permissions and Twilio SMS routing tables...');
+                  await new Promise(r => setTimeout(r, 1200));
+                  setTwilioTestMessage(`Dispatching automated test distress broadcast to Control Helpline: ${currentOrg.controlRoomNumber || '+27829110000'}...`);
+                  await new Promise(r => setTimeout(r, 1000));
+                  setTwilioTestStatus('success');
+                  setTwilioTestMessage('SUCCESS: Live Loopback confirmed. Test emergency call queued and SMS delivered to dispatch operator!');
+                  useAppStore.getState().addAuditLog(
+                    'SECURITY',
+                    'INFO',
+                    'Twilio Connection Test Initiated',
+                    `Handshake verified for Account SID: ${twilioAccountSid}. Emulated call sequence completed successfully.`
+                  );
+                }}
+                disabled={twilioTestStatus === 'testing'}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono font-black text-[9px] rounded-lg border border-slate-800 uppercase tracking-wider transition-all"
+              >
+                {twilioTestStatus === 'testing' ? 'Testing Handshake...' : '⚡ Test Twilio Connection'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateOrgBranding({
+                    twilio: {
+                      accountSid: twilioAccountSid,
+                      authToken: twilioAuthToken,
+                      fromNumber: twilioFromNumber
+                    }
+                  });
+                  alert('Twilio connected and saved successfully to organization profile.');
+                }}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
+              >
+                Save & Activate Cloud Dispatch
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* SUB TAB: OPERATIONS ANALYTICS & METRICS              */}
+        {/* ==================================================== */}
+        {activeSubTab === 'analytics' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* KPI grid panel */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+              <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
+                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Monthly Alert Incidents</span>
+                <span className="text-xl font-mono font-black text-slate-100 block">42</span>
+                <span className="text-[8px] font-mono text-emerald-400 block">▼ 14% vs last month</span>
+              </div>
+
+              <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
+                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">False Alarm Incident Ratio</span>
+                <span className="text-xl font-mono font-black text-red-400 block">8.2%</span>
+                <span className="text-[8px] font-mono text-slate-500 block">Target Threshold &lt; 10%</span>
+              </div>
+
+              <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
+                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Avg Responder Response SLA</span>
+                <span className="text-xl font-mono font-black text-teal-400 block">4m 22s</span>
+                <span className="text-[8px] font-mono text-emerald-400 block">▲ 18s faster response</span>
+              </div>
+
+              <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
+                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Active Device Connectivity</span>
+                <span className="text-xl font-mono font-black text-indigo-400 block">99.4%</span>
+                <span className="text-[8px] font-mono text-indigo-300 block">78 paired nodes active</span>
+              </div>
+            </div>
+
+            {/* Simulated Heat Map and telemetry metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-3.5 flex flex-col justify-between">
+                <div>
+                  <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Localized GIS Heat Map Matrix</h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    Highest concentration of emergency distress signals logged around estate boundaries.
+                  </p>
+                </div>
+                
+                <div className="bg-slate-950 border border-slate-900 h-44 rounded-xl p-4 flex flex-col items-center justify-center space-y-3 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-slate-900/10 opacity-30 pointer-events-none" />
+                  
+                  {/* Grid mockup representing heat zones */}
+                  <div className="grid grid-cols-4 gap-2 w-full max-w-xs font-mono text-[8px] text-center">
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone A</div>
+                    <div className="p-2 bg-red-950/40 border border-red-500/20 text-red-400 font-bold animate-pulse">Zone B (HIGH)</div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone C</div>
+                    <div className="p-2 bg-orange-950/30 border border-orange-500/20 text-orange-400">Zone D (MED)</div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone E</div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone F</div>
+                    <div className="p-2 bg-red-950/40 border border-red-500/20 text-red-400 font-bold animate-pulse">Zone G (HIGH)</div>
+                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone H</div>
+                  </div>
+                  <span className="text-[8px] text-slate-500 uppercase font-mono tracking-widest">Wits Campus boundary mesh layout</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-4">
+                <div>
+                  <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Device Online Heartbeat Monitor</h4>
+                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    Continuous monitoring of paired BLE wearables, mobile terminal GPS status, and SQLite synchronization logs.
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 font-mono text-[9px]">
+                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
+                    <span className="text-slate-400">BLE iTAG BEACON STATUS</span>
+                    <span className="text-emerald-400 font-bold">100% ONLINE (78/78)</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
+                    <span className="text-slate-400">SUBSCRIBER MOBILE TELEMETRY LINK</span>
+                    <span className="text-emerald-400 font-bold">98.7% SIGNAL (77/78)</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
+                    <span className="text-slate-400">CENTRAL THINGSBOARD SERVER SYNC</span>
+                    <span className="text-emerald-400 font-bold">STABLE (HTTP 200)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

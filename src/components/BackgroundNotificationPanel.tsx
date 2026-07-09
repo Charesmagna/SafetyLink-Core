@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
-import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const BackgroundNotificationPanel: React.FC = () => {
   const {
     isBackgroundServiceRunning,
-    toggleBackgroundService,
     backgroundServiceTick,
     incrementBackgroundServiceTick,
     userLocation,
@@ -23,23 +21,6 @@ export const BackgroundNotificationPanel: React.FC = () => {
   const [batteryLevel, setBatteryLevel] = useState(98);
   const [networkLatency, setNetworkLatency] = useState(42);
   const [currentTime, setCurrentTime] = useState(new Date());
-
-  // Listen to custom window events for top-to-down swipe triggers
-  useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
-    const handleClose = () => setIsOpen(false);
-    const handleToggle = () => setIsOpen(prev => !prev);
-    
-    window.addEventListener('open-notification-shade', handleOpen);
-    window.addEventListener('close-notification-shade', handleClose);
-    window.addEventListener('toggle-notification-shade', handleToggle);
-    
-    return () => {
-      window.removeEventListener('open-notification-shade', handleOpen);
-      window.removeEventListener('close-notification-shade', handleClose);
-      window.removeEventListener('toggle-notification-shade', handleToggle);
-    };
-  }, []);
 
   // Time & Battery drift simulator
   useEffect(() => {
@@ -190,100 +171,94 @@ export const BackgroundNotificationPanel: React.FC = () => {
                 </div>
 
                 {/* Constant Foreground Notification Card */}
-                <div className="bg-slate-900/90 border border-slate-800/85 rounded-2xl p-4 text-left relative overflow-hidden shadow-lg">
-                  {/* Subtle watermarked title inside card */}
-                  <div className="absolute top-2 right-3 text-[7.5px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">
-                    Ongoing Service
+                <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-left relative overflow-hidden shadow-lg space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[12px] font-black text-slate-100 uppercase tracking-wider font-mono">
+                        🛡️ SafetyLink Active
+                      </span>
+                    </div>
+                    <span className="text-[8px] font-mono bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-slate-500">
+                      FOREGROUND SERVICE
+                    </span>
                   </div>
 
-                  <div className="flex items-start gap-3">
-                    {/* Floating active shield icon */}
-                    <div className="shrink-0">
-                      <SafetyLinkLogo 
-                        size={36} 
-                        glowColor={isBackgroundServiceRunning ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'} 
-                      />
+                  {/* System Status Indicators List */}
+                  <div className="space-y-1.5 font-mono text-[10px]">
+                    <div className="flex justify-between items-center bg-slate-950/60 p-1.5 rounded-lg border border-slate-900">
+                      <span className="text-slate-500 uppercase">BLE Link Status</span>
+                      <span className={`font-black ${isBleConnected ? 'text-blue-400' : 'text-slate-400'}`}>
+                        {isBleConnected ? '● CONNECTED' : '○ STANDBY (iTAG Scanning)'}
+                      </span>
                     </div>
 
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div>
-                        <h4 className="text-[11px] font-black text-slate-100 uppercase tracking-wide">
-                          SafetyLink Active Connection (Service ID: 8801)
-                        </h4>
-                        <p className="text-[9.5px] text-slate-400 font-mono leading-relaxed mt-0.5">
-                          {isBackgroundServiceRunning 
-                            ? 'Actively polling background location telemetry & listening for bound BLE keyfob gestures.'
-                            : 'Background thread is paused. Wearable hardware gestures will NOT trigger dispatch!'}
-                        </p>
+                    <div className="flex justify-between items-center bg-slate-950/60 p-1.5 rounded-lg border border-slate-900">
+                      <span className="text-slate-500 uppercase">GPS Location</span>
+                      <span className={`font-black ${isGpsLocked ? 'text-teal-400' : 'text-amber-500'}`}>
+                        {isGpsLocked ? '● LOCKED (HPE GNSS)' : '○ ACQUIRING SATELLITES'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-slate-950/60 p-1.5 rounded-lg border border-slate-900">
+                      <span className="text-slate-500 uppercase">Monitoring Engine</span>
+                      <span className={`font-black ${isBackgroundServiceRunning ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {isBackgroundServiceRunning ? '● ACTIVE (STICKY)' : '○ SUSPENDED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Real-time telemetry sub-dump */}
+                  {isBackgroundServiceRunning && (
+                    <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-2.5 font-mono text-[8px] text-slate-400 space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>THREAD DURATION:</span>
+                        <span className="text-slate-300 font-bold">{formatTickTime(backgroundServiceTick)}</span>
                       </div>
-
-                      {/* Real-time telemetry dump */}
-                      {isBackgroundServiceRunning && (
-                        <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-2.5 font-mono text-[8px] text-slate-400 space-y-1">
-                          <div className="flex justify-between">
-                            <span>THREAD STATE:</span>
-                            <span className="text-emerald-400 font-bold">ACTIVE (RUNNING_STICKY)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>TOTAL TICK TIME:</span>
-                            <span className="text-slate-300 font-bold">{formatTickTime(backgroundServiceTick)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>GPS COORDINATES:</span>
-                            <span className="text-blue-400 font-bold">
-                              {userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : 'ACQUIRING...'}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>HARDWARE LINK LOG:</span>
-                            <div className="flex flex-col gap-1 w-full max-w-[200px] text-right">
-                              {bleDevices.length > 0 ? (
-                                bleDevices.map(d => (
-                                  <div key={d.macAddress} className="text-[7px] text-slate-300 leading-none truncate font-bold uppercase">
-                                    {d.friendlyName.substring(0, 10)} [{d.macAddress.replace(/:/g, '').substring(0, 4)}] • <span className={d.connectionState === 'CONNECTED' ? 'text-emerald-400' : 'text-slate-500'}>{d.connectionState}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-[7.5px] text-slate-500 italic">No active iTAG bound</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Control buttons inside notification card */}
-                      <div className="flex gap-2.5 pt-1.5">
-                        <button
-                          onClick={() => {
-                            toggleBackgroundService();
-                            addAuditLog(
-                              'SYSTEM',
-                              'INFO',
-                              isBackgroundServiceRunning ? 'Background Service Suspended' : 'Background Service Resumed',
-                              'Operator action triggered via constant status notification card.'
-                            );
-                          }}
-                          className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${
-                            isBackgroundServiceRunning
-                              ? 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400'
-                              : 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400'
-                          }`}
-                        >
-                          {isBackgroundServiceRunning ? '🛑 Stop Monitoring' : '▶️ Resume Monitoring'}
-                        </button>
-                        
-                        <button
-                          onClick={async () => {
-                            setIsOpen(false);
-                            await triggerPanic('Immediate emergency dispatch activated from persistent background notification panel.');
-                          }}
-                          disabled={activeSOSState !== 'IDLE'}
-                          className="px-3.5 py-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-transparent text-white border border-red-500/20 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
-                        >
-                          🚨 Instant Panic
-                        </button>
+                      <div className="flex justify-between">
+                        <span>LATENCY METRICS:</span>
+                        <span className="text-indigo-400 font-bold">{networkLatency} ms (WITS-NODE-GATEWAY)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>GPS VALUE:</span>
+                        <span className="text-blue-400 font-bold">
+                          {userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : 'ACQUIRING...'}
+                        </span>
                       </div>
                     </div>
+                  )}
+
+                  {/* Android Style Notification Action Panel */}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <button
+                      onClick={async () => {
+                        setIsOpen(false);
+                        await triggerPanic('SOS emergency broadcast activated from persistent Android notification widget.');
+                      }}
+                      disabled={activeSOSState !== 'IDLE'}
+                      className="py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-mono font-black text-[9px] uppercase tracking-wider rounded-xl transition-all border border-red-500/20 shadow-md text-center"
+                    >
+                      🆘 SOS
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        addAuditLog('BLE', 'INFO', 'Initiated manual BLE Reconnect sweep from notification widget', 'Scanning GATT characteristics for bound iTAG keyfobs.');
+                      }}
+                      className="py-2.5 bg-slate-950 hover:bg-slate-900 text-blue-400 border border-slate-800 rounded-xl font-mono font-black text-[9px] uppercase tracking-wider transition-all text-center"
+                    >
+                      🔄 Reconnect
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setMinimized(false);
+                        setIsOpen(false);
+                      }}
+                      className="py-2.5 bg-slate-950 hover:bg-slate-900 text-emerald-400 border border-slate-800 rounded-xl font-mono font-black text-[9px] uppercase tracking-wider transition-all text-center"
+                    >
+                      📱 Open
+                    </button>
                   </div>
                 </div>
 

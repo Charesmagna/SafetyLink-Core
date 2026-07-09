@@ -16,20 +16,22 @@ import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { SplashReveal } from './components/SplashReveal';
 import { AppTour } from './components/AppTour';
 import { AIHub } from './components/AIHub';
+import { MediaHub } from './components/MediaHub';
 import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { KlevaBot } from './components/KlevaBot';
+import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
+import { AdvancedSubsystems } from './components/AdvancedSubsystems';
 import { motion, AnimatePresence } from 'motion/react';
-import { ApkDownloadPopup } from './components/ApkDownloadPopup';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
 import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
 import slide3 from './assets/images/regenerated_image_1783360733591.jpg';
 
-type TabId = 'home' | 'contacts' | 'ble' | 'map' | 'settings';
+type TabId = 'home' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
 
 const App: React.FC = () => {
   const { 
@@ -56,8 +58,6 @@ const App: React.FC = () => {
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
-  const [forceShowApk, setForceShowApk] = useState<boolean>(false);
-  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor;
 
   const backgroundSlides = [
     slide3,
@@ -86,6 +86,39 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    // Automatically minimize and lock the mini app in the system notification panel when the user exits/blurs the screen/switches tasks
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && useAppStore.getState().currentUser) {
+        setMinimized(true);
+        useAppStore.getState().addToast("SafetyLink minimized to persistent notifications panel.", "info");
+        useAppStore.getState().addAuditLog(
+          'SYSTEM',
+          'INFO',
+          'App Switched to Background',
+          'User switched apps or tasks. Pinned notification mini-app locked in system shade.'
+        );
+      }
+    };
+
+    const handleWindowBlur = () => {
+      setTimeout(() => {
+        if (!document.hasFocus() && useAppStore.getState().currentUser && !useAppStore.getState().isAppMinimized) {
+          setMinimized(true);
+          useAppStore.getState().addToast("SafetyLink locked on background notification panel.", "info");
+        }
+      }, 500);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, [setMinimized]);
+
+  useEffect(() => {
     // Bootstrap tracking and simulated BLE hardware listeners on mount
     const geoService = GeolocationService.getInstance();
     geoService.startTracking();
@@ -104,12 +137,15 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Automatically trigger APK Download Popup upon load
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setForceShowApk(true);
-    }, 1500);
-    return () => clearTimeout(timer);
+    const handleSwitchTab = (e: Event) => {
+      const customEvent = e as CustomEvent<TabId>;
+      if (customEvent.detail) {
+        setActiveTab(customEvent.detail);
+      }
+    };
+    window.addEventListener('sl-switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('sl-switch-tab', handleSwitchTab);
   }, []);
 
   // Background monitoring tick loop
@@ -141,10 +177,7 @@ const App: React.FC = () => {
 
   // Show 5-second 3D logo splash reveal before rendering AuthScreen or Dashboards
   if (showSplash) {
-    return <SplashReveal onComplete={() => {
-      setShowSplash(false);
-      setForceShowApk(true);
-    }} />;
+    return <SplashReveal onComplete={() => setShowSplash(false)} />;
   }
 
   // Secure routing conditional renders and persistent layout wraps
@@ -206,7 +239,7 @@ const App: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-2.5">
-            <SafetyLinkLogo size={30} />
+            <SafetyLinkLogo size={44} />
             <div className="text-left">
               <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
@@ -219,11 +252,7 @@ const App: React.FC = () => {
         {/* Right Side: Account status & Active view flag */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              if (window.confirm("Are you sure you want to exit the SafetyLink active console and escape to the home screen? The BLE wearable listeners and background tracking services will remain fully active in the system tray.")) {
-                setMinimized(true);
-              }
-            }}
+            onClick={() => setMinimized(true)}
             title="Exit App to Mobile Desktop"
             className="p-2 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner flex items-center justify-center gap-1 text-[10px] font-bold font-mono uppercase"
           >
@@ -246,6 +275,7 @@ const App: React.FC = () => {
             activeTab === 'contacts' ? 'text-blue-400 border-blue-500/10' :
             activeTab === 'ble' ? 'text-emerald-400 border-emerald-500/10' :
             activeTab === 'map' ? 'text-amber-400 border-amber-500/10' :
+            activeTab === 'subsystems' ? 'text-indigo-400 border-indigo-500/10' :
             'text-purple-400 border-purple-500/10'
           }`}>
             {t(`tab.${activeTab}`)}
@@ -288,6 +318,9 @@ const App: React.FC = () => {
 
               {/* Coordinated AI Hub: K'leva.info */}
               <AIHub />
+
+              {/* Informational Media & Resources Hub (TM Media Solutions) */}
+              <MediaHub />
 
               {/* Interactive Home Screen SOS Widget */}
               <AndroidWidgetSimulator />
@@ -379,6 +412,12 @@ const App: React.FC = () => {
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
               <Settings />
+            </div>
+          )}
+
+          {activeTab === 'subsystems' && (
+            <div className="animate-fadeIn">
+              <AdvancedSubsystems />
             </div>
           )}
         </div>
@@ -546,13 +585,17 @@ const App: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => { setForceShowApk(true); setIsDrawerOpen(false); }}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border border-emerald-500/10 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/10"
+                    onClick={() => { setActiveTab('subsystems'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'subsystems'
+                        ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
                   >
-                    <span className="text-sm shrink-0">📱</span>
+                    <span className="text-sm shrink-0">💻</span>
                     <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">Get Android APK</p>
-                      <p className="text-[7.5px] font-mono text-slate-400 mt-0.5">Mobile installation package</p>
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.subsystems')}</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Hardware & Chaos Simulator</p>
                     </div>
                   </button>
                 </div>
@@ -609,34 +652,15 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {!isCapacitor && (
-                  <button
-                    onClick={() => { setForceShowApk(true); setIsDrawerOpen(false); }}
-                    className="w-full py-2 bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500/20 text-[9px] font-mono font-black text-emerald-400 hover:text-emerald-300 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/10"
-                  >
-                    <span>📱 GET ANDROID APK</span>
-                  </button>
-                )}
-
                 <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to exit the console to the background? Background GPS monitoring and BLE wearable tracking will remain active in your system tray.")) {
-                      setMinimized(true);
-                      setIsDrawerOpen(false);
-                    }
-                  }}
+                  onClick={() => { setMinimized(true); setIsDrawerOpen(false); }}
                   className="w-full py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[9px] font-mono font-black text-slate-300 hover:text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
                 >
                   <span>📳 EXIT CONSOLE TO BACKGROUND</span>
                 </button>
 
                 <button
-                  onClick={() => {
-                    if (window.confirm("WARNING: Are you sure you want to terminate this console session? Doing so will temporarily pause the BLE receiver. Select OK to log out and clear active credentials.")) {
-                      logout();
-                      setIsDrawerOpen(false);
-                    }
-                  }}
+                  onClick={() => { logout(); setIsDrawerOpen(false); }}
                   className="w-full py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[9px] font-mono font-black text-red-400 hover:text-red-300 rounded-xl uppercase tracking-wider transition-all"
                 >
                   🔑 SHUTDOWN SESSION
@@ -707,8 +731,8 @@ const App: React.FC = () => {
       {/* Floating K'lev.ai South African Safety Assistant Bot */}
       <KlevaBot />
 
-      {/* APK Installer Download Popup */}
-      <ApkDownloadPopup forceShow={forceShowApk} onClose={() => setForceShowApk(false)} />
+      {/* Sizable Movable Deployed Floating Panic Button Widget */}
+      <FloatingPanicWidget />
 
     </div>
   );

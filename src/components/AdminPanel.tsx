@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { motion, AnimatePresence } from 'motion/react';
+
+import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
+import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
+import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
+import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS';
 
@@ -25,6 +32,17 @@ export const AdminPanel: React.FC = () => {
     addCustomTool,
     deleteCustomTool
   } = useAppStore();
+
+  // Background slideshow logic
+  const adminSlides = [slide3, slide4, slide5, slide1, slide2];
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % adminSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [adminSlides.length]);
 
   const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
@@ -91,7 +109,30 @@ export const AdminPanel: React.FC = () => {
   };
 
   return (
-    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-12">
+    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-12 relative">
+      {/* Background Slideshow animation */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentSlide}
+            initial={{ opacity: 0, scale: 1.03 }}
+            animate={{ opacity: 0.15 }} // Subtle 15% opacity for Super Admin dashboard readability
+            exit={{ opacity: 0, scale: 0.97 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full"
+          >
+            <img
+              src={adminSlides[currentSlide]}
+              alt="SafetyLink Administration Background"
+              className="w-full h-full object-cover filter brightness-[0.35] contrast-[1.1] saturate-[0.8]"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950" />
+          </motion.div>
+        </AnimatePresence>
+        <div className="absolute inset-0 digital-grid opacity-[0.04]" />
+      </div>
+
       {/* Super Admin Top Badge */}
       <div className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-mono text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 shadow-md">
         <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
@@ -99,7 +140,7 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       {/* Admin Header */}
-      <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative">
+      <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative z-10">
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-60" />
         <div className="flex items-center gap-3 text-left">
           <SafetyLinkLogo size={36} />
@@ -108,7 +149,7 @@ export const AdminPanel: React.FC = () => {
               SL Global Command
             </h1>
             <p className="text-[10px] text-purple-400 font-mono uppercase tracking-widest font-black">
-              System Admin ({ADMIN_ORG_CODE.toUpperCase()})
+              System Admin ({ADMIN_ORG_CODE.toUpperCase()}) // <span className="text-amber-500/80 font-black">POWERED BY TM MEDIA SOLUTIONS</span>
             </p>
           </div>
         </div>
@@ -122,7 +163,7 @@ export const AdminPanel: React.FC = () => {
       </header>
 
       {/* Admin Nav Bar */}
-      <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto">
+      <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
         {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'SETTINGS'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
@@ -142,7 +183,7 @@ export const AdminPanel: React.FC = () => {
       </nav>
 
       {/* Content Body */}
-      <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6">
+      <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6 relative z-10">
         
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'OVERVIEW' && (

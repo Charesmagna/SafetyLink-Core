@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-
+const logoPolish = '/Polish_20260620_014530309.jpg';
 import logoTransparent from './assets/logo_transparent.png';
+
+let cachedSplashLogoSrc: string | null = null;
 
 interface SplashRevealProps {
   onComplete: () => void;
@@ -10,6 +12,7 @@ interface SplashRevealProps {
 export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
   const [stage, setStage] = useState<'black' | 'pulse' | 'assemble' | 'emblem' | 'grid' | 'zoom'>('black');
   const [bootLogs, setBootLogs] = useState<string[]>([]);
+  const [imgSrc, setImgSrc] = useState(cachedSplashLogoSrc || logoPolish);
   
   const onCompleteRef = useRef(onComplete);
   
@@ -244,7 +247,7 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
                 stiffness: 110,
                 damping: 12,
               }}
-              className="relative p-8 rounded-full bg-slate-950/60 border border-slate-800 backdrop-blur-xl shadow-[0_30px_70px_rgba(0,0,0,0.95),0_0_60px_rgba(59,130,246,0.2)] flex items-center justify-center overflow-hidden"
+              className="relative p-10 rounded-full bg-slate-950/60 border border-slate-800 backdrop-blur-xl shadow-[0_30px_70px_rgba(0,0,0,0.95),0_0_60px_rgba(59,130,246,0.3)] flex items-center justify-center overflow-hidden"
             >
               {/* Metallic sheen sweep */}
               <motion.div
@@ -260,17 +263,16 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent skew-x-12 pointer-events-none"
               />
 
-              <div className="relative w-32 h-32 flex items-center justify-center">
+              <div className="relative w-56 h-56 flex items-center justify-center">
                 <img
-                  src={logoTransparent}
+                  src={imgSrc}
                   alt="SafetyLink"
-                  style={{ filter: 'drop-shadow(0 0 16px rgba(59, 130, 246, 0.45))' }}
-                  className="w-28 h-28 object-contain rounded-full"
+                  style={{ filter: 'url(#remove-white-bg) drop-shadow(0 0 24px rgba(59, 130, 246, 0.55))' }}
+                  className="w-48 h-48 object-contain"
                   referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.onerror = null;
-                    target.src = logoTransparent;
+                  onError={() => {
+                    cachedSplashLogoSrc = logoTransparent;
+                    setImgSrc(logoTransparent);
                   }}
                 />
               </div>

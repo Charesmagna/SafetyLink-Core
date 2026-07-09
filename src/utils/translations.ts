@@ -39,6 +39,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     'tab.ble': 'Beacons',
     'tab.map': 'Map',
     'tab.settings': 'Settings',
+    'tab.subsystems': 'Subsystems',
 
     // Home / Panic
     'home.reassurance_title': 'You are fully protected',
@@ -96,6 +97,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     'tab.ble': 'Bikhoni (BLE)',
     'tab.map': 'Mabe',
     'tab.settings': 'Sethingi',
+    'tab.subsystems': 'Mbekanyamushumo',
 
     // Home / Panic
     'home.reassurance_title': 'Ni tsireledzekile tshoṱhe',
@@ -149,6 +151,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     'tab.ble': 'Amabhikhoni',
     'tab.map': 'Imephu',
     'tab.settings': 'Izilungiselelo',
+    'tab.subsystems': 'Izinhlelo',
     'home.reassurance_title': 'Uvikeleke ngokugcwele',
     'home.reassurance_subtitle': 'ISafetyLink iqapha indawo yakho ngezikhathi zonke. Cindezela inkinobho ebomvu ngezansi kunoma yisiphi isimo esibucayi.',
     'home.trigger_desc_placeholder': 'Chaza isimo sakho (uma uthanda)...',
@@ -192,6 +195,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     'tab.ble': 'Amabhikhoni',
     'tab.map': 'Imephu',
     'tab.settings': 'Izicwangciso',
+    'tab.subsystems': 'Izicwangciso ezigqithileyo',
     'header.signout': 'Phuma',
     'home.reassurance_title': 'Khuselekile ngokupheleleyo',
     'home.reassurance_subtitle': 'ISafetyLink ihlala ijonga indawo yakho. Cofa iqhosha elibomvu ngezantsi kuyo nayiphi na imeko engxamisekileyo.',

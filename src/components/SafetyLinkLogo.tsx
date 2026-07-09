@@ -1,7 +1,9 @@
 import React from 'react';
-// Use the bundled transparent PNG that ships with the app.
-// The .gitattributes binary marker ensures it is never corrupted by git text normalisation.
+const logoPolish = '/Polish_20260620_014530309.jpg';
 import logoTransparent from './assets/logo_transparent.png';
+
+// Global cache variable to avoid re-initializing and triggering onError flicker on every mount
+let cachedLogoSrc: string | null = null;
 
 interface SafetyLinkLogoProps {
   size?: number;
@@ -11,61 +13,56 @@ interface SafetyLinkLogoProps {
 }
 
 /**
- * SafetyLink Official Logo
- *
- * Renders the transparent PNG logo with an optional animated glow ring.
- * Used across: splash screen, notification shade, header, drawer header,
- * auth screen, and footer.
- *
- * The logo PNG is tracked in .gitattributes as a binary file so git never
- * applies line-ending normalisation and the PNG header stays intact.
+ * SafetyLink Official Custom Logo.
+ * Displays the background-removed official branding logo from /logo_transparent.png,
+ * providing crystal-clear, transparent visual execution for premium dark/light integrations
+ * without messy edge blending. Includes optional micro-hover scale triggers, subtle
+ * colored backing glows, and standard brand typography.
  */
-export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
-  size = 64,
-  showText = false,
+export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({ 
+  size = 64, 
+  showText = false, 
   className = '',
-  glowColor = 'rgba(59, 130, 246, 0.35)',
+  glowColor = 'rgba(59, 130, 246, 0.35)'
 }) => {
+  const [imgSrc, setImgSrc] = React.useState(cachedLogoSrc || logoPolish);
+
   return (
-    <div
-      className={`flex flex-col items-center justify-center gap-2 group cursor-pointer select-none ${className}`}
-    >
-      <div
-        className="relative flex items-center justify-center"
-        style={{ width: size, height: size }}
-      >
-        {/* Ambient glow ring */}
-        <div
-          className="absolute inset-0 rounded-full bg-blue-500/10 blur-md group-hover:bg-blue-500/20 transition-all duration-500 animate-pulse"
+    <div className={`flex flex-col items-center justify-center gap-2 group cursor-pointer select-none ${className}`}>
+      {/* SVG Color Mask Filter to dynamically strip white background from logo */}
+      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0 }}>
+        <defs>
+          <filter id="remove-white-bg-logo" colorInterpolationFilters="sRGB">
+            <feColorMatrix
+              type="matrix"
+              values="
+                1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                -2 -2 -2 3 -0.1
+              "
+            />
+          </filter>
+        </defs>
+      </svg>
+
+      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+        {/* Background glowing rings */}
+        <div 
+          className="absolute inset-0 rounded-full bg-blue-500/10 blur-md group-hover:bg-blue-500/20 transition-all duration-500 animate-pulse" 
           style={{ opacity: 0.8 }}
         />
-
-        {/* Official transparent logo – binary PNG, never corrupted */}
+        
+        {/* Crisp, transparent brand icon - with SVG color matrix filter to cut out white background */}
         <img
-          src={logoTransparent}
-          alt="SafetyLink"
-          draggable={false}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
-            filter: `drop-shadow(0 0 10px ${glowColor})`,
-          }}
-          className="transition-all duration-500 group-hover:scale-110"
+          src={imgSrc}
+          alt="SafetyLink Official Logo"
+          style={{ filter: `url(#remove-white-bg-logo) drop-shadow(0 0 10px ${glowColor})` }}
+          className="w-full h-full object-contain transition-all duration-500 group-hover:scale-110"
           referrerPolicy="no-referrer"
-          onError={(e) => {
-            // Fallback: hide broken image icon and show a shield emoji placeholder
-            const img = e.currentTarget;
-            img.style.display = 'none';
-            const parent = img.parentElement;
-            if (parent && !parent.querySelector('.logo-fallback')) {
-              const fallback = document.createElement('span');
-              fallback.className = 'logo-fallback text-blue-400 select-none';
-              fallback.style.fontSize = `${size * 0.6}px`;
-              fallback.style.lineHeight = '1';
-              fallback.textContent = '🛡️';
-              parent.appendChild(fallback);
-            }
+          onError={() => {
+            cachedLogoSrc = logoTransparent;
+            setImgSrc(logoTransparent);
           }}
         />
       </div>
