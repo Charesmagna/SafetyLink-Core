@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
+import slLogoMain from '../assets/images/sl_logomain.jpeg';
+import slLogoSet from '../assets/images/sl_logoset.jpeg';
 
 interface CinematicLogoSmashProps {
   onAnimationEnd?: () => void;
@@ -209,9 +211,14 @@ export const CinematicLogoSmash: React.FC<CinematicLogoSmashProps> = ({
             {/* Glowing rings */}
             <div className="absolute w-44 h-44 rounded-full bg-blue-500/10 blur-xl animate-pulse pointer-events-none" />
             
-            {/* Transparent Brand Logo Cutout */}
-            <div className="relative w-44 h-44 flex items-center justify-center p-4">
-              <SafetyLinkLogo size={size * 0.75} showText={false} interactiveHud={false} />
+            {/* Official Brand Logo */}
+            <div className="relative w-44 h-44 flex items-center justify-center p-2">
+              <img
+                src={slLogoMain}
+                alt="SafetyLink"
+                className="w-full h-full object-contain rounded-xl"
+                style={{ filter: 'drop-shadow(0 0 20px rgba(52,211,153,0.7))' }}
+              />
             </div>
             
             <span className="text-[10px] font-black tracking-[0.25em] text-slate-100 uppercase font-mono mt-1">
