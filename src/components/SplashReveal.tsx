@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import slLogoMain from '../assets/images/sl_logomain.jpeg';
+import slLogoSet from '../assets/images/sl_logoset.jpeg';
 
 interface SplashRevealProps {
   onComplete: () => void;
@@ -946,8 +948,17 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
               {/* Subtly moving smoke/reflection overlay inside card */}
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(16,185,129,0.02)_0%,rgba(59,130,246,0.06)_60%,transparent_100%)] mix-blend-screen pointer-events-none" />
 
-              {/* Vector Core Logo component */}
-              <div className="relative w-64 h-64 flex items-center justify-center scale-95">
+              {/* Official Brand Logo — sl_logomain.jpeg */}
+              <div className="relative w-72 h-72 flex items-center justify-center">
+                <img
+                  src={slLogoMain}
+                  alt="SafetyLink Official Logo"
+                  className="w-full h-full object-contain drop-shadow-[0_0_40px_rgba(52,211,153,0.6)] rounded-2xl"
+                  style={{ filter: 'drop-shadow(0 0 24px rgba(52,211,153,0.8)) drop-shadow(0 0 8px rgba(52,211,153,1))' }}
+                />
+              </div>
+              {/* Hidden original SVG div — kept for type safety */}
+              <div className="hidden w-64 h-64 flex items-center justify-center scale-95">
                 <svg 
                   version="1.0" 
                   xmlns="http://www.w3.org/2000/svg" 
