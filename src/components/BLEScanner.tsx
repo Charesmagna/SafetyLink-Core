@@ -118,20 +118,47 @@ export const BLEScanner: React.FC = () => {
       (val) => {
         const store = useAppStore.getState();
         store.addAuditLog('BLE', 'SEVERE', 'NATIVE PHYSICAL BUTTON PRESS', `Signal byte 0x${val.toString(16)} received from ${address} (Click Code: ${val})`);
-        
+
+        // Medium vibration to acknowledge every iTAG press
+        if (navigator.vibrate) { try { navigator.vibrate(120); } catch(e) {} }
+
+        const lizzyFollowUp = (alertType: string) => {
+          // Lizzy AI voice follow-up after dispatch confirmation
+          setTimeout(() => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+              try {
+                window.speechSynthesis.cancel();
+                const msg = new SpeechSynthesisUtterance(
+                  `${alertType} alert dispatched. This is Lizzy from SafetyLink. Are you okay? Please respond if you can hear me.`
+                );
+                msg.rate = 0.9;
+                msg.pitch = 1.1;
+                window.speechSynthesis.speak(msg);
+              } catch(e) {}
+            }
+          }, 3500);
+        };
+
         if (val === 1) {
-          // Single Click (1x Press): NOW triggers SOS panic!
+          // Single Click: 10s countdown SOS
           store.addAuditLog('BLE', 'SEVERE', 'iTAG Single Click SOS (1x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-          store.triggerPanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (Single Click Hardware Protocol)`);
+          store.startMultiStagePanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (Single Click Hardware Protocol)`, 10);
           if (typeof window !== 'undefined' && window.speechSynthesis) {
             try {
               window.speechSynthesis.cancel();
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency S O S activated"));
+              window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency countdown initiated. 10 seconds to cancel."));
             } catch (e) {}
           }
+          // Long vibration + beep on countdown complete
+          setTimeout(() => {
+            if (store.activeSOSState !== 'IDLE') {
+              if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
+              lizzyFollowUp('SOS');
+            }
+          }, 10500);
         } else if (val === 2) {
-          // Double Click (2x Press): Safe Mode check-in / SOS abort if active, otherwise trigger SOS
-          if (store.activeSOSState !== 'IDLE') {
+          // Double Click: abort if active, else trigger
+          if (store.activeSOSState !== 'IDLE' || store.panicCountdown !== null) {
             store.addAuditLog('BLE', 'WARN', 'iTAG Safe Mode Cancel (2x click)', `De-escalation trigger received from physical button ${address}.`);
             store.cancelSOS();
             if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -143,23 +170,15 @@ export const BLEScanner: React.FC = () => {
           } else {
             store.addAuditLog('BLE', 'SEVERE', 'iTAG Double Click SOS (2x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
             store.triggerPanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (Double Click Hardware Protocol)`);
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              try {
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency S O S activated"));
-              } catch (e) {}
-            }
+            if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
+            lizzyFollowUp('Emergency');
           }
         } else if (val >= 3) {
-          // Triple Click (3x Press / Step): TACTICAL SOS TRIGGER
+          // Triple Click: bypass countdown, instant dispatch
           store.addAuditLog('BLE', 'SEVERE', 'iTAG Tactical SOS (3x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
           store.triggerPanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (3x Click Hardware Protocol)`);
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            try {
-              window.speechSynthesis.cancel();
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance("Tactical S O S activated"));
-            } catch (e) {}
-          }
+          if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
+          lizzyFollowUp('Tactical SOS');
         }
       }
     );

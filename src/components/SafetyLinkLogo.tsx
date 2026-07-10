@@ -57,7 +57,7 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
         <img
           src={imgSrc}
           alt="SafetyLink Official Logo"
-          style={{ filter: `url(#remove-white-bg-logo) drop-shadow(0 0 10px ${glowColor})` }}
+          style={{ mixBlendMode: "screen", filter: `drop-shadow(0 0 10px ${glowColor}) brightness(1.15) contrast(1.05)` }}
           className="w-full h-full object-contain transition-all duration-500 group-hover:scale-110"
           referrerPolicy="no-referrer"
           onError={() => {

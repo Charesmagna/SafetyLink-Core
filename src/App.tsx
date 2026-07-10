@@ -297,12 +297,12 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Workspace content - scrollable */}
-      <main className="flex-1 overflow-y-auto min-h-0 pb-12">
-        <div className="max-w-md mx-auto p-4 space-y-5">
+      {/* Main Workspace content */}
+      <main className={`flex-1 min-h-0 pb-12 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div className={`max-w-md mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
-            <div className="space-y-6 animate-fadeIn text-center flex flex-col items-center justify-center py-4">
+            <div className="flex flex-col items-center justify-between h-full animate-fadeIn text-center py-2 gap-2">
               {/* SafetyLink Reassurance Header Card */}
               <div className="w-full bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex items-start gap-4">
                 <div className="w-10 h-10 rounded-full bg-slate-800/60 flex items-center justify-center text-xl shrink-0">

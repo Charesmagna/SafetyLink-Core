@@ -1175,6 +1175,24 @@ export const useAppStore = create<AppState>((set, get) => ({
           bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
         }));
         get().addAuditLog('BLE', 'SEVERE', 'BLE Wearable Connection Severed', `Hardware link to ${mac} was terminated (out of range or battery dead).`);
+        // Auto-reconnect with exponential backoff
+        let attempt = 0;
+        const maxAttempts = 20;
+        const reconnect = () => {
+          const device = get().bleDevices.find(d => d.macAddress === mac);
+          if (!device || device.connectionState === 'CONNECTED') return;
+          attempt++;
+          const delay = Math.min(15000 * Math.pow(1.5, attempt - 1), 120000);
+          get().addAuditLog('BLE', 'INFO', 'BLE Auto-Reconnect Scheduled', `Attempt ${attempt}/${maxAttempts} for ${mac} in ${Math.round(delay/1000)}s.`);
+          setTimeout(() => {
+            const d = get().bleDevices.find(d => d.macAddress === mac);
+            if (d && d.connectionState === 'DISCONNECTED' && attempt < maxAttempts) {
+              get().connectBleDevice(mac);
+              reconnect();
+            }
+          }, delay);
+        };
+        reconnect();
       }
     ).then(() => {
       set(state => ({
