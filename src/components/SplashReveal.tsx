@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import slLogoMain from '../assets/images/sl_logomain.jpeg';
-import slLogoSet from '../assets/images/sl_logoset.jpeg';
 
 interface SplashRevealProps {
   onComplete: () => void;
