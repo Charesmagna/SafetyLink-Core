@@ -170,7 +170,7 @@ export const ConfidentialVault: React.FC = () => {
     addToast('Confidential Vault encrypted successfully.', 'success');
   };
 
-  const handleUnlockSubmit = (e: React.FormEvent) => {
+  const handleUnlockSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const inputHash = await derivePasswordVerifier(passwordInput);
     if (inputHash === vaultPassword) {
