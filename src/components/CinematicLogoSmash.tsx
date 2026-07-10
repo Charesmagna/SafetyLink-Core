@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 interface CinematicLogoSmashProps {
   onAnimationEnd?: () => void;
@@ -13,8 +14,6 @@ export const CinematicLogoSmash: React.FC<CinematicLogoSmashProps> = ({
   // Stages: 'vault' | 'transport' | 'smash' | 'final'
   const [stage, setStage] = useState<'vault' | 'transport' | 'smash' | 'final'>('vault');
   const [sparks, setSparks] = useState<Array<{ id: number; x: number; y: number; r: number; scale: number; speed: number; angle: number }>>([]);
-
-  const logoPolish = '/Polish_20260620_014530309.jpg';
 
   useEffect(() => {
     // Stage 1: Vault is spinning
@@ -212,13 +211,7 @@ export const CinematicLogoSmash: React.FC<CinematicLogoSmashProps> = ({
             
             {/* Transparent Brand Logo Cutout */}
             <div className="relative w-44 h-44 flex items-center justify-center p-4">
-              <img
-                src={logoPolish}
-                alt="SafetyLink"
-                style={{ filter: 'url(#remove-white-bg-smash) drop-shadow(0 0 24px rgba(59, 130, 246, 0.7))' }}
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
+              <SafetyLinkLogo size={size * 0.75} showText={false} interactiveHud={false} />
             </div>
             
             <span className="text-[10px] font-black tracking-[0.25em] text-slate-100 uppercase font-mono mt-1">

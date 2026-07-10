@@ -186,7 +186,13 @@ const App: React.FC = () => {
 
   // Show 5-second 3D logo splash reveal before rendering AuthScreen or Dashboards
   if (showSplash) {
-    return <SplashReveal onComplete={() => setShowSplash(false)} />;
+    return (
+      <SplashReveal 
+        onComplete={() => {
+          setShowSplash(false);
+        }} 
+      />
+    );
   }
 
   // Secure routing conditional renders and persistent layout wraps

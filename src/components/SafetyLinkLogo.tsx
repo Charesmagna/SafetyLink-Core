@@ -1,82 +1,686 @@
-import React from 'react';
-const logoPolish = '/Polish_20260620_014530309.jpg';
-const logoTransparent = '/Polish_20260620_014530309.jpg';
-
-// Global cache variable to avoid re-initializing and triggering onError flicker on every mount
-let cachedLogoSrc: string | null = null;
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore } from '../utils/store';
 
 interface SafetyLinkLogoProps {
   size?: number;
   showText?: boolean;
   className?: string;
   glowColor?: string;
+  interactiveHud?: boolean;
+  forceMode?: 'auto' | 'admin' | 'patrol' | 'school' | 'corporate' | 'gov' | 'family' | 'emergency';
 }
 
-/**
- * SafetyLink Official Custom Logo.
- * Displays the background-removed official branding logo from /logo_transparent.png,
- * providing crystal-clear, transparent visual execution for premium dark/light integrations
- * without messy edge blending. Includes optional micro-hover scale triggers, subtle
- * colored backing glows, and standard brand typography.
- */
 export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({ 
-  size = 64, 
-  showText = false, 
+  size = 140, 
+  showText = true, 
   className = '',
-  glowColor = 'rgba(59, 130, 246, 0.35)'
+  glowColor,
+  interactiveHud: _interactiveHud = false,
+  forceMode = 'auto'
 }) => {
-  const [imgSrc, setImgSrc] = React.useState(cachedLogoSrc || logoPolish);
+  const { currentUser, currentOrg, superAdminActive, activeSOSState } = useAppStore();
+  
+  // Transformers-style states: 'assembled' | 'disassembled' | 'transforming'
+  const [assemblyState, setAssemblyState] = useState<'assembled' | 'disassembled'>('assembled');
+  const [isHovered, setIsHovered] = useState(false);
+  
+  // 3D Parallax Tilt state
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Determine active theme scheme based on forceMode or the global store context
+  const getActiveScheme = (): 'admin' | 'patrol' | 'school' | 'corporate' | 'gov' | 'family' | 'emergency' => {
+    const modeToEvaluate = forceMode;
+    
+    if (modeToEvaluate !== 'auto') {
+      return modeToEvaluate;
+    }
+
+    if (activeSOSState !== 'IDLE') {
+      return 'emergency';
+    }
+
+    if (superAdminActive || currentUser?.username === 'SL-admin-0000') {
+      return 'admin';
+    }
+
+    if (currentOrg) {
+      const name = currentOrg.name.toLowerCase();
+      if (name.includes('school') || name.includes('university') || name.includes('college') || name.includes('academy')) {
+        return 'school';
+      }
+      if (name.includes('patrol') || name.includes('security') || name.includes('police') || name.includes('dispatch') || name.includes('guard')) {
+        return 'patrol';
+      }
+      if (name.includes('corp') || name.includes('office') || name.includes('manufacturing') || name.includes('lone') || name.includes('inc')) {
+        return 'corporate';
+      }
+      if (name.includes('gov') || name.includes('utility') || name.includes('municipal') || name.includes('public')) {
+        return 'gov';
+      }
+    }
+
+    return 'family';
+  };
+
+  const activeScheme = getActiveScheme();
+
+  // Color Definitions and brand styling schemes for different security mesh environments
+  const schemes = {
+    admin: {
+      title: 'SL Global Admin Node',
+      desc: 'Top-Tier System Mesh Control',
+      glow: glowColor || 'rgba(245, 158, 11, 0.5)',
+      primary: '#f59e0b', // Amber 500
+      secondary: '#fbbf24', // Yellow 400
+      gradientId: 'logoAdminGrad',
+      subtextGrad: 'logoAdminSubGrad',
+      bgGlowClass: 'bg-amber-500/10 border-amber-500/20'
+    },
+    patrol: {
+      title: 'Patrol Dispatch Deck',
+      desc: 'Security Command & Patrol mesh',
+      glow: glowColor || 'rgba(217, 119, 6, 0.5)',
+      primary: '#d97706', // Gold 600
+      secondary: '#f59e0b', // Gold 500
+      gradientId: 'logoPatrolGrad',
+      subtextGrad: 'logoPatrolSubGrad',
+      bgGlowClass: 'bg-yellow-600/10 border-yellow-600/20'
+    },
+    school: {
+      title: 'Campus Safe-Zone Node',
+      desc: 'Academic Safety & Emergency escalation',
+      glow: glowColor || 'rgba(16, 185, 129, 0.5)',
+      primary: '#10b981', // Emerald 500
+      secondary: '#06b6d4', // Cyan 500
+      gradientId: 'logoSchoolGrad',
+      subtextGrad: 'logoSchoolSubGrad',
+      bgGlowClass: 'bg-emerald-500/10 border-emerald-500/20'
+    },
+    corporate: {
+      title: 'Corporate Command Deck',
+      desc: 'Office & Lone Worker safety network',
+      glow: glowColor || 'rgba(59, 130, 246, 0.5)',
+      primary: '#3b82f6', // Blue 500
+      secondary: '#6366f1', // Indigo 500
+      gradientId: 'logoCorporateGrad',
+      subtextGrad: 'logoCorporateSubGrad',
+      bgGlowClass: 'bg-blue-500/10 border-blue-500/20'
+    },
+    gov: {
+      title: 'Municipal Responder Hub',
+      desc: 'Public Utility & Disaster management',
+      glow: glowColor || 'rgba(249, 115, 22, 0.5)',
+      primary: '#f97316', // Orange 500
+      secondary: '#ef4444', // Red 500
+      gradientId: 'logoGovGrad',
+      subtextGrad: 'logoGovSubGrad',
+      bgGlowClass: 'bg-orange-500/10 border-orange-500/20'
+    },
+    family: {
+      title: 'Private Family Ring',
+      desc: 'Personal Security & Alert chains',
+      glow: glowColor || 'rgba(236, 72, 153, 0.5)',
+      primary: '#ec4899', // Pink 500
+      secondary: '#8b5cf6', // Violet 500
+      gradientId: 'logoFamilyGrad',
+      subtextGrad: 'logoFamilySubGrad',
+      bgGlowClass: 'bg-pink-500/10 border-pink-500/20'
+    },
+    emergency: {
+      title: 'DISTRESS ACTIVE NODE',
+      desc: 'Active Emergency Alert Broadcast',
+      glow: glowColor || 'rgba(239, 68, 68, 0.8)',
+      primary: '#ef4444', // Red 500
+      secondary: '#dc2626', // Red 600
+      gradientId: 'logoEmergencyGrad',
+      subtextGrad: 'logoEmergencySubGrad',
+      bgGlowClass: 'bg-red-500/20 border-red-500/40 animate-pulse'
+    }
+  };
+
+  const scheme = schemes[activeScheme];
+
+  // Mouse Move Parallax Tilt logic
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left - width / 2;
+    const mouseY = e.clientY - rect.top - height / 2;
+    
+    // Smooth tilt ratio (max 15 degrees)
+    const tiltX = (mouseY / (height / 2)) * -15;
+    const tiltY = (mouseX / (width / 2)) * 15;
+    
+    setTilt({ x: tiltX, y: tiltY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+    setIsHovered(false);
+  };
+
+  // Synthesize mechanical robotic Transformers shift audio procedurally!
+  const playTransformationSound = (type: 'disassemble' | 'assemble') => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+      
+      // 1. Heavy robotic whir / frequency sweep
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const biquadFilter = ctx.createBiquadFilter();
+      const gainNode = ctx.createGain();
+      
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+      
+      if (type === 'disassemble') {
+        // High frequency down to low mechanical hum
+        osc1.frequency.setValueAtTime(450, now);
+        osc1.frequency.exponentialRampToValueAtTime(70, now + 1.2);
+        
+        osc2.frequency.setValueAtTime(300, now);
+        osc2.frequency.exponentialRampToValueAtTime(40, now + 1.2);
+        
+        biquadFilter.frequency.setValueAtTime(1200, now);
+        biquadFilter.frequency.exponentialRampToValueAtTime(200, now + 1.0);
+      } else {
+        // Low frequency ascending to high locking clink
+        osc1.frequency.setValueAtTime(60, now);
+        osc1.frequency.exponentialRampToValueAtTime(380, now + 1.0);
+        
+        osc2.frequency.setValueAtTime(40, now);
+        osc2.frequency.exponentialRampToValueAtTime(240, now + 1.0);
+        
+        biquadFilter.frequency.setValueAtTime(150, now);
+        biquadFilter.frequency.exponentialRampToValueAtTime(1500, now + 0.8);
+      }
+      
+      biquadFilter.type = 'bandpass';
+      biquadFilter.Q.setValueAtTime(5, now);
+      
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.18, now + 0.15);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      
+      osc1.connect(biquadFilter);
+      osc2.connect(biquadFilter);
+      biquadFilter.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 1.2);
+      osc2.stop(now + 1.2);
+      
+      // 2. Add sequential mechanical interlocking clicking gears (Synthesizer clicks)
+      const numClicks = 8;
+      for (let i = 0; i < numClicks; i++) {
+        const clickDelay = i * 0.12;
+        const clickOsc = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        
+        clickOsc.type = 'triangle';
+        const clickFreq = type === 'disassemble' 
+          ? 2000 - (i * 220) 
+          : 300 + (i * 220);
+          
+        clickOsc.frequency.setValueAtTime(clickFreq, now + clickDelay);
+        clickGain.gain.setValueAtTime(0.06, now + clickDelay);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + clickDelay + 0.06);
+        
+        clickOsc.connect(clickGain);
+        clickGain.connect(ctx.destination);
+        
+        clickOsc.start(now + clickDelay);
+        clickOsc.stop(now + clickDelay + 0.06);
+      }
+    } catch (e) {
+      console.warn('Web Audio synthesis not allowed or supported yet on user action:', e);
+    }
+  };
+
+  const toggleAssembly = () => {
+    const nextState = assemblyState === 'assembled' ? 'disassembled' : 'assembled';
+    setAssemblyState(nextState);
+    playTransformationSound(nextState === 'disassembled' ? 'disassemble' : 'assemble');
+  };
 
   return (
-    <div className={`flex flex-col items-center justify-center gap-2 group cursor-pointer select-none ${className}`}>
-      {/* SVG Color Mask Filter to dynamically strip white background from logo */}
-      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0 }}>
-        <defs>
-          <filter id="remove-white-bg-logo" colorInterpolationFilters="sRGB">
-            <feColorMatrix
-              type="matrix"
-              values="
-                1 0 0 0 0
-                0 1 0 0 0
-                0 0 1 0 0
-                -3 -3 -3 4.5 -0.15
-              "
-            />
-          </filter>
-        </defs>
-      </svg>
+    <div className="relative flex flex-col items-center justify-center gap-1">
+      {/* 3D Floating Interactive Parallax Platform */}
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        onMouseEnter={() => setIsHovered(true)}
+        onClick={toggleAssembly}
+        className={`relative flex items-center justify-center transition-all duration-300 cursor-pointer ${className}`}
+        style={{
+          width: size * 1.6,
+          height: size,
+          perspective: 1200,
+          transformStyle: 'preserve-3d',
+        }}
+      >
+        {/* Holographic HUD scanline & grid effects around active node */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute inset-x-0 -inset-y-4 rounded-3xl border border-slate-800/40 bg-slate-950/20 backdrop-blur-[2px] pointer-events-none z-0 shadow-[inset_0_0_20px_rgba(255,255,255,0.02)]"
+              style={{
+                transform: 'translateZ(-10px)'
+              }}
+            >
+              {/* Scanline element */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-100/5 to-transparent h-1/2 w-full animate-pulse pointer-events-none" style={{ animationDuration: '3s' }} />
+              {/* Corner brackets */}
+              <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-slate-700 rounded-tl" />
+              <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-slate-700 rounded-tr" />
+              <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-slate-700 rounded-bl" />
+              <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-slate-700 rounded-br" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-        {/* Background glowing rings */}
+        {/* Outer glowing backplate layer that shifts depth */}
         <div 
-          className="absolute inset-0 rounded-full bg-blue-500/10 blur-md group-hover:bg-blue-500/20 transition-all duration-500 animate-pulse" 
-          style={{ opacity: 0.8 }}
-        />
-        
-        {/* Crisp, transparent brand icon - with SVG color matrix filter to cut out white background */}
-        <img
-          src={imgSrc}
-          alt="SafetyLink Official Logo"
-          style={{ mixBlendMode: "screen", filter: `drop-shadow(0 0 10px ${glowColor}) brightness(1.15) contrast(1.05)` }}
-          className="w-full h-full object-contain transition-all duration-500 group-hover:scale-110"
-          referrerPolicy="no-referrer"
-          onError={() => {
-            cachedLogoSrc = logoTransparent;
-            setImgSrc(logoTransparent);
+          className="absolute rounded-full transition-all duration-500 animate-pulse" 
+          style={{ 
+            width: size * 0.9,
+            height: size * 0.9,
+            background: `radial-gradient(circle, ${scheme.glow} 0%, rgba(0,0,0,0) 70%)`,
+            opacity: isHovered ? 0.85 : 0.45,
+            filter: 'blur(30px)',
+            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(-60px)`,
+            transformStyle: 'preserve-3d',
+            pointerEvents: 'none'
           }}
         />
-      </div>
 
-      {showText && (
-        <div className="flex flex-col text-center">
-          <span className="text-[11px] font-black tracking-[0.25em] text-slate-100 uppercase font-mono">
-            SAFETY LINK
-          </span>
-          <span className="text-[7px] font-bold text-slate-500 font-mono tracking-widest uppercase mt-0.5">
-            POWERED BY TM MEDIA SOLUTIONS
-          </span>
-        </div>
-      )}
+        {/* 3D Rotating vector asset */}
+        <motion.div
+          animate={{
+            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(0px)`
+          }}
+          transition={{ type: 'spring', stiffness: 220, damping: 25 }}
+          className="relative w-full h-full flex items-center justify-center select-none"
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {/* Main SVG Vector Frame */}
+          <svg 
+            version="1.0" 
+            xmlns="http://www.w3.org/2000/svg" 
+            viewBox="0 0 600 327" 
+            preserveAspectRatio="xMidYMid meet"
+            className="w-full h-full drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)]"
+          >
+            {/* Gradients Definition */}
+            <defs>
+              {/* Admin node (yellow-amber gold gradient) */}
+              <linearGradient id="logoAdminGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f59e0b" />
+                <stop offset="50%" stopColor="#fbbf24" />
+                <stop offset="100%" stopColor="#b45309" />
+              </linearGradient>
+              <linearGradient id="logoAdminSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.4" />
+              </linearGradient>
+
+              {/* Patrol Node (rich amber-gold) */}
+              <linearGradient id="logoPatrolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#d97706" />
+                <stop offset="50%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#78350f" />
+              </linearGradient>
+              <linearGradient id="logoPatrolSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.3" />
+              </linearGradient>
+
+              {/* School Node (emerald-cyan safety) */}
+              <linearGradient id="logoSchoolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="60%" stopColor="#06b6d4" />
+                <stop offset="100%" stopColor="#047857" />
+              </linearGradient>
+              <linearGradient id="logoSchoolSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#34d399" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#34d399" stopOpacity="0.3" />
+              </linearGradient>
+
+              {/* Corporate Node (high-tech blue-indigo) */}
+              <linearGradient id="logoCorporateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" />
+                <stop offset="50%" stopColor="#6366f1" />
+                <stop offset="100%" stopColor="#1d4ed8" />
+              </linearGradient>
+              <linearGradient id="logoCorporateSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.3" />
+              </linearGradient>
+
+              {/* Gov Node (hazard orange-red) */}
+              <linearGradient id="logoGovGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f97316" />
+                <stop offset="50%" stopColor="#f43f5e" />
+                <stop offset="100%" stopColor="#9a3412" />
+              </linearGradient>
+              <linearGradient id="logoGovSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#fb923c" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#fb923c" stopOpacity="0.3" />
+              </linearGradient>
+
+              {/* Family Node (rose-violet comfort) */}
+              <linearGradient id="logoFamilyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ec4899" />
+                <stop offset="50%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#a21caf" />
+              </linearGradient>
+              <linearGradient id="logoFamilySubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f472b6" stopOpacity="0.3" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#f472b6" stopOpacity="0.3" />
+              </linearGradient>
+
+              {/* Emergency / Distress Flashing Red */}
+              <linearGradient id="logoEmergencyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ef4444" />
+                <stop offset="50%" stopColor="#b91c1c" />
+                <stop offset="100%" stopColor="#7f1d1d" />
+              </linearGradient>
+              <linearGradient id="logoEmergencySubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f87171" stopOpacity="0.4" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="1.0" />
+                <stop offset="100%" stopColor="#f87171" stopOpacity="0.4" />
+              </linearGradient>
+
+              {/* High-fidelity bevel-reflection overlay */}
+              <filter id="meshBevelReflection">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+                <feSpecularLighting in="blur" surfaceScale="5" specularConstant="1" specularExponent="15" lightingColor="#fff" result="spec">
+                  <feDistantLight azimuth="225" elevation="45" />
+                </feSpecularLighting>
+                <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut" />
+                <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+              </filter>
+            </defs>
+
+            {/* Scale-down scale conversion scale(0.1, -0.1) translate(0, 327) */}
+            <g transform="translate(0,327) scale(0.100000,-0.100000)" stroke="none">
+              
+              {/* GROUP 1: The Core Shield Symbol (Paths 1-5) */}
+              <g fill={`url(#${scheme.gradientId})`} filter="url(#meshBevelReflection)">
+                
+                {/* Piece 1: Top emblem peak accent */}
+                <motion.path 
+                  d="M3880 3263 c-19 -2 -135 -17 -257 -33 -121 -17 -225 -30 -230 -30 -4 -1 28 -34 72 -75 l80 -75 -224 -221 c-122 -121 -221 -221 -220 -223 2 -1 24 -11 49 -22 25 -10 58 -31 75 -45 l30 -27 212 208 211 208 84 -76 c45 -41 101 -93 124 -114 l41 -39 1 83 c2 130 12 357 18 426 6 68 12 63 -66 55z m35 -170 c-4 -87 -9 -183 -10 -213 -2 -30 -4 -68 -4 -83 -1 -16 -5 -27 -10 -25 -4 2 -45 37 -90 78 -112 102 -123 108 -148 84 -11 -10 -104 -102 -207 -203 -183 -181 -186 -183 -209 -167 -12 9 -37 23 -54 31 -18 9 -33 19 -33 23 0 4 92 99 205 211 115 114 205 211 205 221 0 10 -25 42 -55 71 -30 29 -52 56 -48 60 5 4 35 9 68 12 33 3 110 12 170 20 61 9 130 18 153 21 24 2 46 7 50 10 20 21 23 -7 17 -151z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? -80 : 0,
+                    y: assemblyState === 'disassembled' ? 90 : 0,
+                    rotate: assemblyState === 'disassembled' ? -45 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.8 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.75 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '3880px', originY: '3263px' }}
+                />
+
+                {/* Piece 2: Shield upper shell */}
+                <motion.path 
+                  d="M2919 3068 c-194 -139 -395 -221 -627 -259 -37 -5 -70 -15 -74 -22 -12 -18 -10 -390 3 -487 11 -95 37 -229 47 -247 5 -7 36 16 85 63 l77 74 -10 43 c-6 23 -14 123 -17 223 l-6 181 89 22 c152 38 342 121 462 202 24 16 48 29 53 29 6 0 29 -13 52 -28 23 -16 66 -42 94 -58 l53 -29 69 69 70 69 -97 54 c-54 30 -130 78 -169 107 l-71 53 -83 -59z m117 1 c10 -12 32 -28 49 -36 16 -9 39 -23 50 -33 11 -10 49 -33 85 -51 36 -18 67 -35 69 -36 8 -6 -93 -103 -106 -103 -7 0 -13 3 -13 8 0 4 -15 13 -32 21 -18 8 -45 24 -59 36 -15 12 -40 27 -56 34 -28 11 -35 10 -89 -26 -90 -59 -94 -61 -169 -97 -94 -44 -307 -116 -345 -116 -39 0 -49 -30 -50 -146 -1 -60 1 -118 3 -129 3 -11 8 -51 12 -90 4 -38 9 -79 11 -90 2 -13 -13 -34 -48 -67 -29 -26 -55 -48 -59 -48 -14 0 -43 171 -49 285 -7 126 -3 376 6 384 5 5 27 12 49 15 71 9 246 56 309 82 105 43 229 110 312 168 43 30 84 55 90 56 6 0 19 -9 30 -21z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 0 : 0,
+                    y: assemblyState === 'disassembled' ? 140 : 0,
+                    rotate: assemblyState === 'disassembled' ? 25 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.85 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.75 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '2919px', originY: '3068px' }}
+                />
+
+                {/* Piece 3: Outer mechanical brace shard */}
+                <motion.path 
+                  d="M3481 2493 c-295 -289 -327 -313 -391 -294 -20 6 -49 24 -65 41 -40 42 -70 38 -129 -15 l-50 -44 40 -47 c22 -26 64 -61 94 -78 50 -28 63 -31 140 -31 67 0 94 5 130 23 44 21 340 294 340 313 0 21 -23 3 -157 -126 -78 -74 -146 -135 -152 -135 -6 0 -11 -3 -11 -8 0 -4 -19 -15 -42 -25 -60 -27 -166 -24 -223 4 -51 26 -115 83 -115 103 0 19 57 66 80 66 10 0 37 -16 60 -35 36 -30 49 -35 92 -35 59 0 75 11 228 160 52 51 128 124 168 163 39 39 72 74 72 79 0 4 5 8 11 8 16 0 3 -203 -22 -352 -32 -197 -108 -380 -212 -515 -65 -85 -181 -191 -279 -256 l-86 -58 -72 47 c-39 25 -87 59 -106 76 l-34 30 -37 -30 c-21 -17 -53 -46 -71 -65 l-33 -34 48 -40 c68 -57 189 -136 253 -168 l55 -27 80 46 c399 224 617 545 691 1016 21 139 25 469 5 493 -7 10 -16 17 -20 17 -4 0 -130 -120 -280 -267z m285 29 c-6 -221 -10 -255 -38 -387 -39 -186 -112 -355 -214 -500 -40 -57 -163 -184 -229 -238 -90 -73 -258 -177 -285 -177 -26 0 -188 103 -309 197 -8 6 82 93 95 93 7 0 35 -18 63 -40 28 -22 53 -40 56 -40 3 0 23 -11 43 -25 20 -14 43 -25 52 -25 14 0 147 83 200 125 97 77 251 264 289 350 41 92 79 197 91 245 7 30 16 60 21 65 4 6 8 20 8 30 0 11 3 106 6 210 l6 190 64 63 c36 35 69 61 75 57 8 -5 10 -65 6 -193z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 90 : 0,
+                    y: assemblyState === 'disassembled' ? -40 : 0,
+                    rotate: assemblyState === 'disassembled' ? 40 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.9 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '3481px', originY: '2493px' }}
+                />
+
+                {/* Piece 4: Underlayer frame anchor */}
+                <motion.path 
+                  d="M2886 2504 c-71 -22 -90 -37 -327 -260 -118 -111 -227 -212 -244 -226 l-29 -26 18 -58 c32 -100 147 -309 167 -302 4 2 35 30 69 62 l62 59 -21 36 c-12 20 -36 64 -54 99 -29 58 -31 65 -15 76 9 7 100 91 203 187 102 96 194 177 203 181 27 11 81 9 105 -3 12 -7 37 -25 55 -40 18 -16 40 -29 48 -29 9 0 38 21 65 48 l50 47 -26 37 c-33 48 -97 92 -165 112 -65 19 -100 19 -164 0z m173 -28 c46 -11 141 -88 141 -113 0 -23 -47 -63 -74 -63 -12 0 -41 14 -63 30 -50 37 -110 47 -150 27 -34 -18 -145 -119 -395 -359 l-29 -27 -9 25 c-6 14 -15 46 -22 71 -10 41 -9 47 7 59 10 8 69 60 129 117 206 192 269 243 286 232 5 -3 12 0 16 6 6 11 111 8 163 -5z m-622 -393 c-4 -3 -3 -11 2 -17 11 -14 33 -84 37 -113 3 -32 27 -93 36 -93 4 0 8 -5 8 -10 0 -6 12 -28 26 -50 30 -45 29 -49 -38 -102 l-39 -31 -17 24 c-9 13 -16 27 -14 32 1 4 -3 7 -8 7 -12 0 -82 146 -101 209 l-13 44 57 53 c32 30 60 54 64 54 3 0 3 -3 0 -7z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? -100 : 0,
+                    y: assemblyState === 'disassembled' ? -80 : 0,
+                    rotate: assemblyState === 'disassembled' ? -35 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.8 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '2886px', originY: '2504px' }}
+                />
+
+                {/* Piece 5: Central core node / emblem core */}
+                <motion.path 
+                  d="M2750 1824 c-320 -302 -323 -304 -379 -304 -120 0 -175 141 -88 227 l35 35 -28 62 c-15 33 -31 72 -36 84 -9 23 -11 23 -72 -33 -86 -79 -117 -145 -116 -245 1 -91 28 -154 92 -218 61 -62 120 -86 212 -86 59 -1 85 4 121 22 28 14 155 123 324 279 l278 257 -59 13 c-32 8 -73 22 -92 33 -18 11 -34 20 -35 20 -1 0 -72 -66 -157 -146z m220 85 c30 -11 56 -22 58 -24 4 -3 2 -5 -128 -125 -56 -52 -121 -113 -144 -135 -122 -117 -233 -212 -269 -231 -61 -32 -161 -32 -229 -1 -56 26 -115 83 -144 139 -27 53 -30 153 -5 218 23 61 114 162 130 145 4 -6 16 -31 25 -56 l18 -46 -31 -44 c-29 -41 -36 -70 -32 -136 1 -26 67 -103 87 -103 8 0 14 -4 14 -8 0 -18 72 -12 114 10 37 19 193 158 336 298 53 52 132 120 139 120 3 0 31 -9 61 -21z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 40 : 0,
+                    y: assemblyState === 'disassembled' ? -60 : 0,
+                    rotate: assemblyState === 'disassembled' ? 180 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.75 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.6 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '2750px', originY: '1824px' }}
+                />
+              </g>
+
+              {/* GROUP 2: The Brand Text "SAFETYLINK" (Paths 6-16) */}
+              {showText && (
+                <g fill={`url(#${scheme.gradientId})`} filter="url(#meshBevelReflection)">
+                  
+                  {/* S */}
+                  <motion.path 
+                    d="M177 980 c-125 -32 -194 -136 -154 -233 22 -51 78 -83 191 -111 119 -30 148 -47 144 -84 -5 -40 -40 -54 -124 -49 -48 3 -88 12 -129 31 -32 14 -59 25 -59 24 -1 -2 -11 -24 -24 -51 l-22 -47 33 -20 c52 -32 132 -52 216 -52 129 -1 207 37 243 119 44 99 -11 185 -138 218 -185 46 -223 69 -187 114 36 44 154 47 236 6 17 -8 31 -15 32 -15 3 0 45 97 45 104 0 2 -25 14 -57 26 -64 24 -189 34 -246 20z m209 -36 c54 -17 65 -32 46 -62 -7 -10 -21 -9 -73 4 -68 17 -152 15 -186 -6 -11 -7 -26 -24 -34 -39 -13 -23 -13 -29 1 -53 19 -35 52 -50 163 -77 104 -25 146 -49 164 -92 22 -53 17 -94 -18 -134 -36 -41 -58 -54 -103 -64 -51 -10 -199 -4 -231 9 -16 8 -32 14 -35 14 -28 6 -41 25 -35 49 7 26 30 37 37 18 5 -14 150 -41 197 -36 48 4 85 25 102 57 9 17 8 28 -6 55 -19 34 -20 35 -208 88 -32 9 -72 29 -90 45 -76 67 -27 198 84 228 61 16 168 14 225 -4z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? -150 : 0,
+                      y: assemblyState === 'disassembled' ? -120 : 0,
+                      rotate: assemblyState === 'disassembled' ? -90 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '177px', originY: '980px' }}
+                  />
+
+                  {/* A - Outer */}
+                  <motion.path 
+                    d="M772 918 c-16 -35 -77 -166 -136 -291 -58 -126 -106 -229 -106 -230 0 -1 34 0 76 3 l76 5 23 55 23 55 144 3 143 3 26 -60 27 -59 76 -4 c42 -2 76 0 76 3 0 4 -30 69 -66 145 -37 77 -97 204 -135 284 l-69 145 -75 3 -74 3 -29 -63z m182 -13 c12 -22 41 -83 65 -135 24 -52 64 -135 89 -185 24 -49 50 -105 57 -125 l13 -37 -40 -1 c-48 -2 -64 9 -73 47 -3 16 -17 39 -30 51 -23 21 -33 23 -154 22 -72 0 -140 -3 -151 -7 -13 -4 -31 -28 -46 -61 -24 -52 -26 -54 -65 -54 -36 0 -39 2 -36 23 6 34 83 188 90 180 4 -3 7 6 7 22 0 15 13 53 29 84 17 31 44 88 62 126 44 97 44 96 107 93 52 -3 55 -5 76 -43z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? -120 : 0,
+                      y: assemblyState === 'disassembled' ? -150 : 0,
+                      rotate: assemblyState === 'disassembled' ? -45 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '772px', originY: '918px' }}
+                  />
+
+                  {/* A - Inner */}
+                  <motion.path 
+                    d="M848 838 c-8 -13 -32 -63 -53 -112 -49 -115 -46 -120 68 -124 83 -3 127 7 127 28 0 5 -14 40 -31 77 -17 37 -31 75 -32 84 -1 10 -5 15 -9 13 -4 -3 -8 1 -8 9 0 13 -30 47 -42 47 -3 0 -12 -10 -20 -22z m84 -127 c21 -46 38 -84 38 -85 0 -1 -43 -1 -95 -1 -52 0 -95 0 -95 1 0 0 17 41 38 90 21 49 42 98 46 109 8 19 9 19 19 -5 6 -14 28 -63 49 -109z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? -120 : 0,
+                      y: assemblyState === 'disassembled' ? -150 : 0,
+                      rotate: assemblyState === 'disassembled' ? -45 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '848px', originY: '838px' }}
+                  />
+
+                  {/* F */}
+                  <motion.path 
+                    d="M1290 691 l0 -289 75 -4 75 -3 0 108 0 107 140 0 140 0 0 55 0 55 -140 0 -140 0 0 76 0 75 160 -3 160 -3 0 58 0 57 -235 0 -235 0 0 -289z m440 230 l0 -29 -142 -1 c-109 0 -145 -4 -156 -15 -20 -20 -24 -136 -5 -162 12 -17 27 -19 126 -20 62 0 117 -2 123 -2 15 -2 25 -40 13 -47 -5 -3 -63 -7 -130 -8 -140 -3 -151 -10 -149 -87 1 -25 1 -63 1 -86 l-1 -41 -45 -1 -45 -2 0 265 0 265 205 0 205 0 0 -29z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? -80 : 0,
+                      y: assemblyState === 'disassembled' ? -180 : 0,
+                      rotate: assemblyState === 'disassembled' ? 30 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '1290px', originY: '691px' }}
+                  />
+
+                  {/* E */}
+                  <motion.path 
+                    d="M1857 690 l3 -291 235 -2 235 -2 0 58 0 57 -165 0 -165 0 0 65 0 65 145 0 145 0 0 56 0 55 -145 -3 -145 -3 0 63 0 63 160 -3 160 -3 0 58 0 57 -232 0 -233 0 2 -290z m440 232 l-4 -27 -143 -3 c-87 -1 -148 -6 -157 -13 -7 -6 -13 -23 -13 -38 0 -15 -6 -33 -12 -40 -11 -11 -10 -12 1 -6 11 6 13 2 9 -19 -9 -45 21 -56 158 -59 l119 -2 0 -25 0 -25 -122 0 c-151 -1 -157 -4 -154 -97 1 -35 7 -68 14 -75 8 -8 61 -13 162 -15 146 -3 150 -4 153 -25 5 -32 -17 -35 -234 -31 l-189 3 -3 263 -2 263 210 -1 210 -1 -3 -27z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? -30 : 0,
+                      y: assemblyState === 'disassembled' ? -200 : 0,
+                      rotate: assemblyState === 'disassembled' ? -20 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '1857px', originY: '690px' }}
+                  />
+
+                  {/* T */}
+                  <motion.path 
+                    d="M2390 919 l0 -61 100 4 101 3 -3 -232 -3 -232 73 -3 72 -3 0 235 0 235 100 -3 100 -4 0 61 0 61 -270 0 -270 0 0 -61z m510 7 c0 -30 -16 -36 -100 -36 -49 0 -71 -4 -80 -16 -10 -11 -14 -70 -14 -232 l-1 -217 -47 -3 -47 -3 0 222 c0 153 -4 225 -12 235 -8 10 -36 14 -95 14 l-84 0 0 30 0 30 240 0 240 0 0 -24z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 30 : 0,
+                      y: assemblyState === 'disassembled' ? -200 : 0,
+                      rotate: assemblyState === 'disassembled' ? 45 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '2390px', originY: '919px' }}
+                  />
+
+                  {/* Y */}
+                  <motion.path 
+                    d="M2950 976 c0 -3 52 -86 115 -185 l115 -180 0 -105 0 -104 75 -4 75 -3 0 105 0 106 115 182 c63 101 115 185 115 188 0 2 -33 4 -72 4 l-73 -1 -75 -124 c-41 -69 -77 -124 -80 -124 -3 0 -39 56 -80 124 l-75 124 -77 1 c-43 0 -78 -2 -78 -4z m141 -38 c15 -12 31 -36 118 -176 48 -75 59 -70 142 63 38 60 69 113 69 117 0 5 20 8 45 8 25 0 45 -2 45 -4 0 -4 -57 -99 -85 -141 -11 -17 -25 -39 -32 -50 -7 -11 -29 -47 -49 -80 -35 -56 -37 -65 -39 -150 -1 -49 -3 -93 -3 -97 -1 -4 -22 -7 -47 -6 l-45 2 0 91 0 91 -105 167 c-58 92 -105 169 -105 172 0 11 77 4 91 -7z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 80 : 0,
+                      y: assemblyState === 'disassembled' ? -180 : 0,
+                      rotate: assemblyState === 'disassembled' ? -30 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '2950px', originY: '976px' }}
+                  />
+
+                  {/* L */}
+                  <motion.path 
+                    d="M3880 688 l0 -293 225 0 225 0 0 58 0 57 -152 0 -153 0 3 235 3 235 -76 0 -75 0 0 -292z m117 43 c1 -182 4 -216 17 -230 13 -13 41 -16 154 -16 l137 -1 0 -29 0 -30 -193 -1 c-105 -1 -194 1 -196 5 -5 8 -9 203 -7 389 l1 133 43 -3 42 -3 2 -214z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 120 : 0,
+                      y: assemblyState === 'disassembled' ? -150 : 0,
+                      rotate: assemblyState === 'disassembled' ? 60 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '3880px', originY: '688px' }}
+                  />
+
+                  {/* I */}
+                  <motion.path 
+                    d="M4420 688 l0 -293 75 3 75 4 0 289 0 289 -75 0 -75 0 0 -292z m119 5 c0 -186 -4 -260 -12 -265 -7 -4 -26 -8 -43 -8 -25 0 -33 5 -36 23 -4 19 -3 410 1 485 1 19 6 22 46 22 l44 0 0 -257z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 140 : 0,
+                      y: assemblyState === 'disassembled' ? -120 : 0,
+                      rotate: assemblyState === 'disassembled' ? -15 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '4420px', originY: '688px' }}
+                  />
+
+                  {/* N */}
+                  <motion.path 
+                    d="M4710 690 l0 -290 76 0 75 0 -3 170 c-2 94 -1 170 2 169 3 0 69 -77 148 -170 l143 -169 55 0 c30 0 56 -1 59 -2 3 -2 7 129 8 290 l2 292 -72 0 -73 0 -2 -170 -3 -169 -145 169 -145 169 -62 1 -63 0 0 -290z m186 178 c37 -45 74 -89 83 -98 9 -9 42 -47 74 -83 32 -37 65 -67 73 -67 25 0 33 46 32 179 0 71 3 134 6 140 4 6 24 11 45 11 l38 0 1 -263 1 -264 -45 2 c-24 1 -48 6 -53 11 -4 5 -57 67 -117 138 -126 150 -160 186 -172 186 -26 0 -32 -34 -33 -183 l0 -156 -40 1 c-21 0 -41 3 -43 7 -7 10 -8 102 -7 324 l1 197 44 0 c43 0 46 -2 112 -82z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 170 : 0,
+                      y: assemblyState === 'disassembled' ? -80 : 0,
+                      rotate: assemblyState === 'disassembled' ? 30 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '4710px', originY: '690px' }}
+                  />
+
+                  {/* K */}
+                  <motion.path 
+                    d="M5420 688 l0 -293 76 3 75 4 -2 70 c-2 69 -2 70 39 111 23 22 43 39 45 37 2 -3 43 -53 90 -112 l87 -107 85 -3 c47 -2 85 -1 85 2 -1 3 -58 76 -129 163 l-127 158 122 127 122 127 -77 3 -78 3 -134 -136 -134 -136 3 136 4 135 -76 0 -76 0 0 -292z m118 143 c3 -115 12 -144 43 -132 8 3 68 61 134 129 111 114 121 122 157 122 21 0 38 -5 38 -11 0 -5 -43 -55 -95 -110 -52 -54 -95 -103 -95 -108 0 -5 28 -44 63 -87 34 -42 71 -89 81 -103 11 -14 33 -41 48 -59 15 -18 28 -37 28 -42 0 -6 -20 -10 -45 -10 -51 0 -50 0 -162 138 -41 50 -79 92 -84 92 -6 0 -33 -23 -60 -51 -45 -46 -49 -54 -49 -99 0 -71 -6 -80 -51 -80 -32 0 -40 4 -44 23 -4 18 -1 495 4 505 0 2 20 2 44 0 l42 -3 3 -114z"
+                    animate={{
+                      x: assemblyState === 'disassembled' ? 220 : 0,
+                      y: assemblyState === 'disassembled' ? -40 : 0,
+                      rotate: assemblyState === 'disassembled' ? -45 : 0,
+                      opacity: assemblyState === 'disassembled' ? 0.2 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 140, damping: 15 }}
+                    style={{ originX: '5420px', originY: '688px' }}
+                  />
+                </g>
+              )}
+
+              {/* GROUP 3: The Subtext (Paths 17-34) */}
+              {showText && (
+                <motion.g 
+                  fill={`url(#${scheme.subtextGrad})`}
+                  animate={{
+                    y: assemblyState === 'disassembled' ? -120 : 0,
+                    opacity: assemblyState === 'disassembled' ? 0 : 1,
+                    scale: assemblyState === 'disassembled' ? 0.7 : 1
+                  }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <path d="M2713 264 c-7 -19 11 -39 26 -30 16 10 13 33 -4 40 -9 3 -18 -1 -22 -10z"/>
+                  <path d="M3603 273 c-10 -3 -13 -41 -13 -139 0 -112 2 -134 15 -134 13 0 15 22 15 140 0 77 -1 140 -2 139 -2 0 -9 -3 -15 -6z"/>
+                  <path d="M2616 213 l5 -57 -21 19 c-31 28 -92 26 -124 -4 -88 -82 9 -212 117 -157 23 13 27 13 27 0 0 -8 4 -14 9 -14 6 0 11 59 13 135 3 121 1 135 -14 135 -14 0 -16 -8 -12 -57z m-29 -58 c29 -20 37 -59 19 -94 -25 -48 -73 -55 -111 -16 -64 63 18 162 92 110z"/>
+                  <path d="M4092 253 c2 -10 10 -18 18 -18 8 0 16 8 18 18 2 12 -3 17 -18 17 -15 0 -20 -5 -18 -17z"/>
+                  <path d="M1180 245 c0 -11 12 -15 48 -15 l47 0 -3 -115 c-3 -100 -2 -115 12 -115 14 0 16 17 16 115 l0 115 50 0 c38 0 50 4 50 15 0 12 -19 15 -110 15 -91 0 -110 -3 -110 -15z"/>
+                  <path d="M1440 130 c0 -112 2 -130 16 -130 14 0 15 14 12 100 -1 55 -1 100 2 100 3 0 16 -21 28 -47 33 -64 71 -123 80 -123 7 0 84 134 90 158 2 6 7 12 10 12 4 0 6 -45 4 -100 -3 -85 -1 -100 12 -100 14 0 16 19 16 130 0 97 -3 130 -12 130 -7 0 -37 -43 -67 -96 l-54 -95 -56 95 c-31 53 -62 96 -68 96 -10 0 -13 -33 -13 -130z"/>
+                  <path d="M1890 130 c0 -114 2 -130 16 -130 15 0 16 12 12 100 -3 55 -4 100 -2 100 1 0 24 -38 51 -85 26 -46 53 -85 58 -85 6 0 27 30 47 68 63 116 63 116 60 2 -3 -86 -2 -100 12 -100 14 0 16 18 16 130 0 97 -3 130 -12 130 -7 0 -37 -43 -67 -96 l-54 -96 -21 34 c-12 20 -37 63 -56 96 -53 92 -60 84 -60 -68z"/>
+                  <path d="M3146 239 c-26 -21 -34 -60 -17 -87 4 -7 36 -23 71 -35 78 -27 95 -50 60 -79 -29 -23 -90 -20 -120 7 -15 14 -18 14 -23 1 -9 -22 15 -36 69 -42 60 -7 101 7 116 41 20 44 -2 71 -73 92 -68 20 -91 42 -73 71 13 20 83 28 113 13 14 -8 20 -7 24 3 14 36 -104 49 -147 15z"/>
+                  <path d="M3950 214 c0 -21 -4 -24 -20 -19 -14 5 -20 2 -20 -9 0 -9 9 -16 20 -16 18 0 20 -7 20 -69 0 -81 15 -104 63 -99 43 4 47 26 5 25 l-33 -2 -3 73 -3 72 31 0 c20 0 30 5 30 15 0 11 -8 13 -30 9 -27 -6 -30 -4 -30 20 0 16 -5 26 -15 26 -9 0 -15 -10 -15 -26z"/>
+                  <path d="M2268 184 c-77 -41 -59 -164 27 -180 53 -10 115 12 101 35 -5 8 -14 7 -29 -4 -38 -27 -96 -11 -116 31 l-11 24 85 0 c92 0 95 2 75 55 -6 15 -24 32 -45 40 -42 18 -53 18 -87 -1z m94 -31 c36 -32 23 -43 -53 -43 -73 0 -75 2 -41 43 19 22 70 22 94 0z"/>
+                  <path d="M2710 100 c0 -82 3 -100 15 -100 12 0 15 18 15 100 0 82 -3 100 -15 100 -12 0 -15 -18 -15 -100z"/>
+                  <path d="M2831 184 c-26 -11 -32 -17 -23 -26 9 -9 15 -9 24 0 17 17 74 15 92 -4 31 -31 20 -44 -38 -44 -60 0 -86 -16 -86 -53 0 -35 14 -48 59 -54 31 -4 46 -1 61 12 18 16 20 16 20 2 0 -10 5 -17 10 -17 12 0 14 149 2 166 -10 16 -48 34 -69 34 -10 -1 -33 -7 -52 -16z m109 -109 c0 -23 -37 -55 -64 -55 -35 0 -59 26 -46 51 14 25 110 29 110 4z"/>
+                  <path d="M3404 190 c-40 -16 -66 -61 -61 -104 8 -57 37 -81 96 -81 65 0 101 31 101 87 0 52 -15 77 -55 94 -39 16 -51 16 -81 4z m86 -40 c20 -20 27 -74 12 -96 -10 -15 -47 -34 -67 -34 -9 0 -27 11 -40 25 -48 47 -20 125 45 125 17 0 39 -9 50 -20z"/>
+                  <path d="M3690 125 c0 -67 3 -79 25 -100 28 -29 79 -33 113 -9 20 14 22 14 22 0 0 -9 5 -16 10 -16 6 0 10 40 10 101 0 76 -3 100 -12 97 -8 -3 -15 -32 -18 -78 -5 -68 -7 -76 -32 -90 -25 -13 -31 -13 -55 0 -26 15 -28 20 -31 93 -2 59 -6 77 -17 77 -12 0 -15 -16 -15 -75z"/>
+                  <path d="M4099 196 c-8 -8 3 -196 12 -196 5 0 9 40 9 90 0 50 0 93 1 97 1 9 -15 15 -22 9z"/>
+                  <path d="M4233 186 c-39 -18 -53 -43 -53 -94 0 -56 36 -87 101 -87 60 0 88 24 96 82 4 34 1 45 -23 72 -34 37 -77 46 -121 27z m94 -38 c31 -29 30 -72 -2 -103 -27 -28 -45 -31 -78 -14 -30 16 -37 28 -37 71 0 63 69 91 117 46z"/>
+                  <path d="M4430 100 c0 -82 3 -100 15 -100 12 0 15 14 15 65 0 75 20 105 69 105 40 0 50 -16 53 -95 2 -43 8 -70 16 -73 19 -6 16 137 -3 165 -21 29 -68 38 -105 20 -26 -13 -30 -13 -30 -1 0 8 -7 14 -15 14 -12 0 -15 -18 -15 -100z"/>
+                  <path d="M4701 188 c-34 -19 -48 -44 -35 -65 13 -22 30 -30 82 -43 44 -11 53 -28 27 -50 -15 -12 -60 -10 -97 5 -13 5 -18 2 -18 -8 0 -18 66 -32 109 -22 42 9 57 30 45 63 -8 22 -19 29 -58 37 -54 12 -82 39 -56 55 20 13 74 12 87 -1 8 -8 13 -7 18 1 18 29 -63 50 -104 28z"/>
+                </motion.g>
+              )}
+            </g>
+          </svg>
+        </motion.div>
+      </div>
     </div>
   );
 };
