@@ -127,7 +127,7 @@ export const FloatingPanicWidget: React.FC = () => {
                 src="/Polish_20260620_014530309.jpg"
                 onError={(e) => {
                   // Fallback if custom logo fails to load
-                  (e.target as HTMLImageElement).src = '/logo.png';
+                  (e.target as HTMLImageElement).src = '/Polish_20260620_014530309.jpg';
                 }}
                 alt="SL"
                 referrerPolicy="no-referrer"

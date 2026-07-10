@@ -433,7 +433,7 @@ export const PanicButton: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center select-none"
+            className="fixed inset-0 bg-red-950/98 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-6 text-center select-none" style={{ touchAction: "none" }}
           >
             <div className="absolute inset-0 digital-grid opacity-20 pointer-events-none" />
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center font-mono text-[8px] text-slate-500 uppercase">

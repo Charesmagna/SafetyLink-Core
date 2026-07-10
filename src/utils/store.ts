@@ -160,7 +160,8 @@ const DEFAULT_BLE_DEVICES: BleDevice[] = [];
 // who reads this constant can trigger a real emergency dispatch on any
 // install. Remove this before real community members rely on this app —
 // wire real triggers through per-user/per-device auth instead.
-export const STATIC_INTERCEPTOR_MASTER_KEY = 'SL-MASTER-INTERCEPT-0000';
+// Master intercept key from env only — never hardcoded in production
+export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
 const MOCK_ORGANIZATIONS: Organization[] = [
   {
@@ -252,7 +253,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   userLocation: { lat: -26.1912, lng: 28.0264 }, // Default Johannesburg (Wits)
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
-  thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', 'tb_jNbjpA4IQww9aKzKD9nZ53SqRR7pBi6IaXKU7t0aWPlQvr'),
+  thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
   auditLogs: [
     { id: '1', timestamp: Date.now() - 60000, category: 'SYSTEM', severity: 'INFO', message: 'SafetyLink Core initialized', details: 'All modular services ready.' }
   ],
@@ -385,7 +386,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   decoyActive: getStoredJSON<boolean>('sl_decoy_active', false),
   decoyCode: getStoredJSON<string>('sl_decoy_code', '1911'),
   decoyDistressCode: getStoredJSON<string>('sl_decoy_distress_code', '9111'),
-  vaultPassword: getStoredJSON<string>('sl_vault_password', ''),
+  vaultPassword: getStoredJSON<string>('sl_vault_password_hash', ''), // PBKDF2 verifier hash only
   vaultSecurityQuestion: getStoredJSON<string>('sl_vault_security_question', ''),
   vaultSecurityAnswer: getStoredJSON<string>('sl_vault_security_answer', ''),
   vaultFiles: getStoredJSON<any[]>('sl_vault_files', [
@@ -413,12 +414,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ decoyDistressCode: code });
     setStoredJSON('sl_decoy_distress_code', code);
   },
-  setVaultPassword: (password, question, answer) => {
-    set({ vaultPassword: password, vaultSecurityQuestion: question, vaultSecurityAnswer: answer });
-    setStoredJSON('sl_vault_password', password);
+  setVaultPassword: async (password, question, answer) => {
+    const { derivePasswordVerifier } = await import('./crypto');
+    const hash = await derivePasswordVerifier(password);
+    set({ vaultPassword: hash, vaultSecurityQuestion: question, vaultSecurityAnswer: answer });
+    setStoredJSON('sl_vault_password_hash', hash);
     setStoredJSON('sl_vault_security_question', question);
     setStoredJSON('sl_vault_security_answer', answer);
-    get().addAuditLog('SECURITY', 'INFO', 'Confidential Vault Password set/updated', 'Encrypted local key-store initialized.');
+    get().addAuditLog('SECURITY', 'INFO', 'Confidential Vault Password set/updated', 'PBKDF2 verifier stored; raw password never persisted.');
   },
   setSilenceAlerts: (value) => {
     set({ silenceAlerts: value });

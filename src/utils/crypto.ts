@@ -103,3 +103,16 @@ export async function decryptFileData(
     encryptedData
   );
 }
+
+export async function derivePasswordVerifier(password: string): Promise<string> {
+  const enc = new TextEncoder();
+  const salt = enc.encode('sl-vault-verifier-v1');
+  const keyMaterial = await window.crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await window.crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, '0')).join('');
+}

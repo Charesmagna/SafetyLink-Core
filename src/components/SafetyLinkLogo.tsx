@@ -1,6 +1,6 @@
 import React from 'react';
 const logoPolish = '/Polish_20260620_014530309.jpg';
-import logoTransparent from './assets/logo_transparent.png';
+const logoTransparent = '/Polish_20260620_014530309.jpg';
 
 // Global cache variable to avoid re-initializing and triggering onError flicker on every mount
 let cachedLogoSrc: string | null = null;

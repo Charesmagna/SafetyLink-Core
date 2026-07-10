@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 const logoPolish = '/Polish_20260620_014530309.jpg';
-import logoTransparent from './assets/logo_transparent.png';
+const logoTransparent = '/Polish_20260620_014530309.jpg';
 
 let cachedSplashLogoSrc: string | null = null;
 

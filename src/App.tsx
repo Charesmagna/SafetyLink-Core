@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
 import { DispatchChain } from './components/DispatchChain';
 import { BLEScanner } from './components/BLEScanner';
-import { OfflineMap } from './components/OfflineMap';
+const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 import { Settings } from './components/Settings';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
@@ -11,7 +12,7 @@ import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
-import { AdminPanel } from './components/AdminPanel';
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { SplashReveal } from './components/SplashReveal';
 import { AppTour } from './components/AppTour';
@@ -26,7 +27,7 @@ import { BackgroundNotificationPanel } from './components/BackgroundNotification
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { AdvancedSubsystems } from './components/AdvancedSubsystems';
 import { DecoyCalculator } from './components/DecoyCalculator';
-import { ConfidentialVault } from './components/ConfidentialVault';
+const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -195,7 +196,7 @@ const App: React.FC = () => {
     }
 
     if (superAdminActive) {
-      return <AdminPanel />;
+      return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
     if (currentOrg) {
@@ -302,28 +303,48 @@ const App: React.FC = () => {
         <div className={`max-w-md mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
-            <div className="flex flex-col items-center justify-between h-full animate-fadeIn text-center py-2 gap-2">
-              {/* SafetyLink Reassurance Header Card */}
-              <div className="w-full bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-slate-800/60 flex items-center justify-center text-xl shrink-0">
-                  🛡️
-                </div>
-                <div className="space-y-1 text-left">
-                  <h2 className="text-sm font-bold text-slate-100">{t('home.reassurance_title')}, {currentUser.fullName}!</h2>
-                  {currentUser.orgCode && (
-                    <span className="inline-block text-[8px] font-mono font-black text-blue-400 border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider mb-1">
-                      Linked Org ID: {currentUser.orgCode}
-                    </span>
-                  )}
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {t('home.reassurance_subtitle')}
-                  </p>
-                </div>
+            <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
+              {/* TOP: Logo */}
+              <div className="shrink-0 pt-1">
+                <SafetyLinkLogo size={72} showText={true} />
               </div>
 
-              {/* Central Core Panic Trigger Button */}
-              <div className="w-full flex items-center justify-center py-6">
+              {/* MIDDLE: SOS Button fills remaining space */}
+              <div className="flex-1 w-full flex items-center justify-center">
                 <PanicButton />
+              </div>
+
+              {/* BOTTOM: iTAG status + reassurance */}
+              <div className="shrink-0 w-full space-y-2 pb-1">
+                {bleDevices.length > 0 && (
+                  <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-3 py-2 flex items-center gap-2 flex-wrap">
+                    {bleDevices.slice(0, 2).map((d: any) => (
+                      <div key={d.macAddress} className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${d.connectionState === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : d.connectionState === 'CONNECTING' ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+                        <span className="text-[9px] font-mono text-slate-400 truncate">{d.friendlyName}</span>
+                        <span className="text-[8px] font-mono text-slate-600 shrink-0">{d.rssi}dBm</span>
+                        {d.connectionState === 'DISCONNECTED' && (
+                          <button
+                            onClick={() => useAppStore.getState().connectBleDevice(d.macAddress)}
+                            className="text-[7px] font-bold text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-lg hover:bg-blue-500/10 transition-all shrink-0"
+                          >
+                            RECONNECT
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="w-full bg-slate-900/40 border border-slate-900 rounded-2xl px-3 py-2.5 flex items-center gap-3">
+                  <span className="text-lg shrink-0">🛡️</span>
+                  <div className="text-left min-w-0">
+                    <p className="text-[10px] font-bold text-slate-200 leading-none">{t('home.reassurance_title')}, {currentUser.fullName?.split(' ')[0]}!</p>
+                    {currentUser.orgCode && (
+                      <span className="text-[7px] font-mono text-blue-400 uppercase tracking-wider">{currentUser.orgCode}</span>
+                    )}
+                    <p className="text-[8.5px] text-slate-500 leading-snug mt-0.5">{t('home.reassurance_subtitle')}</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -412,9 +433,11 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'vault' && (
-            <div className="animate-fadeIn">
-              <ConfidentialVault />
-            </div>
+            <ErrorBoundary tabName="Vault">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Vault...</div>}>
+                <div className="animate-fadeIn"><ConfidentialVault /></div>
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'contacts' && (
@@ -430,9 +453,11 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'map' && (
-            <div className="animate-fadeIn">
-              <OfflineMap />
-            </div>
+            <ErrorBoundary tabName="Map">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Map...</div>}>
+                <div className="animate-fadeIn"><OfflineMap /></div>
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'settings' && (

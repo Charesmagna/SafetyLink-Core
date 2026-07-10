@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { derivePasswordVerifier } from '../utils/crypto';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { encryptFileData, decryptFileData } from '../utils/crypto';
@@ -171,7 +172,8 @@ export const ConfidentialVault: React.FC = () => {
 
   const handleUnlockSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === vaultPassword) {
+    const inputHash = await derivePasswordVerifier(passwordInput);
+    if (inputHash === vaultPassword) {
       setIsUnlocked(true);
       setShowForgot(false);
       setPasswordInput('');
