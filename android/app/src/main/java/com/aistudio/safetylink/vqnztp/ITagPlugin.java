@@ -71,6 +71,10 @@ public class ITagPlugin extends Plugin {
     private static final UUID ALERT_SERVICE_UUID = UUID.fromString("00001802-0000-1000-8000-00805f9b34fb");
     private static final UUID ALERT_LEVEL_CHARACTERISTIC_UUID = UUID.fromString("00002a06-0000-1000-8000-00805f9b34fb");
 
+    // Standard Battery Service UUIDs
+    private static final UUID BATTERY_SERVICE_UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb");
+    private static final UUID BATTERY_LEVEL_CHARACTERISTIC_UUID = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb");
+
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
     private ScanCallback scanCallback;
@@ -81,6 +85,7 @@ public class ITagPlugin extends Plugin {
     private final Map<String, BluetoothGatt> connectedGatts = new HashMap<>();
     private final Map<String, Boolean> isReconnecting = new HashMap<>();
     private final Map<String, Integer> reconnectAttempts = new HashMap<>();
+    private final Map<String, Runnable> rssiPollers = new HashMap<>();
     private android.os.PowerManager.WakeLock wakeLock = null;
 
     private void acquireWakeLock() {
@@ -108,6 +113,48 @@ public class ITagPlugin extends Plugin {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error releasing WakeLock: " + e.getMessage());
+        }
+    }
+
+    private void startRssiPolling(final BluetoothGatt gatt) {
+        final String devAddress = gatt.getDevice().getAddress();
+        stopRssiPolling(devAddress);
+
+        Runnable poller = new Runnable() {
+            @Override
+            public void run() {
+                if (connectedGatts.containsKey(devAddress)) {
+                    if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                        try {
+                            gatt.readRemoteRssi();
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error polling RSSI for " + devAddress + ": " + e.getMessage());
+                        }
+                    }
+                    handler.postDelayed(this, 5000); // Poll RSSI every 5 seconds (gentle battery impact)
+                }
+            }
+        };
+        rssiPollers.put(devAddress, poller);
+        handler.postDelayed(poller, 5000);
+    }
+
+    private void stopRssiPolling(String address) {
+        Runnable poller = rssiPollers.remove(address);
+        if (poller != null) {
+            handler.removeCallbacks(poller);
+        }
+    }
+
+    private void readBatteryLevel(BluetoothGatt gatt) {
+        BluetoothGattService service = gatt.getService(BATTERY_SERVICE_UUID);
+        if (service != null) {
+            BluetoothGattCharacteristic characteristic = service.getCharacteristic(BATTERY_LEVEL_CHARACTERISTIC_UUID);
+            if (characteristic != null) {
+                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                    gatt.readCharacteristic(characteristic);
+                }
+            }
         }
     }
 
@@ -391,6 +438,7 @@ public class ITagPlugin extends Plugin {
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.w(TAG, "Disconnected from GATT server on: " + devAddress);
                     connectedGatts.remove(devAddress);
+                    stopRssiPolling(devAddress);
                     releaseWakeLock();
                     gatt.close();
 
@@ -419,6 +467,8 @@ public class ITagPlugin extends Plugin {
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     Log.i(TAG, "Services discovered on: " + devAddress);
                     subscribeToButtonNotifications(gatt);
+                    readBatteryLevel(gatt);
+                    startRssiPolling(gatt);
                 } else {
                     Log.w(TAG, "Service discovery failed with status: " + status);
                 }
@@ -458,6 +508,41 @@ public class ITagPlugin extends Plugin {
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
                     notifyListeners("hardware_trigger_pressed", eventObj);
+                }
+            }
+
+            @Override
+            public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    String devAddress = gatt.getDevice().getAddress();
+                    JSObject eventObj = new JSObject();
+                    eventObj.put("address", devAddress);
+                    eventObj.put("rssi", rssi);
+                    notifyListeners("itag_rssi_update", eventObj);
+                }
+            }
+
+            @Override
+            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+                handleCharacteristicReadInternal(gatt, characteristic, status, characteristic.getValue());
+            }
+
+            @Override
+            public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, byte[] value, int status) {
+                handleCharacteristicReadInternal(gatt, characteristic, status, value);
+            }
+
+            private void handleCharacteristicReadInternal(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status, byte[] value) {
+                if (status == BluetoothGatt.GATT_SUCCESS && characteristic.getUuid().equals(BATTERY_LEVEL_CHARACTERISTIC_UUID)) {
+                    String devAddress = gatt.getDevice().getAddress();
+                    if (value != null && value.length > 0) {
+                        int battery = value[0] & 0xFF;
+                        Log.i(TAG, "Battery level read for " + devAddress + ": " + battery + "%");
+                        JSObject eventObj = new JSObject();
+                        eventObj.put("address", devAddress);
+                        eventObj.put("battery", battery);
+                        notifyListeners("itag_battery_update", eventObj);
+                    }
                 }
             }
         };
@@ -553,26 +638,42 @@ public class ITagPlugin extends Plugin {
             return;
         }
 
-        BluetoothGattService service = gatt.getService(ALERT_SERVICE_UUID);
-        if (service == null) {
-            call.reject("Immediate Alert service not found on device.");
-            return;
+        BluetoothGattService service = gatt.getService(SERVICE_UUID); // 0xffe0
+        BluetoothGattCharacteristic characteristic = null;
+        if (service != null) {
+            characteristic = service.getCharacteristic(UUID.fromString("0000ffe2-0000-1000-8000-00805f9b34fb"));
         }
 
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(ALERT_LEVEL_CHARACTERISTIC_UUID);
         if (characteristic == null) {
-            call.reject("Alert Level characteristic not found on device.");
+            // Fallback to standard immediate alert service
+            service = gatt.getService(ALERT_SERVICE_UUID);
+            if (service != null) {
+                characteristic = service.getCharacteristic(ALERT_LEVEL_CHARACTERISTIC_UUID);
+            }
+        }
+
+        if (characteristic == null) {
+            call.reject("No buzzer/alert characteristic (FFE2 or 2A06) found on this device.");
             return;
         }
 
-        characteristic.setValue(new byte[] { level.byteValue() });
+        byte[] alertValue;
+        if (characteristic.getUuid().toString().contains("ffe2")) {
+            // Custom FFE2 buzzer expects 0x01 or 0x02 to beep, 0x00 to silence
+            alertValue = new byte[] { level > 0 ? (byte) 0x02 : (byte) 0x00 };
+        } else {
+            // Standard Alert Level: 0 = silent, 1 = mild beep, 2 = high beep
+            alertValue = new byte[] { level.byteValue() };
+        }
+
+        characteristic.setValue(alertValue);
         boolean success = gatt.writeCharacteristic(characteristic);
         if (success) {
             JSObject ret = new JSObject();
             ret.put("success", true);
             call.resolve(ret);
         } else {
-            call.reject("Failed to write Alert Level characteristic");
+            call.reject("Failed to write alert level characteristic");
         }
     }
 
@@ -587,6 +688,7 @@ public class ITagPlugin extends Plugin {
         BluetoothGatt gatt = connectedGatts.get(address);
         if (gatt != null) {
             isReconnecting.put(address, false);
+            stopRssiPolling(address);
             if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 gatt.disconnect();
             }

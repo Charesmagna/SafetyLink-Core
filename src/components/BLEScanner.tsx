@@ -180,6 +180,19 @@ export const BLEScanner: React.FC = () => {
           if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
           lizzyFollowUp('Tactical SOS');
         }
+      },
+      (battery) => {
+        useAppStore.setState(state => ({
+          bleDevices: state.bleDevices.map(d => d.macAddress === address ? { ...d, batteryLevel: battery } : d)
+        }));
+        setNativeDevices(prev => prev.map(d => d.address === address ? { ...d, batteryLevel: battery } : d));
+        useAppStore.getState().addAuditLog('BLE', 'INFO', 'Battery Level Update', `Device ${address} reported battery level: ${battery}%`);
+      },
+      (rssi) => {
+        useAppStore.setState(state => ({
+          bleDevices: state.bleDevices.map(d => d.macAddress === address ? { ...d, rssi } : d)
+        }));
+        setNativeDevices(prev => prev.map(d => d.address === address ? { ...d, rssi } : d));
       }
     );
 

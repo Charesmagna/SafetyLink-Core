@@ -4,6 +4,7 @@ export interface ITagDevice {
   name: string;
   address: string;
   rssi: number;
+  batteryLevel?: number;
 }
 
 export interface ITagPluginType {
@@ -34,6 +35,16 @@ export interface ITagPluginType {
   addListener(
     eventName: 'itag_warning',
     listenerFunc: (data: { warning: string }) => void
+  ): Promise<any>;
+
+  addListener(
+    eventName: 'itag_rssi_update',
+    listenerFunc: (data: { address: string; rssi: number }) => void
+  ): Promise<any>;
+
+  addListener(
+    eventName: 'itag_battery_update',
+    listenerFunc: (data: { address: string; battery: number }) => void
   ): Promise<any>;
 }
 
@@ -123,7 +134,9 @@ export class ITagPluginService {
   static async connectDevice(
     address: string,
     onConnectionChange?: (status: 'connected' | 'disconnected') => void,
-    onButtonPressed?: (value: number) => void
+    onButtonPressed?: (value: number) => void,
+    onBatteryUpdate?: (battery: number) => void,
+    onRssiUpdate?: (rssi: number) => void
   ): Promise<boolean> {
     if (!isNativeAvailable) {
       console.log(`[ITagPluginService] Connection to ${address} failed: Native BLE is only supported on native mobile platforms.`);
@@ -150,6 +163,26 @@ export class ITagPluginService {
           }
         });
         this.listeners.push(pressListener);
+      }
+
+      if (onBatteryUpdate) {
+        const batteryListener = await ITagPlugin.addListener('itag_battery_update', (data) => {
+          if (data.address.toLowerCase() === address.toLowerCase()) {
+            console.log(`[ITagPluginService] Battery level read for ${address}: ${data.battery}%`);
+            onBatteryUpdate(data.battery);
+          }
+        });
+        this.listeners.push(batteryListener);
+      }
+
+      if (onRssiUpdate) {
+        const rssiListener = await ITagPlugin.addListener('itag_rssi_update', (data) => {
+          if (data.address.toLowerCase() === address.toLowerCase()) {
+            console.log(`[ITagPluginService] RSSI update for ${address}: ${data.rssi} dBm`);
+            onRssiUpdate(data.rssi);
+          }
+        });
+        this.listeners.push(rssiListener);
       }
 
       const res = await ITagPlugin.connect({ address });
