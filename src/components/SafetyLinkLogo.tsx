@@ -327,23 +327,31 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
           >
             {/* Gradients Definition */}
             <defs>
-              {/* Admin node (yellow-amber gold gradient) */}
+              {/* Admin node (polished gold/amber chrome gradient) */}
               <linearGradient id="logoAdminGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f59e0b" />
-                <stop offset="50%" stopColor="#fbbf24" />
-                <stop offset="100%" stopColor="#b45309" />
+                <stop offset="0%" stopColor="#1e1b4b" />
+                <stop offset="15%" stopColor="#f59e0b" />
+                <stop offset="40%" stopColor="#fef08a" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="60%" stopColor="#fef08a" />
+                <stop offset="85%" stopColor="#d97706" />
+                <stop offset="100%" stopColor="#78350f" />
               </linearGradient>
               <linearGradient id="logoAdminSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.9" />
+                <stop offset="50%" stopColor="#ffffff" stopOpacity="0.95" />
                 <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.4" />
               </linearGradient>
 
-              {/* Patrol Node (rich amber-gold) */}
+              {/* Patrol Node (rich golden bronze chrome) */}
               <linearGradient id="logoPatrolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#d97706" />
-                <stop offset="50%" stopColor="#f59e0b" />
-                <stop offset="100%" stopColor="#78350f" />
+                <stop offset="0%" stopColor="#451a03" />
+                <stop offset="15%" stopColor="#d97706" />
+                <stop offset="40%" stopColor="#fef08a" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="65%" stopColor="#f59e0b" />
+                <stop offset="85%" stopColor="#9a3412" />
+                <stop offset="100%" stopColor="#1e293b" />
               </linearGradient>
               <linearGradient id="logoPatrolSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.3" />
@@ -351,11 +359,15 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.3" />
               </linearGradient>
 
-              {/* School Node (emerald-cyan safety) */}
+              {/* School Node (emerald-cyan safety high-tech) */}
               <linearGradient id="logoSchoolGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="0%" stopColor="#064e3b" />
+                <stop offset="15%" stopColor="#10b981" />
+                <stop offset="40%" stopColor="#a7f3d0" />
+                <stop offset="50%" stopColor="#ffffff" />
                 <stop offset="60%" stopColor="#06b6d4" />
-                <stop offset="100%" stopColor="#047857" />
+                <stop offset="85%" stopColor="#0891b2" />
+                <stop offset="100%" stopColor="#0f172a" />
               </linearGradient>
               <linearGradient id="logoSchoolSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#34d399" stopOpacity="0.3" />
@@ -363,11 +375,15 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 <stop offset="100%" stopColor="#34d399" stopOpacity="0.3" />
               </linearGradient>
 
-              {/* Corporate Node (high-tech blue-indigo) */}
+              {/* Corporate Node (high-tech cobalt blue chrome) */}
               <linearGradient id="logoCorporateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="50%" stopColor="#6366f1" />
-                <stop offset="100%" stopColor="#1d4ed8" />
+                <stop offset="0%" stopColor="#172554" />
+                <stop offset="15%" stopColor="#3b82f6" />
+                <stop offset="40%" stopColor="#93c5fd" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="60%" stopColor="#6366f1" />
+                <stop offset="85%" stopColor="#1d4ed8" />
+                <stop offset="100%" stopColor="#0f172a" />
               </linearGradient>
               <linearGradient id="logoCorporateSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.3" />
@@ -375,11 +391,15 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.3" />
               </linearGradient>
 
-              {/* Gov Node (hazard orange-red) */}
+              {/* Gov Node (hazard crimson orange chrome) */}
               <linearGradient id="logoGovGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f97316" />
-                <stop offset="50%" stopColor="#f43f5e" />
-                <stop offset="100%" stopColor="#9a3412" />
+                <stop offset="0%" stopColor="#7c2d12" />
+                <stop offset="15%" stopColor="#f97316" />
+                <stop offset="40%" stopColor="#fed7aa" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="60%" stopColor="#f43f5e" />
+                <stop offset="85%" stopColor="#be123c" />
+                <stop offset="100%" stopColor="#0f172a" />
               </linearGradient>
               <linearGradient id="logoGovSubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#fb923c" stopOpacity="0.3" />
@@ -387,11 +407,15 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 <stop offset="100%" stopColor="#fb923c" stopOpacity="0.3" />
               </linearGradient>
 
-              {/* Family Node (rose-violet comfort) */}
+              {/* Family Node (rose-violet comfort neon) */}
               <linearGradient id="logoFamilyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ec4899" />
-                <stop offset="50%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#a21caf" />
+                <stop offset="0%" stopColor="#581c87" />
+                <stop offset="15%" stopColor="#ec4899" />
+                <stop offset="40%" stopColor="#fbcfe8" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="60%" stopColor="#8b5cf6" />
+                <stop offset="85%" stopColor="#c084fc" />
+                <stop offset="100%" stopColor="#1e1b4b" />
               </linearGradient>
               <linearGradient id="logoFamilySubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#f472b6" stopOpacity="0.3" />
@@ -399,11 +423,15 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                 <stop offset="100%" stopColor="#f472b6" stopOpacity="0.3" />
               </linearGradient>
 
-              {/* Emergency / Distress Flashing Red */}
+              {/* Emergency / Distress Flashing Red chrome */}
               <linearGradient id="logoEmergencyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="50%" stopColor="#b91c1c" />
-                <stop offset="100%" stopColor="#7f1d1d" />
+                <stop offset="0%" stopColor="#7f1d1d" />
+                <stop offset="15%" stopColor="#ef4444" />
+                <stop offset="40%" stopColor="#fca5a5" />
+                <stop offset="50%" stopColor="#ffffff" />
+                <stop offset="60%" stopColor="#b91c1c" />
+                <stop offset="85%" stopColor="#991b1b" />
+                <stop offset="100%" stopColor="#180000" />
               </linearGradient>
               <linearGradient id="logoEmergencySubGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#f87171" stopOpacity="0.4" />
@@ -413,12 +441,18 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
 
               {/* High-fidelity bevel-reflection overlay */}
               <filter id="meshBevelReflection">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
-                <feSpecularLighting in="blur" surfaceScale="5" specularConstant="1" specularExponent="15" lightingColor="#fff" result="spec">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blur" />
+                <feSpecularLighting in="blur" surfaceScale="7" specularConstant="1.4" specularExponent="28" lightingColor="#fff" result="spec">
                   <feDistantLight azimuth="225" elevation="45" />
                 </feSpecularLighting>
                 <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut" />
                 <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+              </filter>
+
+              {/* Dynamic Neon Alloy Glow Filter */}
+              <filter id="dynamicMeshGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="14" floodColor={scheme.primary} floodOpacity="0.8" />
+                <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={scheme.primary} floodOpacity="1" />
               </filter>
             </defs>
 
@@ -494,6 +528,49 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
                   }}
                   transition={{ type: 'spring', stiffness: 180, damping: 18 }}
                   style={{ originX: '2750px', originY: '1824px' }}
+                />
+              </g>
+
+              {/* GROUP 1.5: Dynamic Overlay Neon Alloy Chain & Arrow */}
+              <g fill={`url(#${scheme.gradientId})`} filter="url(#dynamicMeshGlow)" stroke="none">
+                {/* Chain loop core */}
+                <motion.path 
+                  d="M1900 1300 c-50 -50 -100 -120 -120 -160 c-30 -50 -40 -110 -20 -170 c20 -60 70 -110 130 -130 c60 -20 120 -10 170 20 c40 20 110 70 160 120 l90 90 l-50 50 l-50 50 l-90 -90 c-30 -30 -80 -70 -110 -80 c-50 -20 -110 0 -140 40 c-30 40 -30 100 0 140 c30 30 180 180 210 210 c40 40 100 40 140 0 c30 -30 90 -90 120 -120 l50 -50 l50 50 l50 50 l-50 50 c-30 30 -90 90 -120 120 c-70 70 -170 70 -240 0 l-90 -90 z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 120 : 0,
+                    y: assemblyState === 'disassembled' ? 120 : 0,
+                    rotate: assemblyState === 'disassembled' ? 90 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.5 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.1 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '1900px', originY: '1300px' }}
+                />
+                {/* Arrow head diagonal */}
+                <motion.path 
+                  d="M3400 2800 l0 -400 l120 120 l280 -280 l140 140 l-280 280 l120 120 l-380 0 z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 240 : 0,
+                    y: assemblyState === 'disassembled' ? 240 : 0,
+                    rotate: assemblyState === 'disassembled' ? 45 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.6 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.1 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '3400px', originY: '2800px' }}
+                />
+                {/* Arrow stem diagonal connector */}
+                <motion.path 
+                  d="M2300 1700 l900 900 l-140 140 l-900 -900 l140 -140 z"
+                  animate={{
+                    x: assemblyState === 'disassembled' ? 180 : 0,
+                    y: assemblyState === 'disassembled' ? 180 : 0,
+                    rotate: assemblyState === 'disassembled' ? 30 : 0,
+                    scale: assemblyState === 'disassembled' ? 0.5 : 1,
+                    opacity: assemblyState === 'disassembled' ? 0.1 : 1
+                  }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                  style={{ originX: '2300px', originY: '1700px' }}
                 />
               </g>
 

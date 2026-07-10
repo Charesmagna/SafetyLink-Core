@@ -22,6 +22,7 @@ import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
+import { ApkDownloadPopup } from './components/ApkDownloadPopup';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
@@ -843,6 +844,9 @@ const App: React.FC = () => {
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
+
+      {/* APK Sideload & Deployed Handset Package Downloader Portal */}
+      <ApkDownloadPopup />
 
     </div>
   );

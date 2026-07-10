@@ -956,23 +956,42 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
                   className="w-full h-full drop-shadow-[0_4px_24px_rgba(52,211,153,0.3)]"
                 >
                   <defs>
+                    {/* Vivid Multi-stop Neon Green Gradient */}
                     <linearGradient id="logoSplashGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#10b981" />
-                      <stop offset="50%" stopColor="#059669" />
-                      <stop offset="100%" stopColor="#047857" />
+                      <stop offset="0%" stopColor="#047857" />
+                      <stop offset="20%" stopColor="#10b981" />
+                      <stop offset="50%" stopColor="#34d399" />
+                      <stop offset="80%" stopColor="#6ee7b7" />
+                      <stop offset="100%" stopColor="#064e3b" />
                     </linearGradient>
+
+                    {/* Polished Steel Chrome Gradient */}
                     <linearGradient id="logoSplashSteelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#ffffff" />
-                      <stop offset="50%" stopColor="#94a3b8" />
-                      <stop offset="100%" stopColor="#475569" />
+                      <stop offset="0%" stopColor="#1e293b" />
+                      <stop offset="15%" stopColor="#475569" />
+                      <stop offset="30%" stopColor="#8f9fae" />
+                      <stop offset="45%" stopColor="#cbd5e1" />
+                      <stop offset="50%" stopColor="#ffffff" />
+                      <stop offset="55%" stopColor="#cbd5e1" />
+                      <stop offset="70%" stopColor="#475569" />
+                      <stop offset="85%" stopColor="#334155" />
+                      <stop offset="100%" stopColor="#0f172a" />
                     </linearGradient>
+
+                    {/* High-contrast Bevel Reflection Filter */}
                     <filter id="splashBevelReflection">
                       <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blur" />
-                      <feSpecularLighting in="blur" surfaceScale="6" specularConstant="1" specularExponent="18" lightingColor="#fff" result="spec">
+                      <feSpecularLighting in="blur" surfaceScale="7" specularConstant="1.4" specularExponent="30" lightingColor="#fff" result="spec">
                         <feDistantLight azimuth="225" elevation="45" />
                       </feSpecularLighting>
                       <feComposite in="spec" in2="SourceAlpha" operator="in" result="specOut" />
                       <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+                    </filter>
+
+                    {/* Dual Layer Neon Green Glow Filter */}
+                    <filter id="neonGreenGlow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feDropShadow dx="0" dy="0" stdDeviation="15" floodColor="#10b981" floodOpacity="0.85" />
+                      <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#10b981" floodOpacity="1" />
                     </filter>
                   </defs>
                   
@@ -990,8 +1009,8 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
                     <path d="M2750 1824 c-320 -302 -323 -304 -379 -304 -120 0 -175 141 -88 227 l35 35 -28 62 c-15 33 -31 72 -36 84 -9 23 -11 23 -72 -33 -86 -79 -117 -145 -116 -245 1 -91 28 -154 92 -218 61 -62 120 -86 212 -86 59 -1 85 4 121 22 28 14 155 123 324 279 l278 257 -59 13 c-32 8 -73 22 -92 33 -18 11 -34 20 -35 20 -1 0 -72 -66 -157 -146z" />
                   </g>
                   
-                  {/* Central Chain and Arrow (Neon Green Alloy) */}
-                  <g fill="url(#logoSplashGreenGrad)" filter="url(#splashBevelReflection)" transform="translate(0,327) scale(0.100000,-0.100000)" stroke="none">
+                  {/* Central Chain and Arrow (Neon Green Alloy with double glow) */}
+                  <g fill="url(#logoSplashGreenGrad)" filter="url(#neonGreenGlow)" transform="translate(0,327) scale(0.100000,-0.100000)" stroke="none">
                     {/* Chain loop core */}
                     <path d="M1900 1300 c-50 -50 -100 -120 -120 -160 c-30 -50 -40 -110 -20 -170 c20 -60 70 -110 130 -130 c60 -20 120 -10 170 20 c40 20 110 70 160 120 l90 90 l-50 50 l-50 50 l-90 -90 c-30 -30 -80 -70 -110 -80 c-50 -20 -110 0 -140 40 c-30 40 -30 100 0 140 c30 30 180 180 210 210 c40 40 100 40 140 0 c30 -30 90 -90 120 -120 l50 -50 l50 50 l50 50 l-50 50 c-30 30 -90 90 -120 120 c-70 70 -170 70 -240 0 l-90 -90 z" />
                     {/* Arrow head diagonal */}
