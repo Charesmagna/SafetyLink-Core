@@ -23,7 +23,6 @@ import { translate, SA_LANGUAGES } from './utils/translations';
 import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { CommerceCenter } from './components/CommerceCenter';
-import { ApkDownloadPopup } from './components/ApkDownloadPopup';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
@@ -852,9 +851,6 @@ const App: React.FC = () => {
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
       <CommerceCenter />
-
-      {/* Market-Ready APK Sideload & Auto-Build Portal */}
-      <ApkDownloadPopup />
 
     </div>
   );
