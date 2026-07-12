@@ -57,10 +57,13 @@ export const DecoyCalculator: React.FC = () => {
       }
 
       try {
-        // Safe evaluation of basic math expressions
-        const sanitized = equation + display;
-        // eslint-disable-next-line no-eval
-        const result = eval(sanitized.replace(/×/g, '*').replace(/÷/g, '/'));
+        // Safe evaluation using Function constructor — no eval, no arbitrary code
+        const sanitized = (equation + display).replace(/×/g, '*').replace(/÷/g, '/');
+        // Only allow digits, operators, dots, parentheses, spaces
+        if (!/^[0-9+\-*/().\s]+$/.test(sanitized)) throw new Error('Invalid expression');
+        // eslint-disable-next-line no-new-func
+        const result = new Function(`return (${sanitized})`)();
+        if (!isFinite(result)) throw new Error('Not finite');
         setHistory(prev => [...prev, `${sanitized} = ${result}`].slice(-4));
         setDisplay(String(result));
         setEquation('');
