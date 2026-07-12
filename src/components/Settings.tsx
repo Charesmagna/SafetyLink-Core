@@ -21,12 +21,27 @@ export const Settings: React.FC = () => {
     isFloatingWidgetDeployed,
     setFloatingWidgetDeployed,
     floatingWidgetSize,
-    setFloatingWidgetSize
+    setFloatingWidgetSize,
+    currentUser,
+    updateUserProfile,
+    requestJoinOrganization,
+    organizations,
+    onlySystemSms,
+    setOnlySystemSms
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
   const [shortcutTriggerEnabled, setShortcutTriggerEnabled] = useState<boolean>(() => localStorage.getItem('sl_shortcut_enabled') === 'true');
   const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
+
+  // Profile forms state
+  const [profileName, setProfileName] = useState(currentUser?.fullName || '');
+  const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '');
+  const [medicalInfo, setMedicalInfo] = useState(currentUser?.medicalInfo || '');
+  const [homeAddress, setHomeAddress] = useState(currentUser?.homeAddress || '');
+  const [workAddress, setWorkAddress] = useState(currentUser?.workAddress || '');
+  const [orgIdInput, setOrgIdInput] = useState('');
+  const [selectedJoinRole, setSelectedJoinRole] = useState('Community Member');
 
   const t = (key: string) => translate(language, key);
 
@@ -388,6 +403,245 @@ export const Settings: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Custom Profile, System SMS, and Org Membership Panel */}
+      <div className="space-y-4 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
+        
+        {/* Only System SMS Toggle */}
+        <div className="space-y-3">
+          <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+            🛡️ EMERGENCY DISPATCH ROUTING FILTER
+          </h4>
+          <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1 text-left flex-1">
+                <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
+                  Restrict to System SMS Only
+                </span>
+                <span className="text-[9px] text-slate-500 block leading-normal font-sans">
+                  When enabled, outbound alerts will only be processed via native SMS pipelines. Non-SMS channels (such as WhatsApp, Voice speed-dial, and browser simulators) are muted to conserve mobile data or network resources in severe environments.
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={onlySystemSms}
+                  onChange={(e) => setOnlySystemSms(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-900 border border-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-500 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Info Form */}
+        {currentUser && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+            <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+              👤 EDIT SAFETY PROFILE & MEDICAL DETAILS
+            </h4>
+            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Full Name</label>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50"
+                  placeholder="e.g. Thabo Molefe"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Phone Number</label>
+                <input
+                  type="text"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50"
+                  placeholder="e.g. +27829110000"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Medical Information & Allergy Notes</label>
+                <textarea
+                  value={medicalInfo}
+                  onChange={(e) => setMedicalInfo(e.target.value)}
+                  rows={2}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50 resize-none font-mono"
+                  placeholder="e.g. Type-1 Diabetic, Penicillin allergy"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Home Address</label>
+                <input
+                  type="text"
+                  value={homeAddress}
+                  onChange={(e) => setHomeAddress(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50"
+                  placeholder="e.g. 12 Baker Street, Rosebank, Johannesburg"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Work Address</label>
+                <input
+                  type="text"
+                  value={workAddress}
+                  onChange={(e) => setWorkAddress(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50"
+                  placeholder="e.g. SafetyLink Headquarters, Sandton"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateUserProfile(currentUser.id, {
+                    fullName: profileName,
+                    phone: profilePhone,
+                    medicalInfo,
+                    homeAddress,
+                    workAddress
+                  });
+                  useAppStore.getState().addToast("Safety profile updated successfully!", "success");
+                }}
+                className="w-full py-2 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-500/30 rounded-xl text-[9px] font-bold text-purple-300 uppercase tracking-wider text-center cursor-pointer"
+              >
+                💾 Save Safety Profile Details
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Join Organization Workflow Section */}
+        {currentUser && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+            <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+              🏢 CAMPUS / SECURITY ORGANIZATION HUB
+            </h4>
+            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3">
+              
+              {/* Scenario 1: Already has approved Organization */}
+              {currentUser.orgCode ? (() => {
+                const boundOrg = organizations.find(o => o.id === currentUser.orgCode);
+                return (
+                  <div className="space-y-2 text-left">
+                    <span className="text-[9.5px] text-emerald-400 font-bold block flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      ACTIVE ORG CONNECTION: {currentUser.orgCode}
+                    </span>
+                    <p className="text-[9px] text-slate-400 font-sans leading-normal">
+                      Your profile is securely bound to the organization <strong>{boundOrg?.name || 'Authorized Responders Network'}</strong>. Alert dispatches are shared with the organization's central control room console in real time.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateUserProfile(currentUser.id, { orgCode: '', pendingOrgCode: '' });
+                        useAppStore.getState().addToast("Successfully disconnected from organization.", "info");
+                        useAppStore.getState().addAuditLog('SECURITY', 'WARN', 'Organization Disconnected', `User disconnected from organization ${currentUser.orgCode}`);
+                      }}
+                      className="w-full py-1.5 bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 rounded-xl text-[8.5px] font-bold text-red-400 uppercase tracking-wider text-center cursor-pointer"
+                    >
+                      🔌 Leave Organization Connection
+                    </button>
+                  </div>
+                );
+              })() : currentUser.pendingOrgCode ? (() => {
+                const pendingOrg = organizations.find(o => o.id === currentUser.pendingOrgCode);
+                return (
+                  <div className="space-y-2 text-left">
+                    <span className="text-[9.5px] text-amber-400 font-bold block flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      MEMBERSHIP REQUEST PENDING
+                    </span>
+                    <p className="text-[9px] text-slate-400 font-sans leading-normal">
+                      You requested to join <strong>{pendingOrg?.name || currentUser.pendingOrgCode}</strong>. Requests require supervisor approval inside the Safety Node Commander Deck.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateUserProfile(currentUser.id, { pendingOrgCode: '' });
+                        useAppStore.getState().addToast("Organization join request cancelled.", "info");
+                      }}
+                      className="w-full py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-[8.5px] font-bold text-slate-300 uppercase tracking-wider text-center cursor-pointer"
+                    >
+                      ❌ Cancel Membership Request
+                    </button>
+                  </div>
+                );
+              })() : (
+                // Scenario 3: No connection, can type orgCode
+                <div className="space-y-3">
+                  <span className="text-[9.5px] text-slate-400 block font-sans leading-normal">
+                    Type a unique Campus or Patrol Org ID to synchronize distress streams with a local security team, supervisor, or public emergency patrol.
+                  </span>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Organization ID</label>
+                      <input
+                        type="text"
+                        value={orgIdInput}
+                        onChange={(e) => setOrgIdInput(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 uppercase focus:outline-none focus:border-purple-500/50 font-mono"
+                        placeholder="e.g. SL-ORG-001"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Select Your Role</label>
+                      <select
+                        value={selectedJoinRole}
+                        onChange={(e) => setSelectedJoinRole(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-900 rounded-xl px-2 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50 font-mono"
+                      >
+                        <option value="Community Member">Community Member</option>
+                        <option value="Guard">Guard</option>
+                        <option value="Dispatcher">Dispatcher</option>
+                        <option value="Control Room Operator">Control Room Operator</option>
+                        <option value="Organization Administrator">Organization Administrator</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!orgIdInput.trim()) {
+                        useAppStore.getState().addToast("Please enter an Organization ID code.", "warn");
+                        return;
+                      }
+                      const res = requestJoinOrganization(currentUser.id, orgIdInput.toUpperCase().trim(), selectedJoinRole);
+                      if (res.success) {
+                        useAppStore.getState().addToast(`Membership request as ${selectedJoinRole} submitted! Waiting for admin approval.`, "success");
+                        setOrgIdInput('');
+                      } else {
+                        useAppStore.getState().addToast(res.error || "Failed to submit membership request.", "error");
+                      }
+                    }}
+                    className="w-full py-2 bg-blue-900/20 hover:bg-blue-900/40 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-300 uppercase tracking-wider text-center cursor-pointer font-mono"
+                  >
+                    🚀 Submit Membership Request
+                  </button>
+
+                  <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-900/50 text-[7.5px] text-slate-500 space-y-1 font-mono">
+                    <p className="font-bold uppercase tracking-wider text-slate-400 text-center">💡 SIMULATOR CODE DIRECTORY</p>
+                    <p className="flex justify-between"><span>🏫 School Roster Node:</span> <span className="text-blue-400 font-bold">SL-ORG-001</span></p>
+                    <p className="flex justify-between"><span>🚨 Security Patrol Escort:</span> <span className="text-blue-400 font-bold">SL-ORG-002</span></p>
+                    <p className="flex justify-between"><span>🏭 Corporate Safe-zone:</span> <span className="text-blue-400 font-bold">SL-ORG-003</span></p>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Interactive Audit Logs Ledger */}

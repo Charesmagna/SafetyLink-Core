@@ -22,7 +22,7 @@ import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { ApkDownloadPopup } from './components/ApkDownloadPopup';
+import { CommerceCenter } from './components/CommerceCenter';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
@@ -210,7 +210,7 @@ const App: React.FC = () => {
       return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
-    if (currentOrg) {
+    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <OrgDashboard />;
     }
 
@@ -849,8 +849,8 @@ const App: React.FC = () => {
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
 
-      {/* APK Sideload & Deployed Handset Package Downloader Portal */}
-      <ApkDownloadPopup />
+      {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
+      <CommerceCenter />
 
     </div>
   );

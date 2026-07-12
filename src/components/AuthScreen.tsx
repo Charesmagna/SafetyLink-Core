@@ -17,7 +17,8 @@ export const AuthScreen: React.FC = () => {
     demoMode,
     toggleDemoMode
   } = useAppStore();
-  const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG'>('LOGIN');
+  const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG' | 'POST_REGISTER_DECISION'>('LOGIN');
+  const [registeredUsername, setRegisteredUsername] = useState('');
 
   // Background slideshow logic
   const authSlides = [slide5, slide4, slide3, slide1, slide2];
@@ -43,7 +44,6 @@ export const AuthScreen: React.FC = () => {
   const [userAvatar, setUserAvatar] = useState('');
   const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-  const [userOrgCode, setUserOrgCode] = useState('');
   const [userSuccessMsg, setUserSuccessMsg] = useState('');
   const [userError, setUserError] = useState('');
 
@@ -89,15 +89,22 @@ export const AuthScreen: React.FC = () => {
       whatsapp: userWhatsapp,
       avatarUrl: userAvatar,
       email: userEmail,
-      orgCode: userOrgCode
+      orgCode: '' // Simplified flow: No OrgID on registration screen
     });
 
     if (res.success) {
-      setUserSuccessMsg('Profile created successfully! Logging you in...');
-      const registeredUsername = userUsername;
-      const registeredOrgCode = userOrgCode;
+      setUserSuccessMsg('Profile created successfully! Transitioning to mode selection...');
+      const tempUsername = userUsername;
+      const tempFullName = userFullName;
+      const tempEmail = userEmail;
+      
+      setRegisteredUsername(tempUsername);
+      
+      // Pre-fill organization register fields with the newly created profile data
+      setOrgContactName(tempFullName);
+      setOrgEmail(tempEmail);
+
       setTimeout(() => {
-        login(registeredUsername, registeredOrgCode);
         setUserSuccessMsg('');
         setUserUsername('');
         setUserFullName('');
@@ -105,8 +112,8 @@ export const AuthScreen: React.FC = () => {
         setUserWhatsapp('');
         setUserAvatar('');
         setUserEmail('');
-        setUserOrgCode('');
-      }, 1500);
+        setView('POST_REGISTER_DECISION');
+      }, 1200);
     } else {
       setUserError(res.error || 'Registration failed.');
     }
@@ -594,17 +601,7 @@ export const AuthScreen: React.FC = () => {
                 />
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Mesh Node Code Binding (Optional)</label>
-                <input
-                  type="text"
-                  value={userOrgCode}
-                  onChange={e => setUserOrgCode(e.target.value)}
-                  placeholder="e.g. SL-ORG-8492"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
-                />
-                <span className="text-[8px] text-slate-500 mt-1 pl-1">Bind this responder profile to an established Safety Node Command Deck.</span>
-              </div>
+
 
               <button
                 type="submit"
@@ -623,6 +620,83 @@ export const AuthScreen: React.FC = () => {
                 </button>
               </div>
             </motion.form>
+          )}
+
+          {/* POST REGISTER DECISION */}
+          {view === 'POST_REGISTER_DECISION' && (
+            <motion.div
+              key="post_register_decision"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-6 text-left font-mono"
+            >
+              <div className="border-b border-slate-900 pb-3.5 mb-2 text-center">
+                <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-xl text-emerald-400">✓</span>
+                </div>
+                <h2 className="text-sm font-black text-emerald-400 uppercase tracking-widest font-display">Profile Established</h2>
+                <p className="text-[10px] text-slate-400 mt-1">Select your desired SafetyLink service path to proceed.</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Mode A: Personal Account */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    login(registeredUsername, '');
+                  }}
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-blue-500/50 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors mt-0.5">
+                      👤
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-200 group-hover:text-blue-400 transition-colors uppercase tracking-wider">
+                        Personal / Individual Account
+                      </h4>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-normal font-sans">
+                        Deploy the tactical panic dashboard for private security, family networks, offline telemetry queueing, and personal BLE buttons.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Mode B: Create Organization */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('REGISTER_ORG');
+                  }}
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-emerald-500/50 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors mt-0.5">
+                      🏢
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition-colors uppercase tracking-wider">
+                        Create & Provision Organization
+                      </h4>
+                      <p className="text-[10px] text-slate-500 mt-1 leading-normal font-sans">
+                        Establish an enterprise Safety Node Commander Deck to manage patrol guards, monitor student/staff rosters, and configure a Twilio cloud gateway.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setView('LOGIN')}
+                  className="text-[10px] text-slate-400 hover:text-slate-200 font-mono font-bold uppercase tracking-wider"
+                >
+                  ← Back to Login
+                </button>
+              </div>
+            </motion.div>
           )}
 
           {/* REGISTER ORGANIZATION */}

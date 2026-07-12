@@ -15,7 +15,11 @@ export interface UserProfile {
   assignedResponseOfficer?: string;
   preferredHospital?: string;
   homeAddress?: string;
+  workAddress?: string;
   emergencyContactsList?: string; // custom contact numbers comma-separated
+  pendingOrgCode?: string; // requested org code pending approval
+  role?: string; // approved active role in the organization
+  pendingRole?: string; // role requested by user, pending administrator approval
 }
 
 export interface Organization {

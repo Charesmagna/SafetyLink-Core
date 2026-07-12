@@ -136,6 +136,14 @@ interface AppState {
   removeVaultFile: (id: string) => void;
   addVaultApp: (app: { name: string; packageName: string }) => void;
   removeVaultApp: (id: string) => void;
+  
+  // Custom user configuration for only system SMS
+  onlySystemSms: boolean;
+  setOnlySystemSms: (value: boolean) => void;
+  renameBleDevice: (macAddress: string, newFriendlyName: string) => void;
+  requestJoinOrganization: (userId: string, orgCode: string, selectedRole: string) => { success: boolean; error?: string };
+  approvePendingUser: (userId: string) => void;
+  rejectPendingUser: (userId: string) => void;
 }
 
 // Initial Demo Data
@@ -451,6 +459,78 @@ export const useAppStore = create<AppState>((set, get) => ({
     const nextApps = get().vaultApps.filter(a => a.id !== id);
     set({ vaultApps: nextApps });
     setStoredJSON('sl_vault_apps', nextApps);
+  },
+
+  // Custom user configuration for only system SMS
+  onlySystemSms: getStoredJSON<boolean>('sl_only_system_sms', false),
+  setOnlySystemSms: (value) => {
+    set({ onlySystemSms: value });
+    setStoredJSON('sl_only_system_sms', value);
+    get().addAuditLog('SYSTEM', 'INFO', `System SMS Configuration updated`, `Only system SMS alerts set to: ${value}`);
+  },
+  renameBleDevice: (macAddress, newFriendlyName) => {
+    const updatedDevices = get().bleDevices.map(d => 
+      d.macAddress === macAddress ? { ...d, friendlyName: newFriendlyName } : d
+    );
+    set({ bleDevices: updatedDevices });
+    setStoredJSON('sl_ble_devices', updatedDevices);
+    get().addAuditLog('BLE', 'INFO', `iTag Renamed`, `Device ${macAddress} friendly name updated to "${newFriendlyName}"`);
+  },
+  requestJoinOrganization: (userId, orgCode, selectedRole) => {
+    const matchedOrg = get().organizations.find(o => o.id.toUpperCase() === orgCode.toUpperCase());
+    if (!matchedOrg) {
+      return { success: false, error: 'Organization code not found.' };
+    }
+    const updatedUsers = get().users.map(u => 
+      u.id === userId ? { ...u, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole } : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === userId) {
+      const nextUser = { ...currUser, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    get().addAuditLog('SECURITY', 'INFO', 'Join Organization Requested', `User requested to join ${matchedOrg.name} (${matchedOrg.id}) as ${selectedRole}`);
+    return { success: true };
+  },
+  approvePendingUser: (userId) => {
+    const userToApprove = get().users.find(u => u.id === userId);
+    if (!userToApprove || !userToApprove.pendingOrgCode) return;
+    const orgId = userToApprove.pendingOrgCode;
+    const approvedRole = userToApprove.pendingRole || 'Community Member';
+    const updatedUsers = get().users.map(u => 
+      u.id === userId ? { ...u, orgCode: orgId, role: approvedRole, pendingOrgCode: undefined, pendingRole: undefined } : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === userId) {
+      const nextUser = { ...currUser, orgCode: orgId, role: approvedRole, pendingOrgCode: undefined, pendingRole: undefined };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    get().addAuditLog('SECURITY', 'INFO', 'User Join Approved', `User ${userToApprove.fullName} approved into Org ${orgId} as ${approvedRole}`);
+  },
+  rejectPendingUser: (userId) => {
+    const userToReject = get().users.find(u => u.id === userId);
+    if (!userToReject) return;
+    const updatedUsers = get().users.map(u => 
+      u.id === userId ? { ...u, pendingOrgCode: undefined, pendingRole: undefined } : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === userId) {
+      const nextUser = { ...currUser, pendingOrgCode: undefined, pendingRole: undefined };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    get().addAuditLog('SECURITY', 'WARN', 'User Join Rejected', `User ${userToReject.fullName} was rejected from pending Org join`);
   },
 
   // Language & Localization Initializer
@@ -803,6 +883,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().contacts.forEach((contact, index) => {
       setTimeout(async () => {
         if (get().activeSOSState === 'IDLE') return;
+
+        if (get().onlySystemSms && contact.channelType !== 'SMS' && contact.channelType !== 'GROUP') {
+          get().addAuditLog(
+            'DISPATCH',
+            'INFO',
+            `[Contact #${contact.priority}] Skipped ${contact.channelType} to ${contact.label} (System SMS Only Mode Active)`,
+            `Muted non-SMS dispatch channel per user configuration.`
+          );
+          return;
+        }
+
         const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
 
         if (isDrill) {
@@ -914,7 +1005,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('SYSTEM', 'WARN', 'SOS Distress Cancelled', 'Operator input or wearable double-click trigger override applied.');
   },
 
-  startMultiStagePanic: (description, durationSec = 10) => {
+  startMultiStagePanic: (description, durationSec = 5) => {
     if (get().activeSOSState !== 'IDLE' || get().panicCountdown !== null) return;
     
     set({ panicCountdown: durationSec });

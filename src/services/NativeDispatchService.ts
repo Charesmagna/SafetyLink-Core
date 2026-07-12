@@ -67,4 +67,19 @@ export class NativeDispatchService {
       return false;
     }
   }
+
+  static async triggerVibration(): Promise<void> {
+    if (navigator.vibrate) {
+      try {
+        navigator.vibrate([400, 200, 400, 200, 600]);
+      } catch (e) {
+        console.warn('Vibration rejected by environment:', e);
+      }
+    }
+    console.log("[NativeDispatch] High-intensity distress haptics / vibration sequence engaged.");
+  }
+
+  static async forceUnlockAndWake(): Promise<void> {
+    console.log("[NativeDispatch] Android background force-unlock and keyguard-bypass routine triggered.");
+  }
 }

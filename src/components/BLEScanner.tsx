@@ -20,6 +20,10 @@ export const BLEScanner: React.FC = () => {
   const [manualDeviceType, setManualDeviceType] = React.useState<'iTAG' | 'RFD_Beacon' | 'GENERIC_BLE_BUTTON'>('GENERIC_BLE_BUTTON');
   const [manualFormError, setManualFormError] = React.useState<string>('');
 
+  // Paired Device Renaming States
+  const [editingMac, setEditingMac] = React.useState<string | null>(null);
+  const [editingName, setEditingName] = React.useState<string>('');
+
   // Auto-initialize on mount
   React.useEffect(() => {
     const autoInit = async () => {
@@ -527,16 +531,58 @@ export const BLEScanner: React.FC = () => {
               }
             }
 
+            const isEditingThis = editingMac === device.macAddress;
+
             return (
               <div key={device.macAddress} className="p-4 bg-slate-950/20 rounded-2xl border border-slate-900/80 space-y-3.5 transition-all hover:border-slate-800/80">
                 <div className="flex justify-between items-start">
-                  <div className="space-y-0.5">
-                    <h4 className="text-xs font-extrabold text-slate-100 font-display flex items-center gap-1.5 flex-wrap">
-                      <span>{device.friendlyName}</span>
-                      <span className="text-[7px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
-                        {device.deviceType}
-                      </span>
-                    </h4>
+                  <div className="space-y-1 flex-1 pr-2">
+                    {isEditingThis ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="bg-slate-950 border border-slate-900 rounded-lg px-2.5 py-1 text-[10.5px] text-slate-100 focus:outline-none focus:border-emerald-500/50 font-mono w-32"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            useAppStore.getState().renameBleDevice(device.macAddress, editingName.trim());
+                            setEditingMac(null);
+                            useAppStore.getState().addToast("iTAG device renamed successfully!", "success");
+                          }}
+                          className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 font-bold px-2 py-1 rounded-lg text-[8.5px] border border-emerald-500/20 uppercase cursor-pointer"
+                        >
+                          SAVE
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingMac(null)}
+                          className="bg-slate-900 hover:bg-slate-800 text-slate-400 px-2 py-1 rounded-lg text-[8.5px] uppercase cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <h4 className="text-xs font-extrabold text-slate-100 font-display flex items-center gap-1.5 flex-wrap">
+                        <span>{device.friendlyName}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMac(device.macAddress);
+                            setEditingName(device.friendlyName);
+                          }}
+                          className="text-[9px] text-slate-500 hover:text-purple-400 cursor-pointer"
+                          title="Rename Device"
+                        >
+                          ✏️
+                        </button>
+                        <span className="text-[7px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                          {device.deviceType}
+                        </span>
+                      </h4>
+                    )}
                     <p className="text-[9px] font-mono text-slate-500">{device.macAddress}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -580,6 +626,56 @@ export const BLEScanner: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Hardware Click Simulation */}
+                {isConnected && (
+                  <div className="bg-slate-950/40 p-2 rounded-xl border border-slate-900 flex items-center justify-between gap-1.5 text-[8.5px] font-mono mt-1">
+                    <span className="text-slate-500 font-bold uppercase tracking-wider">Simulate Click:</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const store = useAppStore.getState();
+                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Single Click', `Simulated 1x press for ${device.macAddress}`);
+                          store.startMultiStagePanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Single Click (Test Mode)`, 10);
+                          useAppStore.getState().addToast("Simulated single click: 10s SOS initiated.", "warn");
+                        }}
+                        className="px-2 py-0.5 bg-slate-900 hover:bg-blue-900/40 text-blue-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
+                      >
+                        1x Click
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const store = useAppStore.getState();
+                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Double Click', `Simulated 2x press for ${device.macAddress}`);
+                          if (store.activeSOSState !== 'IDLE' || store.panicCountdown !== null) {
+                            store.cancelSOS();
+                            useAppStore.getState().addToast("SOS Cancelled via simulated double click.", "info");
+                          } else {
+                            store.triggerPanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Double Click (Test Mode)`);
+                            useAppStore.getState().addToast("Simulated double click: Instant SOS dispatched.", "error");
+                          }
+                        }}
+                        className="px-2 py-0.5 bg-slate-900 hover:bg-emerald-900/40 text-emerald-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
+                      >
+                        2x Click
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const store = useAppStore.getState();
+                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Triple Click', `Simulated 3x press for ${device.macAddress}`);
+                          store.triggerPanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Triple Click (Test Mode)`);
+                          useAppStore.getState().addToast("Simulated triple click: Instant SOS dispatched.", "error");
+                        }}
+                        className="px-2 py-0.5 bg-slate-900 hover:bg-red-950 text-red-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
+                      >
+                        3x Click
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Toggles */}
                 <div className="flex justify-between items-center text-[9px] pt-1 border-t border-slate-900/80">
