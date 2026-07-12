@@ -43,37 +43,42 @@ class SplashSoundGenerator {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     
-    // Crackling friction electric sparks
-    for (let i = 0; i < 8; i++) {
-      const delay = i * 0.12;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(2500 + Math.random() * 1800, now + delay);
-      
-      gain.gain.setValueAtTime(0.03, now + delay);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.04);
-      
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now + delay);
-      osc.stop(now + delay + 0.04);
-    }
-    
-    // Faint hum revealing shield outline
-    const hum = this.ctx.createOscillator();
+    // Smooth cinematic initial ambient wash
+    const osc1 = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
     const gainNode = this.ctx.createGain();
-    hum.type = 'sine';
-    hum.frequency.setValueAtTime(60, now);
-    hum.frequency.linearRampToValueAtTime(120, now + 1.2);
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(55, now); // Low A1 sub
+    osc1.frequency.linearRampToValueAtTime(110, now + 1.2);
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(165, now); // E3 perfect fifth
+    osc2.frequency.linearRampToValueAtTime(220, now + 1.2);
     
     gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.06, now + 0.4);
+    gainNode.gain.linearRampToValueAtTime(0.12, now + 0.4);
     gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
     
-    hum.connect(gainNode);
+    osc1.connect(gainNode);
+    osc2.connect(gainNode);
     gainNode.connect(this.ctx.destination);
+    
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 1.2);
+    osc2.stop(now + 1.2);
+
+    // Subtle premium analog warm hum
+    const hum = this.ctx.createOscillator();
+    const humGain = this.ctx.createGain();
+    hum.type = 'sine';
+    hum.frequency.setValueAtTime(110, now);
+    humGain.gain.setValueAtTime(0, now);
+    humGain.gain.linearRampToValueAtTime(0.05, now + 0.5);
+    humGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    hum.connect(humGain);
+    humGain.connect(this.ctx.destination);
     hum.start(now);
     hum.stop(now + 1.2);
   }
@@ -83,56 +88,42 @@ class SplashSoundGenerator {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     
-    // 1. Hydraulic mechanical piston whir
-    const oscPiston = this.ctx.createOscillator();
-    const filterPiston = this.ctx.createBiquadFilter();
-    const gainPiston = this.ctx.createGain();
+    // Heavy mechanical solid lock boom
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(73.42, now); // D2 note
+    subOsc.frequency.linearRampToValueAtTime(36.71, now + 0.35); // down to D1 sub
     
-    oscPiston.type = 'sawtooth';
-    oscPiston.frequency.setValueAtTime(150, now);
-    oscPiston.frequency.exponentialRampToValueAtTime(45, now + 0.4);
+    subGain.gain.setValueAtTime(0.18, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
     
-    filterPiston.type = 'lowpass';
-    filterPiston.frequency.setValueAtTime(400, now);
-    filterPiston.frequency.exponentialRampToValueAtTime(100, now + 0.4);
-    
-    gainPiston.gain.setValueAtTime(0.14, now);
-    gainPiston.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-    
-    oscPiston.connect(filterPiston);
-    filterPiston.connect(gainPiston);
-    gainPiston.connect(this.ctx.destination);
-    oscPiston.start(now);
-    oscPiston.stop(now + 0.4);
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(now);
+    subOsc.stop(now + 0.35);
 
-    // 2. Heavy metallic thud clank
-    const oscThud = this.ctx.createOscillator();
-    const gainThud = this.ctx.createGain();
-    oscThud.type = 'triangle';
-    oscThud.frequency.setValueAtTime(80, now);
-    oscThud.frequency.linearRampToValueAtTime(30, now + 0.3);
-    
-    gainThud.gain.setValueAtTime(0.2, now);
-    gainThud.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-    
-    oscThud.connect(gainThud);
-    gainThud.connect(this.ctx.destination);
-    oscThud.start(now);
-    oscThud.stop(now + 0.3);
-
-    // 3. Locking click
+    // Crisp high-tech locking click
     const clickOsc = this.ctx.createOscillator();
     const clickGain = this.ctx.createGain();
+    const clickFilter = this.ctx.createBiquadFilter();
+    
     clickOsc.type = 'sine';
-    clickOsc.frequency.setValueAtTime(1400, now + 0.05);
+    clickOsc.frequency.setValueAtTime(1200, now + 0.05);
     
-    clickGain.gain.setValueAtTime(0.08, now + 0.05);
-    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    clickFilter.type = 'bandpass';
+    clickFilter.frequency.setValueAtTime(1200, now + 0.05);
+    clickFilter.Q.setValueAtTime(10, now + 0.05);
     
-    clickOsc.connect(clickGain);
+    clickGain.gain.setValueAtTime(0, now);
+    clickGain.gain.setValueAtTime(0.06, now + 0.05);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    clickOsc.connect(clickFilter);
+    clickFilter.connect(clickGain);
     clickGain.connect(this.ctx.destination);
     clickOsc.start(now + 0.05);
-    clickOsc.stop(now + 0.12);
+    clickOsc.stop(now + 0.15);
   }
 
   playEnergySurge() {
@@ -140,40 +131,25 @@ class SplashSoundGenerator {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     
-    // Electric hum with vibrato charging effect
-    const osc = this.ctx.createOscillator();
-    const lfo = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const gain = this.ctx.createGain();
-    const lfoGain = this.ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(90, now);
-    osc.frequency.exponentialRampToValueAtTime(380, now + 1.2);
-    
-    lfo.type = 'sine';
-    lfo.frequency.setValueAtTime(15, now); // Rapid oscillations
-    lfoGain.gain.setValueAtTime(35, now);
-    
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(250, now);
-    filter.frequency.exponentialRampToValueAtTime(1800, now + 1.2);
-    
-    gain.gain.setValueAtTime(0.01, now);
-    gain.gain.linearRampToValueAtTime(0.18, now + 0.3);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 1.3);
-    
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    
-    osc.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.ctx.destination);
-    
-    osc.start(now);
-    lfo.start(now);
-    osc.stop(now + 1.3);
-    lfo.stop(now + 1.3);
+    // Futuristic high-end energy chord build (pure sine cluster)
+    const frequencies = [110, 165, 220, 330, 440]; // A Minor Power Chord Stack
+    frequencies.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.5, now + 1.2); // soaring upward glide
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.04 - (idx * 0.005), now + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.25);
+      
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(now);
+      osc.stop(now + 1.25);
+    });
   }
 
   playTextReveal() {
@@ -181,43 +157,37 @@ class SplashSoundGenerator {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     
-    // Molten metal sizzling hiss (high bandpass noise)
-    const bufferSize = this.ctx.sampleRate * 1.3;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    
-    const noiseNode = this.ctx.createBufferSource();
-    noiseNode.buffer = buffer;
-    
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(3500, now);
-    filter.frequency.exponentialRampToValueAtTime(900, now + 1.1);
-    
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.07, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-    
-    noiseNode.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
-    noiseNode.start(now);
-    
-    // Low metallic hum cooling thud
-    const rumble = this.ctx.createOscillator();
-    const rumbleGain = this.ctx.createGain();
-    rumble.type = 'sine';
-    rumble.frequency.setValueAtTime(50, now);
-    rumbleGain.gain.setValueAtTime(0.15, now);
-    rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
-    
-    rumble.connect(rumbleGain);
-    rumbleGain.connect(this.ctx.destination);
-    rumble.start(now);
-    rumble.stop(now + 1.1);
+    // Elegant crystal cascade chime (pure sine triad harmonics)
+    const chimeFrequencies = [523.25, 659.25, 783.99, 1046.50]; // C Major Chord Triad + Octave
+    chimeFrequencies.forEach((freq, i) => {
+      const delay = i * 0.08;
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + delay);
+      
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.setValueAtTime(0.06, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.8);
+      
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.8);
+    });
+
+    // Deep warm backing drone
+    const subTri = this.ctx.createOscillator();
+    const subTriGain = this.ctx.createGain();
+    subTri.type = 'sine';
+    subTri.frequency.setValueAtTime(130.81, now); // C3
+    subTriGain.gain.setValueAtTime(0.08, now);
+    subTriGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+    subTri.connect(subTriGain);
+    subTriGain.connect(this.ctx.destination);
+    subTri.start(now);
+    subTri.stop(now + 1.0);
   }
 
   playFinalBurst() {
@@ -225,57 +195,42 @@ class SplashSoundGenerator {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     
-    // Deep heavy plasma explosion boom
+    // Breathtaking cinematic sub-bass rumble
     const sub = this.ctx.createOscillator();
     const subGain = this.ctx.createGain();
     sub.type = 'sine';
-    sub.frequency.setValueAtTime(120, now);
-    sub.frequency.exponentialRampToValueAtTime(20, now + 0.9);
+    sub.frequency.setValueAtTime(82.41, now); // E2
+    sub.frequency.exponentialRampToValueAtTime(41.20, now + 1.5); // sliding down to E1 sub
     
-    subGain.gain.setValueAtTime(0.38, now);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+    subGain.gain.setValueAtTime(0.28, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
     
     sub.connect(subGain);
     subGain.connect(this.ctx.destination);
     sub.start(now);
-    sub.stop(now + 1.1);
+    sub.stop(now + 1.6);
     
-    // Explosion debris noise crackle
-    const bufferSize = this.ctx.sampleRate * 0.7;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
+    // Premium pure crystal high-frequency chime
+    const glass1 = this.ctx.createOscillator();
+    const glass2 = this.ctx.createOscillator();
+    const glassGain = this.ctx.createGain();
     
-    const noiseFilter = this.ctx.createBiquadFilter();
-    noiseFilter.type = 'lowpass';
-    noiseFilter.frequency.setValueAtTime(1100, now);
-    noiseFilter.frequency.exponentialRampToValueAtTime(120, now + 0.6);
+    glass1.type = 'sine';
+    glass1.frequency.setValueAtTime(880, now); // A5 pure ring
+    glass2.type = 'sine';
+    glass2.frequency.setValueAtTime(1318.51, now); // E6 fifth ring
     
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.24, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+    glassGain.gain.setValueAtTime(0.08, now);
+    glassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.5); // long elegant ring
     
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
-    noise.start(now);
+    glass1.connect(glassGain);
+    glass2.connect(glassGain);
+    glassGain.connect(this.ctx.destination);
     
-    // Crystal ringing sound
-    const oscShine = this.ctx.createOscillator();
-    const shineGain = this.ctx.createGain();
-    oscShine.type = 'sine';
-    oscShine.frequency.setValueAtTime(2800, now);
-    shineGain.gain.setValueAtTime(0.14, now);
-    shineGain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
-    
-    oscShine.connect(shineGain);
-    shineGain.connect(this.ctx.destination);
-    oscShine.start(now);
-    oscShine.stop(now + 1.6);
+    glass1.start(now);
+    glass2.start(now);
+    glass1.stop(now + 2.5);
+    glass2.stop(now + 2.5);
   }
 
   playSteadyHum() {
@@ -288,10 +243,10 @@ class SplashSoundGenerator {
     const gain = this.ctx.createGain();
     
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(60, now);
+    osc.frequency.setValueAtTime(65.41, now); // C2 warm low anchor
     
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(100, now);
+    filter.frequency.setValueAtTime(120, now);
     
     gain.gain.setValueAtTime(0.04, now);
     
