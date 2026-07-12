@@ -59,22 +59,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- Placeable Home Screen Widget Provider -->
-        <receiver
-            android:name=".widget.SafetyLinkWidgetProvider"
-            android:enabled="true"
-            android:exported="false"
-            android:label="SafetyLink Status Widget">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.aistudio.safetylink.itag.ACTION_WIDGET_SOS" />
-                <action android:name="com.aistudio.safetylink.itag.ACTION_WIDGET_TOGGLE_ARM" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/safetylink_widget_info" />
-        </receiver>
-
     </application>
 
 </manifest>

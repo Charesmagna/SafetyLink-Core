@@ -22,7 +22,7 @@ import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { ApkDownloadPopup } from './components/ApkDownloadPopup';
+import { CommerceCenter } from './components/CommerceCenter';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
@@ -210,7 +210,7 @@ const App: React.FC = () => {
       return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
-    if (currentOrg) {
+    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <OrgDashboard />;
     }
 
@@ -263,7 +263,7 @@ const App: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-2.5">
-            <img src={slLogoMain} alt="SafetyLink" className="w-10 h-10 object-contain rounded-xl drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+            <SafetyLinkLogo size={68} />
             <div className="text-left">
               <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
@@ -317,7 +317,7 @@ const App: React.FC = () => {
             <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
               {/* TOP: Logo */}
               <div className="shrink-0 pt-1">
-                <img src={slLogoMain} alt="SafetyLink" className="w-28 h-28 object-contain drop-shadow-[0_0_24px_rgba(16,185,129,0.5)]" />
+                <SafetyLinkLogo size={72} showText={true} />
               </div>
 
               {/* MIDDLE: SOS Button fills remaining space */}
@@ -849,8 +849,8 @@ const App: React.FC = () => {
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
 
-      {/* APK Sideload & Deployed Handset Package Downloader Portal */}
-      <ApkDownloadPopup />
+      {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
+      <CommerceCenter />
 
     </div>
   );

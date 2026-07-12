@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { UserProfile } from '../types';
-import slLogoMain from '../assets/images/sl_logomain.jpeg';
+import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { GlowingHeartBackground } from './GlowingHeartBackground';
 
 export const OrgDashboard: React.FC = () => {
   const { 
-    currentOrg, 
+    currentOrg: storeOrg, 
+    currentUser,
+    organizations,
     users, 
     logout, 
     updateUserProfile, 
@@ -19,8 +21,12 @@ export const OrgDashboard: React.FC = () => {
     updateOrgBranding,
     updateClientProfile,
     localOfflineQueue,
-    syncOfflineQueue
+    syncOfflineQueue,
+    approvePendingUser,
+    rejectPendingUser
   } = useAppStore();
+
+  const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio'>('dispatch');
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +45,7 @@ export const OrgDashboard: React.FC = () => {
   const [editContactsList, setEditContactsList] = useState('');
 
   // Branding Form State (pre-populated from currentOrg values)
-  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '');
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=150&auto=format&fit=crop');
   const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
   const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
@@ -154,7 +160,7 @@ export const OrgDashboard: React.FC = () => {
               onError={() => setBrandLogoUrl('')}
             />
           ) : (
-            <img src={slLogoMain} alt="SafetyLink" className="w-16 h-16 object-contain rounded-2xl drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+            <SafetyLinkLogo size={68} />
           )}
           <div>
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">
@@ -465,6 +471,77 @@ export const OrgDashboard: React.FC = () => {
         {/* ==================================================== */}
         {activeSubTab === 'roster' && (
           <div className="space-y-4 animate-fadeIn">
+            
+            {/* Pending Membership Approvals Board */}
+            {(() => {
+              const pendingUsers = users.filter(u => u.pendingOrgCode === currentOrg.id);
+              if (pendingUsers.length === 0) return null;
+              
+              return (
+                <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-2xl text-left space-y-3.5 shadow-md font-mono">
+                  <div className="flex justify-between items-center border-b border-amber-500/10 pb-2">
+                    <div className="space-y-0.5">
+                      <span className="text-amber-400 font-black uppercase text-[10px] tracking-widest block font-display">
+                        ⏳ MEMBERSHIP APPROVAL REQUESTS ({pendingUsers.length})
+                      </span>
+                      <p className="text-[9.5px] text-slate-500 font-sans leading-normal">
+                        Subscribers listed below have typed your Organization ID and are waiting for active clearance.
+                      </p>
+                    </div>
+                    <span className="h-5 w-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono text-[10px] font-bold">
+                      {pendingUsers.length}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {pendingUsers.map(user => (
+                      <div key={user.id} className="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
+                        <div className="space-y-1 text-xs">
+                          <p className="font-extrabold text-slate-200">{user.fullName} <span className="text-[9px] font-mono text-slate-500">(@{user.username})</span></p>
+                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Requested Role:</span> <span className="font-bold text-amber-400 uppercase">{user.pendingRole || 'Community Member'}</span></p>
+                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Phone:</span> <span className="font-bold text-slate-300">{user.phone}</span></p>
+                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Email:</span> <span className="text-slate-300">{user.email}</span></p>
+                          {user.medicalInfo && (
+                            <p className="text-[8px] font-mono text-amber-400 bg-amber-950/10 border border-amber-500/10 p-1.5 rounded mt-1">
+                              🩺 Med notes: {user.medicalInfo}
+                            </p>
+                          )}
+                          {(user.homeAddress || user.workAddress) && (
+                            <p className="text-[8px] font-mono text-slate-500">
+                              🏠 {user.homeAddress || user.workAddress}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 font-mono text-[9px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              approvePendingUser(user.id);
+                              useAppStore.getState().addToast(`Approved membership for ${user.fullName}!`, "success");
+                            }}
+                            className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-400 border border-emerald-500/20 rounded-lg text-center uppercase tracking-wider cursor-pointer"
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              rejectPendingUser(user.id);
+                              useAppStore.getState().addToast(`Rejected join request from ${user.fullName}.`, "info");
+                            }}
+                            className="flex-1 py-1.5 bg-red-950/25 hover:bg-red-950/45 text-red-400 border border-red-500/10 rounded-lg text-center uppercase tracking-wider cursor-pointer"
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-left">
               <div>
                 <h3 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">
