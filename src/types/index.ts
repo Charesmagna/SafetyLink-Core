@@ -6,9 +6,8 @@ export interface UserProfile {
   whatsapp?: string;
   avatarUrl?: string;
   email: string;
-  orgCode: string; // empty or matches Organization.id
+  orgCode: string;
   createdAt: number;
-  // Premium customer profile extensions for Security Operations
   accountNumber?: string;
   medicalInfo?: string;
   riskNotes?: string;
@@ -16,34 +15,120 @@ export interface UserProfile {
   preferredHospital?: string;
   homeAddress?: string;
   workAddress?: string;
-  emergencyContactsList?: string; // custom contact numbers comma-separated
-  pendingOrgCode?: string; // requested org code pending approval
-  role?: string; // approved active role in the organization
-  pendingRole?: string; // role requested by user, pending administrator approval
+  emergencyContactsList?: string;
+  pendingOrgCode?: string;
+  role?: UserRole;
+  pendingRole?: UserRole;
+  medicalProfile?: MedicalProfile;
 }
 
+export type UserRole =
+  | 'Community Member'
+  | 'Guard'
+  | 'Dispatcher'
+  | 'Control Room Operator'
+  | 'Organization Administrator';
+
+export const USER_ROLES: UserRole[] = [
+  'Community Member',
+  'Guard',
+  'Dispatcher',
+  'Control Room Operator',
+  'Organization Administrator',
+];
+
+export interface MedicalProfile {
+  bloodGroup: string;
+  allergies: string;
+  medications: string;
+  doctorName: string;
+  doctorPhone: string;
+  medicalAidName: string;
+  medicalAidNumber: string;
+  conditions: string;
+  emergencyNotes: string;
+  emergencyContacts: { name: string; phone: string; relation: string }[];
+}
+
+export type EmergencyProfileType =
+  | 'Medical'
+  | 'Hijacking'
+  | 'Vehicle Accident'
+  | 'Fire'
+  | 'Domestic Violence'
+  | 'Clock In'
+  | 'Clock Out'
+  | 'Guard Patrol'
+  | 'Custom';
+
+export interface EmergencyProfile {
+  id: string;
+  name: string;
+  type: EmergencyProfileType;
+  icon: string;
+  color: string;
+  smsRecipients: string[];
+  pushRecipients: string[];
+  callList: string[];
+  whatsappRecipients: string[];
+  includeGPS: boolean;
+  notifyOrganization: boolean;
+  silentMode: boolean;
+  aiSummaryEnabled: boolean;
+  customMessage?: string;
+}
+
+export interface SafetyModules {
+  beacon: boolean;
+  vision: boolean;
+  dispatch: boolean;
+  fleet: boolean;
+  community: boolean;
+  medical: boolean;
+  guardianAI: boolean;
+  vault: boolean;
+  access: boolean;
+}
+
+export const DEFAULT_SAFETY_MODULES: SafetyModules = {
+  beacon: true,
+  vision: false,
+  dispatch: false,
+  fleet: false,
+  community: false,
+  medical: true,
+  guardianAI: false,
+  vault: true,
+  access: false,
+};
+
+export const DEFAULT_EMERGENCY_PROFILES: EmergencyProfile[] = [
+  { id: 'ep-medical',   name: 'Medical Emergency',  type: 'Medical',           icon: '🏥', color: '#ef4444', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: true  },
+  { id: 'ep-hijack',    name: 'Hijacking',           type: 'Hijacking',         icon: '🚗', color: '#f97316', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: true,  aiSummaryEnabled: true  },
+  { id: 'ep-accident',  name: 'Vehicle Accident',    type: 'Vehicle Accident',  icon: '💥', color: '#f59e0b', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: true  },
+  { id: 'ep-fire',      name: 'Fire',                type: 'Fire',              icon: '🔥', color: '#dc2626', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: false },
+  { id: 'ep-domestic',  name: 'Domestic Violence',   type: 'Domestic Violence', icon: '🛡️', color: '#7c3aed', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: true,  aiSummaryEnabled: false },
+  { id: 'ep-clockin',   name: 'Clock In',            type: 'Clock In',          icon: '✅', color: '#10b981', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: false },
+  { id: 'ep-clockout',  name: 'Clock Out',           type: 'Clock Out',         icon: '🔒', color: '#6b7280', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: false },
+  { id: 'ep-patrol',    name: 'Guard Patrol',        type: 'Guard Patrol',      icon: '👮', color: '#3b82f6', smsRecipients: [], pushRecipients: [], callList: [], whatsappRecipients: [], includeGPS: true,  notifyOrganization: true,  silentMode: false, aiSummaryEnabled: false },
+];
+
 export interface Organization {
-  id: string; // e.g. SL-ORG-XXXX
+  id: string;
   name: string;
   contactName: string;
   contactEmail: string;
   createdAt: number;
-  approved?: boolean; // pending approval if false
-  // Professional branding and control room configurations
+  approved?: boolean;
   logoUrl?: string;
-  primaryColor?: string; // hex
-  secondaryColor?: string; // hex
+  primaryColor?: string;
+  secondaryColor?: string;
   controlRoomNumber?: string;
   escalationPolicy?: string;
-  // Live analytics counters
   monthlyAlerts?: number;
   falseAlarms?: number;
   averageResponseTimeSec?: number;
-  twilio?: {
-    accountSid: string;
-    authToken: string;
-    fromNumber: string;
-  };
+  twilio?: { accountSid: string; authToken: string; fromNumber: string };
 }
 
 export interface CustomTool {
@@ -51,8 +136,8 @@ export interface CustomTool {
   title: string;
   description: string;
   type: 'WHATSAPP' | 'CALL' | 'SMS' | 'INFO' | 'WIDGET';
-  targetValue: string; // phone number, template message, or resource link
-  targetOrgId?: string; // undefined means globally pushed by Super Admin
+  targetValue: string;
+  targetOrgId?: string;
   createdAt: number;
 }
 
@@ -75,6 +160,7 @@ export interface PanicEvent {
   assignedResponder?: string;
   description: string;
   timelineData: string[];
+  profileUsed?: string;
 }
 
 export interface BleDevice {
@@ -85,11 +171,11 @@ export interface BleDevice {
   rssi: number;
   connectionState: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
   lastSeen: number;
-  /** GATT service/characteristic actually discovered to carry press
-   *  notifications on THIS specific device -- not assumed from a vendor
-   *  UUID, found live during the bonding wizard. Undefined until bound. */
   triggerServiceUuid?: string;
   triggerCharacteristicUuid?: string;
+  color?: string;
+  icon?: string;
+  lastTestResult?: 'PASS' | 'FAIL' | null;
 }
 
 export interface AuditLog {
