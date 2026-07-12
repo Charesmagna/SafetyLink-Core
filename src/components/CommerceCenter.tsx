@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore } from '../utils/store';
 import { 
   X, 
   ShoppingCart, 
@@ -125,7 +126,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 ];
 
 export const CommerceCenter: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+  const { commerceModalOpen, setCommerceModalOpen } = useAppStore();
   const [activeTab, setActiveTab] = useState<'shop' | 'calc' | 'invoice'>('shop');
   const [cart, setCart] = useState<Record<string, number>>({});
   
@@ -246,22 +247,8 @@ Thank you for securing your community with SafetyLink.
 
   return (
     <>
-      {/* Floating Commerce Action Button */}
-      <motion.button
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 z-50 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white p-3.5 rounded-full shadow-xl shadow-blue-950/40 border border-blue-400/20 flex items-center gap-2 cursor-pointer transition-all duration-300 font-mono text-xs font-bold tracking-wider"
-        id="commerce-portal-trigger"
-      >
-        <ShoppingCart className="w-4 h-4" />
-        <span>COMMERCE & QUOTES</span>
-        <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-      </motion.button>
-
       <AnimatePresence>
-        {isOpen && (
+        {commerceModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
@@ -276,7 +263,7 @@ Thank you for securing your community with SafetyLink.
 
               {/* Close button */}
               <button 
-                onClick={() => setIsOpen(false)}
+                onClick={() => setCommerceModalOpen(false)}
                 className="absolute top-4 right-4 text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-full transition-colors cursor-pointer z-10"
                 id="close-commerce-modal"
               >

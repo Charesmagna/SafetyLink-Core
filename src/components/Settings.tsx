@@ -106,6 +106,29 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
+      {/* Platform Commerce & Quotes Section */}
+      <div className="space-y-2 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
+        <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+          💼 Commercial & Quotations
+        </h4>
+        <div className="bg-slate-950/40 border border-slate-900/80 rounded-2xl p-4 flex flex-col gap-3">
+          <div className="text-left space-y-1">
+            <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
+              SafetyLink Hardware & Subscriptions
+            </span>
+            <span className="text-[9.5px] text-slate-500 block leading-normal font-sans">
+              Access product catalogs, estimate subscription costs for your campus/guards, and download professional SA tax invoices.
+            </span>
+          </div>
+          <button
+            onClick={() => useAppStore.getState().setCommerceModalOpen(true)}
+            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400/20 rounded-xl text-[10px] font-bold uppercase tracking-wider text-center cursor-pointer font-mono flex items-center justify-center gap-2 shadow-lg shadow-blue-950/20"
+          >
+            <span className="text-sm">💼</span> OPEN COMMERCE & QUOTES PORTAL
+          </button>
+        </div>
+      </div>
+
       {/* Background Service & Device System Tray Notification Panel */}
       <div className="space-y-3.5 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">

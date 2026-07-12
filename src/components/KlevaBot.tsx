@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
 import { Send, X } from 'lucide-react';
-const klevaLogo = '/K_leva.png';
+import { LogoSetPart } from './LogoSetPart';
 
 export const KlevaBot: React.FC = () => {
   const { addAuditLog } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [imageError, setImageError] = useState(false);
   
   // South African local safety history / chat list
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; timestamp: number }>>([
@@ -146,22 +145,7 @@ export const KlevaBot: React.FC = () => {
         <div className="absolute inset-0 rounded-full border border-blue-500/20 animate-pulse pointer-events-none" />
         <div className="absolute inset-1 rounded-full border border-dashed border-emerald-500/30 animate-spin" style={{ animationDuration: '20s' }} />
         
-        {!imageError ? (
-          <img 
-            src={klevaLogo} 
-            alt="K'lev.ai Logo" 
-            className="w-11 h-11 object-cover rounded-full shadow-[0_0_10px_rgba(59,130,246,0.3)] mix-blend-screen"
-            referrerPolicy="no-referrer"
-            onError={() => {
-              setImageError(true);
-            }}
-          />
-        ) : (
-          /* Fallback text only if image fails */
-          <span className="text-xl font-black text-blue-400 absolute font-mono select-none" style={{ textShadow: "0 0 10px #3b82f6" }}>
-            K'
-          </span>
-        )}
+        <LogoSetPart part="mascot" size={44} rounded="full" showBorder={false} className="shadow-[0_0_10px_rgba(59,130,246,0.3)] animate-pulse" />
       </motion.button>
 
       {/* Floating Chat Drawer Panel */}
@@ -181,9 +165,7 @@ export const KlevaBot: React.FC = () => {
               
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2.5 text-left">
-                  <div className="relative w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-1 shadow-inner overflow-hidden">
-                    <img src={klevaLogo} alt="K'lev.ai Logo" className="w-full h-full object-contain mix-blend-screen" />
-                  </div>
+                  <LogoSetPart part="mascot" size={36} rounded="xl" />
                   <div>
                     <h3 className="text-xs font-black tracking-widest font-mono text-slate-100 uppercase">
                       K'LEVA.I SAFETY HUB
@@ -231,9 +213,9 @@ export const KlevaBot: React.FC = () => {
 
               {isTyping && (
                 <div className="flex mr-auto items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-slate-900 border border-slate-850 flex items-center justify-center p-0.5 shrink-0">
-                    <img src={klevaLogo} alt="K" className="w-full h-full object-contain animate-spin mix-blend-screen" />
-                  </div>
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 6, ease: "linear" }}>
+                    <LogoSetPart part="mascot" size={24} rounded="full" showBorder={false} />
+                  </motion.div>
                   <div className="p-3 bg-slate-900 border border-slate-850 text-slate-500 text-xs rounded-2xl rounded-bl-none font-mono italic animate-pulse">
                     K'lev.ai is formulating SA safety parameters...
                   </div>

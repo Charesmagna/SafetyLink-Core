@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
-import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -130,6 +130,17 @@ export const AdminPanel: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950" />
           </motion.div>
         </AnimatePresence>
+        {/* Looping 3D Animation Background Video Backdrop */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen"
+          style={{ filter: 'contrast(1.15) brightness(1.1)' }}
+        >
+          <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 digital-grid opacity-[0.04]" />
       </div>
 
@@ -143,7 +154,7 @@ export const AdminPanel: React.FC = () => {
       <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative z-10">
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-60" />
         <div className="flex items-center gap-3 text-left">
-          <SafetyLinkLogo size={36} />
+          <LogoSetPart part="badge" size={44} rounded="xl" />
           <div>
             <h1 className="text-sm font-black tracking-tight text-slate-100 uppercase font-mono">
               SL Global Command

@@ -114,6 +114,10 @@ interface AppState {
   setFloatingWidgetDeployed: (value: boolean) => void;
   setFloatingWidgetSize: (value: number) => void;
 
+  // Commerce & Quotes state
+  commerceModalOpen: boolean;
+  setCommerceModalOpen: (value: boolean) => void;
+
   // Decoy Mode & Vault states
   decoyActive: boolean;
   decoyCode: string;
@@ -388,6 +392,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFloatingWidgetSize: (value) => {
     set({ floatingWidgetSize: value });
     setStoredJSON('sl_floating_widget_size', value);
+  },
+
+  // Commerce & Quotes state
+  commerceModalOpen: false,
+  setCommerceModalOpen: (value) => {
+    set({ commerceModalOpen: value });
   },
 
   // Decoy Mode & Vault Initial States

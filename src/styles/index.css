@@ -5,9 +5,16 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #020617; /* Deepest space blue-slate */
+  }
   body {
     font-family: 'Inter', sans-serif;
-    background-color: #020617; /* Deepest space blue-slate */
   }
 }
 

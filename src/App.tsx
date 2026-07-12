@@ -14,6 +14,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
+import { LogoSetPart } from './components/LogoSetPart';
 import { SplashReveal } from './components/SplashReveal';
 import { AppTour } from './components/AppTour';
 import { AIHub } from './components/AIHub';
@@ -263,7 +264,7 @@ const App: React.FC = () => {
           </button>
           
           <div className="flex items-center gap-2.5">
-            <SafetyLinkLogo size={68} />
+            <LogoSetPart part="badge" size={40} rounded="xl" />
             <div className="text-left">
               <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
@@ -536,7 +537,7 @@ const App: React.FC = () => {
                 {/* Header inside drawer */}
                 <div className="flex items-center justify-between border-b border-slate-900 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <SafetyLinkLogo size={32} />
+                    <LogoSetPart part="main" size={32} rounded="xl" />
                     <div className="text-left">
                       <h2 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none">
                         SafetyLink Core
@@ -777,6 +778,18 @@ const App: React.FC = () => {
 
   return (
     <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      {/* Global Background 3D Animated Mesh Loop */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen z-0"
+        style={{ filter: 'contrast(1.1) brightness(1.1)' }}
+      >
+        <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+      </video>
+
       {/* High fidelity cyber background lighting elements */}
       <div className="police-wash pointer-events-none" />
       
@@ -798,7 +811,9 @@ const App: React.FC = () => {
       <PermissionGateOverlay />
 
       {/* Primary Dynamic App Screen Container */}
-      {renderMainBody()}
+      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden z-10">
+        {renderMainBody()}
+      </div>
 
       {/* Unified Non-overlapping Toast Stack */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2.5 w-full max-w-xs px-4 pointer-events-none">

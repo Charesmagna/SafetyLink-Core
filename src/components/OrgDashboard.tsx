@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { UserProfile } from '../types';
-import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { LogoSetPart } from './LogoSetPart';
 import { GlowingHeartBackground } from './GlowingHeartBackground';
 
 export const OrgDashboard: React.FC = () => {
@@ -134,6 +134,17 @@ export const OrgDashboard: React.FC = () => {
       {/* Background with Glowing Heart and Heartbeat Pulse */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
         <GlowingHeartBackground />
+        {/* Looping 3D Animation Background Video Backdrop */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen"
+          style={{ filter: 'contrast(1.15) brightness(1.1)' }}
+        >
+          <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+        </video>
         {/* Transparent dark overlay to keep foreground text highly readable */}
         <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]" />
       </div>
@@ -160,7 +171,7 @@ export const OrgDashboard: React.FC = () => {
               onError={() => setBrandLogoUrl('')}
             />
           ) : (
-            <SafetyLinkLogo size={68} />
+            <LogoSetPart part="accent" size={68} rounded="2xl" />
           )}
           <div>
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">

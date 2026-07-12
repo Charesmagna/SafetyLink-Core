@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore, getOrgAbbreviation } from '../utils/store';
-import { CinematicLogoSmash } from './CinematicLogoSmash';
+import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -191,7 +191,7 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-y-auto select-none scanlines">
+    <div className="flex-1 w-full bg-slate-950 flex flex-col items-center justify-start py-10 px-4 sm:px-6 relative overflow-y-auto select-none scanlines">
       {/* Background Slideshow animation */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
         <AnimatePresence mode="wait">
@@ -215,6 +215,18 @@ export const AuthScreen: React.FC = () => {
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-red-500/5 mix-blend-color" />
+
+        {/* Looping 3D Animation Background Video Backdrop */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-[0.14] pointer-events-none mix-blend-screen"
+          style={{ filter: 'contrast(1.25) brightness(1.2)' }}
+        >
+          <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+        </video>
       </div>
 
       {/* Background Accents */}
@@ -229,10 +241,10 @@ export const AuthScreen: React.FC = () => {
       >
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-blue-500 to-emerald-500 neon-glow-blue" />
 
-        {/* Branding Header with 3D Cinematic Smash and Zoom Animation */}
-        <div className="text-center mb-4 -mt-2">
+        {/* Branding Header with Crisp High-Fidelity Still Brand Logo */}
+        <div className="text-center mb-5 -mt-1">
           <div className="inline-flex items-center justify-center">
-            <CinematicLogoSmash size={120} />
+            <LogoSetPart part="main" size={90} rounded="2xl" />
           </div>
         </div>
 
