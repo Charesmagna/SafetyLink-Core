@@ -492,14 +492,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { success: false, error: 'Organization code not found.' };
     }
     const updatedUsers = get().users.map(u => 
-      u.id === userId ? { ...u, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole } : u
+      u.id === userId ? { ...u, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole as import("../types").UserRole } : u
     );
     set({ users: updatedUsers });
     setStoredJSON('sl_users', updatedUsers);
     
     const currUser = get().currentUser;
     if (currUser && currUser.id === userId) {
-      const nextUser = { ...currUser, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole };
+      const nextUser = { ...currUser, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole as import("../types").UserRole };
       set({ currentUser: nextUser });
       setStoredJSON('sl_current_user', nextUser);
     }
