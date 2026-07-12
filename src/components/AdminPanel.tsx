@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
-import { SafetyLinkLogo } from './SafetyLinkLogo';
+import slLogoMain from '../assets/images/sl_logomain.jpeg';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -143,7 +143,7 @@ export const AdminPanel: React.FC = () => {
       <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative z-10">
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-60" />
         <div className="flex items-center gap-3 text-left">
-          <SafetyLinkLogo size={36} />
+          <img src={slLogoMain} alt="SafetyLink" className="w-9 h-9 object-contain rounded-lg drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
           <div>
             <h1 className="text-sm font-black tracking-tight text-slate-100 uppercase font-mono">
               SL Global Command
