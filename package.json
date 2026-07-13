@@ -19,7 +19,7 @@
     "@capacitor/android": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/geolocation": "^6.0.0",
-    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/haptics": "^6.0.0",
     "@capacitor/local-notifications": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cordova-plugin-powermanagement": "^1.0.5",
