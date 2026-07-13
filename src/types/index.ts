@@ -152,7 +152,7 @@ export interface Contact {
 
 export interface PanicEvent {
   id: string;
-  status: 'IDLE' | 'ACQUIRING_GPS' | 'CAPTURING_EVIDENCE' | 'ESCALATING' | 'DISPATCHED' | 'RESOLVED';
+  status: 'IDLE' | 'ACQUIRING_GPS' | 'CAPTURING_EVIDENCE' | 'ESCALATING' | 'DISPATCHED' | 'RESOLVED' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   lat: number;
   lng: number;

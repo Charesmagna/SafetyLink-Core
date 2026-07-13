@@ -5,13 +5,11 @@ import { ShieldAlert, Volume2, VolumeX, AlertTriangle, X } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
 export const EmergencyOverlay: React.FC = () => {
-  const { activeSOSState, cancelSOS, triggerPanic, userLocation } = useAppStore();
+  const { panicCountdown, cancelSOS, userLocation } = useAppStore();
   
-  const [countdown, setCountdown] = useState<number>(5);
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [wakeLock, setWakeLock] = useState<any>(null);
   
-  const countdownTimerRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
 
@@ -117,44 +115,30 @@ export const EmergencyOverlay: React.FC = () => {
 
   // 4. Initialization & State Synchronization Loop
   useEffect(() => {
-    if (activeSOSState === 'ACQUIRING_GPS') {
+    if (panicCountdown !== null) {
       // Trigger instant WakeLock and begin 5-second countdown sequence
       requestScreenWakeLock();
-      setCountdown(5);
-      triggerHapticFeedback();
       startSirenOscillator();
-
-      countdownTimerRef.current = window.setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownTimerRef.current!);
-            // Trigger actual critical distress protocol on countdown expiration
-            triggerPanic("SafetyLink high-priority countdown expired. Automatic dispatch triggered.");
-            return 0;
-          }
-          triggerHapticFeedback();
-          return prev - 1;
-        });
-      }, 1000);
     } else {
       // Clear all bindings if the SOS process is canceled or resolved
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
       stopSirenOscillator();
       releaseScreenWakeLock();
     }
 
     return () => {
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
       stopSirenOscillator();
       releaseScreenWakeLock();
     };
-  }, [activeSOSState, isAudioMuted]);
+  }, [panicCountdown, isAudioMuted]);
 
-  if (activeSOSState !== 'ACQUIRING_GPS') return null;
+  // Sync haptics on each second countdown tick
+  useEffect(() => {
+    if (panicCountdown !== null) {
+      triggerHapticFeedback();
+    }
+  }, [panicCountdown]);
+
+  if (panicCountdown === null) return null;
 
   return (
     <AnimatePresence>
@@ -203,19 +187,19 @@ export const EmergencyOverlay: React.FC = () => {
             
             {/* Centered Large Digits */}
             <motion.div 
-              key={countdown}
+              key={panicCountdown}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-7xl font-extrabold text-red-500 font-mono tracking-tight select-none z-10"
             >
-              {countdown}
+              {panicCountdown}
             </motion.div>
           </div>
 
           <div className="text-center space-y-2 max-w-sm">
             <h2 className="text-xl font-bold text-slate-100 uppercase tracking-wide">Emergency Trigger Active</h2>
             <p className="text-xs text-slate-400 leading-relaxed font-sans px-4">
-              Sending real-time telemetry, GPS coordinates, and initiating automatic sequence dispatcher in <span className="font-mono text-red-400 font-bold">{countdown}s</span>.
+              Sending real-time telemetry, GPS coordinates, and initiating automatic sequence dispatcher in <span className="font-mono text-red-400 font-bold">{panicCountdown}s</span>.
             </p>
           </div>
         </div>

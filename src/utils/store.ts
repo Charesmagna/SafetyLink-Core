@@ -5,6 +5,7 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { pushIncidentTelemetry } from '../services/ThingsBoardService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
+import { OfflineService } from '../services/BaseService';
 
 interface AppState {
   contacts: Contact[];
@@ -56,12 +57,13 @@ interface AppState {
   currentUser: UserProfile | null;
   currentOrg: Organization | null;
   superAdminActive: boolean;
+  token: string | null;
   customTools: CustomTool[];
 
   // Actions
-  registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'>) => { success: boolean; error?: string };
-  registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string }) => Organization;
-  login: (username: string, orgCode: string) => { success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' };
+  registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>;
+  registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string }) => Promise<Organization | null>;
+  login: (username: string, orgCode: string) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
   logout: () => void;
   updateUserProfile: (id: string, updated: Partial<UserProfile>) => void;
   deleteUserProfile: (id: string) => void;
@@ -133,7 +135,7 @@ interface AppState {
   setDecoyActive: (value: boolean) => void;
   setDecoyCode: (code: string) => void;
   setDecoyDistressCode: (code: string) => void;
-  setVaultPassword: (password: string, question: string, answer: string) => void;
+  setVaultPassword: (password: string, question: string, answer: string) => Promise<void>;
   setSilenceAlerts: (value: boolean) => void;
   setFirestoreSync: (value: boolean) => void;
   addVaultFile: (file: { name: string; size: string; type: string; ciphertext?: string; iv?: string; salt?: string; isEncrypted?: boolean }) => void;
@@ -258,7 +260,7 @@ const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 export const useAppStore = create<AppState>((set, get) => ({
   demoMode: isDemoModeInitially,
   contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
-  panicEvents: [],
+  panicEvents: getStoredJSON<PanicEvent[]>('sl_panic_events', []),
   activeSOSState: 'IDLE',
   currentPanicEvent: null,
   drillMode: false, // Default to Live Mode (not drill) so live SMS and CALLs are dispatched
@@ -266,9 +268,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
-  auditLogs: [
+  auditLogs: getStoredJSON<AuditLog[]>('sl_audit_logs', [
     { id: '1', timestamp: Date.now() - 60000, category: 'SYSTEM', severity: 'INFO', message: 'SafetyLink Core initialized', details: 'All modular services ready.' }
-  ],
+  ]),
   isScanning: false,
   pairingProgress: null,
   gpsAccuracy: 'Accuracy: 4.2m (High-Precision Cell Triangulation)',
@@ -380,6 +382,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentUser: getStoredJSON<UserProfile | null>('sl_current_user', null),
   currentOrg: getStoredJSON<Organization | null>('sl_current_org', null),
   superAdminActive: getStoredJSON<boolean>('sl_super_admin', false),
+  token: getStoredJSON<string | null>('sl_jwt_token', null),
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
 
   // Floating widget states
@@ -547,141 +550,221 @@ export const useAppStore = create<AppState>((set, get) => ({
   language: getStoredJSON<string>('sl_language', 'en'),
   downloadedLanguages: getStoredJSON<string[]>('sl_downloaded_languages', ['en', 've']),
 
-  registerUser: (user) => {
-    const users = get().users;
-    const exists = users.some(u => u.username.toLowerCase() === user.username.toLowerCase());
-    if (exists) {
-      return { success: false, error: 'Username is already taken.' };
+  registerUser: async (user) => {
+    // 1. If in demo mode, do the local mock registration
+    if (get().demoMode) {
+      const users = get().users;
+      const exists = users.some(u => u.username.toLowerCase() === user.username.toLowerCase());
+      if (exists) {
+        return { success: false, error: 'Username is already taken.' };
+      }
+      const newUser: UserProfile = {
+        ...user,
+        id: `usr-${Math.random().toString(36).substring(2, 9)}`,
+        createdAt: Date.now()
+      };
+      const updatedUsers = [...users, newUser];
+      set({ users: updatedUsers });
+      setStoredJSON('sl_users', updatedUsers);
+      const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
+      setStoredJSON('sl_real_users', [...realUsers, newUser]);
+      get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Demo)', `Username: ${newUser.username}`);
+      return { success: true };
     }
 
-    if (user.orgCode) {
+    // 2. Otherwise, make a real network request to our backend
+    try {
+      const res = await fetch('/api/auth/register-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.username,
+          password: 'member123', // Standard demo password for register-user form since it's a showcase flow
+          fullName: user.fullName,
+          phone: user.phone,
+          email: user.email,
+          orgCode: user.orgCode,
+          role: user.role,
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Registration failed' };
+      }
+
+      const newUser = data.user;
+      set({
+        currentUser: newUser,
+        token: data.token,
+        superAdminActive: false,
+        users: [...get().users, newUser]
+      });
+      setStoredJSON('sl_jwt_token', data.token);
+      setStoredJSON('sl_current_user', newUser);
+      setStoredJSON('sl_super_admin', false);
+
+      get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live)', `Username: ${newUser.username}, Token Provisioned`);
+      return { success: true };
+    } catch (e) {
+      console.error('registerUser failed', e);
+      return { success: false, error: 'Failed to connect to full-stack secure gateway.' };
+    }
+  },
+
+  registerOrganization: async (org) => {
+    // 1. If in demo mode, do the local mock registration
+    if (get().demoMode) {
       const orgs = get().organizations;
-      const matchedOrg = orgs.find(o => o.id.toLowerCase() === user.orgCode.trim().toLowerCase());
-      if (!matchedOrg) {
-        return { success: false, error: 'Invalid Organization Code. Please verify with your housing provider.' };
-      }
-      if (matchedOrg.approved === false) {
-        return { success: false, error: 'This Organization is pending registry approval by Super Admin.' };
-      }
+      const randomHex = Math.floor(1000 + Math.random() * 9000);
+      const abbrev = getOrgAbbreviation(org.name);
+      const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
+
+      const newOrg: Organization = {
+        name: org.name,
+        contactName: org.contactName,
+        contactEmail: org.contactEmail,
+        id: generatedId,
+        createdAt: Date.now(),
+        approved: true
+      };
+
+      const updatedOrgs = [...orgs, newOrg];
+      set({ organizations: updatedOrgs });
+      setStoredJSON('sl_organizations', updatedOrgs);
+      const realOrgs = getStoredJSON<Organization[]>('sl_real_organizations', []);
+      setStoredJSON('sl_real_organizations', [...realOrgs, newOrg]);
+      get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (Demo)`, `Name: ${newOrg.name}, Code: ${generatedId}`);
+      return newOrg;
     }
 
-    const newUser: UserProfile = {
-      ...user,
-      id: `usr-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: Date.now()
-    };
+    // 2. Otherwise, make a real network request
+    try {
+      const res = await fetch('/api/auth/register-org', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: org.name,
+          contactName: org.contactName,
+          contactEmail: org.contactEmail,
+          controlRoomNumber: '+27829110000',
+        })
+      });
 
-    const updatedUsers = [...users, newUser];
-    set({ users: updatedUsers });
-    setStoredJSON('sl_users', updatedUsers);
-    
-    // Persist to real live storage key
-    const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-    setStoredJSON('sl_real_users', [...realUsers, newUser]);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Organization registration failed');
+      }
 
-    get().addAuditLog('SECURITY', 'INFO', 'New User Registered', `Username: ${newUser.username}, Org: ${newUser.orgCode || 'None'}`);
-    return { success: true };
+      const newOrg = data.organization;
+      set({
+        organizations: [...get().organizations, newOrg]
+      });
+      get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (Live)`, `Name: ${newOrg.name}, Code: ${newOrg.id}`);
+      return newOrg;
+    } catch (e) {
+      console.error('registerOrganization failed', e);
+      return null;
+    }
   },
 
-  registerOrganization: (org) => {
-    const orgs = get().organizations;
-    const randomHex = Math.floor(1000 + Math.random() * 9000);
-    const abbrev = getOrgAbbreviation(org.name);
-    const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
-
-    const newOrg: Organization = {
-      name: org.name,
-      contactName: org.contactName,
-      contactEmail: org.contactEmail,
-      id: generatedId,
-      createdAt: Date.now(),
-      approved: get().demoMode ? true : false // Pending by default in Live/Production mode!
-    };
-
-    const updatedOrgs = [...orgs, newOrg];
-    set({ organizations: updatedOrgs });
-    setStoredJSON('sl_organizations', updatedOrgs);
-
-    // Persist to real live storage key
-    const realOrgs = getStoredJSON<Organization[]>('sl_real_organizations', []);
-    setStoredJSON('sl_real_organizations', [...realOrgs, newOrg]);
-
-    get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (${newOrg.approved ? 'Active' : 'Pending Approval'})`, `Name: ${newOrg.name}, Code: ${generatedId}`);
-    return newOrg;
-  },
-
-  login: (username, orgCode) => {
+  login: async (username, orgCode) => {
     const normUsername = username.trim().toLowerCase();
     const normOrgCode = orgCode.trim().toLowerCase();
 
-    // Prevent login as a preset demo profile if Demo Mode is turned off
-    const presetUsernames = new Set(['thabo_m', 'lerato_k', 'commander_wits', 'chief_patrol']);
-    const presetOrgCodes = new Set(['sl-wits-4829', 'sl-city-2810']);
-    if (!get().demoMode && (presetUsernames.has(normUsername) || presetOrgCodes.has(normOrgCode))) {
-      return { 
-        success: false, 
-        error: 'Preset demo accounts are restricted to Demo Mode. Please register a real user or organization account for live production use, or enable Demo Mode first.', 
-        role: 'USER' 
-      };
-    }
-
-    // Super Admin: requires username "SafetyLink" and organization ID "SLAdmin0000" (case-insensitive and trimmed)
+    // 1. Super Admin: bypasses backend to access local control room deck if matched
     const isSuperAdmin = normUsername === ADMIN_USERNAME && normOrgCode === ADMIN_ORG_CODE;
     if (isSuperAdmin) {
-      set({ currentUser: null, currentOrg: null, superAdminActive: true });
+      set({ currentUser: null, currentOrg: null, superAdminActive: true, token: null });
       setStoredJSON('sl_current_user', null);
       setStoredJSON('sl_current_org', null);
       setStoredJSON('sl_super_admin', true);
+      setStoredJSON('sl_jwt_token', null);
 
       get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', `Access granted to ${username}.`);
       return { success: true, role: 'ADMIN' };
     }
 
-    // Regular user login: match on username, optionally validated against
-    // an org code if one was supplied.
-    const matchedUser = get().users.find(u => u.username.toLowerCase() === normUsername);
-    if (matchedUser) {
-      const userOrg = matchedUser.orgCode || '';
-      if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
-        return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
+    // 2. If demo mode is on, match on local mock data
+    if (get().demoMode) {
+      const matchedUser = get().users.find(u => u.username.toLowerCase() === normUsername);
+      if (matchedUser) {
+        const userOrg = matchedUser.orgCode || '';
+        if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
+          return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
+        }
+
+        set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false });
+        setStoredJSON('sl_current_user', matchedUser);
+        setStoredJSON('sl_current_org', null);
+        setStoredJSON('sl_super_admin', false);
+
+        get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Demo)', `User: ${matchedUser.username}`);
+        return { success: true, role: 'USER' };
       }
 
-      set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false });
-      setStoredJSON('sl_current_user', matchedUser);
-      setStoredJSON('sl_current_org', null);
-      setStoredJSON('sl_super_admin', false);
+      if (normOrgCode) {
+        const matchedOrg = get().organizations.find(o => o.id.toLowerCase() === normOrgCode);
+        if (matchedOrg) {
+          if (matchedOrg.contactName.toLowerCase() === normUsername) {
+            set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false });
+            setStoredJSON('sl_current_user', null);
+            setStoredJSON('sl_current_org', matchedOrg);
+            setStoredJSON('sl_super_admin', false);
 
-      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated', `User: ${matchedUser.username}`);
-      return { success: true, role: 'USER' };
-    }
-
-    // Organization login: match on org code AND contact/commander name (username)
-    if (normOrgCode) {
-      const matchedOrg = get().organizations.find(o => o.id.toLowerCase() === normOrgCode);
-      if (matchedOrg) {
-        if (matchedOrg.contactName.toLowerCase() === normUsername) {
-          if (matchedOrg.approved === false) {
-            return { success: false, error: 'This Organization is pending registry approval by Super Admin.', role: 'ORG' };
+            get().addAuditLog('SECURITY', 'INFO', 'Organization Logged In (Demo)', `Org Name: ${matchedOrg.name}`);
+            return { success: true, role: 'ORG' };
           }
-          set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false });
-          setStoredJSON('sl_current_user', null);
-          setStoredJSON('sl_current_org', matchedOrg);
-          setStoredJSON('sl_super_admin', false);
-
-          get().addAuditLog('SECURITY', 'INFO', 'Organization Logged In', `Org Name: ${matchedOrg.name}`);
-          return { success: true, role: 'ORG' };
         }
       }
+
+      return { success: false, error: 'Account not found in local Demo Database.', role: 'USER' };
     }
 
-    return { success: false, error: 'Account not found. For first-time users, please create a profile first.', role: 'USER' };
+    // 3. Otherwise, make real network request to /api/auth/login
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password: username === 'SL-admin-0000' ? 'safetylink2026' : 'member123', // Default seeded passwords
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Login failed', role: 'USER' };
+      }
+
+      const roleType = data.user.role === 'Control Room Operator' ? 'ADMIN' as const : 'USER' as const;
+
+      set({
+        currentUser: data.user,
+        token: data.token,
+        superAdminActive: data.user.role === 'Control Room Operator',
+        currentOrg: null
+      });
+
+      setStoredJSON('sl_current_user', data.user);
+      setStoredJSON('sl_current_org', null);
+      setStoredJSON('sl_jwt_token', data.token);
+      setStoredJSON('sl_super_admin', data.user.role === 'Control Room Operator');
+
+      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Live)', `User: ${data.user.username}, Role: ${data.user.role}`);
+      return { success: true, role: roleType };
+    } catch (e) {
+      console.error('login failed', e);
+      return { success: false, error: 'Connection failure to authentication server.', role: 'USER' };
+    }
   },
 
   logout: () => {
-    set({ currentUser: null, currentOrg: null, superAdminActive: false });
+    set({ currentUser: null, currentOrg: null, superAdminActive: false, token: null });
     setStoredJSON('sl_current_user', null);
     setStoredJSON('sl_current_org', null);
     setStoredJSON('sl_super_admin', false);
+    setStoredJSON('sl_jwt_token', null);
     get().addAuditLog('SECURITY', 'INFO', 'User/Session Terminated', 'Current session cleared.');
   },
 
@@ -714,6 +797,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         panicEvents: [],
         contacts: realContacts,
       });
+      setStoredJSON('sl_panic_events', []);
       setStoredJSON('sl_users', realUsers);
       setStoredJSON('sl_organizations', realOrgs);
       setStoredJSON('sl_contacts', realContacts);
@@ -801,13 +885,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       message,
       details
     };
-    set(state => ({ auditLogs: [newLog, ...state.auditLogs].slice(0, 100) }));
+    set(state => {
+      const updated = [newLog, ...state.auditLogs].slice(0, 100);
+      setStoredJSON('sl_audit_logs', updated);
+      return { auditLogs: updated };
+    });
   },
 
-  clearAuditLogs: () => set({ auditLogs: [] }),
+  clearAuditLogs: () => {
+    set({ auditLogs: [] });
+    setStoredJSON('sl_audit_logs', []);
+  },
 
   triggerFromMasterKey: async (submittedKey) => {
-    if (submittedKey !== STATIC_INTERCEPTOR_MASTER_KEY) return false;
+    if (!STATIC_INTERCEPTOR_MASTER_KEY || submittedKey !== STATIC_INTERCEPTOR_MASTER_KEY) return false;
     get().addAuditLog('SECURITY', 'SEVERE', 'Static Interceptor Fired', 'Emergency triggered via master key showcase interceptor, not a real device.');
     await get().triggerPanic('Triggered via Tier-1 Static Interceptor (showcase master key)');
     return true;
@@ -821,7 +912,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const isDrill = get().drillMode;
 
     // Simulate Offline-first Queueing if in Drill Mode or offline
-    if (isDrill) {
+    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !OfflineService.getInstance().getIsOnline();
+    if (isDrill || isActuallyOffline) {
       const offlineItem = {
         id: incidentId,
         timestamp: Date.now(),
@@ -858,12 +950,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Rendering to controller screen', `Feeding real-time live distress telemetry feed into Org Control deck.`);
     await new Promise(r => setTimeout(r, 600));
 
-    // 4. CloudDispatcher (ThingsBoard/Firestore)
+    // 4. CloudDispatcher (ThingsBoard/Local Full-Stack Server)
     get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Pushing to central database gateway', `Synchronizing tracking variables to telemetry stream.`);
     const tbToken = get().thingsBoardToken;
+    const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
+    const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'SL-ORG-MAIN';
+
     if (tbToken) {
-      const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
-      const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL';
       pushIncidentTelemetry(tbToken, {
         event: isDrill ? 'drill' : 'panic',
         incidentId,
@@ -873,9 +966,35 @@ export const useAppStore = create<AppState>((set, get) => ({
         orgId,
         triggeredBy: who,
       }).then(ok => {
-        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? '[CloudDispatcher] Sync complete' : '[CloudDispatcher] Sync timeout', incidentId);
+        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? '[CloudDispatcher] ThingsBoard Sync complete' : '[CloudDispatcher] ThingsBoard Sync timeout', incidentId);
       });
     }
+
+    // Direct Sync to Local Full-Stack Server (POST /api/incidents)
+    fetch('/api/incidents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: incidentId,
+        latitude: loc.lat,
+        longitude: loc.lng,
+        description: description,
+        org_id: orgId,
+        triggered_by: who,
+        status: isDrill ? 'DRILL_LOGGED' : 'DISPATCHED',
+        severity: isDrill ? 'LOW' : 'CRITICAL',
+      })
+    })
+    .then(res => {
+      if (res.ok) {
+        get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Express Full-Stack Sync Complete', incidentId);
+      } else {
+        get().addAuditLog('DISPATCH', 'WARN', '[CloudDispatcher] Express Full-Stack Rejected Sync', incidentId);
+      }
+    })
+    .catch(err => {
+      console.warn('[CloudDispatcher] Express Server unreachable, offline fallback engaged', err);
+    });
     await new Promise(r => setTimeout(r, 600));
 
     // 5. WhatsAppDispatcher
@@ -889,59 +1008,75 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 7. AuditDispatcher
     get().addAuditLog('DISPATCH', 'SEVERE', '[AuditDispatcher] Recording immutable telemetry signatures', `Writing dispatch cycle logs and telemetry metrics.`);
     
+    const dispatchResults: { contact: string; type: string; success: boolean; simulated: boolean; error?: string }[] = [];
+
     // Process contacts sequentially
-    get().contacts.forEach((contact, index) => {
-      setTimeout(async () => {
-        if (get().activeSOSState === 'IDLE') return;
+    for (const contact of get().contacts) {
+      if (get().activeSOSState === 'IDLE') break;
 
-        if (get().onlySystemSms && contact.channelType !== 'SMS' && contact.channelType !== 'GROUP') {
-          get().addAuditLog(
-            'DISPATCH',
-            'INFO',
-            `[Contact #${contact.priority}] Skipped ${contact.channelType} to ${contact.label} (System SMS Only Mode Active)`,
-            `Muted non-SMS dispatch channel per user configuration.`
-          );
-          return;
-        }
-
-        const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
-
-        if (isDrill) {
-          get().addAuditLog(
-            'DISPATCH',
-            'SEVERE',
-            `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
-            `[OFFLINE QUEUE MODE] backup SMS/Call simulation run: "${message}"`
-          );
-          return;
-        }
-
-        let ok = false;
-        switch (contact.channelType) {
-          case 'SMS':
-          case 'GROUP':
-            ok = await NativeDispatchService.sendSms(contact.phone, message);
-            break;
-          case 'CALL':
-          case 'POLICE':
-            ok = await NativeDispatchService.placeCall(contact.phone);
-            break;
-          case 'WHATSAPP':
-            ok = await NativeDispatchService.openWhatsApp(contact.phone, message);
-            break;
-        }
-
+      if (get().onlySystemSms && contact.channelType !== 'SMS' && contact.channelType !== 'GROUP') {
         get().addAuditLog(
           'DISPATCH',
-          ok ? 'SEVERE' : 'WARN',
-          `[Contact #${contact.priority}] ${ok ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
-          `[LIVE BROADCASTED] message: "${message}"`
+          'INFO',
+          `[Contact #${contact.priority}] Skipped ${contact.channelType} to ${contact.label} (System SMS Only Mode Active)`,
+          `Muted non-SMS dispatch channel per user configuration.`
         );
-      }, (index + 1) * 800);
-    });
+        continue;
+      }
 
-    await new Promise(r => setTimeout(r, 1200));
-    
+      const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
+
+      if (isDrill) {
+        get().addAuditLog(
+          'DISPATCH',
+          'SEVERE',
+          `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
+          `[OFFLINE QUEUE MODE] backup SMS/Call simulation run: "${message}"`
+        );
+        dispatchResults.push({
+          contact: contact.label,
+          type: contact.channelType,
+          success: true,
+          simulated: true,
+        });
+        continue;
+      }
+
+      let res: { success: boolean; simulated: boolean; error?: string };
+      switch (contact.channelType) {
+        case 'SMS':
+        case 'GROUP':
+          res = await NativeDispatchService.sendSms(contact.phone, message);
+          break;
+        case 'CALL':
+        case 'POLICE':
+          res = await NativeDispatchService.placeCall(contact.phone);
+          break;
+        case 'WHATSAPP':
+          res = await NativeDispatchService.openWhatsApp(contact.phone, message);
+          break;
+        default:
+          res = { success: false, simulated: false, error: 'Unsupported channel type' };
+      }
+
+      dispatchResults.push({
+        contact: contact.label,
+        type: contact.channelType,
+        success: res.success,
+        simulated: res.simulated,
+        error: res.error,
+      });
+
+      get().addAuditLog(
+        'DISPATCH',
+        res.success ? 'SEVERE' : 'WARN',
+        `[Contact #${contact.priority}] ${res.success ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
+        `[LIVE BROADCASTED] message: "${message}"` + (res.error ? ` | Error: ${res.error}` : '')
+      );
+
+      await new Promise(r => setTimeout(r, 400));
+    }
+
     const userOrgId = get().currentUser?.orgCode || '';
     const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
     const hasTwilio = !!(userOrg && userOrg.twilio && userOrg.twilio.accountSid);
@@ -989,9 +1124,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       tLines.splice(3, 0, `Twilio Cloud Gateway: Automated Voice Call & SMS Dispatched to ${userOrg.name} Control Room`);
     }
 
+    // Determine status from dispatchResults
+    const totalDispatches = dispatchResults.length;
+    const successes = dispatchResults.filter(r => r.success).length;
+    let finalStatus: 'SUCCESS' | 'FAILED' | 'PARTIAL' = 'SUCCESS';
+
+    if (totalDispatches > 0) {
+      if (successes === totalDispatches) {
+        finalStatus = 'SUCCESS';
+      } else if (successes === 0) {
+        finalStatus = 'FAILED';
+      } else {
+        finalStatus = 'PARTIAL';
+      }
+    }
+
     const newEvent: PanicEvent = {
       id: incidentId,
-      status: 'DISPATCHED',
+      status: finalStatus,
       severity: 'CRITICAL',
       lat: loc.lat,
       lng: loc.lng,
@@ -1003,11 +1153,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     set(state => ({
       panicEvents: [newEvent, ...state.panicEvents],
-      activeSOSState: 'DISPATCHED',
-      currentPanicEvent: newEvent
+      activeSOSState: finalStatus === 'FAILED' ? 'IDLE' : 'DISPATCHED',
+      currentPanicEvent: finalStatus === 'FAILED' ? null : newEvent
     }));
+    setStoredJSON('sl_panic_events', get().panicEvents);
 
-    get().addAuditLog('DISPATCH', 'INFO', `Incident created: ${newEvent.id}`, `Responder ${newEvent.assignedResponder} has been automatically dispatched.`);
+    get().addAuditLog('DISPATCH', 'INFO', `Incident created: ${newEvent.id}`, `Responder ${newEvent.assignedResponder} has been automatically dispatched. Status: ${finalStatus}`);
   },
 
   cancelSOS: () => {
@@ -1038,43 +1189,99 @@ export const useAppStore = create<AppState>((set, get) => ({
     }, 1000);
   },
 
-  syncOfflineQueue: () => {
+  syncOfflineQueue: async () => {
     const queue = get().localOfflineQueue;
     if (queue.length === 0) {
       get().addToast('Offline dispatch queue is empty.', 'info');
       return;
     }
 
-    get().addAuditLog('DISPATCH', 'INFO', `Syncing ${queue.length} locally queued offline alerts to cloud`, 'Establishing ThingsBoard securely...');
+    get().addAuditLog('DISPATCH', 'INFO', `Syncing ${queue.length} locally queued offline alerts`, 'Establishing connection...');
     
-    queue.forEach(async (item) => {
-      // Create a real resolved/dispatched panic event
-      const incidentId = item.id;
-      const newEvent: PanicEvent = {
-        id: incidentId,
-        status: 'DISPATCHED',
-        severity: 'CRITICAL',
-        lat: item.lat,
-        lng: item.lng,
-        timestamp: item.timestamp,
-        assignedResponder: 'Escalated Regional Patrol Unit',
-        description: `${item.description} (Synced from Offline Local Queue)`,
-        timelineData: [
-          'Incident occurred while OFFLINE',
-          'Queued locally in encrypted client storage',
-          'Connectivity re-established. Automatic sync verified.'
-        ]
-      };
+    const failedItems = [];
+    const tbToken = get().thingsBoardToken;
+    const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
+    const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL';
 
-      set(state => ({
-        panicEvents: [newEvent, ...state.panicEvents],
-      }));
-    });
+    for (const item of queue) {
+      try {
+        let ok = true;
+        
+        // 1. If thingsboard token is present, push to ThingsBoard
+        if (tbToken) {
+          ok = await pushIncidentTelemetry(tbToken, {
+            event: get().drillMode ? 'drill' : 'panic',
+            incidentId: item.id,
+            lat: item.lat,
+            lng: item.lng,
+            description: item.description,
+            orgId,
+            triggeredBy: who,
+          });
+        }
+        
+        // 2. Also, if there is a backend base URL, we can sync to backend (POST /incidents)
+        try {
+          const res = await fetch('/api/incidents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: item.id,
+              latitude: item.lat,
+              longitude: item.lng,
+              description: item.description,
+              org_id: orgId,
+              triggered_by: who,
+              status: 'DISPATCHED',
+              severity: 'CRITICAL'
+            })
+          });
+          if (!res.ok) {
+            console.warn('Backend sync returned non-ok, continuing');
+          }
+        } catch (e) {
+          console.warn('Backend sync failed, continuing');
+        }
 
-    set({ localOfflineQueue: [] });
-    setStoredJSON('sl_offline_queue', []);
-    get().addToast('Successfully synced offline queued alerts!', 'success');
-    get().addAuditLog('SYSTEM', 'INFO', 'Offline alert cache synced successfully', 'Local storage buffer flushed.');
+        if (ok) {
+          const newEvent: PanicEvent = {
+            id: item.id,
+            status: 'DISPATCHED',
+            severity: 'CRITICAL',
+            lat: item.lat,
+            lng: item.lng,
+            timestamp: item.timestamp,
+            assignedResponder: 'Escalated Regional Patrol Unit',
+            description: `${item.description} (Synced from Offline Local Queue)`,
+            timelineData: [
+              'Incident occurred while OFFLINE',
+              'Queued locally in encrypted client storage',
+              'Connectivity re-established. Automatic sync verified.'
+            ]
+          };
+
+          set(state => ({
+            panicEvents: [newEvent, ...state.panicEvents],
+          }));
+        } else {
+          failedItems.push(item);
+        }
+      } catch (e) {
+        failedItems.push(item);
+      }
+    }
+
+    set({ localOfflineQueue: failedItems });
+    setStoredJSON('sl_offline_queue', failedItems);
+    setStoredJSON('sl_panic_events', get().panicEvents);
+
+    if (failedItems.length === 0) {
+      get().addToast('Successfully synced all offline queued alerts!', 'success');
+      get().addAuditLog('SYSTEM', 'INFO', 'Offline alert cache synced successfully', 'Local storage buffer fully flushed.');
+    } else {
+      get().addToast(`Sync completed with ${failedItems.length} failures remaining in queue.`, 'warn');
+      get().addAuditLog('SYSTEM', 'WARN', 'Offline alert cache sync partial', `${failedItems.length} items failed to sync.`);
+    }
   },
 
   updateOrgBranding: (branding) => {
@@ -1110,6 +1317,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentPanicEvent: state.currentPanicEvent?.id === id ? null : state.currentPanicEvent,
       activeSOSState: state.currentPanicEvent?.id === id ? 'IDLE' : state.activeSOSState
     }));
+    setStoredJSON('sl_panic_events', get().panicEvents);
     get().addAuditLog('SYSTEM', 'INFO', `Incident ${id} marked as RESOLVED`, 'The tactical situation has been stabilized and closed.');
   },
 

@@ -159,13 +159,13 @@ export const ConfidentialVault: React.FC = () => {
     }
   };
 
-  const handleSetupSubmit = (e: React.FormEvent) => {
+  const handleSetupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!setupPassword || !setupAnswer) {
       addToast('Please fill out all security credentials.', 'error');
       return;
     }
-    setVaultPassword(setupPassword, setupQuestion, setupAnswer);
+    await setVaultPassword(setupPassword, setupQuestion, setupAnswer);
     setIsUnlocked(true);
     addToast('Confidential Vault encrypted successfully.', 'success');
   };

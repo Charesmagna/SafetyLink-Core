@@ -47,6 +47,13 @@ public class PanicService extends Service {
     private boolean isCountdownActive = false;
     private TextView countdownTextView;
 
+    private String pendingPhone = "+15550199";
+    private String pendingDescription = "ALERT! SafetyLink SOS Triggered. Location: [Simulated GPS Core] • Status: Critical distress.";
+    private double pendingLat = -26.2041;
+    private double pendingLng = 28.0473;
+    private String pendingOrgId = "SL-ORG-MAIN";
+    private String pendingTriggeredBy = "Hardware iTag Keyfob / Native Widget";
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -63,6 +70,28 @@ public class PanicService extends Service {
         if (intent != null) {
             String action = intent.getAction();
             Log.i(TAG, "Received Action: " + action);
+
+            if (intent.hasExtra("phone")) {
+                pendingPhone = intent.getStringExtra("phone");
+            }
+            if (intent.hasExtra("description")) {
+                pendingDescription = intent.getStringExtra("description");
+            } else if (intent.hasExtra("message")) {
+                pendingDescription = intent.getStringExtra("message");
+            }
+            if (intent.hasExtra("latitude")) {
+                pendingLat = intent.getDoubleExtra("latitude", pendingLat);
+            }
+            if (intent.hasExtra("longitude")) {
+                pendingLng = intent.getDoubleExtra("longitude", pendingLng);
+            }
+            if (intent.hasExtra("orgId")) {
+                pendingOrgId = intent.getStringExtra("orgId");
+            }
+            if (intent.hasExtra("triggeredBy")) {
+                pendingTriggeredBy = intent.getStringExtra("triggeredBy");
+            }
+
             if ("com.aistudio.safetylink.ACTION_TRIGGER_PANIC".equals(action)) {
                 startPanicSequence();
             } else if ("com.aistudio.safetylink.ACTION_CANCEL_PANIC".equals(action)) {
@@ -124,18 +153,39 @@ public class PanicService extends Service {
         removeOverlay();
         Log.e(TAG, "COUNTDOWN FINISHED. DISPATCHING COVERT EMERGENCY RESPONDERS!");
 
-        // Dispatch alerts via Twilio/CockroachDB
-        EmergencyService.getInstance().dispatchEmergency(
-                "+15550199", // Fallback responder number
-                "ALERT! SafetyLink SOS Triggered. Location: [Simulated GPS Core] • Status: Critical distress.",
-                "INCIDENT-" + System.currentTimeMillis(),
-                -26.2041, // Sample latitude
-                28.0473,  // Sample longitude
-                "SL-ORG-MAIN",
-                "Hardware iTag Keyfob / Native Widget"
-        );
+        String incidentId = "INCIDENT-" + System.currentTimeMillis();
 
-        updateNotificationState("🚨 SOS ACTIVE BROADCAST", "Covert distress channels have been alerted!");
+        updateNotificationState("🚨 SOS DISPATCHING", "Connecting to emergency dispatch routing...");
+
+        // Dispatch alerts via backend with full DispatchCallback
+        EmergencyService.getInstance().dispatchEmergency(
+                pendingPhone,
+                pendingDescription,
+                incidentId,
+                pendingLat,
+                pendingLng,
+                pendingOrgId,
+                pendingTriggeredBy,
+                new EmergencyService.DispatchCallback() {
+                    @Override
+                    public void onResult(EmergencyService.DispatchResult result) {
+                        String statusText;
+                        String detailText;
+                        if (result.smsOk && result.dbOk) {
+                            statusText = "🚨 SOS STATUS: SUCCESS";
+                            detailText = "SMS and backend database sync successfully completed.";
+                        } else if (!result.smsOk && !result.dbOk) {
+                            statusText = "🚨 SOS STATUS: FAILED";
+                            detailText = "All dispatch channels failed. Local offline queue retained.";
+                        } else {
+                            statusText = "🚨 SOS STATUS: PARTIAL";
+                            detailText = "SMS: " + (result.smsOk ? "SENT" : "FAIL") + " | Web: " + (result.dbOk ? "SENT" : "FAIL");
+                        }
+                        updateNotificationState(statusText, detailText);
+                        Log.i(TAG, "Dispatch Result - SMS: " + result.smsOk + ", DB: " + result.dbOk);
+                    }
+                }
+        );
     }
 
     private void showOverlayCountdown() {

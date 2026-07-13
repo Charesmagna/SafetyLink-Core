@@ -57,7 +57,7 @@ export const AuthScreen: React.FC = () => {
   const [orgError, setOrgError] = useState('');
   const [orgSuccessMsg, setOrgSuccessMsg] = useState('');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
@@ -66,13 +66,13 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    const res = login(loginUsername, loginOrgCode);
+    const res = await login(loginUsername, loginOrgCode);
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     }
   };
 
-  const handleUserRegister = (e: React.FormEvent) => {
+  const handleUserRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setUserError('');
     setUserSuccessMsg('');
@@ -82,7 +82,7 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    const res = registerUser({
+    const res = await registerUser({
       username: userUsername,
       fullName: userFullName,
       phone: userPhone,
@@ -136,7 +136,7 @@ export const AuthScreen: React.FC = () => {
     }, 1200);
   };
 
-  const handleOrgRegister = (e: React.FormEvent) => {
+  const handleOrgRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setOrgError('');
     setOrgSuccessMsg('');
@@ -151,12 +151,17 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    const newOrg = registerOrganization({
+    const newOrg = await registerOrganization({
       name: orgName,
       contactName: orgContactName,
       contactEmail: orgEmail,
       id: generatedOrgId
     });
+
+    if (!newOrg) {
+      setOrgError('Failed to register organization.');
+      return;
+    }
 
     if (newOrg.approved === false) {
       setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Awaiting registry approval from Super Admin...`);
@@ -178,8 +183,8 @@ export const AuthScreen: React.FC = () => {
       const registeredContactName = orgContactName;
       const registeredOrgId = generatedOrgId;
 
-      setTimeout(() => {
-        login(registeredContactName, registeredOrgId);
+      setTimeout(async () => {
+        await login(registeredContactName, registeredOrgId);
         setOrgSuccessMsg('');
         setOrgName('');
         setOrgContactName('');
@@ -366,11 +371,11 @@ export const AuthScreen: React.FC = () => {
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setLoginUsername(p.username);
                           setLoginOrgCode(p.orgCode);
                           setLoginError('');
-                          const res = login(p.username, p.orgCode);
+                          const res = await login(p.username, p.orgCode);
                           if (!res.success) {
                             setLoginError(res.error || 'Failed to auto-authenticate.');
                           }
