@@ -678,3 +678,25 @@ input[type="number"], input[type="tel"], input.font-mono {
   z-index: 5 !important;
 }
 
+/* 11. High-Priority Emergency Overlay Countdown Circle */
+.countdown-circle-svg {
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.countdown-circle-bar {
+  stroke-dasharray: 283; /* 2 * PI * r (r=45) => ~282.7 */
+  stroke-dashoffset: 283;
+  animation: countdown-anim 5s linear forwards;
+}
+
+@keyframes countdown-anim {
+  0% {
+    stroke-dashoffset: 283;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
