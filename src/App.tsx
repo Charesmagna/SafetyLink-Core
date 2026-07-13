@@ -25,7 +25,8 @@ import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { CommerceCenter } from './components/CommerceCenter';
 import { PermissionGateOverlay } from './components/PermissionGateOverlay';
-import { EmergencyOverlay } from './components/EmergencyOverlay';
+import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
+import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { AdvancedSubsystems } from './components/AdvancedSubsystems';
@@ -812,7 +813,10 @@ const App: React.FC = () => {
       <PermissionGateOverlay />
 
       {/* High-Priority Emergency Overlay */}
-      <EmergencyOverlay />
+      <ForcedCountdownOverlay />
+
+      {/* Critical Wearable Device Alert Sentinel Overlay */}
+      <DeviceAlertOverlay />
 
       {/* Primary Dynamic App Screen Container */}
       <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden z-10">

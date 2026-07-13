@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
 import { Send, X } from 'lucide-react';
-import { LogoSetPart } from './LogoSetPart';
+import klevaLogo from '../assets/images/kleva.png';
 
 export const KlevaBot: React.FC = () => {
   const { addAuditLog } = useAppStore();
@@ -145,7 +145,11 @@ export const KlevaBot: React.FC = () => {
         <div className="absolute inset-0 rounded-full border border-blue-500/20 animate-pulse pointer-events-none" />
         <div className="absolute inset-1 rounded-full border border-dashed border-emerald-500/30 animate-spin" style={{ animationDuration: '20s' }} />
         
-        <LogoSetPart part="mascot" size={44} rounded="full" showBorder={false} className="shadow-[0_0_10px_rgba(59,130,246,0.3)] animate-pulse" />
+        <img
+          src={klevaLogo}
+          alt="K'lev.ai Mascot"
+          className="w-[44px] h-[44px] rounded-full object-cover shadow-[0_0_10px_rgba(59,130,246,0.3)] animate-pulse"
+        />
       </motion.button>
 
       {/* Floating Chat Drawer Panel */}
@@ -165,7 +169,13 @@ export const KlevaBot: React.FC = () => {
               
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2.5 text-left">
-                  <LogoSetPart part="mascot" size={36} rounded="xl" />
+                  <div className="w-[36px] h-[36px] rounded-xl overflow-hidden border border-slate-800/80 bg-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center justify-center">
+                    <img
+                      src={klevaLogo}
+                      alt="K'lev.ai Logo"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <div>
                     <h3 className="text-xs font-black tracking-widest font-mono text-slate-100 uppercase">
                       K'LEVA.I SAFETY HUB
@@ -214,7 +224,11 @@ export const KlevaBot: React.FC = () => {
               {isTyping && (
                 <div className="flex mr-auto items-center gap-2">
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 6, ease: "linear" }}>
-                    <LogoSetPart part="mascot" size={24} rounded="full" showBorder={false} />
+                    <img
+                      src={klevaLogo}
+                      alt="K'lev.ai Typing"
+                      className="w-[24px] h-[24px] rounded-full object-cover"
+                    />
                   </motion.div>
                   <div className="p-3 bg-slate-900 border border-slate-850 text-slate-500 text-xs rounded-2xl rounded-bl-none font-mono italic animate-pulse">
                     K'lev.ai is formulating SA safety parameters...

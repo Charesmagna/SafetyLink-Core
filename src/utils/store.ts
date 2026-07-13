@@ -1480,7 +1480,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       { serviceUuid: device.triggerServiceUuid, characteristicUuid: device.triggerCharacteristicUuid },
       () => {
         get().addAuditLog('BLE', 'SEVERE', 'Hardware Button Press Detected', `Real notification received from ${mac}`);
-        get().triggerPanic(`Hardware trigger: BLE button ${mac} pressed.`);
+        get().startMultiStagePanic('Hardware trigger: BLE button pressed', 10);
       },
       () => {
         set(state => ({

@@ -143,47 +143,22 @@ export const BLEScanner: React.FC = () => {
           }, 3500);
         };
 
-        if (val === 1) {
-          // Single Click: 10s countdown SOS
-          store.addAuditLog('BLE', 'SEVERE', 'iTAG Single Click SOS (1x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-          store.startMultiStagePanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (Single Click Hardware Protocol)`, 10);
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            try {
-              window.speechSynthesis.cancel();
-              window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency countdown initiated. 10 seconds to cancel."));
-            } catch (e) {}
-          }
-          // Long vibration + beep on countdown complete
-          setTimeout(() => {
-            if (store.activeSOSState !== 'IDLE') {
-              if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
-              lizzyFollowUp('SOS');
-            }
-          }, 10500);
-        } else if (val === 2) {
-          // Double Click: abort if active, else trigger
-          if (store.activeSOSState !== 'IDLE' || store.panicCountdown !== null) {
-            store.addAuditLog('BLE', 'WARN', 'iTAG Safe Mode Cancel (2x click)', `De-escalation trigger received from physical button ${address}.`);
-            store.cancelSOS();
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              try {
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(new SpeechSynthesisUtterance("S O S cancelled successfully"));
-              } catch (e) {}
-            }
-          } else {
-            store.addAuditLog('BLE', 'SEVERE', 'iTAG Double Click SOS (2x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-            store.triggerPanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (Double Click Hardware Protocol)`);
-            if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
-            lizzyFollowUp('Emergency');
-          }
-        } else if (val >= 3) {
-          // Triple Click: bypass countdown, instant dispatch
-          store.addAuditLog('BLE', 'SEVERE', 'iTAG Tactical SOS (3x click)', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-          store.triggerPanic(`Silent tactical SOS broadcast triggered via physical iTAG keyfob (3x Click Hardware Protocol)`);
-          if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
-          lizzyFollowUp('Tactical SOS');
+        // Single, standardized action on any click code: 10s countdown SOS
+        store.addAuditLog('BLE', 'SEVERE', 'iTAG Physical Button Press', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
+        store.startMultiStagePanic("SOS triggered via iTAG button", 10);
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+          try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency countdown initiated. 10 seconds to cancel."));
+          } catch (e) {}
         }
+        // Long vibration + beep on countdown complete
+        setTimeout(() => {
+          if (store.activeSOSState !== 'IDLE') {
+            if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
+            lizzyFollowUp('SOS');
+          }
+        }, 10500);
       },
       (battery) => {
         useAppStore.setState(state => ({
@@ -631,49 +606,18 @@ export const BLEScanner: React.FC = () => {
                 {isConnected && (
                   <div className="bg-slate-950/40 p-2 rounded-xl border border-slate-900 flex items-center justify-between gap-1.5 text-[8.5px] font-mono mt-1">
                     <span className="text-slate-500 font-bold uppercase tracking-wider">Simulate Click:</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const store = useAppStore.getState();
-                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Single Click', `Simulated 1x press for ${device.macAddress}`);
-                          store.startMultiStagePanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Single Click (Test Mode)`, 10);
-                          useAppStore.getState().addToast("Simulated single click: 10s SOS initiated.", "warn");
-                        }}
-                        className="px-2 py-0.5 bg-slate-900 hover:bg-blue-900/40 text-blue-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
-                      >
-                        1x Click
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const store = useAppStore.getState();
-                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Double Click', `Simulated 2x press for ${device.macAddress}`);
-                          if (store.activeSOSState !== 'IDLE' || store.panicCountdown !== null) {
-                            store.cancelSOS();
-                            useAppStore.getState().addToast("SOS Cancelled via simulated double click.", "info");
-                          } else {
-                            store.triggerPanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Double Click (Test Mode)`);
-                            useAppStore.getState().addToast("Simulated double click: Instant SOS dispatched.", "error");
-                          }
-                        }}
-                        className="px-2 py-0.5 bg-slate-900 hover:bg-emerald-900/40 text-emerald-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
-                      >
-                        2x Click
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const store = useAppStore.getState();
-                          store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Triple Click', `Simulated 3x press for ${device.macAddress}`);
-                          store.triggerPanic(`Silent tactical SOS broadcast triggered via simulated physical keyfob Triple Click (Test Mode)`);
-                          useAppStore.getState().addToast("Simulated triple click: Instant SOS dispatched.", "error");
-                        }}
-                        className="px-2 py-0.5 bg-slate-900 hover:bg-red-950 text-red-400 border border-slate-800 rounded font-bold uppercase tracking-wide cursor-pointer"
-                      >
-                        3x Click
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const store = useAppStore.getState();
+                        store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Press', `Simulated physical button press for ${device.macAddress}`);
+                        store.startMultiStagePanic("SOS triggered via simulated iTAG button", 10);
+                        useAppStore.getState().addToast("Simulated press: 10s countdown initiated.", "warn");
+                      }}
+                      className="px-3 py-1 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded font-bold uppercase tracking-wide cursor-pointer"
+                    >
+                      Simulate Press
+                    </button>
                   </div>
                 )}
 
@@ -698,85 +642,7 @@ export const BLEScanner: React.FC = () => {
         )}
       </div>
 
-      {/* Interactive iTAG Multi-Click Profile Action Mapper */}
-      <div className="mt-5 p-4 bg-slate-950/60 border border-slate-900 rounded-2xl space-y-3.5 text-left font-mono relative z-10">
-        <div>
-          <span className="text-[7.5px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-            FEATURE PROGRAMMED
-          </span>
-          <h4 className="text-[10px] font-black text-slate-100 uppercase tracking-wider mt-1.5 flex items-center gap-1.5">
-            📟 iTAG Multi-Click Sequence Mapping
-          </h4>
-          <p className="text-[9px] text-slate-400 mt-0.5 leading-relaxed">
-            Configure different system responses based on physical keyfob press intervals. Protects against accidental false triggers.
-          </p>
-        </div>
 
-        {/* Action profile grid */}
-        <div className="space-y-2 text-[9px]">
-          {/* 1-Click Action */}
-          <div className="p-2.5 bg-slate-900/50 border border-slate-850 rounded-xl flex items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <span className="font-extrabold text-blue-400 uppercase tracking-wider">● Single Click (1x Press)</span>
-              <p className="text-[8px] text-slate-500 leading-normal">Pings local receiver nodes to verify BLE RSSI connectivity and report active battery level.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const logs = useAppStore.getState();
-                logs.addAuditLog('BLE', 'INFO', 'iTAG Diagnostic Ping (1x Click)', 'RSSI Signal: -55 dBm, Status: Fully Paired & Connected. Battery: 94%.');
-                alert("iTAG Heartbeat Acknowledged: Connection is secure. Battery at 94%.");
-              }}
-              className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/35 text-blue-300 font-bold uppercase tracking-wide rounded-lg border border-blue-500/20 text-[8px]"
-            >
-              Test 1x
-            </button>
-          </div>
-
-          {/* 2-Clicks Action */}
-          <div className="p-2.5 bg-slate-900/50 border border-slate-850 rounded-xl flex items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <span className="font-extrabold text-amber-400 uppercase tracking-wider">●● Double Click (2x Press)</span>
-              <p className="text-[8px] text-slate-500 leading-normal">Safe Mode check-in. Instantly aborts/de-escalates any active accidental panic countdown.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const logs = useAppStore.getState();
-                logs.addAuditLog('BLE', 'WARN', 'iTAG Safe Mode Check-In (2x Click)', 'User canceled SOS broadcast via Wearable hardware override.');
-                if (logs.activeSOSState !== 'IDLE') {
-                  logs.cancelSOS();
-                  alert("Safe Mode Override: Active SOS cancelled successfully!");
-                } else {
-                  alert("Safe Mode Check-In: App is currently secure. No active panics to cancel.");
-                }
-              }}
-              className="px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/35 text-amber-300 font-bold uppercase tracking-wide rounded-lg border border-amber-500/20 text-[8px]"
-            >
-              Test 2x
-            </button>
-          </div>
-
-          {/* 3-Clicks Action (The specific 3-click step) */}
-          <div className="p-2.5 bg-red-950/15 border border-red-500/20 rounded-xl flex items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <span className="font-extrabold text-red-400 uppercase tracking-wider animate-pulse">●●● Triple Click (3x Press / Step)</span>
-              <p className="text-[8px] text-slate-400 leading-normal">TACTICAL SOS TRIGGER. Bypasses all countdown filters to launch cellular SMS dispatch sequence instantly.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const logs = useAppStore.getState();
-                logs.addAuditLog('BLE', 'SEVERE', 'iTAG SOS Broadcast Verified (3x Click)', '3-click hardware step verified. Initiating immediate dispatcher enroute!');
-                logs.triggerPanic("Immediate silent SOS triggered via physical iTAG keyfob (3x Click Hardware Protocol)");
-              }}
-              className="px-2.5 py-1 bg-red-600/20 hover:bg-red-500 text-white font-bold uppercase tracking-wide rounded-lg border border-red-500/30 text-[8px]"
-            >
-              Test 3x
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* SafetyLink Active Connection Keep-Alive Background Service Explanation Panel */}
       <div className="mt-5 p-4 bg-slate-950/60 border border-slate-900 rounded-2xl text-left font-mono relative z-10 space-y-3">
