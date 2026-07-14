@@ -23,10 +23,28 @@ export const OrgDashboard: React.FC = () => {
     localOfflineQueue,
     syncOfflineQueue,
     approvePendingUser,
-    rejectPendingUser
+    rejectPendingUser,
+    bleDevices,
+    thingsBoardToken
   } = useAppStore();
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
+
+  const connectedBleCount = bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
+  const totalBleCount = bleDevices.length;
+  const bleStatusLabel = totalBleCount === 0
+    ? 'NO DEVICES PAIRED (DEMO)'
+    : `${connectedBleCount}/${totalBleCount} ONLINE`;
+  const bleStatusColor = totalBleCount === 0
+    ? 'text-slate-500'
+    : connectedBleCount === totalBleCount
+      ? 'text-emerald-400'
+      : connectedBleCount > 0
+        ? 'text-yellow-400'
+        : 'text-red-400';
+
+  const telemetryStatusLabel = thingsBoardToken ? 'CONNECTED' : 'NOT CONFIGURED (DEMO)';
+  const telemetryStatusColor = thingsBoardToken ? 'text-emerald-400' : 'text-slate-500';
 
   const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio'>('dispatch');
   const [searchTerm, setSearchTerm] = useState('');
@@ -1102,15 +1120,15 @@ export const OrgDashboard: React.FC = () => {
                 <div className="space-y-2.5 font-mono text-[9px]">
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">BLE iTAG BEACON STATUS</span>
-                    <span className="text-emerald-400 font-bold">100% ONLINE (78/78)</span>
+                    <span className={`${bleStatusColor} font-bold`}>{bleStatusLabel}</span>
                   </div>
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">SUBSCRIBER MOBILE TELEMETRY LINK</span>
-                    <span className="text-emerald-400 font-bold">98.7% SIGNAL (77/78)</span>
+                    <span className="text-slate-500 font-bold">DEMO — no subscriber telemetry source</span>
                   </div>
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">CENTRAL THINGSBOARD SERVER SYNC</span>
-                    <span className="text-emerald-400 font-bold">STABLE (HTTP 200)</span>
+                    <span className={`${telemetryStatusColor} font-bold`}>{telemetryStatusLabel}</span>
                   </div>
                 </div>
               </div>

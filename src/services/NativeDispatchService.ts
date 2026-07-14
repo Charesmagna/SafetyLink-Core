@@ -4,6 +4,7 @@ export interface EmergencyDispatchPlugin {
   sendSms(options: { phone: string; message: string }): Promise<{ sent: boolean; error?: string }>;
   placeCall(options: { phone: string }): Promise<{ dialed: boolean; error?: string }>;
   openWhatsApp(options: { phone: string; message: string }): Promise<{ opened: boolean; requiresManualSend: boolean; error?: string }>;
+  forceUnlockAndWake(): Promise<{ woke: boolean; error?: string }>;
 }
 
 const NativeEmergencyDispatch = registerPlugin<EmergencyDispatchPlugin>('EmergencyDispatch');
@@ -85,7 +86,22 @@ export class NativeDispatchService {
     console.log("[NativeDispatch] High-intensity distress haptics / vibration sequence engaged.");
   }
 
+  /**
+   * Acquires a wake lock and dismisses the keyguard so the panic UI is
+   * visible on a locked/sleeping device. Native only — no-op in browser.
+   */
   static async forceUnlockAndWake(): Promise<void> {
-    console.log("[NativeDispatch] Android background force-unlock and keyguard-bypass routine triggered.");
+    if (!this.isNative) {
+      console.log("[NativeDispatch:web-sim] forceUnlockAndWake — no-op in browser.");
+      return;
+    }
+    try {
+      const res = await NativeEmergencyDispatch.forceUnlockAndWake();
+      if (!res.woke) {
+        console.warn('[NativeDispatch] forceUnlockAndWake returned woke=false:', res.error);
+      }
+    } catch (e) {
+      console.error('[NativeDispatch] forceUnlockAndWake failed', e);
+    }
   }
 }

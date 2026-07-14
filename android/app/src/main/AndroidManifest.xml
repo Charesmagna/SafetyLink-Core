@@ -111,6 +111,7 @@
     
     <!-- Wake lock: keep CPU running between BLE events -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
     
     <!-- Request Ignore Battery Optimizations for Samsung/Xiaomi survival -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />

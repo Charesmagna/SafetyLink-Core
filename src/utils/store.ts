@@ -938,17 +938,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeSOSState: 'ESCALATING' });
     
     // --- Modular Dispatch Engine Pipeline ---
-    // 1. SmsDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[SmsDispatcher] Executing channel broadcast', `Sending cell SMS with geolocation maps linkage to primary contacts.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 2. PushDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 3. DashboardDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Rendering to controller screen', `Feeding real-time live distress telemetry feed into Org Control deck.`);
-    await new Promise(r => setTimeout(r, 600));
+    // [SmsDispatcher], [WhatsAppDispatcher], [VoiceDispatcher] logs removed —
+    // the real contact loop below is the single source of truth for those channels.
+    // [PushDispatcher] handled via LocalNotificationService (real on-device notification).
+    await LocalNotificationService.updateStatusNotification(
+      true, 0, 'ESCALATING', `${loc.lat.toFixed(4)},${loc.lng.toFixed(4)}`, get().bleDevices.filter(d => d.connectionState === 'CONNECTED').length
+    );
 
     // 4. CloudDispatcher (ThingsBoard/Local Full-Stack Server)
     get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Pushing to central database gateway', `Synchronizing tracking variables to telemetry stream.`);
@@ -997,16 +992,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
     await new Promise(r => setTimeout(r, 600));
 
-    // 5. WhatsAppDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[WhatsAppDispatcher] Opening secure chat template', `Spawning WhatsApp protocol string with coordinate tokens.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 6. VoiceDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[VoiceDispatcher] Launching speed-dial sequence', `Synthesizing automated voice backup call lines.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 7. AuditDispatcher
-    get().addAuditLog('DISPATCH', 'SEVERE', '[AuditDispatcher] Recording immutable telemetry signatures', `Writing dispatch cycle logs and telemetry metrics.`);
+    // [WhatsAppDispatcher] and [VoiceDispatcher] pre-loop stubs removed — real dispatch happens in the contact loop below.
+    // [AuditDispatcher] summary emitted after loop with real counts.
     
     const dispatchResults: { contact: string; type: string; success: boolean; simulated: boolean; error?: string }[] = [];
 
@@ -1071,11 +1058,24 @@ export const useAppStore = create<AppState>((set, get) => ({
         'DISPATCH',
         res.success ? 'SEVERE' : 'WARN',
         `[Contact #${contact.priority}] ${res.success ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
-        `[LIVE BROADCASTED] message: "${message}"` + (res.error ? ` | Error: ${res.error}` : '')
+        (res.simulated ? `[SIMULATED — web preview] message: "${message}"` : `[LIVE BROADCASTED] message: "${message}"`) + (res.error ? ` | Error: ${res.error}` : '')
       );
 
       await new Promise(r => setTimeout(r, 400));
     }
+
+    // Post-loop AuditDispatcher summary — derived from real dispatchResults
+    const simCount = dispatchResults.filter(r => r.simulated).length;
+    const liveSuccessCount = dispatchResults.filter(r => r.success && !r.simulated).length;
+    const failCount = dispatchResults.filter(r => !r.success).length;
+    get().addAuditLog(
+      'DISPATCH',
+      failCount > 0 ? 'WARN' : 'INFO',
+      `[AuditDispatcher] Dispatch cycle complete`,
+      `Live sent: ${liveSuccessCount} | Simulated (web): ${simCount} | Failed: ${failCount} | Total contacts: ${dispatchResults.length}`
+    );
+    // DashboardDispatcher — update org dashboard state (reflected via panicEvents in OrgDashboard)
+    get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Control deck updated', `Incident ${incidentId} pushed to org dashboard telemetry feed.`);
 
     const userOrgId = get().currentUser?.orgCode || '';
     const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
