@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import slLogoMain from '../assets/images/sl_logomain.jpeg';
+import slLogoMain from '../assets/safetylink-metallic.svg';
 
 interface CinematicLogoSmashProps {
   onAnimationEnd?: () => void;
