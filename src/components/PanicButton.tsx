@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const PanicButton: React.FC = () => {
-  const { activeSOSState, cancelSOS, drillMode, panicCountdown, startMultiStagePanic } = useAppStore();
+  const { activeSOSState, cancelSOS, drillMode, panicCountdown, startMultiStagePanic, auditLogs } = useAppStore();
   const [isHolding, setIsHolding] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<number | null>(null);
 
-  // Dynamic Device Detection & Layout Ergonomics state
+  // Dynamic Device Detection
   const [deviceInfo, setDeviceInfo] = useState({
     os: 'Detecting...',
     type: 'Evaluating...',
@@ -17,7 +17,6 @@ export const PanicButton: React.FC = () => {
     height: typeof window !== 'undefined' ? window.innerHeight : 667,
     isTouch: false,
   });
-  const [buttonLocation, setButtonLocation] = useState<'default' | 'ergonomic-thumb' | 'ergonomic-left'>('default');
 
   useEffect(() => {
     const detectDevice = () => {
@@ -55,11 +54,6 @@ export const PanicButton: React.FC = () => {
         height: window.innerHeight,
         isTouch,
       });
-
-      // Proactively default to ergonomic thumb shift on actual compact mobile screens to assist single-handed use
-      if (window.innerWidth < 480) {
-        setButtonLocation('ergonomic-thumb');
-      }
     };
 
     detectDevice();
@@ -148,8 +142,8 @@ export const PanicButton: React.FC = () => {
       {/* Orbital Actuator Stage */}
       <motion.div 
         animate={{
-          x: buttonLocation === 'ergonomic-thumb' ? 22 : buttonLocation === 'ergonomic-left' ? -22 : 0,
-          y: buttonLocation !== 'default' ? 10 : 0,
+          x: 0,
+          y: 0,
         }}
         transition={{ type: "spring", stiffness: 120, damping: 14 }}
         className="relative flex items-center justify-center w-64 h-64 mx-auto my-2 z-10"
@@ -335,72 +329,41 @@ export const PanicButton: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Ergonomic Device Telemetry & Grip Selector Cockpit Block */}
-      <div className="mt-5 p-3.5 bg-slate-950/85 border border-slate-900 rounded-2xl text-left relative z-10 font-mono">
+      {/* Recent Activity Log Engine */}
+      <div className="mt-5 p-3.5 bg-slate-950/85 border border-slate-900 rounded-2xl text-left relative z-10 font-mono flex flex-col h-40">
         <div className="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
           <span className="text-[9px] font-black text-blue-400 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            COCKPIT TELEMETRY & DEVICE GRIP
+            NOTIFICATION GHOST ENGINE
           </span>
-          <span className="text-[7.5px] text-slate-500 uppercase">SYS-DIAG V1.4</span>
+          <span className="text-[7.5px] text-slate-500 uppercase">EVENTS LOG</span>
         </div>
 
-        {/* Device properties list */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-slate-400 mb-2.5">
-          <div className="flex justify-between border-b border-slate-900/30 pb-0.5">
-            <span>Detected OS:</span>
-            <span className="text-slate-200 font-bold">{deviceInfo.os}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-900/30 pb-0.5">
-            <span>Viewport:</span>
-            <span className="text-slate-200 font-bold">{deviceInfo.width}x{deviceInfo.height}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-900/30 pb-0.5 col-span-2">
-            <span>Device Type:</span>
-            <span className="text-slate-200 font-bold uppercase">{deviceInfo.type} ({deviceInfo.isTouch ? "TOUCH READY" : "CURSOR DRIVEN"})</span>
-          </div>
-        </div>
-
-        {/* Hand Ergonomic Selector */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[7.5px] text-slate-500 uppercase tracking-widest font-bold">
-            Single-Hand Touch Thumb Ergonomics:
-          </span>
-          <div className="grid grid-cols-3 gap-1">
-            <button
-              onClick={() => setButtonLocation('ergonomic-left')}
-              className={`py-1 rounded text-[8px] font-bold border uppercase transition-all ${
-                buttonLocation === 'ergonomic-left'
-                  ? 'bg-blue-650/80 border-blue-500 text-white shadow-md'
-                  : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              👈 Left Hand
-            </button>
-            <button
-              onClick={() => setButtonLocation('default')}
-              className={`py-1 rounded text-[8px] font-bold border uppercase transition-all ${
-                buttonLocation === 'default'
-                  ? 'bg-slate-800 border-slate-700 text-slate-100 shadow-md'
-                  : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              🎯 Balanced
-            </button>
-            <button
-              onClick={() => setButtonLocation('ergonomic-thumb')}
-              className={`py-1 rounded text-[8px] font-bold border uppercase transition-all ${
-                buttonLocation === 'ergonomic-thumb'
-                  ? 'bg-blue-650/80 border-blue-500 text-white shadow-md'
-                  : 'bg-slate-900/50 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Right Hand 👉
-            </button>
-          </div>
-          <p className="text-[7.5px] text-slate-600 leading-normal mt-0.5">
-            *Shift actuator position to match physical thumb sweep arc for immediate distress triggering in emergency conditions.
-          </p>
+        <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+          {auditLogs && auditLogs.length > 0 ? (
+            auditLogs.slice(0, 5).map((log) => (
+              <div key={log.id} className="flex flex-col gap-0.5 pb-2 border-b border-slate-900/40 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <span className={`text-[8.5px] font-bold uppercase ${
+                    log.severity === 'SEVERE' || log.severity === 'CRITICAL' ? 'text-red-400' :
+                    log.severity === 'WARNING' ? 'text-amber-400' : 'text-blue-400'
+                  }`}>
+                    {log.action}
+                  </span>
+                  <span className="text-[7.5px] text-slate-600">
+                    {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+                <p className="text-[9px] text-slate-400 truncate leading-relaxed">
+                  {log.details}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center h-full text-[9px] text-slate-600">
+              No recent events
+            </div>
+          )}
         </div>
       </div>
 

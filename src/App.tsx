@@ -28,7 +28,6 @@ import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
-import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { AdvancedSubsystems } from './components/AdvancedSubsystems';
 import { DecoyCalculator } from './components/DecoyCalculator';
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
@@ -57,8 +56,6 @@ const App: React.FC = () => {
     isBackgroundServiceRunning,
     backgroundServiceTick,
     bleDevices,
-    isAppMinimized,
-    setMinimized,
     decoyActive,
     demoMode
   } = useAppStore();
@@ -102,38 +99,7 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    // Automatically minimize and lock the mini app in the system notification panel when the user exits/blurs the screen/switches tasks
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && useAppStore.getState().currentUser) {
-        setMinimized(true);
-        useAppStore.getState().addToast("SafetyLink minimized to persistent notifications panel.", "info");
-        useAppStore.getState().addAuditLog(
-          'SYSTEM',
-          'INFO',
-          'App Switched to Background',
-          'User switched apps or tasks. Pinned notification mini-app locked in system shade.'
-        );
-      }
-    };
 
-    const handleWindowBlur = () => {
-      setTimeout(() => {
-        if (!document.hasFocus() && useAppStore.getState().currentUser && !useAppStore.getState().isAppMinimized) {
-          setMinimized(true);
-          useAppStore.getState().addToast("SafetyLink locked on background notification panel.", "info");
-        }
-      }, 500);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, [setMinimized]);
 
   useEffect(() => {
     // Bootstrap tracking and simulated BLE hardware listeners on mount
@@ -221,9 +187,7 @@ const App: React.FC = () => {
       return <AuthScreen />;
     }
 
-    if (isAppMinimized) {
-      return <SimulatedDesktop />;
-    }
+
 
     return (
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
@@ -278,17 +242,6 @@ const App: React.FC = () => {
 
         {/* Right Side: Account status & Active view flag */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMinimized(true)}
-            title="Exit App to Mobile Desktop"
-            className="p-2 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner flex items-center justify-center gap-1 text-[10px] font-bold font-mono uppercase"
-          >
-            <span>📳</span>
-            <span className="hidden sm:inline text-[8px] text-slate-400">Exit App</span>
-          </button>
-
-          <div className="h-4.5 w-[1px] bg-slate-850" />
-
           <div className="text-right">
             <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>
             <span className="text-[7.5px] font-mono text-slate-500 uppercase mt-0.5 block leading-none">@{currentUser.username}</span>
@@ -746,13 +699,6 @@ const App: React.FC = () => {
                     <p>⚡ K'LEVA.I SIMPLICITY</p>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => { setMinimized(true); setIsDrawerOpen(false); }}
-                  className="w-full py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[9px] font-mono font-black text-slate-300 hover:text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
-                >
-                  <span>📳 EXIT CONSOLE TO BACKGROUND</span>
-                </button>
 
                 <button
                   onClick={() => { logout(); setIsDrawerOpen(false); }}

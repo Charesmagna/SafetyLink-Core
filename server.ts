@@ -289,41 +289,6 @@ app.post('/api/dispatch/whatsapp', (req, res) => {
   });
 });
 
-// POST /api/ai/chat — OpenRouter proxy (key never exposed to client)
-app.post('/api/ai/chat', async (req, res) => {
-  const { messages, model } = req.body;
-  if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: 'messages array is required' });
-  }
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(503).json({ error: 'AI chat not configured on server (OPENROUTER_API_KEY missing)' });
-  }
-  try {
-    const upstream = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': process.env.OPENROUTER_REFERER || 'https://safetylink.app',
-        'X-Title': process.env.OPENROUTER_TITLE || 'SafetyLink-Core',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model || 'openai/gpt-4o-mini',
-        messages,
-      }),
-    });
-    const data = await upstream.json();
-    if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: data?.error?.message || 'OpenRouter error' });
-    }
-    return res.json(data);
-  } catch (err) {
-    console.error('[AIChat] OpenRouter proxy error:', err);
-    return res.status(502).json({ error: 'AI service unreachable' });
-  }
-});
-
 // POST /incidents
 app.post('/api/incidents', (req, res) => {
   const { id, latitude, longitude, description, org_id, triggered_by, status, severity } = req.body;

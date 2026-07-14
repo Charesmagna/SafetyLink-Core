@@ -49,8 +49,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[SafetyViewModel::class.java]
-        if (intent?.action == "com.example.action.TRIGGER_SOS" || intent?.action == "com.example.ACTION_PANIC") {
-            viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut / Widget.")
+        if (intent?.action == "com.example.action.TRIGGER_SOS") {
+            viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut.")
         }
 
         setContent {
@@ -72,8 +72,8 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         val viewModel = androidx.lifecycle.ViewModelProvider(this)[SafetyViewModel::class.java]
-        if (intent.action == "com.example.action.TRIGGER_SOS" || intent.action == "com.example.ACTION_PANIC") {
-            viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut / Widget.")
+        if (intent.action == "com.example.action.TRIGGER_SOS") {
+            viewModel.triggerEmergencySOS("Instant SOS triggered from Homescreen Red Circle Quick-Shortcut.")
         }
     }
 }

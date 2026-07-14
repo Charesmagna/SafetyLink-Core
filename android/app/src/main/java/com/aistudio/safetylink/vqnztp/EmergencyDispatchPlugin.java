@@ -16,12 +16,6 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.ArrayList;
 
-import android.app.Activity;
-import android.app.KeyguardManager;
-import android.os.Build;
-import android.os.PowerManager;
-import android.view.WindowManager;
-
 /**
  * EmergencyDispatch
  *
@@ -255,60 +249,5 @@ public class EmergencyDispatchPlugin extends Plugin {
         } else {
             call.reject("Call permission denied");
         }
-    }
-
-    @PluginMethod
-    public void forceUnlockAndWake(PluginCall call) {
-        Activity activity = getActivity();
-        if (activity == null) {
-            JSObject ret = new JSObject();
-            ret.put("woke", false);
-            ret.put("error", "Activity not available");
-            call.resolve(ret);
-            return;
-        }
-        activity.runOnUiThread(() -> {
-            try {
-                // Show over lockscreen and turn screen on
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    activity.setShowWhenLocked(true);
-                    activity.setTurnScreenOn(true);
-                } else {
-                    activity.getWindow().addFlags(
-                        WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                    );
-                }
-
-                // Dismiss keyguard (API 26+, best-effort — requires DISABLE_KEYGUARD permission or user action)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    KeyguardManager km = (KeyguardManager) getContext().getSystemService(android.content.Context.KEYGUARD_SERVICE);
-                    if (km != null) {
-                        km.requestDismissKeyguard(activity, null);
-                    }
-                }
-
-                // Brief wake lock to guarantee screen stays on during initial panic UI render (~10 s)
-                PowerManager pm = (PowerManager) getContext().getSystemService(android.content.Context.POWER_SERVICE);
-                if (pm != null) {
-                    @SuppressWarnings("deprecation")
-                    PowerManager.WakeLock wl = pm.newWakeLock(
-                        PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.ON_AFTER_RELEASE,
-                        "SafetyLink:PanicWake"
-                    );
-                    wl.acquire(10_000L); // auto-release after 10 s
-                }
-
-                JSObject ret = new JSObject();
-                ret.put("woke", true);
-                call.resolve(ret);
-            } catch (Exception e) {
-                JSObject ret = new JSObject();
-                ret.put("woke", false);
-                ret.put("error", e.getMessage());
-                call.resolve(ret);
-            }
-        });
     }
 }
