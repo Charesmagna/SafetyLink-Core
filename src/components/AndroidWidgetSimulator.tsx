@@ -38,7 +38,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-2">
             <img
-              src="/Polish_20260620_014530309.jpg"
+              src="/media/polish-logo.jpg"
               alt="SafetyLink"
               className="w-6 h-6 rounded-full object-cover"
               style={{ mixBlendMode: 'luminosity', filter: 'brightness(1.3)' }}

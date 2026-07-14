@@ -8,6 +8,8 @@ import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
 import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
 import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
 import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
+import newBg1 from '../assets/images/background1.jpeg';
+import newLogo1 from '../assets/images/logo-ai1.png';
 
 interface VideoClip {
   id: string;
@@ -72,7 +74,7 @@ export const MediaHub: React.FC = () => {
   ];
 
   // Slide slideshow loop for the local card backgrounds
-  const mediaSlides = [slide1, slide2, slide4, slide5, slide3];
+  const mediaSlides = [newBg1, newLogo1, slide1, slide2, slide4, slide5, slide3];
 
   useEffect(() => {
     const timer = setInterval(() => {

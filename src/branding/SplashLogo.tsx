@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 
-const logoPolish = '/Polish_20260620_014530309.jpg';
+const logoPolish = '/media/polish-logo.jpg';
 
 interface SplashLogoProps {
   onComplete: () => void;

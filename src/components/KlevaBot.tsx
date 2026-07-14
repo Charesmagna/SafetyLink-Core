@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
 import { Send, X } from 'lucide-react';
-import klevaLogo from '../assets/images/kleva.png';
+import klevaLogo from '../assets/images/kleva-logo.png';
 
 export const KlevaBot: React.FC = () => {
   const { addAuditLog } = useAppStore();

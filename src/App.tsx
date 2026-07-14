@@ -39,6 +39,10 @@ import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
 import slide3 from './assets/images/regenerated_image_1783360733591.jpg';
 import slLogoMain from './assets/safetylink-metallic.svg';
 import slLogoSet from './assets/images/sl_logoset.jpeg';
+import newBg1 from './assets/images/background1.jpeg';
+import newLogo1 from './assets/images/logo-ai1.png';
+import klevaLogo from './assets/images/kleva-logo.png';
+import polishLogo from './assets/images/polish-logo.jpg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
 
@@ -73,6 +77,10 @@ const App: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
   const backgroundSlides = [
+    newBg1,
+    newLogo1,
+    klevaLogo,
+    polishLogo,
     slLogoMain,
     slLogoSet,
     slide3,
@@ -748,10 +756,10 @@ const App: React.FC = () => {
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen z-0"
-        style={{ filter: 'contrast(1.1) brightness(1.1)' }}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+        
       >
-        <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+        <source src="/media/video-background.mp4" type="video/mp4" />
       </video>
 
       {/* High fidelity cyber background lighting elements */}

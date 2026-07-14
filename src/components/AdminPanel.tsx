@@ -10,6 +10,8 @@ import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
 import slide3 from '../assets/images/regenerated_image_1783360733591.jpg';
 import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
 import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
+import newBg1 from '../assets/images/background1.jpeg';
+import newLogo1 from '../assets/images/logo-ai1.png';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS';
 
@@ -34,7 +36,7 @@ export const AdminPanel: React.FC = () => {
   } = useAppStore();
 
   // Background slideshow logic
-  const adminSlides = [slide3, slide4, slide5, slide1, slide2];
+  const adminSlides = [newBg1, newLogo1, slide3, slide4, slide5, slide1, slide2];
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -136,10 +138,10 @@ export const AdminPanel: React.FC = () => {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen"
-          style={{ filter: 'contrast(1.15) brightness(1.1)' }}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          
         >
-          <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+          <source src="/media/video-background.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 digital-grid opacity-[0.04]" />
       </div>

@@ -46,7 +46,7 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
         onEnded={handleComplete}
         className="absolute inset-0 w-full h-full object-contain z-10"
       >
-        <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+        <source src="/media/safetylink-intro.mp4" type="video/mp4" />
       </video>
 
       {/* Cybernetic background decoration behind the video */}

@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
-import logoMain from '../assets/images/safetylink_logo_main.png';
-import logoPanic from '../assets/images/safetylink_logo_panic.png';
+import logoMain from '../assets/images/logo-ai1.png';
+import logoPanic from '../assets/images/logo-ai1.png';
 
 interface SafetyLinkLogoProps {
   size?: number;

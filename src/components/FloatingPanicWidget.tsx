@@ -146,10 +146,10 @@ export const FloatingPanicWidget: React.FC = () => {
             {/* Default logo with subtle rotation */}
             {tapState !== 'AWAITING' && !isCountdownActive && !isSOSActive && (
               <img
-                src="/Polish_20260620_014530309.jpg"
+                src="/media/polish-logo.jpg"
                 onError={(e) => {
                   // Fallback if custom logo fails to load
-                  (e.target as HTMLImageElement).src = '/Polish_20260620_014530309.jpg';
+                  (e.target as HTMLImageElement).src = '/media/polish-logo.jpg';
                 }}
                 alt="SL"
                 referrerPolicy="no-referrer"

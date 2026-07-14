@@ -45,7 +45,7 @@ export const OrgDashboard: React.FC = () => {
   const [editContactsList, setEditContactsList] = useState('');
 
   // Branding Form State (pre-populated from currentOrg values)
-  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=150&auto=format&fit=crop');
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '/media/logo-ai1.png');
   const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
   const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
@@ -140,10 +140,10 @@ export const OrgDashboard: React.FC = () => {
           loop
           muted
           playsInline
-          className="absolute inset-0 w-full h-full object-cover opacity-[0.06] pointer-events-none mix-blend-screen"
-          style={{ filter: 'contrast(1.15) brightness(1.1)' }}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          
         >
-          <source src="/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+          <source src="/media/video-background.mp4" type="video/mp4" />
         </video>
         {/* Transparent dark overlay to keep foreground text highly readable */}
         <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]" />
