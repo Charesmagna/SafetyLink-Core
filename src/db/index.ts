@@ -15,4 +15,5 @@ const pool = new Pool({
   ssl: false,
 });
 
+pool.on('error', (err) => { console.error('Unexpected error on idle client', err); });
 export const db = drizzle(pool, { schema });
