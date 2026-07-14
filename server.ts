@@ -32,7 +32,7 @@ import { db } from './src/db/index.js';
 import { users, organizations, incidents, telemetryLogs, dispatchLogs } from './src/db/schema.js';
 import { eq } from 'drizzle-orm';
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'safetylink-super-secret-key-2026';
 
 app.use(express.json());
@@ -428,4 +428,4 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch(err => { console.error("Fatal error during server startup:", err); process.exit(1); });
