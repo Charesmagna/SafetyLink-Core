@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Existing Core Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -21,6 +22,36 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- NEW PERMISSIONS FOR NATIVE SUBSYSTEM HARDENING -->
+
+    <!-- android.Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC | normal | API 34 (Android 14)
+         Required to start a foreground service of type dataSync.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_DATA_SYNC -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- android.Manifest.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED | signature | API 34 (Android 14)
+         Exempts SafetyLink foreground monitoring service from Android 14 background launch limits.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_SYSTEM_EXEMPTED -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+
+    <!-- android.Manifest.permission.SCHEDULE_EXACT_ALARM | normal | API 31 (Android 12)
+         Allows scheduling exact alarms to support the 60-second watchdog failover recheck.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#SCHEDULE_EXACT_ALARM -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- android.Manifest.permission.USE_EXACT_ALARM | normal | API 33 (Android 13)
+         Grants safety-critical exact alarm triggers on Android 13+ devices without user prompt fatigue.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#USE_EXACT_ALARM -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- SIGNATURE-LEVEL PERMISSION NOTES:
+         1. Manifest.permission.BIND_QUICK_SETTINGS_TILE is a system/signature permission and MUST NOT
+            be requested as a <uses-permission>. It is declared as 'android:permission' in the <service>
+            block to ensure only the Android system is permitted to bind to the SOS Quick Settings Tile.
+         2. Manifest.permission.BIND_CONTROLS is a signature permission and MUST NOT be requested as
+            a <uses-permission>. It is declared on the <service> block so that only the system UI can
+            access the SOS Device Controls template. -->
 
     <queries>
         <intent>
@@ -58,11 +89,76 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- SafetyBackgroundService: core tracking loop -->
         <service
             android:name=".SafetyBackgroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- BootReceiver: Auto-starts monitoring after reboot across multiple hardware manufacturer actions -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter android:priority="2000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- WatchdogService: guards uptime and restarts location polling if killed -->
+        <service
+            android:name=".WatchdogService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- WatchdogAlarmReceiver: alarm tick backup receiver -->
+        <receiver
+            android:name=".WatchdogAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.ACTION_WATCHDOG_CHECK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- SafetyLinkTileService: Quick Settings panel SOS trigger -->
+        <service
+            android:name=".SafetyLinkTileService"
+            android:icon="@android:drawable/ic_lock_lock"
+            android:label="SOS"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- SafetyLinkControlsProvider: Settings > Device Controls / Power Menu direct trigger -->
+        <service
+            android:name=".SafetyLinkControlsProvider"
+            android:label="SOS Panic"
+            android:permission="android.permission.BIND_CONTROLS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.controls.ControlsProviderService" />
+            </intent-filter>
+        </service>
+
+        <!-- FileProvider: secures exchange of evidence exports and audit logs -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.file.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
+
     </application>
 
 </manifest>
