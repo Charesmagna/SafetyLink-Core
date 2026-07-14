@@ -7,10 +7,18 @@ import admin from 'firebase-admin';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+import fs from 'fs';
+
+const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
+let firebaseConfig = { projectId: 'safetylink-99e56', firestoreDatabaseId: '(default)' };
+if (fs.existsSync(firebaseConfigPath)) {
+  firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
+}
+
 const firebaseApp = initializeApp({
-  projectId: process.env.FIREBASE_PROJECT_ID || 'safetylink-99e56'
+  projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId
 });
-const firestore = getFirestore(firebaseApp);
+const firestore = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 
 
 import { db } from './src/db/index.js';
