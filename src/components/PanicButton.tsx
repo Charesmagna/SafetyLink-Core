@@ -9,58 +9,6 @@ export const PanicButton: React.FC = () => {
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<number | null>(null);
 
-  // Dynamic Device Detection
-  const [deviceInfo, setDeviceInfo] = useState({
-    os: 'Detecting...',
-    type: 'Evaluating...',
-    width: typeof window !== 'undefined' ? window.innerWidth : 375,
-    height: typeof window !== 'undefined' ? window.innerHeight : 667,
-    isTouch: false,
-  });
-
-  useEffect(() => {
-    const detectDevice = () => {
-      const ua = navigator.userAgent || '';
-      let os = 'Desktop Platform';
-      let type = 'Standard Terminal';
-      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
-      if (/android/i.test(ua)) {
-        os = 'Android Device';
-        type = 'Handheld Node';
-      } else if (/iPad|iPhone|iPod/.test(ua)) {
-        os = 'iOS Device';
-        type = 'Handheld Node';
-      } else if (/Macintosh/i.test(ua)) {
-        os = 'macOS Desktop';
-      } else if (/Windows/i.test(ua)) {
-        os = 'Windows Terminal';
-      } else if (/Linux/i.test(ua)) {
-        os = 'Linux Terminal';
-      }
-
-      if (window.innerWidth < 480) {
-        type = 'Compact Mobile';
-      } else if (window.innerWidth < 768) {
-        type = 'Mobile Viewport';
-      } else if (window.innerWidth >= 768 && window.innerWidth < 1024) {
-        type = 'Tablet Deck';
-      }
-
-      setDeviceInfo({
-        os,
-        type,
-        width: window.innerWidth,
-        height: window.innerHeight,
-        isTouch,
-      });
-    };
-
-    detectDevice();
-    window.addEventListener('resize', detectDevice);
-    return () => window.removeEventListener('resize', detectDevice);
-  }, []);
-
   const startHolding = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     if (activeSOSState !== 'IDLE') return;
@@ -345,10 +293,10 @@ export const PanicButton: React.FC = () => {
               <div key={log.id} className="flex flex-col gap-0.5 pb-2 border-b border-slate-900/40 last:border-0 last:pb-0">
                 <div className="flex items-center justify-between">
                   <span className={`text-[8.5px] font-bold uppercase ${
-                    log.severity === 'SEVERE' || log.severity === 'CRITICAL' ? 'text-red-400' :
-                    log.severity === 'WARNING' ? 'text-amber-400' : 'text-blue-400'
+                    log.severity === 'SEVERE' ? 'text-red-400' :
+                    log.severity === 'WARN' ? 'text-amber-400' : 'text-blue-400'
                   }`}>
-                    {log.action}
+                    {log.message}
                   </span>
                   <span className="text-[7.5px] text-slate-600">
                     {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
