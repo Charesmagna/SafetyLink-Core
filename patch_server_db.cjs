@@ -1,32 +1,21 @@
-import express from 'express';
-import path from 'path';
-import { createServer as createViteServer } from 'vite';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import admin from 'firebase-admin';
-import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+const fs = require('fs');
+let code = fs.readFileSync('server.ts', 'utf8');
 
-const firebaseApp = initializeApp({
-  projectId: process.env.FIREBASE_PROJECT_ID || 'safetylink-99e56'
-});
-const firestore = getFirestore(firebaseApp);
+code = code.replace(
+  "const app = express();",
+  `import { db } from './src/db/index.js';\nimport { users, organizations, incidents, telemetryLogs, dispatchLogs } from './src/db/schema.js';\nimport { eq } from 'drizzle-orm';\nconst app = express();`
+);
 
+// Remove in-memory arrays
+code = code.replace(
+  /\/\/ ==========================================\n\/\/ In-Memory Database Store \(with Seed Data\)\n\/\/ ==========================================\nconst users: any\[\] = \[\];\nconst organizations: any\[\] = \[\];\nconst incidents: any\[\] = \[\];\nconst telemetryLogs: any\[\] = \[\];\nconst dispatchLogs: any\[\] = \[\];\n/g,
+  `// ==========================================\n// Database setup is now in src/db\n// ==========================================\n`
+);
 
-import { db } from './src/db/index.js';
-import { users, organizations, incidents, telemetryLogs, dispatchLogs } from './src/db/schema.js';
-import { eq } from 'drizzle-orm';
-const app = express();
-const PORT = 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'safetylink-super-secret-key-2026';
-
-app.use(express.json());
-
-// ==========================================
-// Database setup is now in src/db
-// ==========================================
-
-
+// We should wrap seeding in an async function
+code = code.replace(
+  /\/\/ Seed an Initial Organization[\s\S]*?users\.push\(\{[^]*?\}\);/g,
+  `
 // Seeding logic removed in favor of Drizzle ORM
 async function seedDefaultUserAndOrg() {
   try {
@@ -78,43 +67,13 @@ async function seedDefaultUserAndOrg() {
   }
 }
 seedDefaultUserAndOrg();
+`
+);
 
-
-// ==========================================
-// Authentication Middleware
-// ==========================================
-interface AuthenticatedRequest extends express.Request {
-  user?: {
-    id: string;
-    username: string;
-    role: string;
-    orgCode: string;
-  };
-}
-
-function authenticateToken(req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = decoded as AuthenticatedRequest['user'];
-    next();
-  });
-}
-
-// ==========================================
-// API Endpoints — Part B Implementation
-// ==========================================
-
-// POST /auth/register-user
-app.post('/api/auth/register-user', async (req, res) => {
+// Fix POST /api/auth/register-user
+code = code.replace(
+  /app\.post\('\/api\/auth\/register-user', \(req, res\) => \{([\s\S]*?)users\.push\(newUser\);([\s\S]*?)return res\.status\(201\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/auth/register-user', async (req, res) => {
   const { username, password, fullName, phone, email, orgCode, role } = req.body;
 
   if (!username || !password || !fullName || !phone || !email || !orgCode) {
@@ -130,7 +89,7 @@ app.post('/api/auth/register-user', async (req, res) => {
   const hash = bcrypt.hashSync(password, saltRounds);
 
   const newUser = {
-    id: `SL-USR-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: \`SL-USR-\${Math.floor(1000 + Math.random() * 9000)}\`,
     username,
     fullName,
     phone,
@@ -156,10 +115,13 @@ app.post('/api/auth/register-user', async (req, res) => {
     user: safeUser,
     token,
   });
-});
+});`
+);
 
-// POST /auth/register-org
-app.post('/api/auth/register-org', async (req, res) => {
+// Fix POST /api/auth/register-org
+code = code.replace(
+  /app\.post\('\/api\/auth\/register-org', \(req, res\) => \{([\s\S]*?)organizations\.push\(newOrg\);([\s\S]*?)return res\.status\(201\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/auth/register-org', async (req, res) => {
   const { name, contactName, contactEmail, controlRoomNumber } = req.body;
 
   if (!name || !contactName || !contactEmail) {
@@ -167,7 +129,7 @@ app.post('/api/auth/register-org', async (req, res) => {
   }
 
   const newOrg = {
-    id: `SL-ORG-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: \`SL-ORG-\${Math.floor(1000 + Math.random() * 9000)}\`,
     name,
     contactName,
     contactEmail,
@@ -181,10 +143,13 @@ app.post('/api/auth/register-org', async (req, res) => {
     message: 'Organization registered successfully',
     organization: newOrg,
   });
-});
+});`
+);
 
-// POST /auth/login
-app.post('/api/auth/login', async (req, res) => {
+// Fix POST /api/auth/login
+code = code.replace(
+  /app\.post\('\/api\/auth\/login', \(req, res\) => \{([\s\S]*?)const user = users\.find\(u => u\.username\.toLowerCase\(\) === username\.toLowerCase\(\)\);([\s\S]*?)return res\.status\(200\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -217,86 +182,14 @@ app.post('/api/auth/login', async (req, res) => {
     user: safeUser,
     token,
   });
-});
+});`
+);
 
-// POST /dispatch/sms
-app.post('/api/dispatch/sms', async (req, res) => {
-  const { phone, message } = req.body;
-  if (!phone || !message) {
-    return res.status(400).json({ error: 'Recipient phone number and message body are required' });
-  }
 
-  const logEntry = {
-    id: `TX-${Math.floor(100000 + Math.random() * 900000)}`,
-    channel: 'SMS',
-    recipient: phone,
-    content: message,
-    status: 'QUEUED',
-    provider: 'twilio',
-  };
-  await db.insert(dispatchLogs).values(logEntry);
-
-  return res.status(202).json({
-    success: true,
-    message: 'SMS dispatch queued',
-    dispatchId: logEntry.id,
-    status: logEntry.status,
-    provider: logEntry.provider,
-  });
-});
-
-// POST /dispatch/voice
-app.post('/api/dispatch/voice', async (req, res) => {
-  const { phone, message } = req.body;
-  if (!phone || !message) {
-    return res.status(400).json({ error: 'Recipient phone number and voice message template are required' });
-  }
-
-  const logEntry = {
-    id: `VC-${Math.floor(100000 + Math.random() * 900000)}`,
-    channel: 'VOICE',
-    recipient: phone,
-    content: message,
-    status: 'INITIATED',
-    provider: 'twilio',
-  };
-  await db.insert(dispatchLogs).values(logEntry);
-
-  return res.status(202).json({
-    success: true,
-    message: 'Voice synthesized speed-dial dispatch initiated',
-    dispatchId: logEntry.id,
-    status: logEntry.status,
-  });
-});
-
-// POST /dispatch/whatsapp
-app.post('/api/dispatch/whatsapp', async (req, res) => {
-  const { phone, message } = req.body;
-  if (!phone || !message) {
-    return res.status(400).json({ error: 'Recipient phone number and WhatsApp message are required' });
-  }
-
-  const logEntry = {
-    id: `WA-${Math.floor(100000 + Math.random() * 900000)}`,
-    channel: 'WHATSAPP',
-    recipient: phone,
-    content: message,
-    status: 'OPENED',
-    provider: 'whatsapp-direct',
-  };
-  await db.insert(dispatchLogs).values(logEntry);
-
-  return res.status(200).json({
-    success: true,
-    message: 'WhatsApp message dispatch link successfully generated',
-    dispatchId: logEntry.id,
-    status: logEntry.status,
-  });
-});
-
-// POST /incidents
-app.post('/api/incidents', async (req, res) => {
+// Replace incidents
+code = code.replace(
+  /app\.post\('\/api\/incidents', \(req, res\) => \{([\s\S]*?)incidents\.push\(newIncident\);([\s\S]*?)return res\.status\(201\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/incidents', async (req, res) => {
   const { id, latitude, longitude, description, org_id, triggered_by, status, severity } = req.body;
 
   if (!id || latitude === undefined || longitude === undefined || !description) {
@@ -320,18 +213,19 @@ app.post('/api/incidents', async (req, res) => {
   };
 
   await db.insert(incidents).values(newIncident);
-  try { await firestore.collection('incidents').doc(newIncident.id).set(newIncident); } catch(e) { console.error('Firestore sync error:', e); }
 
-  console.log(`[EnterpriseDispatch] Recorded new Incident: ${id} at [${latitude}, ${longitude}]`);
+  console.log(\`[EnterpriseDispatch] Recorded new Incident: \${id} at [\${latitude}, \${longitude}]\`);
   return res.status(201).json({
     success: true,
     message: 'Incident recorded successfully',
     incident: newIncident,
   });
-});
+});`
+);
 
-// GET /incidents (Allows optional Org Filtering)
-app.get('/api/incidents', async (req, res) => {
+code = code.replace(
+  /app\.get\('\/api\/incidents', \(req, res\) => \{([\s\S]*?)\}\);/m,
+  `app.get('/api/incidents', async (req, res) => {
   const orgCode = req.query.orgCode as string;
   try {
     if (orgCode) {
@@ -343,10 +237,13 @@ app.get('/api/incidents', async (req, res) => {
   } catch (err) {
     return res.status(500).json({error: 'Failed to fetch incidents'});
   }
-});
+});`
+);
 
-// POST /telemetry
-app.post('/api/telemetry', async (req, res) => {
+// telemetry
+code = code.replace(
+  /app\.post\('\/api\/telemetry', \(req, res\) => \{([\s\S]*?)telemetryLogs\.push\(telemetryEntry\);([\s\S]*?)return res\.status\(200\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/telemetry', async (req, res) => {
   const { deviceId, latitude, longitude, batteryLevel, rssi, status } = req.body;
 
   if (!deviceId) {
@@ -354,7 +251,7 @@ app.post('/api/telemetry', async (req, res) => {
   }
 
   const telemetryEntry = {
-    id: `TEL-${Math.floor(100000 + Math.random() * 900000)}`,
+    id: \`TEL-\${Math.floor(100000 + Math.random() * 900000)}\`,
     deviceId,
     latitude: (latitude || 0).toString(),
     longitude: (longitude || 0).toString(),
@@ -370,10 +267,96 @@ app.post('/api/telemetry', async (req, res) => {
     message: 'Telemetry logged successfully',
     telemetryId: telemetryEntry.id,
   });
-});
+});`
+);
 
-// POST /webhooks/twilio-status
-app.post('/api/webhooks/twilio-status', async (req, res) => {
+
+// Webhooks & Dispatch - simplified
+code = code.replace(
+  /app\.post\('\/api\/dispatch\/sms', \(req, res\) => \{([\s\S]*?)dispatchLogs\.push\(logEntry\);([\s\S]*?)return res\.status\(202\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/dispatch/sms', async (req, res) => {
+  const { phone, message } = req.body;
+  if (!phone || !message) {
+    return res.status(400).json({ error: 'Recipient phone number and message body are required' });
+  }
+
+  const logEntry = {
+    id: \`TX-\${Math.floor(100000 + Math.random() * 900000)}\`,
+    channel: 'SMS',
+    recipient: phone,
+    content: message,
+    status: 'QUEUED',
+    provider: 'twilio',
+  };
+  await db.insert(dispatchLogs).values(logEntry);
+
+  return res.status(202).json({
+    success: true,
+    message: 'SMS dispatch queued',
+    dispatchId: logEntry.id,
+    status: logEntry.status,
+    provider: logEntry.provider,
+  });
+});`
+);
+
+code = code.replace(
+  /app\.post\('\/api\/dispatch\/voice', \(req, res\) => \{([\s\S]*?)dispatchLogs\.push\(logEntry\);([\s\S]*?)return res\.status\(202\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/dispatch/voice', async (req, res) => {
+  const { phone, message } = req.body;
+  if (!phone || !message) {
+    return res.status(400).json({ error: 'Recipient phone number and voice message template are required' });
+  }
+
+  const logEntry = {
+    id: \`VC-\${Math.floor(100000 + Math.random() * 900000)}\`,
+    channel: 'VOICE',
+    recipient: phone,
+    content: message,
+    status: 'INITIATED',
+    provider: 'twilio',
+  };
+  await db.insert(dispatchLogs).values(logEntry);
+
+  return res.status(202).json({
+    success: true,
+    message: 'Voice synthesized speed-dial dispatch initiated',
+    dispatchId: logEntry.id,
+    status: logEntry.status,
+  });
+});`
+);
+
+code = code.replace(
+  /app\.post\('\/api\/dispatch\/whatsapp', \(req, res\) => \{([\s\S]*?)dispatchLogs\.push\(logEntry\);([\s\S]*?)return res\.status\(200\)\.json\(\{([\s\S]*?)\}\);\n\}\);/m,
+  `app.post('/api/dispatch/whatsapp', async (req, res) => {
+  const { phone, message } = req.body;
+  if (!phone || !message) {
+    return res.status(400).json({ error: 'Recipient phone number and WhatsApp message are required' });
+  }
+
+  const logEntry = {
+    id: \`WA-\${Math.floor(100000 + Math.random() * 900000)}\`,
+    channel: 'WHATSAPP',
+    recipient: phone,
+    content: message,
+    status: 'OPENED',
+    provider: 'whatsapp-direct',
+  };
+  await db.insert(dispatchLogs).values(logEntry);
+
+  return res.status(200).json({
+    success: true,
+    message: 'WhatsApp message dispatch link successfully generated',
+    dispatchId: logEntry.id,
+    status: logEntry.status,
+  });
+});`
+);
+
+code = code.replace(
+  /app\.post\('\/api\/webhooks\/twilio-status', \(req, res\) => \{([\s\S]*?)\}\);/m,
+  `app.post('/api/webhooks/twilio-status', async (req, res) => {
   const { MessageSid, MessageStatus, ErrorCode } = req.body;
   
   try {
@@ -384,32 +367,7 @@ app.post('/api/webhooks/twilio-status', async (req, res) => {
   } catch(e) {}
 
   return res.status(200).json({ received: true });
-});
+});`
+);
 
-// ==========================================
-// Vite SPA Static Asset / Middleware Routing
-// ==========================================
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  }
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`====================================================`);
-    console.log(`🚀 SafetyLink Core Secure Full-Stack Node Server`);
-    console.log(`   Running on http://0.0.0.0:${PORT}`);
-    console.log(`====================================================`);
-  });
-}
-
-startServer();
+fs.writeFileSync('server.ts', code);

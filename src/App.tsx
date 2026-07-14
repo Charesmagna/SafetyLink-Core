@@ -31,6 +31,7 @@ import { BackgroundNotificationPanel } from './components/BackgroundNotification
 import { AdvancedSubsystems } from './components/AdvancedSubsystems';
 import { DecoyCalculator } from './components/DecoyCalculator';
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
+import { App as CapApp } from '@capacitor/app';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -89,8 +90,8 @@ const App: React.FC = () => {
   }, [isDrawerOpen]);
 
   useEffect(() => {
+    const skipTour = localStorage.getItem('sl_skip_tour');
     if (currentUser) {
-      const skipTour = localStorage.getItem('sl_skip_tour');
       if (skipTour !== 'true') {
         setShowTour(true);
       }
@@ -99,7 +100,22 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-
+  useEffect(() => {
+    const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+      } else if (activeTab !== 'home') {
+        setActiveTab('home');
+      } else {
+        if (!canGoBack) {
+          CapApp.exitApp();
+        }
+      }
+    });
+    return () => {
+      backButtonListener.then(listener => listener.remove());
+    };
+  }, [isDrawerOpen, activeTab]);
 
   useEffect(() => {
     // Bootstrap tracking and simulated BLE hardware listeners on mount
