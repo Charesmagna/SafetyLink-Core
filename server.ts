@@ -14,10 +14,18 @@ if (fs.existsSync(firebaseConfigPath)) {
   firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
 }
 
-const firebaseApp = initializeApp({
-  projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId
-});
-const firestore = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+let firebaseApp: any = null;
+let firestore: any = null;
+
+function getFirebase() {
+  if (!firebaseApp) {
+    firebaseApp = initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId
+    });
+    firestore = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+  }
+  return { firebaseApp, firestore };
+}
 
 
 import { db } from './src/db/index.js';
@@ -327,7 +335,7 @@ app.post('/api/incidents', async (req, res) => {
   };
 
   await db.insert(incidents).values(newIncident);
-  try { await firestore.collection('incidents').doc(newIncident.id).set(newIncident); } catch(e) { console.error('Firestore sync error:', e); }
+  try { await getFirebase().firestore.collection('incidents').doc(newIncident.id).set(newIncident); } catch(e) { console.error('Firestore sync error:', e); }
 
   console.log(`[EnterpriseDispatch] Recorded new Incident: ${id} at [${latitude}, ${longitude}]`);
   return res.status(201).json({
