@@ -176,7 +176,7 @@ export const OrgDashboard: React.FC = () => {
           <div>
             <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">
               {currentOrg.name} 
-              <span className="text-[8.5px] px-2 py-0.5 rounded-full text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-bold font-mono">
+              <span className="text-[8.5px] px-2 py-0.5 rounded-full text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 font-bold font-mono">
                 ACTIVE COMMAND NODE
               </span>
             </h1>
@@ -275,8 +275,8 @@ export const OrgDashboard: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-slate-950 border border-emerald-500/20 rounded-xl p-3.5 flex flex-col items-center justify-center shrink-0 min-w-[200px]">
-                <span className="text-[8px] font-mono font-black text-emerald-400 tracking-wider uppercase mb-1">
+              <div className="bg-slate-950 border border-cyan-500/20 rounded-xl p-3.5 flex flex-col items-center justify-center shrink-0 min-w-[200px]">
+                <span className="text-[8px] font-mono font-black text-cyan-400 tracking-wider uppercase mb-1">
                   Active Org ID
                 </span>
                 <span className="text-base font-mono font-black text-slate-100 tracking-widest select-all">
@@ -316,7 +316,7 @@ export const OrgDashboard: React.FC = () => {
                           <span className="text-[8px] text-slate-500 font-black block uppercase tracking-wider">Live Incident Sequence Audit</span>
                           {p.timelineData.map((t, i) => (
                             <div key={i} className="flex gap-1">
-                              <span className="text-emerald-500">✓</span>
+                              <span className="text-cyan-500">✓</span>
                               <span>{t}</span>
                             </div>
                           ))}
@@ -357,7 +357,7 @@ export const OrgDashboard: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                 {/* Creator form */}
                 <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-4 space-y-3.5 md:col-span-1">
-                  <span className="text-[9px] font-mono font-black uppercase text-emerald-400 block tracking-wider">
+                  <span className="text-[9px] font-mono font-black uppercase text-cyan-400 block tracking-wider">
                     Push New Client Tool
                   </span>
 
@@ -429,7 +429,7 @@ export const OrgDashboard: React.FC = () => {
                         setNewToolDesc('');
                         setNewToolValue('');
                       }}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[9px] tracking-wider uppercase transition-all font-mono"
+                      className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-[9px] tracking-wider uppercase transition-all font-mono"
                     >
                       Publish Custom Tool
                     </button>
@@ -453,7 +453,7 @@ export const OrgDashboard: React.FC = () => {
                           <div className="space-y-1 text-left">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-slate-100">{t.title}</span>
-                              <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-emerald-950/20 text-emerald-400 rounded border border-emerald-500/10">
+                              <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-cyan-950/20 text-cyan-400 rounded border border-cyan-500/10">
                                 {t.type}
                               </span>
                             </div>
@@ -531,7 +531,7 @@ export const OrgDashboard: React.FC = () => {
                               approvePendingUser(user.id);
                               useAppStore.getState().addToast(`Approved membership for ${user.fullName}!`, "success");
                             }}
-                            className="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/35 text-emerald-400 border border-emerald-500/20 rounded-lg text-center uppercase tracking-wider cursor-pointer"
+                            className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/35 text-cyan-400 border border-cyan-500/20 rounded-lg text-center uppercase tracking-wider cursor-pointer"
                           >
                             ✓ Approve
                           </button>
@@ -570,7 +570,7 @@ export const OrgDashboard: React.FC = () => {
                   placeholder="Search subscribers..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 w-full md:w-64 font-mono"
+                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500 w-full md:w-64 font-mono"
                 />
               </div>
             </div>
@@ -604,7 +604,7 @@ export const OrgDashboard: React.FC = () => {
                       {isEditing ? (
                         <div className="space-y-3 font-mono text-[10px] grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
                           <div className="sm:col-span-2 flex justify-between items-center border-b border-slate-800 pb-1.5">
-                            <span className="text-emerald-400 font-black uppercase text-[9px]">Edit Client Profile</span>
+                            <span className="text-cyan-400 font-black uppercase text-[9px]">Edit Client Profile</span>
                             <span className="text-slate-500">ID: {student.id}</span>
                           </div>
 
@@ -719,7 +719,7 @@ export const OrgDashboard: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleSaveEdit(student.id)}
-                              className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-black rounded-lg hover:bg-emerald-500 font-mono uppercase"
+                              className="px-4 py-1.5 bg-cyan-600 text-white text-[10px] font-black rounded-lg hover:bg-cyan-500 font-mono uppercase"
                             >
                               Commit Changes
                             </button>
@@ -750,7 +750,7 @@ export const OrgDashboard: React.FC = () => {
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleEditClick(student)}
-                                className="px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-850 rounded-md text-[9px] font-mono font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase"
+                                className="px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-850 rounded-md text-[9px] font-mono font-black text-cyan-400 hover:text-cyan-300 transition-colors uppercase"
                               >
                                 Edit Profile
                               </button>
@@ -889,7 +889,7 @@ export const OrgDashboard: React.FC = () => {
             <div className="flex justify-end gap-3 pt-3 border-t border-slate-900">
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
+                className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
               >
                 Save Branding Settings
               </button>
@@ -913,7 +913,7 @@ export const OrgDashboard: React.FC = () => {
               </div>
               <span className={`text-[8.5px] px-2.5 py-1 rounded-full font-mono font-black border uppercase ${
                 twilioAccountSid && twilioAuthToken && twilioFromNumber
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}>
                 {twilioAccountSid && twilioAuthToken && twilioFromNumber ? 'Connected' : 'Offline / Standby'}
@@ -923,7 +923,7 @@ export const OrgDashboard: React.FC = () => {
             <div className="bg-slate-950/60 border border-slate-850 p-4 rounded-2xl text-xs space-y-2 text-slate-300">
               <span className="text-[8px] font-mono font-black text-indigo-400 uppercase tracking-widest block">HOW TO ACTIVATE CLOUD DISPATCH</span>
               <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-slate-400">
-                <li>Create a free account at <a href="https://console.twilio.com" target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline">console.twilio.com</a></li>
+                <li>Create a free account at <a href="https://console.twilio.com" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">console.twilio.com</a></li>
                 <li>Acquire a dedicated South African or regional cell number for roughly R50.00 once-off.</li>
                 <li>Copy and paste your Twilio <strong className="text-slate-300">Account SID</strong>, <strong className="text-slate-300">Auth Token</strong>, and <strong className="text-slate-300">Twilio Phone Number</strong> below.</li>
                 <li>Click <strong className="text-slate-300">Test Connection</strong> to verify loopback delivery to your dispatch terminal.</li>
@@ -967,12 +967,12 @@ export const OrgDashboard: React.FC = () => {
               {twilioTestStatus !== 'idle' && (
                 <div className={`p-4 rounded-xl border text-[11px] leading-relaxed font-mono ${
                   twilioTestStatus === 'testing' ? 'bg-amber-950/20 border-amber-500/20 text-amber-400' :
-                  twilioTestStatus === 'success' ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400' :
+                  twilioTestStatus === 'success' ? 'bg-cyan-950/20 border-cyan-500/20 text-cyan-400' :
                   'bg-red-950/20 border-red-500/20 text-red-400'
                 }`}>
                   <div className="flex items-center gap-2 font-bold mb-1 uppercase text-[9px]">
                     {twilioTestStatus === 'testing' && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />}
-                    {twilioTestStatus === 'success' && <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />}
+                    {twilioTestStatus === 'success' && <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />}
                     {twilioTestStatus === 'error' && <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />}
                     <span>Handshake Output Log</span>
                   </div>
@@ -1023,7 +1023,7 @@ export const OrgDashboard: React.FC = () => {
                   });
                   alert('Twilio connected and saved successfully to organization profile.');
                 }}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
+                className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
               >
                 Save & Activate Cloud Dispatch
               </button>
@@ -1041,7 +1041,7 @@ export const OrgDashboard: React.FC = () => {
               <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Monthly Alert Incidents</span>
                 <span className="text-xl font-mono font-black text-slate-100 block">42</span>
-                <span className="text-[8px] font-mono text-emerald-400 block">▼ 14% vs last month</span>
+                <span className="text-[8px] font-mono text-cyan-400 block">▼ 14% vs last month</span>
               </div>
 
               <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
@@ -1053,7 +1053,7 @@ export const OrgDashboard: React.FC = () => {
               <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Avg Responder Response SLA</span>
                 <span className="text-xl font-mono font-black text-teal-400 block">4m 22s</span>
-                <span className="text-[8px] font-mono text-emerald-400 block">▲ 18s faster response</span>
+                <span className="text-[8px] font-mono text-cyan-400 block">▲ 18s faster response</span>
               </div>
 
               <div className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 space-y-1">
@@ -1102,15 +1102,15 @@ export const OrgDashboard: React.FC = () => {
                 <div className="space-y-2.5 font-mono text-[9px]">
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">BLE iTAG BEACON STATUS</span>
-                    <span className="text-emerald-400 font-bold">100% ONLINE (78/78)</span>
+                    <span className="text-cyan-400 font-bold">100% ONLINE (78/78)</span>
                   </div>
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">SUBSCRIBER MOBILE TELEMETRY LINK</span>
-                    <span className="text-emerald-400 font-bold">98.7% SIGNAL (77/78)</span>
+                    <span className="text-cyan-400 font-bold">98.7% SIGNAL (77/78)</span>
                   </div>
                   <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
                     <span className="text-slate-400">CENTRAL THINGSBOARD SERVER SYNC</span>
-                    <span className="text-emerald-400 font-bold">STABLE (HTTP 200)</span>
+                    <span className="text-cyan-400 font-bold">STABLE (HTTP 200)</span>
                   </div>
                 </div>
               </div>

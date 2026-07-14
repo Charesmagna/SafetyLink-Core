@@ -145,21 +145,21 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       {/* Super Admin Top Badge */}
-      <div className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-mono text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 shadow-md">
+      <div className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-blue-600 text-white font-mono text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 shadow-md">
         <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
         <span>🔒 SECURED CORE ADMINISTRATIVE INTERACTION PROTOCOL LOCKED 🔒</span>
       </div>
 
       {/* Admin Header */}
       <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative z-10">
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 opacity-60" />
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60" />
         <div className="flex items-center gap-3 text-left">
           <LogoSetPart part="badge" size={44} rounded="xl" />
           <div>
             <h1 className="text-sm font-black tracking-tight text-slate-100 uppercase font-mono">
               SL Global Command
             </h1>
-            <p className="text-[10px] text-purple-400 font-mono uppercase tracking-widest font-black">
+            <p className="text-[10px] text-amber-400 font-mono uppercase tracking-widest font-black">
               System Admin ({ADMIN_ORG_CODE.toUpperCase()}) // <span className="text-amber-500/80 font-black">POWERED BY TM MEDIA SOLUTIONS</span>
             </p>
           </div>
@@ -167,7 +167,7 @@ export const AdminPanel: React.FC = () => {
 
         <button
           onClick={logout}
-          className="px-4 py-1.5 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full"
+          className="px-4 py-1.5 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-500/30 text-amber-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full"
         >
           SIGNOUT SECURE LINK
         </button>
@@ -184,7 +184,7 @@ export const AdminPanel: React.FC = () => {
             }}
             className={`px-4.5 py-2.5 text-[10px] font-mono font-bold tracking-wider rounded-xl uppercase transition-all whitespace-nowrap ${
               activeTab === tab
-                ? 'bg-purple-600 text-white'
+                ? 'bg-amber-600 text-white'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -282,13 +282,13 @@ export const AdminPanel: React.FC = () => {
 
             {/* Recent Activity Logs */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-purple-400 font-mono uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">
                 System Administrative Audit Trails
               </h3>
               <div className="bg-slate-950/80 border border-slate-900 rounded-3xl p-4 h-64 overflow-y-auto font-mono text-[10px] space-y-2.5">
                 {users.map((u, i) => (
                   <div key={i} className="border-b border-slate-900/40 pb-2 last:border-0 text-slate-400">
-                    <span className="text-slate-500">[{new Date(u.createdAt).toLocaleTimeString()}]</span> USER_REGISTRY: Resident <span className="text-purple-400">@{u.username}</span> registered under organization <span className="text-blue-400">{u.orgCode || 'Independent Node'}</span>.
+                    <span className="text-slate-500">[{new Date(u.createdAt).toLocaleTimeString()}]</span> USER_REGISTRY: Resident <span className="text-amber-400">@{u.username}</span> registered under organization <span className="text-blue-400">{u.orgCode || 'Independent Node'}</span>.
                   </div>
                 ))}
                 {organizations.map((o, i) => (
@@ -317,13 +317,13 @@ export const AdminPanel: React.FC = () => {
                   placeholder="Search name / user / cell..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-purple-500 font-mono"
+                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono"
                 />
 
                 <select
                   value={orgFilter}
                   onChange={e => setOrgFilter(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-full px-4.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-purple-500 font-mono"
+                  className="bg-slate-900 border border-slate-800 rounded-full px-4.5 py-2 text-xs text-slate-300 focus:outline-none focus:border-amber-500 font-mono"
                 >
                   <option value="">All Organizations</option>
                   {organizations.map(org => (
@@ -394,14 +394,14 @@ export const AdminPanel: React.FC = () => {
 
                           <div className="flex justify-end gap-2 pt-1">
                             <button onClick={() => setEditingUserId(null)} className="text-[10px] text-slate-400 hover:text-slate-200">Cancel</button>
-                            <button onClick={() => handleSaveUser(u.id)} className="px-3 py-1 bg-purple-600 text-white rounded-full text-[10px] font-bold">Save Record</button>
+                            <button onClick={() => handleSaveUser(u.id)} className="px-3 py-1 bg-amber-600 text-white rounded-full text-[10px] font-bold">Save Record</button>
                           </div>
                         </div>
                       ) : (
                         <>
                           <div className="flex justify-between items-start gap-3">
                             <div className="flex gap-3">
-                              <div className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center font-bold text-purple-400">
+                              <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-400">
                                 {u.fullName.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -455,16 +455,16 @@ export const AdminPanel: React.FC = () => {
                   placeholder="Search residence name..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-purple-500 font-mono w-full md:w-64"
+                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono w-full md:w-64"
                 />
               </div>
 
               {/* Pending Approvals */}
               {pendingOrgs.length > 0 && (
-                <div className="bg-purple-950/25 border border-purple-500/30 p-5 rounded-3xl space-y-3.5 mb-6">
+                <div className="bg-amber-950/25 border border-amber-500/30 p-5 rounded-3xl space-y-3.5 mb-6">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping" />
-                    <h3 className="text-xs font-mono font-black uppercase text-purple-300 tracking-wider">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                    <h3 className="text-xs font-mono font-black uppercase text-amber-300 tracking-wider">
                       🔔 Pending Organization Registries Awaiting System Admin Approval ({pendingOrgs.length})
                     </h3>
                   </div>
@@ -474,7 +474,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <h4 className="text-xs font-black text-slate-100">{o.name}</h4>
-                            <span className="text-[9px] font-mono font-bold bg-purple-500/15 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/10">{o.id}</span>
+                            <span className="text-[9px] font-mono font-bold bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/10">{o.id}</span>
                           </div>
                           <p className="text-[10px] text-slate-400 font-mono">
                             Manager: {o.contactName} • Email: {o.contactEmail}
@@ -489,7 +489,7 @@ export const AdminPanel: React.FC = () => {
                           </button>
                           <button
                             onClick={() => approveOrganization(o.id)}
-                            className="px-3.5 py-1 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-mono font-bold rounded-lg transition-all"
+                            className="px-3.5 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg transition-all"
                           >
                             ACCEPT REGISTRY
                           </button>
@@ -542,7 +542,7 @@ export const AdminPanel: React.FC = () => {
 
                             <div className="flex justify-end gap-2 pt-1">
                               <button onClick={() => setEditingOrgId(null)} className="text-[10px] text-slate-400 hover:text-slate-200">Cancel</button>
-                              <button onClick={() => handleSaveOrg(o.id)} className="px-3 py-1 bg-purple-600 text-white rounded-full text-[10px] font-bold">Save Org</button>
+                              <button onClick={() => handleSaveOrg(o.id)} className="px-3 py-1 bg-amber-600 text-white rounded-full text-[10px] font-bold">Save Org</button>
                             </div>
                           </div>
                         ) : (
@@ -577,7 +577,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <div>
                               <span className="text-slate-500 block text-[8px]">DATABASE TYPE</span>
-                              <span className="text-purple-400 text-[8px] uppercase font-black block mt-0.5">Firebase Stack</span>
+                              <span className="text-amber-400 text-[8px] uppercase font-black block mt-0.5">Firebase Stack</span>
                             </div>
                           </div>
                         </>
@@ -637,7 +637,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="space-y-1 font-mono text-[9px] text-slate-400">
                           {p.timelineData.map((log, lidx) => (
                             <div key={lidx} className="flex gap-2">
-                              <span className="text-purple-400 shrink-0">›</span>
+                              <span className="text-amber-400 shrink-0">›</span>
                               <span>{log}</span>
                             </div>
                           ))}
@@ -669,7 +669,7 @@ export const AdminPanel: React.FC = () => {
                   placeholder="Paste ThingsBoard device access token..."
                   value={tbTokenInput}
                   onChange={e => setTbTokenInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
                 />
                 
                 <div className="flex gap-2">
@@ -678,7 +678,7 @@ export const AdminPanel: React.FC = () => {
                       setThingsBoardToken(tbTokenInput);
                       addAuditLog('SYSTEM', 'INFO', 'ThingsBoard token saved');
                     }}
-                    className="px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
+                    className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
                   >
                     SAVE ROUTE
                   </button>
@@ -709,7 +709,7 @@ export const AdminPanel: React.FC = () => {
               {/* Creator Form */}
               <div className="bg-slate-900 border border-slate-900 rounded-3xl p-5 space-y-4 md:col-span-1">
                 <div className="space-y-1">
-                  <h3 className="text-xs font-black uppercase text-purple-400 font-mono tracking-wider">🛠️ Add New Custom Tool / Setting</h3>
+                  <h3 className="text-xs font-black uppercase text-amber-400 font-mono tracking-wider">🛠️ Add New Custom Tool / Setting</h3>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
                     Instantly push a new setting, quick-dial contact, or automatic integration tool to all connected SafetyLink devices and resident dashboards.
                   </p>
@@ -782,7 +782,7 @@ export const AdminPanel: React.FC = () => {
                       setNewToolValue('');
                       addAuditLog('SYSTEM', 'INFO', `Admin pushed global tool: ${newToolTitle}`);
                     }}
-                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-[10px] tracking-wider uppercase transition-all"
+                    className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[10px] tracking-wider uppercase transition-all"
                   >
                     PUBLISH GLOBAL TOOL
                   </button>
@@ -809,7 +809,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-100">{t.title}</span>
-                            <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-purple-900/40 text-purple-300 rounded border border-purple-500/20">
+                            <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-amber-900/40 text-amber-300 rounded border border-amber-500/20">
                               {t.type}
                             </span>
                           </div>

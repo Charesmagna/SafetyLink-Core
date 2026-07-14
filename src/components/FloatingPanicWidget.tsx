@@ -15,58 +15,70 @@ export const FloatingPanicWidget: React.FC = () => {
     silenceAlerts,
     setSilenceAlerts,
     decoyActive,
-    setDecoyActive
+    setDecoyActive,
+    userLocation
   } = useAppStore();
 
-  const [showControls, setShowControls] = useState(false);
+  const [tapState, setTapState] = useState<'IDLE' | 'AWAITING' | 'MENU'>('IDLE');
+  const [localCountdown, setLocalCountdown] = useState<number | null>(null);
   const [opacity, setOpacity] = useState(1);
+  const bleDevices = useAppStore(state => state.bleDevices || []);
+  const bluetoothConnected = bleDevices.some((d: any) => d.connectionState === 'CONNECTED');
   
   const widgetRef = useRef<HTMLDivElement>(null);
 
-  // Auto-close control slider after 10 seconds of inactivity to allow enough time for toggles
   useEffect(() => {
-    if (showControls) {
-      const timer = setTimeout(() => setShowControls(false), 10000);
+    let timer: NodeJS.Timeout;
+    if (tapState === 'AWAITING' && localCountdown !== null) {
+      if (localCountdown > 0) {
+        timer = setTimeout(() => setLocalCountdown(localCountdown - 1), 1000);
+      } else {
+        // 10 seconds elapsed, no second tap -> deploy
+        setTapState('IDLE');
+        setLocalCountdown(null);
+        startMultiStagePanic("Emergency distress activated via floating widget auto-deploy.", 0);
+        addToast("SOS Deployed automatically from floating widget.", "error");
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [tapState, localCountdown, startMultiStagePanic, addToast]);
+
+  // Auto-close menu after 10 seconds of inactivity
+  useEffect(() => {
+    if (tapState === 'MENU') {
+      const timer = setTimeout(() => setTapState('IDLE'), 10000);
       return () => clearTimeout(timer);
     }
-  }, [showControls, floatingWidgetSize, opacity, silenceAlerts, decoyActive]);
+  }, [tapState, floatingWidgetSize, opacity, silenceAlerts, decoyActive]);
 
   if (!isFloatingWidgetDeployed) return null;
 
   const isSOSActive = activeSOSState !== 'IDLE';
   const isCountdownActive = panicCountdown !== null;
 
-  // Handle single tap or double tap
-  let lastTap = 0;
   const handleTap = (e: React.MouseEvent) => {
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    
-    // Simulate tactile haptic vibration feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(now - lastTap < DOUBLE_TAP_DELAY ? [40, 20, 40] : 15);
+    e.stopPropagation();
+    if (navigator.vibrate) navigator.vibrate(15);
+
+    if (isSOSActive || isCountdownActive) {
+      cancelSOS();
+      setTapState('IDLE');
+      addToast("SOS Distress sequence aborted.", "warn");
+      return;
     }
 
-    if (now - lastTap < DOUBLE_TAP_DELAY) {
-      // Double tap -> Toggle sizing controls
-      setShowControls(!showControls);
-      e.stopPropagation();
-    } else {
-      // Single tap -> Trigger / Cancel SOS
-      setTimeout(() => {
-        const doubleTapped = Date.now() - lastTap < DOUBLE_TAP_DELAY;
-        if (!doubleTapped) {
-          if (isCountdownActive || isSOSActive) {
-            cancelSOS();
-            addToast("SOS Distress sequence aborted via floating shortcut.", "warn");
-          } else {
-            startMultiStagePanic("Emergency distress activated via movable Home Screen floating panic widget.", 10);
-            addToast("SOS Countdown initiated! You have 10 seconds to abort.", "warn");
-          }
-        }
-      }, DOUBLE_TAP_DELAY);
+    if (tapState === 'IDLE') {
+      // First tap
+      setTapState('AWAITING');
+      setLocalCountdown(10);
+    } else if (tapState === 'AWAITING') {
+      // Second tap -> open menu
+      setTapState('MENU');
+      setLocalCountdown(null);
+    } else if (tapState === 'MENU') {
+      // Third tap -> close menu
+      setTapState('IDLE');
     }
-    lastTap = now;
   };
 
   return (
@@ -121,8 +133,18 @@ export const FloatingPanicWidget: React.FC = () => {
               </div>
             )}
 
+            {/* Awaiting Second Tap */}
+            {tapState === 'AWAITING' && !isCountdownActive && !isSOSActive && (
+              <div className="absolute inset-0 bg-amber-500/95 flex flex-col items-center justify-center font-black text-slate-900 text-[10px] uppercase tracking-wider text-center p-1 leading-none animate-pulse">
+                <span>TAP</span>
+                <span>AGAIN</span>
+                <span className="text-[7px] mt-0.5 opacity-80 font-bold">for menu</span>
+                <span className="text-xl mt-0.5">{localCountdown}</span>
+              </div>
+            )}
+
             {/* Default logo with subtle rotation */}
-            {!isCountdownActive && !isSOSActive && (
+            {tapState !== 'AWAITING' && !isCountdownActive && !isSOSActive && (
               <img
                 src="/Polish_20260620_014530309.jpg"
                 onError={(e) => {
@@ -131,23 +153,54 @@ export const FloatingPanicWidget: React.FC = () => {
                 }}
                 alt="SL"
                 referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-full object-cover pointer-events-none drop-shadow-md select-none transition-transform hover:scale-105"
+                className="w-[75%] h-[75%] rounded-full object-cover pointer-events-none drop-shadow-md select-none transition-transform hover:scale-105"
               />
             )}
           </div>
         </div>
 
-        {/* Floating slider helper tooltip */}
+        {/* Floating slider helper tooltip & Mini Menu */}
         <AnimatePresence>
-          {showControls && (
+          {tapState === 'MENU' && (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-full left-1/2 -translate-x-1/2 mt-3 p-3 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl flex flex-col gap-2.5 w-48 text-left z-50 pointer-events-auto backdrop-blur-xl"
+              className="absolute top-full left-1/2 -translate-x-1/2 mt-3 p-3 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl flex flex-col gap-2.5 w-52 text-left z-50 pointer-events-auto backdrop-blur-xl"
             >
-              <div className="space-y-1">
+              {/* Mini Menu Info */}
+              <div className="flex flex-col gap-1.5 pb-2 border-b border-slate-900">
+                <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
+                  <span>STATUS:</span>
+                  <span className={bluetoothConnected ? "text-emerald-400" : "text-slate-500"}>{bluetoothConnected ? "CONNECTED" : "DISCONNECTED"}</span>
+                </div>
+                <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
+                  <span>ACTIVITY:</span>
+                  <span className="text-slate-300">PATROL / MONITOR</span>
+                </div>
+                <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
+                  <span>LOCATION:</span>
+                  <span className="text-blue-400 truncate max-w-[90px] text-right">
+                    {userLocation ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}` : 'SYNCING...'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-1.5 pt-1">
+                <button
+                  onClick={() => {
+                    setTapState('IDLE');
+                    startMultiStagePanic("Manual trigger from widget menu", 0);
+                  }}
+                  className="w-full py-2 bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/40 hover:text-red-100 rounded text-[10px] font-black tracking-widest uppercase transition-colors"
+                >
+                  DEPLOY SOS NOW
+                </button>
+              </div>
+
+              <div className="space-y-1 mt-1">
                 <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
                   <span>WIDGET SIZE: {floatingWidgetSize}px</span>
                 </div>
@@ -206,8 +259,8 @@ export const FloatingPanicWidget: React.FC = () => {
                 </button>
               </div>
 
-              <div className="text-[8px] text-center text-slate-500 font-mono italic leading-none">
-                Double-tap shortcut to hide options
+              <div className="text-[8px] text-center text-slate-500 font-mono italic leading-none pt-1">
+                Tap widget again to close
               </div>
             </motion.div>
           )}
