@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#0a0f1e"
+    android:padding="8dp">
+
+    <!-- Logo -->
+    <ImageView
+        android:id="@+id/widget_logo"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="SafetyLink logo"
+        android:layout_marginBottom="4dp" />
+
+    <!-- SOS Trigger Button -->
+    <Button
+        android:id="@+id/widget_panic_btn"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:background="#b91c1c"
+        android:text="SOS"
+        android:textColor="#ffffff"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:contentDescription="Trigger SOS panic"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Status label -->
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TAP TO TRIGGER"
+        android:textColor="#94a3b8"
+        android:textSize="8sp"
+        android:fontFamily="sans-serif-condensed" />
+
+    <!-- BLE status -->
+    <TextView
+        android:id="@+id/widget_ble_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SafetyLink"
+        android:textColor="#475569"
+        android:textSize="7sp"
+        android:layout_marginTop="2dp" />
+</LinearLayout>
