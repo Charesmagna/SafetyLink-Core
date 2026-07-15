@@ -34,3 +34,14 @@
 
 # Cordova SMS plugin
 -keep class com.cordova.plugins.sms.** { *; }
+
+# Prevent R8 from obfuscating Room Entity data classes
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class * { *; }
+
+# Prevent R8 from stripping the CoroutineWorker class used for background syncing
+-keep class com.aistudio.safetylink.vqnztp.SosSyncWorker { *; }
+# (Ensure you replace 'com.aistudio.safetylink.vqnztp' with your actual package name)
+
+# Firebase Functions Keep Rules
+-keep class com.google.firebase.functions.** { *; }
