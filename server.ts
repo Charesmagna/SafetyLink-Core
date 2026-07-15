@@ -32,10 +32,14 @@ import { db } from './src/db/index.js';
 import { users, organizations, incidents, telemetryLogs, dispatchLogs } from './src/db/schema.js';
 import { eq } from 'drizzle-orm';
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'safetylink-super-secret-key-2026';
 
 app.use(express.json());
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
 
 // ==========================================
 // Database setup is now in src/db
@@ -429,3 +433,4 @@ async function startServer() {
 }
 
 startServer().catch(err => { console.error("Fatal error during server startup:", err); process.exit(1); });
+process.on('beforeExit', () => console.log('BEFORE EXIT EVENT')); process.on('exit', () => console.log('EXIT EVENT'));
