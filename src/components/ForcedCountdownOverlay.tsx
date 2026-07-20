@@ -9,10 +9,11 @@ export const ForcedCountdownOverlay: React.FC = () => {
     panicCountdown, 
     cancelSOS, 
     userLocation, 
-    currentUser 
+    currentUser,
+    silenceAlerts
   } = useAppStore();
 
-  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(silenceAlerts);
   const [wakeLock, setWakeLock] = useState<any>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);

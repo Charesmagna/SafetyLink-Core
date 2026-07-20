@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { Lock, ShieldAlert, X, AlertTriangle } from 'lucide-react';
+import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 
 export const PanicButton: React.FC = () => {
@@ -15,7 +15,8 @@ export const PanicButton: React.FC = () => {
   const { 
     activeSOSState, attemptCancelSOS, drillMode, 
     panicCountdown, startMultiStagePanic, auditLogs,
-    watchMeTimerSeconds, startWatchMeTimer, cancelWatchMeTimer 
+    watchMeTimerSeconds, startWatchMeTimer, cancelWatchMeTimer,
+    silenceAlerts, setSilenceAlerts
   } = useAppStore();
   
   const [showWatchMe, setShowWatchMe] = useState(false);
@@ -482,12 +483,23 @@ export const PanicButton: React.FC = () => {
           >
             {drillMode ? "DRILL TEST" : "LIVE PROTOCOL"}
           </button>
+          <button
+            onClick={() => setSilenceAlerts(!silenceAlerts)}
+            className={`px-3 py-1.5 rounded-full flex items-center justify-center border transition-all duration-300 ${
+              silenceAlerts 
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                : 'bg-slate-900/40 border-slate-800 text-slate-500'
+            }`}
+            title={silenceAlerts ? "Silent Alerts Active" : "Audible Alerts Active"}
+          >
+            {silenceAlerts ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
 
       {/* Watch-Me Timer Component */}
-      <div className="absolute bottom-[4.5rem] left-6 right-6">
+      <div className="mt-6 relative z-10">
         {watchMeTimerSeconds !== null ? (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
