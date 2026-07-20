@@ -1,19 +1,45 @@
 version: '3.8'
+
 services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: safetylink
-  owncloud:
-    image: owncloud/server
-  ntfy:
-    image: binwiederhier/ntfy
   backend:
     build: .
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgres://user:password@postgres:5432/safetylink
-# ACCESSIBILITY TESTING WITH TALKBACK
+      - NODE_ENV=production
+    depends_on:
+      - postgres
+      - ntfy
+      - owncloud
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: safetylink
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  ntfy:
+    image: binwiederhier/ntfy
+    command: serve
+    ports:
+      - "2586:80"
+
+  owncloud:
+    image: owncloud/server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - OWNCLOUD_DOMAIN=localhost:8080
+      - OWNCLOUD_ADMIN_USERNAME=admin
+      - OWNCLOUD_ADMIN_PASSWORD=admin
+    volumes:
+      - owncloud_data:/mnt/data
+
+volumes:
+  pgdata:
+  owncloud_data:

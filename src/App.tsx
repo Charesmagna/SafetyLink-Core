@@ -15,7 +15,7 @@ import { useAppStore } from './utils/store';
 import { BackgroundVideoLoop } from './components/BackgroundVideoLoop';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
-const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { LogoSetPart } from './components/LogoSetPart';
 import { SplashReveal } from './components/SplashReveal';
@@ -257,7 +257,7 @@ const App: React.FC = () => {
     }
 
     if (superAdminActive) {
-      return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
+      return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><SuperDashboard /></Suspense></ErrorBoundary>;
     }
 
     if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder'].includes(currentUser.role || ''))) {

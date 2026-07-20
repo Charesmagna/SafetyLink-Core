@@ -71,7 +71,7 @@ export const MotherboardConsole: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#0b101a] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col h-[700px]">
+    <div className="bg-[#020617] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col h-[700px]">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl font-black text-slate-200 tracking-widest font-mono">
@@ -191,9 +191,12 @@ export const MotherboardConsole: React.FC = () => {
             </div>
 
             {/* Bottom Actions */}
-            <div className="p-4 bg-slate-900/50 border-t border-slate-800 grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900/50 border-t border-slate-800 grid grid-cols-3 gap-2">
               <button className="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono font-bold text-[9px] uppercase tracking-widest rounded-xl transition-colors border border-slate-700 flex items-center justify-center gap-1">
                 <span>📍</span> NAV
+              </button>
+              <button className="py-2 bg-slate-800 hover:bg-slate-700 text-blue-400 font-mono font-bold text-[9px] uppercase tracking-widest rounded-xl transition-colors border border-slate-700 flex items-center justify-center gap-1">
+                <span>📞</span> CALL VICTIM
               </button>
               <button 
                 onClick={() => activeOrgPanics.length > 0 && resolvePanic(activeOrgPanics[0].id)}
