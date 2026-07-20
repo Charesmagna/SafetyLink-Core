@@ -687,3 +687,35 @@ async function startServer() {
 }
 
 startServer().catch(err => { console.error("Fatal error during server startup:", err); process.exit(1); });
+
+// POST /api/org/contact/add
+app.post('/api/org/contact/add', async (req, res) => {
+  const { orgCode, name, phone, role, whatsappEnabled, smsEnabled } = req.body;
+  if (!orgCode || !name || !phone) return res.status(400).json({ error: 'Missing fields' });
+  const newContact = {
+    id: `SL-CON-${Math.floor(1000 + Math.random() * 9000)}`,
+    name,
+    phone,
+    role: role || 'Guard',
+    orgId: orgCode,
+    lang: 'en'
+  };
+  await db.insert(contacts).values(newContact);
+  return res.status(201).json({ message: 'Contact added', contact: newContact });
+});
+
+// POST /api/family/contact/add
+app.post('/api/family/contact/add', async (req, res) => {
+  const { familyCode, name, phone, role, whatsappEnabled, smsEnabled } = req.body;
+  if (!familyCode || !name || !phone) return res.status(400).json({ error: 'Missing fields' });
+  const newContact = {
+    id: `SL-CON-${Math.floor(1000 + Math.random() * 9000)}`,
+    name,
+    phone,
+    role: role || 'Member',
+    familyId: familyCode,
+    lang: 'en'
+  };
+  await db.insert(contacts).values(newContact);
+  return res.status(201).json({ message: 'Contact added', contact: newContact });
+});
