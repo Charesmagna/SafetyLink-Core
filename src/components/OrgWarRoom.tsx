@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useAppStore } from '../utils/store';
 
 export const OrgWarRoom = () => {
   const [messages, setMessages] = useState<string[]>([]);

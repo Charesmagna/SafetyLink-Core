@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import { useAppStore } from '../utils/store';
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 export const MotherboardConsole: React.FC = () => {
   const { currentOrg: storeOrg, currentUser, organizations, users, panicEvents, resolvePanic } = useAppStore();
   
+  const isDownloading = false;
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   if (!currentOrg) return null;
