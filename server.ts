@@ -7,7 +7,8 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 import fs from 'fs';
-import { createOCUser } from './src/services/owncloud';
+import cron from 'node-cron';
+import { createOCUser, deleteOCFolder } from './src/services/owncloud';
 
 const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
 let firebaseConfig = { projectId: 'safetylink-99e56', firestoreDatabaseId: '(default)' };
@@ -31,7 +32,7 @@ function getFirebase() {
 
 import { db } from './src/db/index.js';
 import { users, organizations, incidents, telemetryLogs, dispatchLogs } from './src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, lte } from 'drizzle-orm';
 const app = express();
 const PORT = 3000;
 const getJwtSecret = () => {
@@ -733,3 +734,36 @@ app.post('/api/family/contact/add', async (req, res) => {
   await db.insert(contacts).values(newContact);
   return res.status(201).json({ message: 'Contact added', contact: newContact });
 });
+
+// ==========================================
+// Cron Jobs
+// ==========================================
+cron.schedule('0 2 * * *', async () => {
+  console.log('[Cron] Running daily 90-day evidence cleanup...');
+  try {
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    
+    // Find incidents older than 90 days
+    const oldIncidents = await db.select().from(incidents).where(lte(incidents.timestamp, ninetyDaysAgo));
+    
+    for (const incident of oldIncidents) {
+      // Reconstruct folder path /safetylink/{type}/{code}/{year-month-day}/{panicId}
+      const type = incident.familyId ? 'FAMILY' : 'ORGANIZATION';
+      const code = incident.familyId || incident.orgId || 'SL-ORG-MAIN';
+      
+      const date = new Date(incident.timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      const folderPath = `/safetylink/${type}/${code}/${dateStr}/${incident.id}`;
+      await deleteOCFolder(folderPath);
+    }
+    console.log(`[Cron] Finished cleanup. Checked ${oldIncidents.length} old incidents.`);
+  } catch (e: any) {
+    console.error('[Cron] Error during evidence cleanup:', e.message);
+  }
+});
+

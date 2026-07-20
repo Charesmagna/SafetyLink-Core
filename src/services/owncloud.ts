@@ -61,3 +61,16 @@ export async function createOCUser(code: string, type: 'ORGANIZATION' | 'FAMILY'
 
   return { ocUsername: code, ocPassword: ocPassword };
 }
+
+export async function deleteOCFolder(folderPath: string) {
+  try {
+    await axios.request({
+      method: 'DELETE',
+      url: `${OC_URL}/remote.php/webdav${folderPath}`,
+      auth: { username: OC_ADMIN, password: OC_ADMIN_PASS }
+    });
+    console.log(`[OwnCloud] Successfully deleted folder: ${folderPath}`);
+  } catch (e: any) {
+    console.warn(`[OwnCloud] Failed to delete folder ${folderPath}:`, e.message);
+  }
+}
