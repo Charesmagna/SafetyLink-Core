@@ -868,7 +868,7 @@ const App: React.FC = () => {
   return (
     <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       {/* Global Background 3D Animated Mesh Loop */}
-      <BackgroundVideoLoop />
+      <BackgroundVideoLoop isHome={activeTab === 'home'} />
 
       {/* High fidelity cyber background lighting elements */}
       <div className="police-wash pointer-events-none" />
