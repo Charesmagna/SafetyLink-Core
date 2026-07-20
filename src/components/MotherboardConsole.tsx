@@ -279,25 +279,21 @@ export const MotherboardConsole: React.FC = () => {
               </div>
             </div>
 
-            {/* Blinking Status */}
+            {/* Global Actions */}
             <div className="space-y-3 pt-4 border-t border-slate-800">
-              <h4 className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Blinking Status</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Blinking Server
-                  </div>
-                  <span className="text-emerald-500">8</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Blinking
-                  </div>
-                  <span className="text-emerald-500">6.1</span>
-                </div>
-              </div>
+              <h4 className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">Global Actions</h4>
+              <button 
+                onClick={() => alert("Initiating Global Lockdown protocol...")}
+                className="w-full py-2 bg-red-900/50 hover:bg-red-800/80 border border-red-500/50 text-red-400 text-[9px] font-bold font-mono tracking-widest rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                ⚠️ INITIATE LOCKDOWN
+              </button>
+              <button 
+                onClick={() => alert("Broadcasting alert to all nodes...")}
+                className="w-full py-2 bg-amber-900/50 hover:bg-amber-800/80 border border-amber-500/50 text-amber-400 text-[9px] font-bold font-mono tracking-widest rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                📢 BROADCAST ALERT
+              </button>
             </div>
 
             {/* System Status */}
@@ -306,7 +302,7 @@ export const MotherboardConsole: React.FC = () => {
               <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
-                  System Status
+                  Core Telemetry
                 </div>
                 <span className="text-emerald-500 font-bold">ONLINE</span>
               </div>
@@ -316,7 +312,7 @@ export const MotherboardConsole: React.FC = () => {
 
           <div className="p-3 bg-slate-900 border-t border-slate-800 text-center">
             <span className="text-[8px] font-mono font-bold text-slate-500 tracking-widest uppercase">
-              NASA-GRADE CONCURRENT UDP SERVER
+              NASA-GRADE UDP SERVER
             </span>
           </div>
         </div>
