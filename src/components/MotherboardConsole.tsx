@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { initAuth, googleSignIn, getAccessToken } from '../utils/googleAuth';
 
 export const MotherboardConsole: React.FC = () => {
   const { currentOrg: storeOrg, currentUser, organizations, users, panicEvents, resolvePanic } = useAppStore();
   const [isDownloading, setIsDownloading] = useState(false);
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
-
-  useEffect(() => {
-    const unsubscribe = initAuth();
-    return () => unsubscribe();
-  }, []);
 
   if (!currentOrg) return null;
 
@@ -28,46 +22,11 @@ export const MotherboardConsole: React.FC = () => {
   // Default to Johannesburg or center of active panics
   const mapCenter: [number, number] = activeOrgPanics.length > 0 ? [activeOrgPanics[0].lat, activeOrgPanics[0].lng] : [-26.2041, 28.0473];
 
-  const handleDownloadClick = async () => {
-    setIsDownloading(true);
-    try {
-      let token = await getAccessToken();
-      if (!token) {
-        const result = await googleSignIn();
-        if (result) {
-          token = result.accessToken;
-        } else {
-          throw new Error("Failed to authenticate with Google.");
-        }
-      }
-      
-      const q = encodeURIComponent("name = 'SafetyLink_ControlRoom_Client.zip' and trashed = false");
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,webContentLink)`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const data = await res.json();
-      if (data.files && data.files.length > 0) {
-        const file = data.files[0];
-        if (file.webContentLink) {
-          const link = document.createElement('a');
-          link.href = file.webContentLink;
-          link.setAttribute('target', '_blank');
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } else {
-          alert("File found but no download link available.");
-        }
-      } else {
-        alert("Executable not found on your Google Drive. Please upload 'SafetyLink_ControlRoom_Client.zip' to your Drive first.");
-      }
-    } catch (err: any) {
-      console.error("Download error:", err);
-      alert("Error accessing Google Drive: " + err.message);
-    } finally {
-      setIsDownloading(false);
-    }
+  const handleDownloadClick = () => {
+    // This is where you place the public Google Drive link for the generated .exe ZIP file.
+    // Replace this URL with your "Anyone with the link can view" Google Drive URL.
+    const PUBLIC_DRIVE_LINK = "https://drive.google.com/drive/folders/placeholder-link";
+    window.open(PUBLIC_DRIVE_LINK, '_blank');
   };
 
   return (
