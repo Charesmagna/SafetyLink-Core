@@ -30,20 +30,14 @@ export const MotherboardConsole: React.FC = () => {
           MOTHERBOARD RESPONSE CONSOLE
         </h2>
         <div className="flex flex-wrap items-center gap-4 font-mono text-[10px] font-bold">
-          <button 
-            onClick={() => {
-              const link = document.createElement('a');
-              link.href = 'data:application/octet-stream;charset=utf-8,dummy-exe-content';
-              link.download = 'SafetyLink_ControlRoom_Setup.exe';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
+          <a 
+            href="/SafetyLink_ControlRoom_Client.zip"
+            download="SafetyLink_ControlRoom_Client_Win64.zip"
             className="flex items-center gap-2 bg-blue-900/40 hover:bg-blue-800/60 px-4 py-1.5 rounded-lg border border-blue-500/50 transition-colors text-blue-300"
           >
             <span className="text-sm">⬇️</span>
-            <span>DOWNLOAD .EXE CLIENT</span>
-          </button>
+            <span>DOWNLOAD DESKTOP CLIENT (.ZIP)</span>
+          </a>
           <div className="flex items-center gap-2 bg-[#0E1525] px-3 py-1.5 rounded-lg border border-slate-800">
             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
             <span className="text-blue-400">Ocean Blue #0EASE9</span>
