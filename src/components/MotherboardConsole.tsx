@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';

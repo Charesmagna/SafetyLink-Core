@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../utils/store';
 
 export const OrgWarRoom = () => {
