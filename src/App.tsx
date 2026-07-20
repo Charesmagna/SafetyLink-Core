@@ -42,7 +42,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
 import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
-import slide3 from './assets/images/regenerated_image_1783360733591.jpg';
+import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
 import slLogoSet from './assets/images/sl_logoset.jpeg';
 import newBg1 from './assets/images/background1.jpeg';
