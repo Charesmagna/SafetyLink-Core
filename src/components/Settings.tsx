@@ -589,7 +589,7 @@ export const Settings: React.FC = () => {
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
-                <h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5>
+                <div className="flex flex-row justify-between items-center mb-1"><h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5><button onClick={() => { const code = currentUser?.orgCode || currentUser?.familyId || ""; const baseUrl = ocUrl || "http://localhost:8080"; const type = currentUser?.familyId ? "FAMILY" : "ORGANIZATION"; const zipUrl = `${baseUrl}/index.php/apps/files/ajax/download.php?files=&dir=/safetylink/${type}/${code}`; window.open(zipUrl, "_blank"); }} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 text-[8px] font-bold px-2 py-1 rounded transition-colors">Download ZIP</button></div>
                 <input type="text" value={ocUrl} onChange={e => setOcUrl(e.target.value)} placeholder="Server URL" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={ocUser} onChange={e => setOcUser(e.target.value)} placeholder="Username" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="password" value={ocToken} onChange={e => setOcToken(e.target.value)} placeholder="App Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
@@ -672,7 +672,7 @@ export const Settings: React.FC = () => {
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
-                <h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5>
+                <div className="flex flex-row justify-between items-center mb-1"><h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5><button onClick={() => { const code = currentUser?.orgCode || currentUser?.familyId || ""; const baseUrl = ocUrl || "http://localhost:8080"; const type = currentUser?.familyId ? "FAMILY" : "ORGANIZATION"; const zipUrl = `${baseUrl}/index.php/apps/files/ajax/download.php?files=&dir=/safetylink/${type}/${code}`; window.open(zipUrl, "_blank"); }} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 text-[8px] font-bold px-2 py-1 rounded transition-colors">Download ZIP</button></div>
                 <input type="text" value={ocUrl} onChange={e => setOcUrl(e.target.value)} placeholder="Server URL" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={ocUser} onChange={e => setOcUser(e.target.value)} placeholder="Username" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="password" value={ocToken} onChange={e => setOcToken(e.target.value)} placeholder="App Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
@@ -734,7 +734,7 @@ export const Settings: React.FC = () => {
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
-                <h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5>
+                <div className="flex flex-row justify-between items-center mb-1"><h5 className="text-[9px] font-bold text-slate-500 uppercase">OwnCloud / NextCloud</h5><button onClick={() => { const code = currentUser?.orgCode || currentUser?.familyId || ""; const baseUrl = ocUrl || "http://localhost:8080"; const type = currentUser?.familyId ? "FAMILY" : "ORGANIZATION"; const zipUrl = `${baseUrl}/index.php/apps/files/ajax/download.php?files=&dir=/safetylink/${type}/${code}`; window.open(zipUrl, "_blank"); }} className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 text-[8px] font-bold px-2 py-1 rounded transition-colors">Download ZIP</button></div>
                 <input type="text" value={ocUrl} onChange={e => setOcUrl(e.target.value)} placeholder="Server URL" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={ocUser} onChange={e => setOcUser(e.target.value)} placeholder="Username" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="password" value={ocToken} onChange={e => setOcToken(e.target.value)} placeholder="App Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />

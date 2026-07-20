@@ -1081,7 +1081,20 @@ export const OrgDashboard: React.FC = () => {
 
                 {/* ownCloud Config */}
                 <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-                  <h4 className="text-slate-300 font-mono font-bold text-xs uppercase mb-4">ownCloud (Evidence Backup)</h4>
+                  <div className="flex flex-row justify-between items-center mb-4">
+                    <h4 className="text-slate-300 font-mono font-bold text-xs uppercase">ownCloud (Evidence Backup)</h4>
+                    <button 
+                      onClick={() => {
+                        const code = currentOrg?.id || '';
+                        const ocUrl = ownCloudServerUrl || 'http://localhost:8080';
+                        const zipUrl = `${ocUrl}/index.php/apps/files/ajax/download.php?files=&dir=/safetylink/ORGANIZATION/${code}`;
+                        window.open(zipUrl, '_blank');
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-[10px] px-3 py-1.5 rounded uppercase tracking-wider transition-colors"
+                    >
+                      Download All Evidence ZIP
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest mb-1">Server URL</label>

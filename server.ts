@@ -7,6 +7,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 import fs from 'fs';
+import { createOCUser } from './src/services/owncloud';
 
 const firebaseConfigPath = path.join(process.cwd(), 'firebase-applet-config.json');
 let firebaseConfig = { projectId: 'safetylink-99e56', firestoreDatabaseId: '(default)' };
@@ -208,15 +209,26 @@ app.post(['/api/auth/register-org', '/api/org/register', '/api/family/register']
   if (!name || !contactName || !contactEmail) {
     return res.status(400).json({ error: 'Missing required organization fields' });
   }
+  
+  const isFamily = req.path.includes('family');
+  const type = isFamily ? 'FAMILY' : 'ORGANIZATION';
+  const prefix = isFamily ? 'FAM' : 'ORG';
 
+  const newId = id || `SL-${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+  
+  // 1. Auto Create OC User
+  const ocCreds = await createOCUser(newId, type);
+  
   const newOrg = {
-    id: id || `SL-ORG-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: newId,
     name,
     contactName,
     contactEmail,
     controlRoomNumber: controlRoomNumber || '+27829110000',
     escalationPolicy: 'Standard dispatcher escalation loop.',
-    approved: false
+    approved: false,
+    ocUsername: ocCreds.ocUsername,
+    ocPassword: ocCreds.ocPassword
   };
 
   await db.insert(organizations).values(newOrg);
@@ -230,13 +242,15 @@ app.post(['/api/auth/register-org', '/api/org/register', '/api/family/register']
     phone: controlRoomNumber || '+27829110000',
     email: contactEmail,
     orgCode: newOrg.id,
-    role: 'Organization Administrator',
+    role: isFamily ? 'Family Administrator' : 'Organization Administrator',
     passwordHash: hash,
+    ocUsername: ocCreds.ocUsername,
+    ocPassword: ocCreds.ocPassword
   };
   await db.insert(users).values(newUser);
 
   return res.status(201).json({
-    message: 'Organization registered successfully',
+    message: isFamily ? 'Family registered successfully' : 'Organization registered successfully',
     organization: newOrg,
   });
 });
