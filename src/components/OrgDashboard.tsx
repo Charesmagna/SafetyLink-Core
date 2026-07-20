@@ -5,6 +5,7 @@ import { UserProfile } from '../types';
 import { LogoSetPart } from './LogoSetPart';
 import { GlowingHeartBackground } from './GlowingHeartBackground';
 import { MphakatiOverwatch } from './MphakatiOverwatch';
+import { MotherboardConsole } from './MotherboardConsole';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -287,82 +288,8 @@ export const OrgDashboard: React.FC = () => {
         {/* ==================================================== */}
         {activeSubTab === 'dispatch' && (
           <div className="space-y-6 animate-fadeIn">
-            {/* Org ID and fast copy info board */}
-            <div className="bg-slate-900/40 border border-slate-900 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
-              <div className="space-y-1">
-                <h2 className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">Node Dispatch Registry Code</h2>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Provide your residents, campus students, or security clients this unique identifier. When written in their profile settings, their panic button triggers route telemetry directly to this screen.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-cyan-500/20 rounded-xl p-3.5 flex flex-col items-center justify-center shrink-0 min-w-[200px]">
-                <span className="text-[8px] font-mono font-black text-cyan-400 tracking-wider uppercase mb-1">
-                  Active Org ID
-                </span>
-                <span className="text-base font-mono font-black text-slate-100 tracking-widest select-all">
-                  {currentOrg.id}
-                </span>
-                <span className="text-[7.5px] text-slate-500 mt-1 uppercase font-mono">
-                  Tap to copy ID
-                </span>
-              </div>
-            </div>
-
-            {/* Active Panics Feed */}
-            {activeOrgPanics.length > 0 ? (
-              <div className="space-y-3 text-left">
-                <h3 className="text-xs font-black text-red-500 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                  Active Critical Panic Signal Feed ({activeOrgPanics.length})
-                </h3>
-                <div className="space-y-3">
-                  {activeOrgPanics.map((p) => (
-                    <div key={p.id} className="p-4 bg-red-950/20 border border-red-500/30 rounded-2xl flex flex-col md:flex-row justify-between md:items-center gap-3">
-                      <div className="space-y-1 text-left">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-slate-100">{p.description}</span>
-                          <span className="text-[8px] font-mono font-black px-1.5 py-0.5 bg-red-500 text-slate-950 rounded border border-red-400">
-                            {p.severity}
-                          </span>
-                          <span className="text-[9px] text-slate-500 font-mono">
-                            ID: {p.id}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-mono leading-relaxed">
-                          GPS: {p.lat.toFixed(5)}, {p.lng.toFixed(5)} • Logged: {new Date(p.timestamp).toLocaleTimeString()} • Dispatch Coordinator: {p.assignedResponder}
-                        </p>
-                        
-                        <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-2.5 max-w-2xl mt-2 font-mono text-[9px] text-slate-400 space-y-1">
-                          <span className="text-[8px] text-slate-500 font-black block uppercase tracking-wider">Live Incident Sequence Audit</span>
-                          {p.timelineData.map((t, i) => (
-                            <div key={i} className="flex gap-1">
-                              <span className="text-cyan-500">✓</span>
-                              <span>{t}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => resolvePanic(p.id)}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-mono font-black text-[10px] rounded-xl transition-all uppercase self-start md:self-auto shadow-md border border-red-500/20"
-                      >
-                        Resolve Incident
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="p-10 bg-slate-900/10 border border-slate-900 rounded-2xl text-center space-y-2">
-                <span className="text-3xl">📡</span>
-                <h3 className="text-xs font-black text-slate-400 font-mono uppercase tracking-wider">No Active Panic Incidents</h3>
-                <p className="text-[10.5px] text-slate-500 font-mono max-w-sm mx-auto">
-                  Standing by. Listening continuously for localized BLE hardware beacon double-clicks and application distress broadcasts.
-                </p>
-              </div>
-            )}
+            {/* Motherboard Response Console for Panics */}
+            <MotherboardConsole />
 
             {/* Custom Tools pushed specifically by this Org */}
             <div className="space-y-4 pt-4 border-t border-slate-900/80">
