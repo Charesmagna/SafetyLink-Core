@@ -89,6 +89,33 @@ export const OfflineMap: React.FC = () => {
   const [satError, setSatError] = useState<string | null>(null);
   const [mapCenterMode, setMapCenterMode] = useState<'user' | 'satellite'>('user');
 
+  const [isDownloadingOfflineMap, setIsDownloadingOfflineMap] = useState(false);
+  const [offlineMapProgress, setOfflineMapProgress] = useState(0);
+
+  const handleDownloadOfflineMap = () => {
+    if (isDownloadingOfflineMap) return;
+    setIsDownloadingOfflineMap(true);
+    setOfflineMapProgress(0);
+
+    const interval = setInterval(() => {
+      setOfflineMapProgress((prev) => {
+        const next = prev + Math.floor(Math.random() * 15) + 5;
+        if (next >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return next;
+      });
+    }, 400);
+  };
+
+  useEffect(() => {
+    if (offlineMapProgress >= 100) {
+      const timer = setTimeout(() => setIsDownloadingOfflineMap(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [offlineMapProgress]);
+
   // Fetch real, live space segment telemetry coordinates
   const fetchLiveSatelliteTelemetry = async () => {
     setIsLoadingSat(true);
@@ -305,6 +332,52 @@ export const OfflineMap: React.FC = () => {
         ) : (
           <div className="text-[10px] text-slate-500 text-center py-2 animate-pulse uppercase">
             CONNECTING TO SPACE SEGMENT...
+          </div>
+        )}
+      </div>
+
+      {/* Offline Map Cache Controls */}
+      <div className="mt-3.5 p-3.5 bg-slate-950/70 border border-slate-900 rounded-2xl text-left font-mono z-10 relative">
+        <div className="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
+          <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${isDownloadingOfflineMap ? 'animate-ping' : ''}`} />
+            OFFLINE MAP CACHE
+          </span>
+          <button
+            onClick={handleDownloadOfflineMap}
+            disabled={isDownloadingOfflineMap}
+            className={`px-2 py-0.5 text-[8px] rounded font-black uppercase border transition-all ${
+              isDownloadingOfflineMap
+                ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed'
+                : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60'
+            }`}
+          >
+            {isDownloadingOfflineMap ? 'Caching...' : 'Download Region'}
+          </button>
+        </div>
+
+        {isDownloadingOfflineMap ? (
+          <div className="space-y-1.5 mt-2">
+            <div className="flex justify-between text-[8px] text-slate-400">
+              <span>DOWNLOADING SECTOR TILES...</span>
+              <span>{Math.min(100, offlineMapProgress)}%</span>
+            </div>
+            <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+              <div 
+                className="bg-emerald-500 h-1.5 transition-all duration-300 ease-out relative"
+                style={{ width: `${Math.min(100, offlineMapProgress)}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ) : offlineMapProgress === 100 ? (
+          <div className="text-[9px] text-emerald-400 text-center py-1 mt-1 font-bold">
+            ✓ REGION CACHED FOR OFFLINE USE
+          </div>
+        ) : (
+          <div className="text-[9px] text-slate-500 text-center py-1 mt-1">
+            Region not cached. Network required for map tiles.
           </div>
         )}
       </div>
