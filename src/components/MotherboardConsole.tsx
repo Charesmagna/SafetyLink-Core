@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppStore } from '../utils/store';
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export const MotherboardConsole: React.FC = () => {

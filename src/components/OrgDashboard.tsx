@@ -17,7 +17,7 @@ export const OrgDashboard: React.FC = () => {
     updateUserProfile, 
     deleteUserProfile, 
     panicEvents, 
-    resolvePanic,
+    
     customTools,
     addCustomTool,
     deleteCustomTool,
