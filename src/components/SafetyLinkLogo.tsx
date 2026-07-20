@@ -132,11 +132,7 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
           style={{ transformStyle: 'preserve-3d' }}
         >
           {/* Slices or displays the high-fidelity branding logo, swapping conditionally during emergency panic states */}
-          <img
-            src="/media/new_logo/New_SafetyLink_Official_Logo.svg"
-            alt="SafetyLink Logo"
-            className="w-full h-full object-contain drop-shadow-[0_6px_16px_rgba(0,0,0,0.85)]"
-          />
+
         </motion.div>
       </div>
     </div>
