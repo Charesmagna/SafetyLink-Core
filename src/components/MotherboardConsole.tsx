@@ -22,11 +22,27 @@ export const MotherboardConsole: React.FC = () => {
   // Default to Johannesburg or center of active panics
   const mapCenter: [number, number] = activeOrgPanics.length > 0 ? [activeOrgPanics[0].lat, activeOrgPanics[0].lng] : [-26.2041, 28.0473];
 
-  const handleDownloadClick = () => {
-    // This is where you place the public Google Drive link for the generated .exe ZIP file.
-    // Replace this URL with your "Anyone with the link can view" Google Drive URL.
-    const PUBLIC_DRIVE_LINK = "https://drive.google.com/drive/folders/placeholder-link";
-    window.open(PUBLIC_DRIVE_LINK, '_blank');
+  const handleDownloadClick = async () => {
+    try {
+      const response = await fetch("https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest");
+      if (!response.ok) {
+        throw new Error("Failed to fetch latest release");
+      }
+      const data = await response.json();
+      const exeAsset = data.assets.find((asset: any) => asset.name.endsWith('.exe'));
+      
+      if (exeAsset) {
+        window.open(exeAsset.browser_download_url, '_blank');
+      } else {
+        alert("No executable found in the latest release. Please check GitHub Releases.");
+        window.open("https://github.com/Charesmagna/SafetyLink-Core/releases/latest", '_blank');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Error finding latest executable: " + err.message);
+      // Fallback
+      window.open("https://github.com/Charesmagna/SafetyLink-Core/releases/latest", '_blank');
+    }
   };
 
   return (
