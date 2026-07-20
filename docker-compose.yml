@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: safetylink
+  owncloud:
+    image: owncloud/server
+  ntfy:
+    image: binwiederhier/ntfy
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://user:password@postgres:5432/safetylink
+# ACCESSIBILITY TESTING WITH TALKBACK

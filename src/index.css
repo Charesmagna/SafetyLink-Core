@@ -1,0 +1,9 @@
+
+/* Capacitor ML Kit Barcode Scanner Transparent Overlay */
+body.barcode-scanner-active {
+  background: transparent !important;
+  --ion-background-color: transparent !important;
+}
+body.barcode-scanner-active #root {
+  display: none !important;
+}

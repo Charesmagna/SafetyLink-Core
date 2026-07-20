@@ -1,0 +1,7 @@
+<svg width="600" height="327" viewBox="0 0 600 327" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#FFFFFF" id="bounding-mask"/>
+  <path d="M10 10 L50 50" fill="white"/>
+  <g id="shield-emblem" fill="#10b981">
+    <circle cx="300" cy="163" r="50"/>
+  </g>
+</svg>

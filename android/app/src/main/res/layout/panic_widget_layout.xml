@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#0a0f1e"
+    android:padding="6dp">
+
+    <!-- Logo -->
+    <ImageView
+        android:id="@+id/widget_logo"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="SafetyLink logo"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Animated SOS Circle Button -->
+    <FrameLayout
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="4dp">
+
+        <!-- Outer pulse ring -->
+        <ImageView
+            android:id="@+id/widget_pulse_ring"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/circle_panic_button"
+            android:alpha="0.3"
+            android:scaleX="1.0"
+            android:scaleY="1.0" />
+
+        <!-- Main SOS circle button -->
+        <ImageView
+            android:id="@+id/widget_panic_btn"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:background="@drawable/circle_panic_button"
+            android:contentDescription="Trigger SOS panic"
+            android:src="@drawable/ic_sos_white"
+            android:scaleType="centerInside"
+            android:padding="12dp" />
+    </FrameLayout>
+
+    <!-- Status label -->
+    <TextView
+        android:id="@+id/widget_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TAP TO TRIGGER"
+        android:textColor="#94a3b8"
+        android:textSize="7sp"
+        android:fontFamily="sans-serif-condensed"
+        android:layout_marginBottom="3dp" />
+
+    <!-- BLE status + reconnect row -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="3dp">
+
+        <TextView
+            android:id="@+id/widget_ble_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="○ No Device"
+            android:textColor="#475569"
+            android:textSize="7sp" />
+
+        <ImageView
+            android:id="@+id/widget_ble_reconnect"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:src="@drawable/ic_ble_connected"
+            android:contentDescription="Reconnect BLE"
+            android:layout_marginStart="4dp"
+            android:alpha="0.7" />
+    </LinearLayout>
+
+    <!-- Watch Me 10min button -->
+    <TextView
+        android:id="@+id/widget_watch_me"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="👁 WATCH ME 10m"
+        android:textColor="#6366f1"
+        android:textSize="7sp"
+        android:fontFamily="sans-serif-condensed"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:background="#0d0f1e"
+        android:contentDescription="Start Watch Me 10 minutes" />
+
+</LinearLayout>

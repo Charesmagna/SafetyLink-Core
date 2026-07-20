@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="io.github.charesmagna.safetylink" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0"><preference name="android-minSdkVersion" value="26" />
+    <preference name="android-targetSdkVersion" value="34" />
+    <name>SafetyLink</name>
+    <description>
+        A sample Apache Cordova application that responds to the deviceready event.
+    </description>
+    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
+        Apache Cordova Team
+    </author>
+    <content src="index.html" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <plugin name="cordova-plugin-sms" spec="^1.0.5" />
+    <plugin name="call-number" spec="^1.0.1" />
+    <plugin name="cordova-plugin-geolocation" spec="^4.1.0" />
+</widget>
