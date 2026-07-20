@@ -24,12 +24,26 @@ export const MotherboardConsole: React.FC = () => {
   return (
     <div className="bg-[#0b101a] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col h-[700px]">
       {/* Top Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl font-black text-slate-200 tracking-widest font-mono">
           <span className="text-blue-500 mr-2">🛡️</span> 
           MOTHERBOARD RESPONSE CONSOLE
         </h2>
-        <div className="flex gap-4 font-mono text-[10px] font-bold">
+        <div className="flex flex-wrap items-center gap-4 font-mono text-[10px] font-bold">
+          <button 
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = 'data:application/octet-stream;charset=utf-8,dummy-exe-content';
+              link.download = 'SafetyLink_ControlRoom_Setup.exe';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="flex items-center gap-2 bg-blue-900/40 hover:bg-blue-800/60 px-4 py-1.5 rounded-lg border border-blue-500/50 transition-colors text-blue-300"
+          >
+            <span className="text-sm">⬇️</span>
+            <span>DOWNLOAD .EXE CLIENT</span>
+          </button>
           <div className="flex items-center gap-2 bg-[#0E1525] px-3 py-1.5 rounded-lg border border-slate-800">
             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
             <span className="text-blue-400">Ocean Blue #0EASE9</span>
