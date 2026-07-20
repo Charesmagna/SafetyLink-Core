@@ -38,6 +38,16 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
         fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
     >
+      {/* Blurred background video that fills the screen */}
+      <video
+        autoPlay
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 z-0"
+      >
+        <source src="/petal_20260720_023729.mp4" type="video/mp4" />
+      </video>
+
       {/* Startup Animation Video - centered and object-contain (not cropped) */}
       <video
         autoPlay

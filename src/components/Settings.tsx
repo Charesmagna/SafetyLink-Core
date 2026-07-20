@@ -25,6 +25,8 @@ export const Settings: React.FC = () => {
     floatingWidgetSize,
     setFloatingWidgetSize,
     currentUser,
+    userPin,
+    duressPin,
     updateUserProfile,
     requestJoinOrganization,
     organizations,
@@ -618,6 +620,42 @@ export const Settings: React.FC = () => {
               >
                 💾 Save Safety Profile Details
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Security PINs Section */}
+        {currentUser && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+            <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+              🔒 SECURITY PIN SETTINGS
+            </h4>
+            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase">Safe PIN (Cancels Alert)</label>
+                <input
+                  type="password"
+                  value={userPin}
+                  onChange={(e) => useAppStore.getState().setUserPin(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
+                  maxLength={4}
+                  placeholder="e.g. 1234"
+                />
+                <p className="text-[7.5px] text-slate-500 mt-1">Used to safely cancel an accidental panic trigger.</p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-400 block uppercase text-red-500/80">Duress PIN (Silent Escalation)</label>
+                <input
+                  type="password"
+                  value={duressPin}
+                  onChange={(e) => useAppStore.getState().setDuressPin(e.target.value)}
+                  className="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-red-200 focus:outline-none focus:border-red-500/50"
+                  maxLength={4}
+                  placeholder="e.g. 9999"
+                />
+                <p className="text-[7.5px] text-slate-500 mt-1">If forced to cancel by an attacker, enter this to appear like you canceled, but silently escalate to Police.</p>
+              </div>
             </div>
           </div>
         )}

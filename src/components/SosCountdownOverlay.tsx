@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { useAppStore } from "../utils/store";
 
 // You would store these securely in your state manager (Redux/Zustand) or encrypted local storage.
 const TRUE_PIN = "1234";
@@ -61,10 +62,11 @@ export const SosCountdownOverlay: React.FC<OverlayProps> = ({
   };
 
   const evaluatePin = (enteredPin: string) => {
-    if (enteredPin === TRUE_PIN) {
+    const { userPin, duressPin } = useAppStore.getState();
+    if (enteredPin === userPin) {
       // User is safe. Cancel the alert.
       onTrueCancel();
-    } else if (enteredPin === DURESS_PIN) {
+    } else if (enteredPin === duressPin) {
       // User is under threat. Pretend to cancel, but silently escalate.
       onDuressTrigger();
     } else {
