@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAppStore } from "../utils/store";
 
 // You would store these securely in your state manager (Redux/Zustand) or encrypted local storage.
-const TRUE_PIN = "1234";
-const DURESS_PIN = "9999"; 
+
+ 
 
 interface OverlayProps {
   isActive: boolean;

@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 
 export const MotherboardConsole: React.FC = () => {
   const { currentOrg: storeOrg, currentUser, organizations, users, panicEvents, resolvePanic } = useAppStore();
-  const [isDownloading, setIsDownloading] = useState(false);
+  
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   if (!currentOrg) return null;

@@ -68,7 +68,7 @@ export const SuperDashboard: React.FC = () => {
             <tbody>
               {panicEvents.map(p => (
                 <tr key={p.id} className="border-b border-slate-800/50">
-                  <td className="py-2">{p.username}</td>
+                  <td className="py-2">{p.profileUsed || "Unknown"}</td>
                   <td className="py-2 font-mono text-red-400">{p.status}</td>
                   <td className="py-2 text-slate-400">{new Date(p.timestamp).toLocaleTimeString()}</td>
                 </tr>
