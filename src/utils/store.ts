@@ -693,7 +693,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           contactName: org.contactName,
           contactEmail: org.contactEmail,
           controlRoomNumber: '+27829110000',
-          password: (org as any).password
+          password: (org as any).password,
+          id: org.id
         })
       });
 
@@ -803,19 +804,20 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { success: false, error: data.error || 'Login failed', role: 'USER' };
       }
 
-      const roleType = data.user.role === 'Control Room Operator' ? 'ADMIN' as const : 'USER' as const;
+      const isRealSuperAdmin = data.user.username === 'sl-admin-0000' || (data.user.role === 'Control Room Operator' && data.user.orgCode === 'SL-ORG-MAIN');
+      const roleType = isRealSuperAdmin ? 'ADMIN' as const : 'USER' as const;
 
       set({
         currentUser: data.user,
         token: data.token,
-        superAdminActive: data.user.role === 'Control Room Operator',
+        superAdminActive: isRealSuperAdmin,
         currentOrg: null
       });
 
       setStoredJSON('sl_current_user', data.user);
       setStoredJSON('sl_current_org', null);
       setStoredJSON('sl_jwt_token', data.token);
-      setStoredJSON('sl_super_admin', data.user.role === 'Control Room Operator');
+      setStoredJSON('sl_super_admin', isRealSuperAdmin);
 
       get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Live)', `User: ${data.user.username}, Role: ${data.user.role}`);
       return { success: true, role: roleType };

@@ -203,14 +203,14 @@ app.post(['/api/auth/register-user', '/api/auth/register'], async (req, res) => 
 
 // POST /auth/register-org
 app.post(['/api/auth/register-org', '/api/org/register', '/api/family/register'], async (req, res) => {
-  const { name, contactName, contactEmail, controlRoomNumber, password } = req.body;
+  const { name, contactName, contactEmail, controlRoomNumber, password, id } = req.body;
 
   if (!name || !contactName || !contactEmail) {
     return res.status(400).json({ error: 'Missing required organization fields' });
   }
 
   const newOrg = {
-    id: `SL-ORG-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: id || `SL-ORG-${Math.floor(1000 + Math.random() * 9000)}`,
     name,
     contactName,
     contactEmail,
@@ -230,7 +230,7 @@ app.post(['/api/auth/register-org', '/api/org/register', '/api/family/register']
     phone: controlRoomNumber || '+27829110000',
     email: contactEmail,
     orgCode: newOrg.id,
-    role: 'Control Room Operator',
+    role: 'Organization Administrator',
     passwordHash: hash,
   };
   await db.insert(users).values(newUser);

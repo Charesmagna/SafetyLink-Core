@@ -229,7 +229,7 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 flex flex-col gap-4 items-center justify-start py-10 px-4 sm:px-6 relative overflow-y-auto select-none scanlines">
+    <div className="w-full min-h-screen bg-slate-950 flex flex-col gap-4 items-center justify-start py-10 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
       
       {showExitConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
@@ -899,7 +899,7 @@ export const AuthScreen: React.FC = () => {
                       </button>
 
                       {generatedOrgId && (
-                        <div className="flex-1 bg-slate-950 border border-emerald-500/20 px-3 py-2 rounded-xl text-center font-mono font-black text-xs text-emerald-400 tracking-widest">
+                        <div className="flex-1 bg-slate-950 border border-emerald-500/20 px-3 py-2 rounded-xl text-center font-mono font-black text-xs text-emerald-400 tracking-widest select-text">
                           {generatedOrgId}
                         </div>
                       )}
