@@ -1,25 +1,29 @@
 package com.aistudio.safetylink.vqnztp.ui
 
-import androidx.camera.camera2.interop.Camera2Interop
-import android.hardware.camera2.CameraAccessException
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 
-class PanicRouter {
-    // HEARING: Trigger Flash Alert. FIX: Bind torch directly to CameraX `Camera2Interop` to prevent `CameraAccessException`.
-    fun triggerFlashAlert() {
-        // CameraX Camera2Interop setup for torch
-    }
-
-    // VISUAL: Voice announce "Alert Sent" + TalkBack.
-    fun voiceAnnounce() {
-        // Voice announce implementation
-    }
-
-    // MOBILITY: "Shake-to-Panic". FIX: Add 5-second accelerometer debounce with haptic warning before firing to prevent false positives.
-    val debounceTimeMs = 5000L
-    fun handleShake() {
-        // Shake detection logic with haptic warning
+object PanicRouter {
+    fun sendPanic(context: Context, data: String, hasInternet: Boolean, hasMoya: Boolean, smsEnabled: Boolean, batteryPct: Int) {
+        val payload = if (batteryPct < 15) "LOW BATTERY $data" else data
+        
+        // 1. CameraX & Audio capture would trigger here
+        // 2. Vibration + Siren
+        
+        if (hasInternet) {
+            // api.postPanic(payload)
+        } else if (hasMoya) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("moya://share?text=$payload"))
+            context.startActivity(intent)
+        } else {
+            // sendSMS()
+            if (smsEnabled) {
+                // send WA via Twilio API equivalent
+            }
+            // Offline Queue: If no internet + no Moya, queue panic
+        }
+        
+        // After success, schedule LizzyPopup in 2min
     }
 }

@@ -1,7 +1,5 @@
-<?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">SafetyLink Core</string>
-    <string name="title_activity_main">SafetyLink Core</string>
-    <string name="package_name">com.aistudio.safetylink.vqnztp</string>
-    <string name="custom_url_scheme">com.aistudio.safetylink.vqnztp</string>
+    <string name="app_name">SafetyLink</string>
+    <string name="login">Login</string>
+    <!-- Translations for EN, ZU, AF, ST, XH would be here -->
 </resources>
