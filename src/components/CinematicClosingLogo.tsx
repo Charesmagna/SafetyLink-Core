@@ -39,7 +39,7 @@ export const CinematicClosingLogo: React.FC<CinematicClosingLogoProps> = ({
         onEnded={handleComplete}
         className="absolute inset-0 w-full h-full object-contain z-10"
       >
-        <source src="/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
+        <source src="/petal_20260720_023729.mp4" type="video/mp4" />
       </video>
 
       {/* Grid Pattern */}

@@ -155,7 +155,7 @@ const App: React.FC = () => {
         setActiveTab('home');
       } else {
         if (!canGoBack) {
-          CapApp.exitApp();
+          setShowExitConfirm(true);
         }
       }
     });
@@ -199,21 +199,7 @@ const App: React.FC = () => {
   }, []);
 
 
-  useEffect(() => {
-    const handleBackButton = async (event: any) => {
-      if (!event.canGoBack) {
-        if (activeTab !== 'home') {
-          setActiveTab('home');
-        } else {
-          setShowExitConfirm(true);
-        }
-      }
-    };
-    CapacitorApp.addListener('backButton', handleBackButton);
-    return () => {
-      CapacitorApp.removeAllListeners();
-    };
-  }, [activeTab]);
+
 
   useEffect(() => {
     const handleSwitchTab = (e: Event) => {

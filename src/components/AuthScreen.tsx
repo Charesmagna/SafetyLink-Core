@@ -65,16 +65,21 @@ export const AuthScreen: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
-    const handleBackButton = async () => {
-      if (showIdApplication) {
-        setShowIdApplication(false);
-      } else {
-        setShowExitConfirm(true);
-      }
+    let listener: any = null;
+    const setupListener = async () => {
+      listener = await CapacitorApp.addListener('backButton', () => {
+        if (showIdApplication) {
+          setShowIdApplication(false);
+        } else {
+          setShowExitConfirm(true);
+        }
+      });
     };
-    CapacitorApp.addListener('backButton', handleBackButton);
+    setupListener();
     return () => {
-      CapacitorApp.removeAllListeners();
+      if (listener) {
+        listener.remove();
+      }
     };
   }, [showIdApplication]);
 
