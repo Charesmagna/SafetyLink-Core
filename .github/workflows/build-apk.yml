@@ -43,6 +43,9 @@ jobs:
       with:
         name: app-debug
         path: android/app/build/outputs/apk/debug/app-debug.apk
+    - name: Install Android Build Tools 29.0.3
+      run: \$\{ANDROID_HOME\}/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3"
+
     - name: Sign APK
       uses: r0adkll/sign-android-release@v1
       id: sign_app
@@ -52,7 +55,7 @@ jobs:
         alias: ${{ secrets.KEY_ALIAS }}
         keyStorePassword: ${{ secrets.KEY_PASSWORD }}
         keyPassword: ${{ secrets.KEY_PASSWORD }}
-        buildToolsVersion: 34.0.0
+        
     - name: Upload Signed APK
       uses: actions/upload-artifact@v4
       with:
