@@ -30,10 +30,10 @@ jobs:
       run: rm -rf ~/.gradle/caches
     - name: Build with Gradle (Debug)
       working-directory: ./android
-      run: ./gradlew assembleDebug --no-daemon --refresh-dependencies
+      run: ./gradlew clean assembleDebug --no-daemon --no-parallel
     - name: Build with Gradle (Release)
       working-directory: ./android
-      run: ./gradlew assembleRelease --no-daemon --refresh-dependencies
+      run: ./gradlew clean assembleRelease --no-daemon --no-parallel
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
