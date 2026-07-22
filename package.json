@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/run-tests.ts",
-    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs"
+    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
+    "postinstall": "node patch_audio_recorder.cjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^6.0.0",
