@@ -20,7 +20,7 @@ export class EmergencyBridgeService {
 
   public async initialize(): Promise<void> {
     try {
-      if ((await VoiceRecorder.requestPermissions() as any).microphone !== 'granted') {
+      if (!(await VoiceRecorder.requestAudioRecordingPermission()).value) {
         throw new Error('Microphone permission is required for contextual audio.');
       }
       if ((await Geolocation.requestPermissions()).location !== 'granted') {
