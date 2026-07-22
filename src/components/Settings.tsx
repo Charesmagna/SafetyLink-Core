@@ -64,6 +64,7 @@ export const Settings: React.FC = () => {
   const [homeAddress, setHomeAddress] = useState(currentUser?.homeAddress || '');
   const [workAddress, setWorkAddress] = useState(currentUser?.workAddress || '');
   const [orgIdInput, setOrgIdInput] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [selectedJoinRole, setSelectedJoinRole] = useState('Community Member');
 
   const t = (key: string) => translate(language, key);
@@ -637,19 +638,21 @@ export const Settings: React.FC = () => {
                   <label className="text-[9px] font-bold text-slate-400 block uppercase mb-1">Account Password</label>
                   <div className="flex gap-2">
                     <input
-                      type="password"
-                      placeholder="New Password"
-                      id="newAccountPassword"
-                      className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
-                    />
+  type="password"
+  placeholder="New Password"
+  value={newPassword}
+  onChange={(e) => setNewPassword(e.target.value)}
+  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
+/>
                     <button
                       type="button"
                       onClick={() => {
-                        const newPwd = (document.getElementById('newAccountPassword') as HTMLInputElement).value;
+                        const newPwd = newPassword;
                         if (!newPwd) return useAppStore.getState().addToast('Password cannot be empty', 'warn');
                         if (currentUser) {
                            useAppStore.getState().updateUserPassword(currentUser.id, newPwd);
                            useAppStore.getState().addToast('Account password updated successfully.', 'success');
+                           setNewPassword('');
                            (document.getElementById('newAccountPassword') as HTMLInputElement).value = '';
                         }
                       }}
