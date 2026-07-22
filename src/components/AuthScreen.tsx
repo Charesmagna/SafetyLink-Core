@@ -223,7 +223,7 @@ export const AuthScreen: React.FC = () => {
       const registeredOrgId = generatedOrgId;
 
       setTimeout(async () => {
-        await login(registeredContactName.replace(/\s+/g, '_').toLowerCase(), orgPassword, registeredOrgId);
+        await login(registeredContactName, orgPassword, registeredOrgId);
         setOrgSuccessMsg('');
         setOrgName('');
         setOrgContactName('');
