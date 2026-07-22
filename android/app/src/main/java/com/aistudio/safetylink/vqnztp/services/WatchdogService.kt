@@ -1,4 +1,4 @@
-package com.example
+package com.aistudio.safetylink.vqnztp.services
 
 import android.app.ActivityManager
 import android.app.AlarmManager
@@ -61,7 +61,7 @@ class WatchdogService : Service() {
     private fun scheduleNextCheck() {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, WatchdogAlarmReceiver::class.java).apply {
-            action = "com.example.ACTION_WATCHDOG_CHECK"
+            action = "com.aistudio.safetylink.vqnztp.ACTION_WATCHDOG_CHECK"
         }
         
         val pendingIntent = PendingIntent.getBroadcast(

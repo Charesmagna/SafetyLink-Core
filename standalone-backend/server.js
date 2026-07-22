@@ -6,6 +6,20 @@ import { createOCUser } from './services/owncloud.js';
 import cron from 'node-cron';
 import axios from 'axios';
 
+import crypto from 'crypto';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex'); // Must be 256 bits (32 chars hex)
+const IV_LENGTH = 16;
+
+function encrypt(text) {
+  if (!text) return text;
+  let iv = crypto.randomBytes(IV_LENGTH);
+  let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+
 dotenv.config();
 
 const app = express();
@@ -25,9 +39,9 @@ app.get('/api/health', (req, res) => {
 app.post('/api/org/register', async (req, res) => {
   try {
     const { code, name, contactName, phone } = req.body;
-    const { username: ocUsername, password: ocPassword } = await createOCUser(code, 'ORGANIZATION');
+    const { username: ocUsername, password: ocPassword: rawOcPassword } = await createOCUser(code, 'ORGANIZATION');
     const org = await prisma.organization.create({
-      data: { code, name, contactName, phone, ocUsername, ocPassword }
+      data: { code, name, contactName, phone, ocUsername, ocPassword: encrypt(rawOcPassword) }
     });
     res.json({ success: true, org });
   } catch (err) {
@@ -38,9 +52,9 @@ app.post('/api/org/register', async (req, res) => {
 app.post('/api/family/register', async (req, res) => {
   try {
     const { code, familyName } = req.body;
-    const { username: ocUsername, password: ocPassword } = await createOCUser(code, 'FAMILY');
+    const { username: ocUsername, password: ocPassword: rawOcPassword } = await createOCUser(code, 'FAMILY');
     const family = await prisma.family.create({
-      data: { code, familyName, ocUsername, ocPassword }
+      data: { code, familyName, ocUsername, ocPassword: encrypt(rawOcPassword) }
     });
     res.json({ success: true, family });
   } catch (err) {

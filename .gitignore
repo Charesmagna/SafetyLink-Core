@@ -33,3 +33,4 @@ yarn-error.log*
 !android/gradle/wrapper/gradle-wrapper.jar
 !android/gradle/wrapper/gradle-wrapper.properties
 
+sqlite.db

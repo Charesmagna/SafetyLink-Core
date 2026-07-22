@@ -1,4 +1,4 @@
-package com.example
+package com.aistudio.safetylink.vqnztp.services
 
 import android.content.Context
 import android.content.Intent

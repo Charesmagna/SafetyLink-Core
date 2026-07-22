@@ -33,7 +33,7 @@ class SafetyLinkTileService : TileService() {
         }
 
         val panicIntent = Intent(this, MainActivity::class.java).apply {
-            action = "com.example.ACTION_PANIC"
+            action = "com.aistudio.safetylink.vqnztp.ACTION_PANIC"
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         try {

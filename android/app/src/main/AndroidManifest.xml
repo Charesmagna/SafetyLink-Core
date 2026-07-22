@@ -148,7 +148,7 @@ android:persistent="true"
 
         <!-- Replace existing BootReceiver with our prioritized one -->
         <receiver
-            android:name="com.example.BootReceiver"
+            android:name=".services.BootReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter android:priority="2000">
@@ -160,18 +160,18 @@ android:persistent="true"
 
         <!-- New WatchdogService -->
         <service
-            android:name="com.example.WatchdogService"
+            android:name=".services.WatchdogService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
         <!-- New WatchdogAlarmReceiver -->
         <receiver
-            android:name="com.example.WatchdogAlarmReceiver"
+            android:name=".services.WatchdogAlarmReceiver"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.example.ACTION_WATCHDOG_CHECK" />
+                <action android:name="com.aistudio.safetylink.vqnztp.ACTION_WATCHDOG_CHECK" />
             </intent-filter>
         </receiver>
 
@@ -189,7 +189,7 @@ android:persistent="true"
 
         <!-- New SafetyLinkControlsProvider -->
         <service
-            android:name="com.example.SafetyLinkControlsProvider"
+            android:name=".services.SafetyLinkControlsProvider"
             android:label="SafetyLink Controls"
             android:permission="android.permission.BIND_CONTROLS"
             android:exported="true">

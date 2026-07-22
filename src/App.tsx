@@ -13,7 +13,6 @@ import { GeolocationService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
-import { PermissionsScreen } from './components/PermissionsScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
@@ -95,7 +94,6 @@ const App: React.FC = () => {
     setFloatingWidgetDeployed,
     demoMode
   } = useAppStore();
-  const [hasGrantedPermissions, setHasGrantedPermissions] = useState(() => localStorage.getItem('sl_permissions_granted') === 'true');
   
   const t = (key: string) => {
     if (key === 'tab.deck') return 'Control Deck';

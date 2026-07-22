@@ -17,7 +17,7 @@ export const users = sqliteTable('users', {
   needsVibration: integer('needs_vibration', { mode: 'boolean' }).default(true),
   familyId: text('family_id'),
   ocUsername: text('oc_username'),
-  ocPassword: text('oc_password'),
+  ocPassword: text('oc_password_encrypted'),
   lang: text('lang').default('en')
 });
 
@@ -35,7 +35,7 @@ export const organizations = sqliteTable('organizations', {
   ocFolder: text('oc_folder'),
   adminUserId: text('admin_user_id'),
   ocUsername: text('oc_username').unique(),
-  ocPassword: text('oc_password')
+  ocPassword: text('oc_password_encrypted')
 });
 
 export const families = sqliteTable('families', {
@@ -46,7 +46,7 @@ export const families = sqliteTable('families', {
   ocFolder: text('oc_folder').notNull(),
   adminUserId: text('admin_user_id').notNull().unique(),
   ocUsername: text('oc_username').notNull().unique(),
-  ocPassword: text('oc_password').notNull()
+  ocPassword: text('oc_password_encrypted').notNull()
 });
 
 export const contacts = sqliteTable('contacts', {

@@ -1,4 +1,4 @@
-package com.example
+package com.aistudio.safetylink.vqnztp.services
 
 import com.aistudio.safetylink.vqnztp.MainActivity
 
@@ -55,7 +55,7 @@ class SafetyLinkControlsProvider : ControlsProviderService() {
             Log.d("SafetyLinkControls", "SOS Control Triggered")
             
             val panicIntent = Intent(this, MainActivity::class.java).apply {
-                this.action = "com.example.ACTION_PANIC"
+                this.action = "com.aistudio.safetylink.vqnztp.ACTION_PANIC"
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             try {
@@ -72,7 +72,7 @@ class SafetyLinkControlsProvider : ControlsProviderService() {
 
     private fun createSOSControl(): Control {
         val intent = Intent(this, MainActivity::class.java).apply {
-            action = "com.example.ACTION_PANIC"
+            action = "com.aistudio.safetylink.vqnztp.ACTION_PANIC"
         }
         val pendingIntent = PendingIntent.getActivity(
             this,

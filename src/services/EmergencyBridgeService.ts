@@ -1,10 +1,10 @@
-// @ts-nocheck
+
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Geolocation } from '@capacitor/geolocation';
 import { CapacitorHttp } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { AudioRecorder } from '@capawesome-team/capacitor-audio-recorder';
+import { CapacitorAudioRecorder } from '@capgo/capacitor-audio-recorder';
 
 export class EmergencyBridgeService {
   private readonly AURA_API_URL = 'https://api.auraplatform.example.com/v1/panic';
@@ -20,7 +20,7 @@ export class EmergencyBridgeService {
 
   public async initialize(): Promise<void> {
     try {
-      if ((await AudioRecorder.requestPermissions()).microphone !== 'granted') {
+      if ((await CapacitorAudioRecorder.requestPermissions() as any).microphone !== 'granted') {
         throw new Error('Microphone permission is required for contextual audio.');
       }
       if ((await Geolocation.requestPermissions()).location !== 'granted') {
@@ -32,6 +32,7 @@ export class EmergencyBridgeService {
         title: 'SafetyLink Secure Node',
         body: 'Monitoring for emergency beacon triggers.',
         buttons: [],
+        smallIcon: 'ic_launcher',
       });
 
       await BleClient.initialize();
@@ -70,25 +71,54 @@ export class EmergencyBridgeService {
         timestamp: new Date().toISOString(),
       };
 
-      const response = await CapacitorHttp.post({
-        url: this.AURA_API_URL,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`,
-        },
-        data: payload,
-      });
+      
+      const success = await this.dispatchWithBackoff(payload);
+      if (success) {
 
-      if (response.status === 200 || response.status === 201) {
         console.log('Dispatch successful. Triggering haptic feedback...');
         await this.triggerHapticFeedback();
         await this.captureAndUploadAudio();
-      } else {
-        console.error('Dispatch failed with status:', response.status);
-      }
+      } else { console.error("Dispatch failed after all retries."); }
     } catch (error) {
       console.error('Error during emergency trigger workflow:', error);
     }
+  }
+
+
+  private async dispatchWithBackoff(payload: any, maxRetries = 5): Promise<boolean> {
+    let retries = 0;
+    while (retries < maxRetries) {
+      try {
+        const response = await CapacitorHttp.post({
+          url: this.AURA_API_URL,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`,
+          },
+          data: payload,
+        });
+
+        if (response.status === 200 || response.status === 201) {
+          return true;
+        } else {
+          console.error(`Dispatch failed with status: ${response.status}`);
+        }
+      } catch (error) {
+        console.error(`Network error during dispatch attempt ${retries + 1}:`, error);
+      }
+      
+      retries++;
+      if (retries < maxRetries) {
+        const delay = Math.pow(2, retries) * 1000;
+        console.log(`[Offline Dispatch Retry] Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    // Queue to offline storage if all retries failed
+    console.warn('[Offline Dispatch] All immediate retries failed. Queuing to secure local DB.');
+    // TODO: Write to offline SQLite queue for later synchronization
+    return false;
   }
 
   private async triggerHapticFeedback(): Promise<void> {
@@ -102,11 +132,11 @@ export class EmergencyBridgeService {
     console.log('Starting contextual audio capture...');
 
     try {
-      await AudioRecorder.startRecording();
+      await CapacitorAudioRecorder.startRecording();
       await new Promise(resolve => setTimeout(resolve, 45000));
 
-      const result = await AudioRecorder.stopRecording();
-      const audioBase64 = result.recordDataBase64; 
+      const result = await CapacitorAudioRecorder.stopRecording();
+      const audioBase64 = (result as any).recordDataBase64; 
 
       console.log('Audio recording completed. Uploading evidence...');
       

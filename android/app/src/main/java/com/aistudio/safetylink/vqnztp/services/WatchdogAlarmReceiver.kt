@@ -1,4 +1,4 @@
-package com.example
+package com.aistudio.safetylink.vqnztp.services
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -8,7 +8,7 @@ import android.util.Log
 // Reference: https://developer.android.com/reference/android/Manifest.permission#SCHEDULE_EXACT_ALARM
 class WatchdogAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == "com.example.ACTION_WATCHDOG_CHECK") {
+        if (intent.action == "com.aistudio.safetylink.vqnztp.ACTION_WATCHDOG_CHECK") {
             Log.d("WatchdogAlarmReceiver", "Watchdog alarm triggered")
             val serviceIntent = Intent(context, WatchdogService::class.java)
             try {
