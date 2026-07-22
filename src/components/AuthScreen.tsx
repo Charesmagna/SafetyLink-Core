@@ -27,7 +27,7 @@ export const AuthScreen: React.FC = () => {
 
   // Background slideshow logic
   const authSlides = [newBg1, newLogo1, slide5, slide4, slide3, slide1, slide2];
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [, setCurrentSlide] = useState(0);
 
 
   useEffect(() => {
