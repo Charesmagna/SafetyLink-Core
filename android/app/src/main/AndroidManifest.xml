@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    
+    <!-- Bluetooth LE: scanning for and connecting to iTAG keyfobs -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+        
+    <!-- Foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+        
+    <!-- Wake lock: keep CPU running between BLE events -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+        
+    <!-- Request Ignore Battery Optimizations for Samsung/Xiaomi survival -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+        
+    <!-- Restart after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+        
+    <!-- Notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Manifest.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED | normal | API 34
+         Exempts FGS from Android 14 background launch restrictions.
+         Required for mission-critical emergency dispatch.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_SYSTEM_EXEMPTED -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
+
+    <!-- Manifest.permission.SCHEDULE_EXACT_ALARM | normal | API 31
+         Allows applications to use exact alarm APIs.
+         Required to schedule WatchdogService restart checks.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#SCHEDULE_EXACT_ALARM -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Manifest.permission.USE_EXACT_ALARM | normal | API 33
+         Grants exact alarm without user approval for safety-critical apps.
+         Ref: https://developer.android.com/reference/android/Manifest.permission#USE_EXACT_ALARM -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC | normal | API 34
+         Foreground service type for WatchdogService. 
+         Ref: https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_DATA_SYNC -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Note on signature permissions:
+         Manifest.permission.BIND_QUICK_SETTINGS_TILE and Manifest.permission.BIND_CONTROLS 
+         are signature-level permissions required BY the service components, so only the system can bind to them.
+         They do not need to be declared in <uses-permission>. -->
+
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+    <application
+android:persistent="true"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <receiver android:name=".SafetyLinkDeviceAdminReceiver" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="true">
+            <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+        
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.file.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_provider_paths" />
+        </provider>
+
+        <!-- SafeLink persistent foreground service: keeps BLE + GPS alive when
+             the app is backgrounded or the screen is locked. -->
+        <service
+            android:name=".SafelinkForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice|location|microphone" />
+
+        <!-- Headless ghost PanicService for quick-actions and system overlays -->
+        <service
+            android:name=".PanicService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <!-- System widgets -->
+        <receiver
+            android:name=".PanicWidgetProvider"
+            android:label="SafetyLink Instant SOS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/panic_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".StatusWidgetProvider"
+            android:label="SafetyLink System Status"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_info" />
+        </receiver>
+
+        <!-- Replace existing BootReceiver with our prioritized one -->
+        <receiver
+            android:name="com.example.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="2000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- New WatchdogService -->
+        <service
+            android:name="com.example.WatchdogService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- New WatchdogAlarmReceiver -->
+        <receiver
+            android:name="com.example.WatchdogAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.ACTION_WATCHDOG_CHECK" />
+            </intent-filter>
+        </receiver>
+
+        <!-- New SafetyLinkTileService -->
+        <service
+            android:name=".SafetyLinkTileService"
+            android:icon="@android:drawable/ic_lock_lock"
+            android:label="SOS"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- New SafetyLinkControlsProvider -->
+        <service
+            android:name="com.example.SafetyLinkControlsProvider"
+            android:label="SafetyLink Controls"
+            android:permission="android.permission.BIND_CONTROLS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.controls.ControlsProviderService" />
+            </intent-filter>
+        </service>
+
+        <!-- SafetyBackgroundService for BLE Keep-Alive -->
+        <service android:name=".SafetyBackgroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />
+
+        <service android:name=".FloatingWidgetService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Emergency Overlay" />
+        </service>
+    
+        <!-- Lock screen banner: panic + BLE reconnect + watch-me quick actions -->
+        <service
+            android:name=".LockScreenNotificationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Safety Lock Screen Banner" />
+        </service>
+    
+        <service android:name=".ActiveEmergencyService" android:exported="false" android:foregroundServiceType="specialUse" />
+        <receiver android:name=".triggers.PowerButtonReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SCREEN_ON" />
+                <action android:name="android.intent.action.SCREEN_OFF" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".messaging.SmsDeliveryReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+</manifest>

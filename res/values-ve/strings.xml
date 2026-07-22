@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- TSHIVENDA FIXED -->
+  <string name="panic_button">THUSO</string>
+  <string name="lizzy_message">Ndi Lizzy. Ndi khou vhudzisa uri ni zwavhuḓi naa? Vha thuso vho swika naa? Ni toḓa u vhidza thuso hafhu naa?</string>
+  <string name="btn_im_okay">Ndi zwavhuḓi</string>
+</resources>

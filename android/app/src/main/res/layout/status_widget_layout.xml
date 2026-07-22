@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#020617"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#0f172a"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/widget_status_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ SafetyLink Status"
+            android:textColor="#10b981"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_status_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Connected Device Scanning Active"
+            android:textColor="#94a3b8"
+            android:textSize="9sp"
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/widget_status_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#1e293b"
+            android:text="Open Control Deck"
+            android:textColor="#f8fafc"
+            android:textSize="10sp"
+            android:gravity="center"
+            android:padding="6dp"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+</RelativeLayout>

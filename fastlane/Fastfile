@@ -1,0 +1,38 @@
+default_platform(:android)
+
+platform :android do
+  desc "Deploy branding assets and build to Google Play Beta Track"
+  lane :beta do
+    # Ensure correct branding pipeline execution before building
+    sh("cd .. && npm run build")
+
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "android/"
+    )
+
+    upload_to_play_store(
+      track: "beta",
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Deploy to Internal App Sharing"
+  lane :internal do
+    sh("cd .. && npm run build")
+    
+    gradle(
+      task: "bundle",
+      build_type: "Release",
+      project_dir: "android/"
+    )
+
+    upload_to_play_store_internal_app_sharing(
+      package_name: "com.aistudio.safetylink.vqnztp",
+      apk: "android/app/build/outputs/bundle/release/app-release.aab"
+    )
+  end
+end

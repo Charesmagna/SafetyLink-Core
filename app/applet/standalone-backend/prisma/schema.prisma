@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  contactName String
+  phone       String
+  createdAt   DateTime @default(now())
+
+  // OwnCloud Credentials (Auto-generated on register)
+  ocUsername  String?  @unique
+  ocPassword  String?
+}
+
+model Family {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  familyName  String
+  createdAt   DateTime @default(now())
+
+  // OwnCloud Credentials (Auto-generated on register)
+  ocUsername  String?  @unique
+  ocPassword  String?
+}
+
+model Incident {
+  id          String   @id @default(uuid())
+  orgCode     String?
+  familyCode  String?
+  latitude    Float?
+  longitude   Float?
+  audioPath   String?
+  photoPath   String?
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
