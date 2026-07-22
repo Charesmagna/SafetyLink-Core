@@ -1,5 +1,7 @@
 package com.example
 
+import com.aistudio.safetylink.vqnztp.MainActivity
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
