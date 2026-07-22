@@ -104,7 +104,15 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    // Failsafe: hide splash screen after 5 seconds just in case video doesn't play or end
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -909,6 +917,7 @@ const App: React.FC = () => {
             muted
             playsInline
             onEnded={() => setShowSplash(false)}
+            onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
             <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />
