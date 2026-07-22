@@ -711,6 +711,25 @@ export const AuthScreen: React.FC = () => {
 
 
 
+
+              {!hasMoya && (
+                <div className="bg-emerald-900/40 border border-emerald-500/30 p-4 rounded-xl mb-4">
+                  <h4 className="text-emerald-400 text-xs font-bold mb-2">Use SafetyLink for FREE with 0.data</h4>
+                  <button 
+                    type="button"
+                    onClick={() => window.open('https://play.google.com/store/apps/details?id=com.moya.android', '_blank')}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold py-2 rounded-lg transition-colors"
+                  >
+                    Download Moya App
+                  </button>
+                  <p className="text-slate-400 text-[9px] mt-2">Required for data-free panic alerts.</p>
+                </div>
+              )}
+              {hasMoya && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl mb-4 text-center">
+                  <span className="text-emerald-400 text-xs font-bold">Moya Detected - Free Mode Active</span>
+                </div>
+              )}
               <button
                 type="submit"
                 className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
