@@ -104,6 +104,7 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -844,7 +845,18 @@ const App: React.FC = () => {
                     <span className="text-[7.5px] text-slate-500 font-mono mt-0.5">Persistent safety toggle</span>
                   </div>
                   <button
-                    onClick={() => setFloatingWidgetDeployed(!isFloatingWidgetDeployed)}
+                    onClick={() => {
+                      const newState = !isFloatingWidgetDeployed;
+                      setFloatingWidgetDeployed(newState);
+                      try {
+                        import('@capacitor/core').then(({ Capacitor }) => {
+                          const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
+                          if (bridge) bridge.toggleFloatingWidget({ enable: newState });
+                        });
+                      } catch (e) {
+                        console.warn(e);
+                      }
+                    }}
                     className={`w-10 h-5 rounded-full relative transition-colors ${isFloatingWidgetDeployed ? 'bg-emerald-500' : 'bg-slate-700'}`}
                   >
                     <span className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-all ${isFloatingWidgetDeployed ? 'right-0.5' : 'left-0.5'}`} />
@@ -890,6 +902,19 @@ const App: React.FC = () => {
     <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
 
       {/* High fidelity cyber background lighting elements */}
+      {showSplash && (
+        <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
+          <video
+            autoPlay
+            muted
+            playsInline
+            onEnded={() => setShowSplash(false)}
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />
+          </video>
+        </div>
+      )}
       <div className="police-wash pointer-events-none" />
       
       <div className="flare-line-container pointer-events-none">
@@ -897,7 +922,19 @@ const App: React.FC = () => {
         <div className="flare-line flare-line-2" />
       </div>
 
-      <GlobalRadarBackground />
+      {activeTab === 'deck' && !currentOrg && <GlobalRadarBackground />}
+      {/* Background Video */}
+      {(activeTab === 'home' && !currentOrg) && (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
+        >
+          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+        </video>
+      )}
       {demoMode && (
         <div className="demo-simulated-overlay select-none pointer-events-none">
           <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>

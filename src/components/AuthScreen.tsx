@@ -272,24 +272,15 @@ export const AuthScreen: React.FC = () => {
 
       {/* Background Slideshow animation */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentSlide}
-            initial={{ opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 0.45 }} // Subtle 45% opacity for auth background to keep form text legible
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 1.5, ease: "easeInOut" }}
-            className="absolute inset-0 w-full h-full"
+        <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen"
           >
-            <img
-              src={authSlides[currentSlide]}
-              alt="SafetyLink Background"
-              className="w-full h-full object-cover filter brightness-[0.35] contrast-[1.1] saturate-[0.8]"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950" />
-          </motion.div>
-        </AnimatePresence>
+            <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+          </video>
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-red-500/5 mix-blend-color" />

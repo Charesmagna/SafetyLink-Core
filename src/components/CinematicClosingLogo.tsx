@@ -37,7 +37,7 @@ export const CinematicClosingLogo: React.FC<CinematicClosingLogoProps> = ({
         playsInline
         className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 z-0"
       >
-        <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+        <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />
       </video>
       {/* Video Background */}
       <video
@@ -47,7 +47,7 @@ export const CinematicClosingLogo: React.FC<CinematicClosingLogoProps> = ({
         onEnded={handleComplete}
         className="absolute inset-0 w-full h-full object-cover z-10"
       >
-        <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+        <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />
       </video>
 
       {/* Grid Pattern */}
