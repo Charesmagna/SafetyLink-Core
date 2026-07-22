@@ -89,5 +89,10 @@
         "nsis"
       ]
     }
+  },
+  "overrides": {
+    "@capgo/capacitor-audio-recorder": {
+      "@capacitor/core": "$@capacitor/core"
+    }
   }
 }
