@@ -16,6 +16,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
+import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { AppTour } from './components/AppTour';
 import { AIHub } from './components/AIHub';
@@ -82,7 +83,7 @@ const App: React.FC = () => {
     logout,
     customTools,
     userLocation,
-    language,
+    language, setLanguage,
     setCommerceModalOpen,
     toasts,
     removeToast,
@@ -345,8 +346,19 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Account status & Active view flag */}
+        {/* Right Side: Language & Account */}
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-1 mr-2">
+            {['en', 'zu', 'af', 'st', 'xh'].map((code) => (
+              <button
+                key={code}
+                onClick={() => setLanguage(code)}
+                className={`text-[9px] font-bold px-1.5 py-1 rounded transition-colors uppercase ${language === code ? 'bg-red-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+              >
+                {code}
+              </button>
+            ))}
+          </div>
           <div className="text-right">
             <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>
             <span className="text-[7.5px] font-mono text-slate-500 uppercase mt-0.5 block leading-none">@{currentUser.username}</span>
@@ -905,6 +917,7 @@ const App: React.FC = () => {
 
       {/* Critical Wearable Device Alert Sentinel Overlay */}
       <DeviceAlertOverlay />
+      <LizzyPopup />
 
       {/* Primary Dynamic App Screen Container */}
       <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden z-10">

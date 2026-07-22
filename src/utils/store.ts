@@ -50,6 +50,8 @@ interface AppState {
   toggleBackgroundService: () => void;
   incrementBackgroundServiceTick: () => void;
   isAppMinimized: boolean;
+  showLizzyPopup: boolean;
+  setShowLizzyPopup: (show: boolean) => void;
   setMinimized: (value: boolean) => void;
 
   // System Permissions for Android/iOS Compatibility
@@ -308,6 +310,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   isBackgroundServiceRunning: getStoredJSON<boolean>('sl_bg_service_running', true),
   backgroundServiceTick: 0,
   isAppMinimized: false,
+  showLizzyPopup: false,
+  setShowLizzyPopup: (show) => set({ showLizzyPopup: show }),
   setMinimized: (value: boolean) => {
     set({ isAppMinimized: value });
     get().addAuditLog(

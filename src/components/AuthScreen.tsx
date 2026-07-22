@@ -47,6 +47,17 @@ export const AuthScreen: React.FC = () => {
   const [userUsername, setUserUsername] = useState('');
   const [userRole, setUserRole] = useState<import('../types').UserRole>('Community Member');
   const [userPassword, setUserPassword] = useState('');
+  const [hasMoya, setHasMoya] = useState(false);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).Capacitor) {
+      import('@capacitor/app').then(({ App }) => {
+        if ((App as any).canOpenUrl) {
+           (App as any).canOpenUrl({ url: 'moya://' }).then((res: any) => setHasMoya(res.value)).catch(() => setHasMoya(false));
+        }
+      });
+    }
+  }, []);
   const [userFullName, setUserFullName] = useState('');
   const [userPhone, setUserPhone] = useState('');
   const [userWhatsapp, setUserWhatsapp] = useState('');
