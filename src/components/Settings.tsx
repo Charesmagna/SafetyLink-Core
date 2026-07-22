@@ -24,6 +24,8 @@ export const Settings: React.FC = () => {
     setFloatingWidgetDeployed,
     floatingWidgetSize,
     setFloatingWidgetSize,
+    customBackendUrl,
+    setCustomBackendUrl,
     currentUser,
     userPin,
     duressPin,
@@ -56,6 +58,7 @@ export const Settings: React.FC = () => {
   const [personalControlRoom, setPersonalControlRoom] = useState(currentUser?.personalControlRoom || '');
   const [securityCompany, setSecurityCompany] = useState(currentUser?.securityCompany || '');
 
+  const [localBackendUrl, setLocalBackendUrl] = useState(customBackendUrl || '');
   const [profileName, setProfileName] = useState(currentUser?.fullName || '');
 
 
@@ -567,6 +570,12 @@ export const Settings: React.FC = () => {
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
               <div className="space-y-3">
+                
+              <div className="space-y-3 border-t border-slate-800/50 pt-3">
+                <h5 className="text-[9px] font-bold text-slate-500 uppercase">Custom Alerting Server (Fallback/Org)</h5>
+                <input type="text" value={localBackendUrl} onChange={e => setLocalBackendUrl(e.target.value)} onBlur={() => setCustomBackendUrl(localBackendUrl)} placeholder="e.g. https://oraclecloud.mycompany.com" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+              </div>
+
                 <h5 className="text-[9px] font-bold text-slate-500 uppercase">Twilio (Voice/SMS)</h5>
                 <input type="text" value={twilioAccountSid} onChange={e => setTwilioAccountSid(e.target.value)} placeholder="Account SID" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioAuthToken} onChange={e => setTwilioAuthToken(e.target.value)} placeholder="Auth Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
