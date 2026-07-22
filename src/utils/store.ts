@@ -679,8 +679,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         contactEmail: org.contactEmail,
         id: generatedId,
         createdAt: Date.now(),
-        approved: true
-      };
+        approved: true,
+        password: (org as any).password
+      } as any;
 
       const updatedOrgs = [...orgs, newOrg];
       set({ organizations: updatedOrgs });
@@ -729,7 +730,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         contactEmail: org.contactEmail,
         id: generatedId,
         createdAt: Date.now(),
-        approved: true
+        approved: true,
+        password: (org as any).password
       };
 
       set({
@@ -786,7 +788,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (normOrgCode) {
         const matchedOrg = get().organizations.find(o => o.id.toLowerCase() === normOrgCode);
         if (matchedOrg) {
-          if (matchedOrg.contactName.toLowerCase() === normUsername) {
+          const matchName = matchedOrg.name.toLowerCase();
+          const matchContact = matchedOrg.contactName.toLowerCase();
+          if (matchName === normUsername || matchContact === normUsername) {
             const orgPassword = (matchedOrg as any).password;
             if (orgPassword && orgPassword !== password) {
               return { success: false, error: 'Incorrect password.', role: 'USER' };
@@ -851,6 +855,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
           return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
         }
+        
+        const userPassword = (matchedUser as any).password;
+        if (userPassword && userPassword !== password) {
+          return { success: false, error: 'Incorrect password.', role: 'USER' };
+        }
 
         set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false, token: 'offline-jwt-token' });
         setStoredJSON('sl_current_user', matchedUser);
@@ -866,7 +875,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (normOrgCode) {
         const matchedOrg = realOrgs.find(o => o.id.toLowerCase() === normOrgCode);
         if (matchedOrg) {
-          if (matchedOrg.contactName.toLowerCase() === normUsername) {
+          const matchName = matchedOrg.name.toLowerCase();
+          const matchContact = matchedOrg.contactName.toLowerCase();
+          if (matchName === normUsername || matchContact === normUsername) {
+            const orgPassword = (matchedOrg as any).password;
+            if (orgPassword && orgPassword !== password) {
+              return { success: false, error: 'Incorrect password.', role: 'USER' };
+            }
             set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false, token: 'offline-jwt-token' });
             setStoredJSON('sl_current_user', null);
             setStoredJSON('sl_current_org', matchedOrg);
