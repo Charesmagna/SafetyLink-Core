@@ -4,7 +4,7 @@ apply plugin: 'kotlin-kapt'
 
 android {
     namespace "com.aistudio.safetylink.vqnztp"
-    compileSdk rootProject.ext.compileSdkVersion
+    compileSdkVersion rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.aistudio.safetylink.vqnztp"
         minSdkVersion rootProject.ext.minSdkVersion
