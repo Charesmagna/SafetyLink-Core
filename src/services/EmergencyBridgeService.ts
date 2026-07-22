@@ -4,7 +4,7 @@ import { ForegroundService } from '@capawesome-team/capacitor-android-foreground
 import { Geolocation } from '@capacitor/geolocation';
 import { CapacitorHttp } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { CapacitorAudioRecorder } from '@capgo/capacitor-audio-recorder';
+import { VoiceRecorder } from 'capacitor-voice-recorder';
 
 export class EmergencyBridgeService {
   private readonly AURA_API_URL = 'https://api.auraplatform.example.com/v1/panic';
@@ -20,7 +20,7 @@ export class EmergencyBridgeService {
 
   public async initialize(): Promise<void> {
     try {
-      if ((await CapacitorAudioRecorder.requestPermissions() as any).microphone !== 'granted') {
+      if ((await VoiceRecorder.requestPermissions() as any).microphone !== 'granted') {
         throw new Error('Microphone permission is required for contextual audio.');
       }
       if ((await Geolocation.requestPermissions()).location !== 'granted') {
@@ -132,10 +132,10 @@ export class EmergencyBridgeService {
     console.log('Starting contextual audio capture...');
 
     try {
-      await CapacitorAudioRecorder.startRecording();
+      await VoiceRecorder.startRecording();
       await new Promise(resolve => setTimeout(resolve, 45000));
 
-      const result = await CapacitorAudioRecorder.stopRecording();
+      const result = await VoiceRecorder.stopRecording();
       const audioBase64 = (result as any).recordDataBase64; 
 
       console.log('Audio recording completed. Uploading evidence...');
