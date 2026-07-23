@@ -20,6 +20,7 @@ export interface UserProfile {
   role?: UserRole;
   pendingRole?: UserRole;
   medicalProfile?: MedicalProfile;
+  moya?: { turnApiToken?: string; enabled?: boolean };
   twilio?: { accountSid: string; authToken: string; fromNumber: string };
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };

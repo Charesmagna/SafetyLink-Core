@@ -10,6 +10,7 @@ import { Settings } from './components/Settings';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
 import { GeolocationService } from './services/BaseService';
+import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
@@ -104,7 +105,15 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    // Failsafe: hide splash screen after 5 seconds just in case video doesn't play or end
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -223,6 +232,40 @@ const App: React.FC = () => {
     }, 4000);
     return () => clearInterval(tickInterval);
   }, [isBackgroundServiceRunning]);
+
+
+  // Manage actual Android Foreground Service
+  useEffect(() => {
+    const manageForegroundService = async () => {
+      try {
+        if (isBackgroundServiceRunning) {
+          await ForegroundService.startForegroundService({
+            id: 111,
+            title: "SafetyLink Secure Node",
+            body: "Monitoring triggers...",
+            smallIcon: "ic_stat_icon_config_sample",
+            buttons: []
+          });
+        } else {
+          await ForegroundService.stopForegroundService();
+        }
+      } catch (err) {
+        console.warn("ForegroundService plugin error:", err);
+      }
+    };
+    manageForegroundService();
+  }, [isBackgroundServiceRunning]);
+
+
+  useEffect(() => {
+    // Auto-reconnect bound BLE devices on app start
+    const store = useAppStore.getState();
+    const boundDevices = store.bleDevices.filter(d => d.triggerServiceUuid && d.triggerCharacteristicUuid);
+    boundDevices.forEach(d => {
+      console.log('Auto-reconnecting to bound BLE device:', d.macAddress);
+      store.connectBleDevice(d.macAddress);
+    });
+  }, []);
 
   // Synchronize state with actual phone local notification system tray
   useEffect(() => {
@@ -909,6 +952,7 @@ const App: React.FC = () => {
             muted
             playsInline
             onEnded={() => setShowSplash(false)}
+            onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
             <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />

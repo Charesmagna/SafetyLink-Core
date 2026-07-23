@@ -37,7 +37,7 @@ jobs:
       run: ./gradlew clean assembleDebug --no-daemon --no-parallel --no-build-cache
     - name: Build with Gradle (Release)
       working-directory: ./android
-      run: ./gradlew clean assembleRelease --no-daemon --no-parallel --no-build-cache
+      run: ./gradlew assembleRelease --no-daemon --no-parallel --no-build-cache
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
