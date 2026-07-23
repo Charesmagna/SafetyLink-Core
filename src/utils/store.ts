@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
+import { sendPanic } from '../services/panicRouter';
 import { pushIncidentTelemetry } from '../services/ThingsBoardService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
@@ -1100,13 +1101,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeSOSState: 'ESCALATING' });
     
     // --- Modular Dispatch Engine Pipeline ---
-    // 1. SmsDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[SmsDispatcher] Executing channel broadcast', `Sending cell SMS with geolocation maps linkage to primary contacts.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 2. PushDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
-    await new Promise(r => setTimeout(r, 600));
+    // Run SMART PANIC ROUTER sequence
+    try {
+      get().addAuditLog('DISPATCH', 'INFO', '[PanicRouter] Starting SMART Offline-First Routing', 'Attempting Native SMS, Call, WhatsApp, Custom Server, and Moya');
+      await sendPanic(
+        { id: incidentId, lat: loc.lat, coords: `${loc.lat},${loc.lng}`, lng: loc.lng, description, name: "User", isDrill },
+        get().contacts,
+        get().customBackendUrl
+      );
+    } catch(e) {
+      console.warn('Smart Panic Router Error', e);
+    }
+    
+    // Post-panic Voice AI Check
+    get().setShowLizzyPopup(true);
 
     // 3. DashboardDispatcher
     get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Rendering to controller screen', `Feeding real-time live distress telemetry feed into Org Control deck.`);

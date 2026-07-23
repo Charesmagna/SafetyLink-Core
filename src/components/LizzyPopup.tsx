@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldAlert, CheckCircle2 } from 'lucide-react';
 
 export const LizzyPopup: React.FC = () => {
   const { showLizzyPopup, setShowLizzyPopup, startMultiStagePanic, resolvePanic, currentPanicEvent } = useAppStore();
+
+  useEffect(() => {
+    if (showLizzyPopup) {
+      try {
+        const msg = new SpeechSynthesisUtterance("Hi, it's Lizzy. Are you okay? Did help arrive? Or should I retract the alert?");
+        msg.rate = 0.9;
+        msg.pitch = 1.1;
+        window.speechSynthesis.speak(msg);
+      } catch (e) {
+        console.warn('Speech synthesis failed', e);
+      }
+    }
+  }, [showLizzyPopup]);
 
   const handleRestart = () => {
     setShowLizzyPopup(false);
@@ -36,7 +49,7 @@ export const LizzyPopup: React.FC = () => {
             
             <h2 className="text-xl font-bold text-white mb-2">Lizzy from SafetyLink</h2>
             <p className="text-slate-300 text-sm mb-8 leading-relaxed">
-              "Hi, it's Lizzy. Are you okay? Did help arrive?"
+              "Hi, it's Lizzy. Are you okay? Did help arrive? Or should I retract the alert?"
             </p>
             
             <div className="flex flex-col gap-3">
@@ -45,7 +58,7 @@ export const LizzyPopup: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold py-3.5 rounded-xl transition-colors"
               >
                 <ShieldAlert size={18} />
-                Restart Panic
+                Retrigger Panic
               </button>
               
               <button
@@ -53,7 +66,7 @@ export const LizzyPopup: React.FC = () => {
                 className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 font-bold py-3.5 rounded-xl transition-colors"
               >
                 <CheckCircle2 size={18} />
-                I'm Okay
+                I'm Okay (Retract)
               </button>
             </div>
           </motion.div>

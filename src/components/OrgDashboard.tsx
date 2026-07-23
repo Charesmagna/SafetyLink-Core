@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
+import { BackgroundVideoLoop } from './BackgroundVideoLoop';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
@@ -149,19 +150,7 @@ export const OrgDashboard: React.FC = () => {
 
   return (
     <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-4 relative">
-      {activeSubTab === 'dispatch' ? (
-        <GlobalRadarBackground />
-      ) : (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
-        >
-          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
-        </video>
-      )}
+      {activeSubTab === 'dispatch' ? <GlobalRadarBackground /> : <BackgroundVideoLoop />}
       {/* Background with Glowing Heart and Heartbeat Pulse */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
         <GlowingHeartBackground />

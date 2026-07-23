@@ -24,3 +24,7 @@ To enable the AI capabilities of SafetyLink (e.g., KlevaBot):
 4. Copy the generated key.
 5. Paste it into your project's `.env` file under `GEMINI_API_KEY=your_key_here`.
 6. Restart the backend to apply changes.
+
+## Supabase Deployment Instructions
+1. Get SUPABASE_SERVICE_KEY from Supabase > Settings > API and add it to your `.env` file.
+2. Run `npm run deploy:backend` to push the database schema and deploy the `send-sos` Edge Function.

@@ -1,3 +1,4 @@
+import { BackgroundVideoLoop } from './BackgroundVideoLoop';
 import React, { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useAppStore, getOrgAbbreviation } from '../utils/store';
@@ -272,15 +273,7 @@ export const AuthScreen: React.FC = () => {
 
       {/* Background Slideshow animation */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-        <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen"
-          >
-            <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
-          </video>
+        <BackgroundVideoLoop />
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-red-500/5 mix-blend-color" />

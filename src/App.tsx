@@ -12,6 +12,7 @@ import { LocationDisplay } from './components/LocationDisplay';
 import { GeolocationService } from './services/BaseService';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { LocalNotificationService } from './services/LocalNotificationService';
+import { BackgroundVideoLoop } from './components/BackgroundVideoLoop';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
@@ -28,6 +29,7 @@ import { KlevaBot } from './components/KlevaBot';
 import { GlobalRadarBackground } from './components/GlobalRadarBackground';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { CommerceCenter } from './components/CommerceCenter';
+import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
@@ -946,18 +948,7 @@ const App: React.FC = () => {
 
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
-        <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video
-            autoPlay
-            muted
-            playsInline
-            onEnded={() => setShowSplash(false)}
-            onError={() => setShowSplash(false)}
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="/media/petal_20260720_023729.mp4" type="video/mp4" />
-          </video>
-        </div>
+        <SplashReveal onComplete={() => setShowSplash(false)} />
       )}
       <div className="police-wash pointer-events-none" />
       
@@ -967,18 +958,8 @@ const App: React.FC = () => {
       </div>
 
       {activeTab === 'deck' && !currentOrg && <GlobalRadarBackground />}
-      {/* Background Video */}
-      {(activeTab === 'home' && !currentOrg) && (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
-        >
-          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
-        </video>
-      )}
+      {/* Global Background 3D Animated Mesh Loop */}
+      <BackgroundVideoLoop isHome={activeTab === 'home'} />
       {demoMode && (
         <div className="demo-simulated-overlay select-none pointer-events-none">
           <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
@@ -986,6 +967,9 @@ const App: React.FC = () => {
       )}
 
       {/* Persistent System Status Bar & Background Notification Tray */}
+
+      {/* Permissions Gate Requester */}
+      <PermissionGateOverlay />
 
       {/* High-Priority Emergency Overlay */}
       <ForcedCountdownOverlay />
