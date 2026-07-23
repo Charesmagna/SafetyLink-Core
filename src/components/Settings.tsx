@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
 import { SafetyLinkBridge } from '../hooks/useEmergencyListener';
@@ -580,6 +581,9 @@ export const Settings: React.FC = () => {
                 <input type="text" value={twilioAccountSid} onChange={e => setTwilioAccountSid(e.target.value)} placeholder="Account SID" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioAuthToken} onChange={e => setTwilioAuthToken(e.target.value)} placeholder="Auth Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioFromNumber} onChange={e => setTwilioFromNumber(e.target.value)} placeholder="From Number" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+                <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
+                  🔗 Connect Twilio
+                </button>
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
@@ -725,11 +729,29 @@ export const Settings: React.FC = () => {
             <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
+              
               <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-[9px] font-bold text-slate-500 uppercase">Moya / Turn.io (Data-Free)</h5>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-[9px] text-slate-400">Enable</span>
+                    <input type="checkbox" checked={moyaEnabled} onChange={e => setMoyaEnabled(e.target.checked)} className="accent-blue-500" />
+                  </label>
+                </div>
+                <input type="text" value={turnApiToken} onChange={e => setTurnApiToken(e.target.value)} placeholder="Turn.io API Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+                <button type="button" onClick={() => connectService('turn')} className="w-full py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
+                  🔗 Connect Moya
+                </button>
+              </div>
+              
+              <div className="space-y-3 border-t border-slate-800/50 pt-3">
                 <h5 className="text-[9px] font-bold text-slate-500 uppercase">Twilio (Voice/SMS)</h5>
                 <input type="text" value={twilioAccountSid} onChange={e => setTwilioAccountSid(e.target.value)} placeholder="Account SID" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioAuthToken} onChange={e => setTwilioAuthToken(e.target.value)} placeholder="Auth Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioFromNumber} onChange={e => setTwilioFromNumber(e.target.value)} placeholder="From Number" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+                <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
+                  🔗 Connect Twilio
+                </button>
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
@@ -787,11 +809,29 @@ export const Settings: React.FC = () => {
             <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
+              
               <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h5 className="text-[9px] font-bold text-slate-500 uppercase">Moya / Turn.io (Data-Free)</h5>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-[9px] text-slate-400">Enable</span>
+                    <input type="checkbox" checked={moyaEnabled} onChange={e => setMoyaEnabled(e.target.checked)} className="accent-blue-500" />
+                  </label>
+                </div>
+                <input type="text" value={turnApiToken} onChange={e => setTurnApiToken(e.target.value)} placeholder="Turn.io API Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+                <button type="button" onClick={() => connectService('turn')} className="w-full py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
+                  🔗 Connect Moya
+                </button>
+              </div>
+              
+              <div className="space-y-3 border-t border-slate-800/50 pt-3">
                 <h5 className="text-[9px] font-bold text-slate-500 uppercase">Twilio (Voice/SMS)</h5>
                 <input type="text" value={twilioAccountSid} onChange={e => setTwilioAccountSid(e.target.value)} placeholder="Account SID" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioAuthToken} onChange={e => setTwilioAuthToken(e.target.value)} placeholder="Auth Token" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
                 <input type="text" value={twilioFromNumber} onChange={e => setTwilioFromNumber(e.target.value)} placeholder="From Number" className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-purple-500/50" />
+                <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
+                  🔗 Connect Twilio
+                </button>
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
