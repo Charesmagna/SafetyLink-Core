@@ -1105,7 +1105,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       get().addAuditLog('DISPATCH', 'INFO', '[PanicRouter] Starting SMART Offline-First Routing', 'Attempting Native SMS, Call, WhatsApp, Custom Server, and Moya');
       await sendPanic(
-        { id: incidentId, lat: loc.lat, coords: `${loc.lat},${loc.lng}`, lng: loc.lng, description, name: "User" },
+        { id: incidentId, lat: loc.lat, coords: `${loc.lat},${loc.lng}`, lng: loc.lng, description, name: "User", isDrill },
         get().contacts,
         get().customBackendUrl
       );
