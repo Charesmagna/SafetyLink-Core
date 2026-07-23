@@ -584,6 +584,14 @@ export const Settings: React.FC = () => {
                 <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
                   🔗 Connect Twilio
                 </button>
+                <button
+                  type="button"
+                  onClick={testTwilioAndSupabase}
+                  className="w-full mt-2 py-2 bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-500/30 rounded-xl text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center cursor-pointer transition-all"
+                >
+                  📡 Test All Integrations
+                </button>
+
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
@@ -752,6 +760,14 @@ export const Settings: React.FC = () => {
                 <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
                   🔗 Connect Twilio
                 </button>
+                <button
+                  type="button"
+                  onClick={testTwilioAndSupabase}
+                  className="w-full mt-2 py-2 bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-500/30 rounded-xl text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center cursor-pointer transition-all"
+                >
+                  📡 Test All Integrations
+                </button>
+
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
@@ -832,6 +848,14 @@ export const Settings: React.FC = () => {
                 <button type="button" onClick={() => connectService('twilio')} className="w-full mt-1 py-1.5 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-500/30 rounded-xl text-[9px] font-bold text-blue-400 uppercase tracking-wider text-center cursor-pointer transition-all">
                   🔗 Connect Twilio
                 </button>
+                <button
+                  type="button"
+                  onClick={testTwilioAndSupabase}
+                  className="w-full mt-2 py-2 bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-500/30 rounded-xl text-[9px] font-bold text-emerald-400 uppercase tracking-wider text-center cursor-pointer transition-all"
+                >
+                  📡 Test All Integrations
+                </button>
+
               </div>
 
               <div className="space-y-3 border-t border-slate-800/50 pt-3">
