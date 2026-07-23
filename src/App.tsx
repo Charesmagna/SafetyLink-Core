@@ -18,6 +18,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
+import { SplashReveal } from './components/SplashReveal';
 import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { AppTour } from './components/AppTour';
