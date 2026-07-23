@@ -20,7 +20,7 @@ export async function wellnessCheck(userId: string) {
   console.log(`Running wellness check for user ${userId}`);
 }
 
-export async function getLizzyMessage(panicStatus: string, lang: string) {
+export async function getLizzyMessage(_panicStatus: string, lang: string) {
   const prompts: Record<string, string> = {
     en: "You are Lizzy, a caring AI assistant for SafetyLink SA. The user just had a panic. Ask if they are okay, if help arrived, and offer to restart the alert or chat. Be warm, short, South African tone.",
     zu: "Ungu-Lizzy, umsizi we-AI wakwa SafetyLink. Umsebenzisi usanda kuba ne-panic. Mbuze ukuthi ukahle, usizwe, futhi umnike ithuba lokuqala kabusha i-alert noma ukukhuluma.",

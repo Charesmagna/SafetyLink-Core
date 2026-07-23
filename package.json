@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "deploy:backend": "bash scripts/deploy-supabase.sh",
+    "deploy:backend": "supabase db push && supabase functions deploy send-sos",
     "dev": "vite",
     "build": "vite build",
     "cap:sync": "npx cap sync android",
