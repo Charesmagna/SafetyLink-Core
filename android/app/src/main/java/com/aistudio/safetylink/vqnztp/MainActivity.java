@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.WindowManager;
+import android.view.WindowManager; import android.provider.Settings; import android.text.TextUtils; import android.content.Context; import android.content.ComponentName;
 
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.PeriodicWorkRequest;
@@ -28,13 +28,13 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         // Start the persistent foreground service so BLE + GPS stay alive
-        startSafelinkService();
+        try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
 
         // Enqueue unique 15-minute keepalive work to survive aggressive OEM memory sweeps
         scheduleKeepAlive();
 
         // Prompt the user to whitelist the app from battery optimizations
-        requestBatteryOptimizationBypass();
+        checkPermissionsAndServices();
         handleSosWake(getIntent());
     }
 
@@ -80,7 +80,7 @@ public class MainActivity extends BridgeActivity {
         super.onStop();
         // App went to background / screen locked – make sure service is running
         // so the "Device Locked" notification banner appears in the shade.
-        startSafelinkService();
+        try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
         Log.i(TAG, "App backgrounded – foreground service ensured running");
     }
 
@@ -113,6 +113,51 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception e) {
             Log.e(TAG, "Failed to schedule KeepAlive WorkManager: " + e.getMessage());
         }
+    }
+
+    
+    private void checkPermissionsAndServices() {
+        // Battery
+        requestBatteryOptimizationBypass();
+        
+        // System Alert Window
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                try {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:" + getPackageName()));
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed overlay permission", e);
+                }
+            }
+        }
+        
+        // Accessibility Service Check
+        if (!isAccessibilityServiceEnabled(this, SafetyAccessibilityService.class)) {
+            try {
+                Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e) {
+                 Log.e(TAG, "Failed accessibility setting", e);
+            }
+        }
+    }
+    
+    private boolean isAccessibilityServiceEnabled(Context context, Class<?> accessibilityService) {
+        ComponentName expectedComponentName = new ComponentName(context, accessibilityService);
+        String enabledServicesSetting = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabledServicesSetting == null) return false;
+        TextUtils.SimpleStringSplitter colonSplitter = new TextUtils.SimpleStringSplitter(':');
+        colonSplitter.setString(enabledServicesSetting);
+        while (colonSplitter.hasNext()) {
+            String componentNameString = colonSplitter.next();
+            ComponentName enabledService = ComponentName.unflattenFromString(componentNameString);
+            if (enabledService != null && enabledService.equals(expectedComponentName)) return true;
+        }
+        return false;
     }
 
     private void requestBatteryOptimizationBypass() {

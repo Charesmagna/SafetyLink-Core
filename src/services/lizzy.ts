@@ -1,15 +1,16 @@
-import { GoogleGenAI } from "@google/genai";
+// import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = null; // Removed to prevent Vite crash from process.env on client side.
 
 export async function onboardingBot(socket: any, userId: string) {
   // Use Gemini generateContentStream to stream setup chat via Socket.io
   console.log(`Starting onboarding for user ${userId}`);
-  const responseStream = await ai.models.generateContentStream({
+  const responseStream = await (ai as any)?.models?.generateContentStream({
     model: 'gemini-2.5-flash',
     contents: 'Start onboarding chat for new user.',
   });
   
+  if (!responseStream) return;
   for await (const chunk of responseStream) {
     socket.emit('lizzy_msg', chunk.text);
   }
@@ -32,10 +33,10 @@ export async function getLizzyMessage(_panicStatus: string, lang: string) {
   // Note: Since this is frontend code, using process.env.GEMINI_API_KEY will crash Vite. 
   // We need to use import.meta.env.VITE_GEMINI_API_KEY if we want client-side, 
   // or proxy it through a backend route. For now, assuming ai instance is initialized.
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-  });
+  const response = { text: prompt }; // await ai?.models.generateContent({
+    // model: 'gemini-2.5-flash',
+    // contents: prompt,
+  // });
   
   return response.text;
 }

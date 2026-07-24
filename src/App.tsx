@@ -10,15 +10,12 @@ import { Settings } from './components/Settings';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
 import { GeolocationService } from './services/BaseService';
-import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { LocalNotificationService } from './services/LocalNotificationService';
-import { BackgroundVideoLoop } from './components/BackgroundVideoLoop';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { OrgDashboard } from './components/OrgDashboard';
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
-import { SplashReveal } from './components/SplashReveal';
 import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { AppTour } from './components/AppTour';
@@ -30,7 +27,6 @@ import { KlevaBot } from './components/KlevaBot';
 import { GlobalRadarBackground } from './components/GlobalRadarBackground';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { CommerceCenter } from './components/CommerceCenter';
-import { PermissionGateOverlay } from './components/PermissionGateOverlay';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
@@ -108,15 +104,8 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
-
-  useEffect(() => {
-    // Failsafe: hide splash screen after 5 seconds just in case video doesn't play or end
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
+  const [showSplash, setShowSplash] = useState(true);
+  useEffect(() => { const timer = setTimeout(() => setShowSplash(false), 7000); return () => clearTimeout(timer); }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -167,7 +156,7 @@ const App: React.FC = () => {
       } else if (activeTab !== 'home') {
         setActiveTab('home');
       } else {
-        if (!canGoBack) {
+        if (true) {
           setShowExitConfirm(true);
         }
       }
@@ -235,40 +224,6 @@ const App: React.FC = () => {
     }, 4000);
     return () => clearInterval(tickInterval);
   }, [isBackgroundServiceRunning]);
-
-
-  // Manage actual Android Foreground Service
-  useEffect(() => {
-    const manageForegroundService = async () => {
-      try {
-        if (isBackgroundServiceRunning) {
-          await ForegroundService.startForegroundService({
-            id: 111,
-            title: "SafetyLink Secure Node",
-            body: "Monitoring triggers...",
-            smallIcon: "ic_stat_icon_config_sample",
-            buttons: []
-          });
-        } else {
-          await ForegroundService.stopForegroundService();
-        }
-      } catch (err) {
-        console.warn("ForegroundService plugin error:", err);
-      }
-    };
-    manageForegroundService();
-  }, [isBackgroundServiceRunning]);
-
-
-  useEffect(() => {
-    // Auto-reconnect bound BLE devices on app start
-    const store = useAppStore.getState();
-    const boundDevices = store.bleDevices.filter(d => d.triggerServiceUuid && d.triggerCharacteristicUuid);
-    boundDevices.forEach(d => {
-      console.log('Auto-reconnecting to bound BLE device:', d.macAddress);
-      store.connectBleDevice(d.macAddress);
-    });
-  }, []);
 
   // Synchronize state with actual phone local notification system tray
   useEffect(() => {
@@ -949,7 +904,17 @@ const App: React.FC = () => {
 
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
-        <SplashReveal onComplete={() => setShowSplash(false)} />
+        <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
+          <video
+            autoPlay
+            muted
+            playsInline
+            onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
+          </video>
+        </div>
       )}
       <div className="police-wash pointer-events-none" />
       
@@ -959,8 +924,18 @@ const App: React.FC = () => {
       </div>
 
       {activeTab === 'deck' && !currentOrg && <GlobalRadarBackground />}
-      {/* Global Background 3D Animated Mesh Loop */}
-      <BackgroundVideoLoop isHome={activeTab === 'home'} />
+      {/* Background Video */}
+      {(activeTab === 'home' && !currentOrg) && (
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
+        >
+          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+        </video>
+      )}
       {demoMode && (
         <div className="demo-simulated-overlay select-none pointer-events-none">
           <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
@@ -968,9 +943,6 @@ const App: React.FC = () => {
       )}
 
       {/* Persistent System Status Bar & Background Notification Tray */}
-
-      {/* Permissions Gate Requester */}
-      <PermissionGateOverlay />
 
       {/* High-Priority Emergency Overlay */}
       <ForcedCountdownOverlay />

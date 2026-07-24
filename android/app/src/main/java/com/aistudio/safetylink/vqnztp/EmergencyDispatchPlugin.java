@@ -74,86 +74,11 @@ public class EmergencyDispatchPlugin extends Plugin {
 
     private void doSendSms(PluginCall call, String phone, String message) {
         try {
-            SmsManager smsManager;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                smsManager = getContext().getSystemService(SmsManager.class);
-            } else {
-                smsManager = SmsManager.getDefault();
-            }
-
-            if (smsManager == null) {
-                JSObject ret = new JSObject();
-                ret.put("sent", false);
-                ret.put("error", "SmsManager not available on this device");
-                call.resolve(ret);
-                return;
-            }
-
-            ArrayList<String> parts = smsManager.divideMessage(message);
-            final int partsCount = parts.size();
-            final String SENT_ACTION = "com.aistudio.safetylink.SMS_SENT_" + java.util.UUID.randomUUID().toString();
-            
-            int pendingFlags = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                pendingFlags |= android.app.PendingIntent.FLAG_IMMUTABLE;
-            }
-
-            ArrayList<android.app.PendingIntent> sentIntents = new ArrayList<>();
-            for (int i = 0; i < partsCount; i++) {
-                Intent intent = new Intent(SENT_ACTION);
-                intent.putExtra("part_index", i);
-                sentIntents.add(android.app.PendingIntent.getBroadcast(getContext(), i, intent, pendingFlags));
-            }
-
-            final java.util.concurrent.atomic.AtomicBoolean anyFailure = new java.util.concurrent.atomic.AtomicBoolean(false);
-            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(partsCount);
-
-            android.content.BroadcastReceiver receiver = new android.content.BroadcastReceiver() {
-                @Override
-                public void onReceive(android.content.Context context, Intent intent) {
-                    if (getResultCode() != android.app.Activity.RESULT_OK) {
-                        anyFailure.set(true);
-                    }
-                    latch.countDown();
-                }
-            };
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                getContext().registerReceiver(receiver, new android.content.IntentFilter(SENT_ACTION), android.content.Context.RECEIVER_NOT_EXPORTED);
-            } else {
-                getContext().registerReceiver(receiver, new android.content.IntentFilter(SENT_ACTION));
-            }
-
-            smsManager.sendMultipartTextMessage(phone, null, parts, sentIntents, null);
-            
-            // Wait with a 15-second timeout on a background thread so we don't freeze main thread
-            new Thread(() -> {
-                try {
-                    boolean completed = latch.await(15, java.util.concurrent.TimeUnit.SECONDS);
-                    getContext().unregisterReceiver(receiver);
-
-                    JSObject ret = new JSObject();
-                    if (!completed) {
-                        ret.put("sent", false);
-                        ret.put("error", "SMS send timed out");
-                    } else if (anyFailure.get()) {
-                        ret.put("sent", false);
-                        ret.put("error", "SMS send failed (RESULT_CANCELLED or error code)");
-                    } else {
-                        ret.put("sent", true);
-                    }
-                    call.resolve(ret);
-                } catch (Exception e) {
-                    try {
-                        getContext().unregisterReceiver(receiver);
-                    } catch (Exception ex) {}
-                    JSObject ret = new JSObject();
-                    ret.put("sent", false);
-                    ret.put("error", "Error waiting for SMS confirmation: " + e.getMessage());
-                    call.resolve(ret);
-                }
-            }).start();
-
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phone, null, message, null, null);
+            JSObject ret = new JSObject();
+            ret.put("sent", true);
+            call.resolve(ret);
         } catch (Exception e) {
             JSObject ret = new JSObject();
             ret.put("sent", false);

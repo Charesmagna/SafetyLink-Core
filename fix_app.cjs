@@ -1,33 +1,13 @@
 const fs = require('fs');
 let content = fs.readFileSync('src/App.tsx', 'utf8');
 
+// Replace petal with safetylink_startup
+content = content.replace('/media/petal_20260720_023729.mp4', '/media/safetylink_startup.mp4');
+
+// Add confirm exit
 content = content.replace(
-  /\{showSplash && \([\s\S]*?<SplashReveal onComplete=\{\(\) => setShowSplash\(false\)\} \/>[\s\S]*?<\/div>\s*\)\}/,
-  '{showSplash && (\n        <SplashReveal onComplete={() => setShowSplash(false)} />\n      )}'
-);
-
-if (!content.includes('import { BackgroundVideoLoop }')) {
-  content = content.replace(
-    "import { LocalNotificationService } from './services/LocalNotificationService';",
-    "import { LocalNotificationService } from './services/LocalNotificationService';\nimport { BackgroundVideoLoop } from './components/BackgroundVideoLoop';"
-  );
-}
-
-if (!content.includes('import { PermissionGateOverlay }')) {
-  content = content.replace(
-    "import { ForcedCountdownOverlay }",
-    "import { PermissionGateOverlay } from './components/PermissionGateOverlay';\nimport { ForcedCountdownOverlay }"
-  );
-}
-
-content = content.replace(
-  "{/* High-Priority Emergency Overlay */}",
-  "{/* Permissions Gate Requester */}\n      <PermissionGateOverlay />\n\n      {/* High-Priority Emergency Overlay */}"
-);
-
-content = content.replace(
-  /\{\/\* Background Video \*\/\}[\s\S]*?<\/video>\s*\)\}/,
-  "{/* Global Background 3D Animated Mesh Loop */}\n      <BackgroundVideoLoop isHome={activeTab === 'home'} />"
+  "      } else if (activeTab !== 'home') {\n        setActiveTab('home');\n      }",
+  "      } else if (activeTab !== 'home') {\n        setActiveTab('home');\n      } else {\n        if (window.confirm('Are you sure you want to exit SafetyLink?')) {\n          CapApp.exitApp();\n        }\n      }"
 );
 
 fs.writeFileSync('src/App.tsx', content);

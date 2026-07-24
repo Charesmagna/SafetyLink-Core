@@ -90,10 +90,15 @@ public class SafelinkForegroundService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "onStartCommand – promoting to foreground");
-        startForeground(NOTIF_ID_ONGOING, buildOngoingNotification(
-                "🛡️ SafetyLink Active Connection",
-                "• SERVICE ACTIVE \n• GHOST ENGINE ACTIVE \n• BLE LINKED: STANDBY \n• HPE GPS LOCKED: ACQUIRING"
-        ));
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ONGOING)
+            .setSmallIcon(R.drawable.ic_safetylink)
+            .setContentTitle("SafetyLink Active")
+            .setContentText("Service + Ghost Engine Running")
+            .setStyle(new NotificationCompat.BigTextStyle()
+                .bigText("BLE Linked: Standby\nGPS: Acquiring"))
+            .setOngoing(true);
+
+        startForeground(NOTIF_ID_ONGOING, builder.build());
         return START_STICKY;
     }
 
