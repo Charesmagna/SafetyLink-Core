@@ -13,8 +13,6 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
@@ -23,6 +21,13 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
     }
 }
 
@@ -47,21 +52,21 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-    
-    // 1. AndroidX Core KTX (Required for Coroutines and modern WorkManager)
+
+    // AndroidX Core KTX
     implementation "androidx.core:core-ktx:1.12.0"
 
-    // 2. Room Persistence Library (The SQLite Vault)
+    // Room Persistence Library
     def room_version = "2.6.1"
     implementation "androidx.room:room-runtime:$room_version"
-    implementation "androidx.room:room-ktx:$room_version" // Kotlin Extensions and Coroutines support for Room
+    implementation "androidx.room:room-ktx:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
-    
-    // 3. WorkManager (The Background Sync Engine)
+
+    // WorkManager
     def work_version = "2.9.0"
     implementation "androidx.work:work-runtime-ktx:$work_version"
 
-    // 4. Firebase Cloud Functions (Required for the HTTPS Callable sync)
+    // Firebase Cloud Functions
     implementation "com.google.firebase:firebase-functions-ktx:20.4.0"
 
 }
@@ -75,14 +80,4 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-}
-
-android {
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
 }
