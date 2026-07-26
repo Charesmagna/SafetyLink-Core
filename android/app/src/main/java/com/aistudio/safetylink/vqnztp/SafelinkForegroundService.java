@@ -1,5 +1,6 @@
 package com.aistudio.safetylink.vqnztp;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -25,20 +26,19 @@ import androidx.core.app.NotificationCompat;
  *
  * Behaviour:
  *   - Starts automatically on boot (via BootReceiver).
- *   - Posts an ongoing "Device locked – SafetyLink connected" notification
- *     visible in the Android notification shade whenever the app is minimised
- *     or the screen is locked.  This notification reassures the user that BLE
- *     listening and GPS tracking are still active.
+ *   - Posts an ongoing "Device locked – SafetyLink connected" notification.
  *   - Holds a PARTIAL_WAKE_LOCK so the CPU does not sleep between BLE events.
- *   - Returns START_STICKY so Android restarts it if it is killed.
- *   - Calls onTaskRemoved() to re-schedule itself if the user swipes the app
- *     away from the Recents list.
+ *   - Returns START_STICKY so Android restarts it if killed.
+ *   - Dead-man's switch: schedules a repeating AlarmManager ping every
+ *     5 minutes. If the ping intent is received but the service is dead,
+ *     Android re-delivers START_STICKY; if AlarmManager fires with no
+ *     service, the ping intent restarts it.
  */
 public class SafelinkForegroundService extends Service {
     private static final String TAG = "SafelinkFgService";
 
     // Notification channel IDs
-    public static final String CHANNEL_ID_ONGOING  = "safetylink_channel";
+    public static final String CHANNEL_ID_ONGOING   = "safetylink_channel";
     public static final String CHANNEL_ID_EMERGENCY = "safetylink_emergency_channel";
 
     // Stable notification IDs
@@ -48,19 +48,24 @@ public class SafelinkForegroundService extends Service {
     // Wake lock tag
     private static final String WAKE_LOCK_TAG = "SafetyLink::BleWakeLock";
 
-    private PowerManager.WakeLock wakeLock;
+    // Dead-man's switch: ping every 5 minutes
+    private static final String ACTION_DEADMAN_PING = "com.aistudio.safetylink.ACTION_DEADMAN_PING";
+    private static final int    DEADMAN_REQUEST_CODE = 9901;
+    private static final long   DEADMAN_INTERVAL_MS  = 5 * 60 * 1000L; // 5 minutes
 
+    private PowerManager.WakeLock wakeLock;
     private boolean isSurvivalMode = false;
-    private BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
             int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            float batteryPct = level * 100 / (float)scale;
-            
+            float batteryPct = level * 100 / (float) scale;
+
             if (batteryPct <= 10.0f && !isSurvivalMode) {
                 isSurvivalMode = true;
-                Log.w(TAG, "BATTERY CRITICAL (<10%). ENTERING SURVIVAL MODE. THROTTLING GPS & KILLING UI.");
+                Log.w(TAG, "BATTERY CRITICAL (<10%). ENTERING SURVIVAL MODE.");
                 if (SafetyLinkBridgePlugin.getInstance() != null) {
                     SafetyLinkBridgePlugin.getInstance().emitSurvivalMode(true);
                 }
@@ -74,7 +79,6 @@ public class SafelinkForegroundService extends Service {
         }
     };
 
-
     // -----------------------------------------------------------------------
     // Service lifecycle
     // -----------------------------------------------------------------------
@@ -85,17 +89,27 @@ public class SafelinkForegroundService extends Service {
         createNotificationChannels();
         acquireWakeLock();
         registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        scheduleDeadManPing();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Handle dead-man ping — touch wake lock and reschedule
+        if (intent != null && ACTION_DEADMAN_PING.equals(intent.getAction())) {
+            Log.d(TAG, "Dead-man ping received — service alive, rescheduling");
+            touchWakeLock(this);
+            scheduleDeadManPing();
+            return START_STICKY;
+        }
+
         Log.i(TAG, "onStartCommand – promoting to foreground");
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ONGOING)
             .setSmallIcon(R.drawable.ic_safetylink)
             .setContentTitle("SafetyLink Active")
             .setContentText("Service + Ghost Engine Running")
             .setStyle(new NotificationCompat.BigTextStyle()
-                .bigText("BLE Linked: Standby\nGPS: Acquiring"))
+                .bigText("BLE Linked: Standby
+GPS: Acquiring"))
             .setOngoing(true);
 
         startForeground(NOTIF_ID_ONGOING, builder.build());
@@ -104,7 +118,6 @@ public class SafelinkForegroundService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        // App was swiped from Recents – reschedule so we restart after a short delay
         Log.w(TAG, "Task removed – rescheduling service restart");
         Intent restartIntent = new Intent(getApplicationContext(), SafelinkForegroundService.class);
         restartIntent.setPackage(getPackageName());
@@ -114,11 +127,11 @@ public class SafelinkForegroundService extends Service {
                 restartIntent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
         );
-        android.app.AlarmManager alarmManager =
-                (android.app.AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        AlarmManager alarmManager =
+                (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         if (alarmManager != null) {
             alarmManager.set(
-                    android.app.AlarmManager.RTC_WAKEUP,
+                    AlarmManager.RTC_WAKEUP,
                     System.currentTimeMillis() + 2000,
                     restartPending
             );
@@ -129,29 +142,76 @@ public class SafelinkForegroundService extends Service {
     @Override
     public void onDestroy() {
         Log.w(TAG, "Service destroyed – releasing wake lock");
+        cancelDeadManPing();
         releaseWakeLock();
-        try { unregisterReceiver(batteryReceiver); } catch (Exception e) {}
+        try { unregisterReceiver(batteryReceiver); } catch (Exception e) { /* ignore */ }
         super.onDestroy();
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null; // not a bound service
+        return null;
     }
 
     // -----------------------------------------------------------------------
-    // Public helpers called by the Capacitor layer / JS bridge
+    // Dead-man's switch
     // -----------------------------------------------------------------------
+
     /**
-     * Update the ongoing notification text – called from LocalNotificationService
-     * when BLE / GPS / SOS state changes.
+     * Schedule (or reschedule) a repeating AlarmManager ping.
+     * If the service is killed without onDestroy being called (OEM force-kill),
+     * the next pending alarm will restart it via START_STICKY delivery.
      */
+    private void scheduleDeadManPing() {
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+
+        Intent pingIntent = new Intent(this, SafelinkForegroundService.class);
+        pingIntent.setAction(ACTION_DEADMAN_PING);
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                DEADMAN_REQUEST_CODE,
+                pingIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        // Cancel any existing ping before rescheduling
+        am.cancel(pi);
+
+        long triggerAt = System.currentTimeMillis() + DEADMAN_INTERVAL_MS;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+        } else {
+            am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi);
+        }
+        Log.d(TAG, "Dead-man ping scheduled in " + (DEADMAN_INTERVAL_MS / 1000) + "s");
+    }
+
+    private void cancelDeadManPing() {
+        AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (am == null) return;
+        Intent pingIntent = new Intent(this, SafelinkForegroundService.class);
+        pingIntent.setAction(ACTION_DEADMAN_PING);
+        PendingIntent pi = PendingIntent.getService(
+                this,
+                DEADMAN_REQUEST_CODE,
+                pingIntent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+        );
+        if (pi != null) {
+            am.cancel(pi);
+            Log.d(TAG, "Dead-man ping cancelled");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Public helpers
+    // -----------------------------------------------------------------------
     public static void updateNotification(Context ctx,
                                            boolean isRunning,
                                            String locationStr,
                                            int connectedBleCount,
                                            String sosState) {
-        // Touch the wake lock on status changes to keep the CPU awake for the transition
         touchWakeLock(ctx);
 
         NotificationManager nm =
@@ -161,10 +221,12 @@ public class SafelinkForegroundService extends Service {
         String title;
         String body;
 
-        
         if (!"IDLE".equals(sosState)) {
             title = "🚨 SafetyLink EMERGENCY ACTIVE";
-            body  = "Distress signal broadcasting! Location: [" + locationStr + "] \n• GHOST ENGINE: ACTIVE \n• BLE LINK: ACTIVE \n• TX RELAY: ENGAGED";
+            body  = "Distress signal broadcasting! Location: [" + locationStr + "] 
+• GHOST ENGINE: ACTIVE 
+• BLE LINK: ACTIVE 
+• TX RELAY: ENGAGED";
         } else if (!isRunning) {
             title = "⚠️ SafetyLink Monitoring Suspended";
             body  = "Panic gestures & background tracking are offline. Tap to reactivate.";
@@ -173,9 +235,11 @@ public class SafelinkForegroundService extends Service {
                     ? connectedBleCount + " iTAG paired"
                     : "No iTAG bound";
             title = "🛡️ SafetyLink Active Connection";
-            body  = "• SERVICE ACTIVE \n• GHOST ENGINE ACTIVE \n• BLE LINKED: " + devicesStr + " \n• HPE GPS LOCKED: [" + locationStr + "]";
+            body  = "• SERVICE ACTIVE 
+• GHOST ENGINE ACTIVE 
+• BLE LINKED: " + devicesStr + " 
+• HPE GPS LOCKED: [" + locationStr + "]";
         }
-
 
         Notification notification = buildNotification(ctx, title, body,
                 !"IDLE".equals(sosState) ? CHANNEL_ID_EMERGENCY : CHANNEL_ID_ONGOING);
@@ -191,7 +255,6 @@ public class SafelinkForegroundService extends Service {
                     (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
 
-            // Ongoing / status channel – low importance, no sound
             NotificationChannel ongoing = new NotificationChannel(
                     CHANNEL_ID_ONGOING,
                     "SafetyLink Background Service",
@@ -201,7 +264,6 @@ public class SafelinkForegroundService extends Service {
             ongoing.setShowBadge(false);
             nm.createNotificationChannel(ongoing);
 
-            // Emergency channel – high importance, sound
             NotificationChannel emergency = new NotificationChannel(
                     CHANNEL_ID_EMERGENCY,
                     "SafetyLink Emergency Alerts",
@@ -212,15 +274,10 @@ public class SafelinkForegroundService extends Service {
         }
     }
 
-    private Notification buildOngoingNotification(String title, String body) {
-        return buildNotification(this, title, body, CHANNEL_ID_ONGOING);
-    }
-
     private static Notification buildNotification(Context ctx,
                                                     String title,
                                                     String body,
                                                     String channelId) {
-        // Tap opens MainActivity
         Intent openIntent = new Intent(ctx, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent openPending = PendingIntent.getActivity(
@@ -249,9 +306,8 @@ public class SafelinkForegroundService extends Service {
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
             wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
-            // Limit to 10 minutes maximum per acquisition block to prevent Samsung/Xiaomi battery drain warnings
-            wakeLock.acquire(10 * 60 * 1000L); 
-            Log.d(TAG, "Wake lock acquired with 10 minute timeout");
+            wakeLock.acquire(10 * 60 * 1000L);
+            Log.d(TAG, "Wake lock acquired (10 min timeout)");
         }
     }
 
@@ -260,8 +316,8 @@ public class SafelinkForegroundService extends Service {
             PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
             if (pm != null) {
                 PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG);
-                wl.acquire(5 * 60 * 1000L); // Hold for another 5 minutes on event/update
-                Log.d(TAG, "Wake lock touched/refreshed for 5 minutes");
+                wl.acquire(5 * 60 * 1000L);
+                Log.d(TAG, "Wake lock touched (5 min)");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to touch wake lock: " + e.getMessage());
