@@ -34,9 +34,28 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    headers: {
+      'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self' https://thingsboard.cloud https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://generativelanguage.googleapis.com",
+        "media-src 'self' blob:",
+        "worker-src 'self' blob:",
+      ].join('; '),
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(self), geolocation=(self)',
+    },
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
