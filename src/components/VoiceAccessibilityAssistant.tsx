@@ -114,7 +114,7 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   const handleRegister = () => {
-    const { registerUser, loginUser } = useAppStore.getState();
+    const { registerUser, login } = useAppStore.getState();
     const finalName = tempName || "Voice User";
     const username = finalName.replace(/\s+/g, '').toLowerCase() + Math.floor(Math.random() * 1000);
     
@@ -122,13 +122,13 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
       username: username,
       password: "password123",
       fullName: finalName,
+      email: username + "@example.com",
+      phone: tempPhone || "911",
       orgCode: "DEMO-ORG-01",
-      emergencyContacts: [
-        { name: "Emergency Voice Contact", phone: tempPhone || "911", relation: "Primary" }
-      ]
+      emergencyContactsList: tempPhone || "911"
     });
     
-    loginUser(username, "password123");
+    login(username, "password123");
     onClose();
   };
 
