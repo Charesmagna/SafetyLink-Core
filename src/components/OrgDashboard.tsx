@@ -1,3 +1,4 @@
+import { WorkspaceIntegrations } from "./WorkspaceIntegrations";
 import React, { useState } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -298,7 +299,7 @@ export const OrgDashboard: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={syncOfflineQueue}
+              onClick={() => syncOfflineQueue()}
               className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-mono font-black text-[9px] rounded-lg transition-all uppercase"
             >
               Sync Offline Queue

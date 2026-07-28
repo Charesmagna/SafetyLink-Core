@@ -756,7 +756,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (isSuperAdmin) {
       set({ currentUser: null, currentOrg: null, superAdminActive: true, token: null });
       setStoredJSON('sl_current_user', null);
-      setStoredJSON('sl_current_org', isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id === matchedUser.orgCode) || null : null);
+      setStoredJSON('sl_current_org', null);
       setStoredJSON('sl_super_admin', true);
       setStoredJSON('sl_jwt_token', null);
 
@@ -778,8 +778,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           return { success: false, error: 'Incorrect password.', role: 'USER' };
         }
         
-        const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(matchedUser.role);
-        set({ currentUser: matchedUser, currentOrg: isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id === matchedUser.orgCode) || null : null, superAdminActive: false });
+        const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(matchedUser.role || '');
+        set({ currentUser: matchedUser, currentOrg: isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id === (matchedUser.orgCode as string)) || null : null, superAdminActive: false });
         setStoredJSON('sl_current_user', matchedUser);
         setStoredJSON('sl_current_org', null);
         setStoredJSON('sl_super_admin', false);
