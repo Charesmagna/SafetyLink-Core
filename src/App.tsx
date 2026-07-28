@@ -501,8 +501,8 @@ const App: React.FC = () => {
 
                     <div className="space-y-3">
                       {visibleTools.map((t) => {
-                        const lat = userLocation?.lat || -26.191200;
-                        const lng = userLocation?.lng || 28.026400;
+                        const lat = userLocation?.lat || 0;
+                        const lng = userLocation?.lng || 0;
                         const formattedVal = t.targetValue
                           .replace('{LAT}', lat.toFixed(6))
                           .replace('{LNG}', lng.toFixed(6));

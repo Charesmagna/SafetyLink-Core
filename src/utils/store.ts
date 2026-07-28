@@ -179,7 +179,7 @@ const DEFAULT_CONTACTS: Contact[] = [
   { id: '1', label: '1st Contact - Tactical Voice Dispatch', phone: '+27829110000', template: 'Direct call sequence enqueued.', channelType: 'CALL', priority: 1 },
   { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: 'EMERGENCY: Distress beacon active. GPS: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS', priority: 2 },
   { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: 'CRITICAL: RFD_Beacon keyfob click verified. GPS: {LAT},{LNG}', channelType: 'WHATSAPP', priority: 3 },
-  { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: -26.1912, 28.0264', channelType: 'GROUP', priority: 4 },
+  { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: {LAT}, {LNG}', channelType: 'GROUP', priority: 4 },
   { id: '5', label: '5th Contact - SAPS Emergency Police', phone: '10111', template: 'Tactical coordinator distress ping.', channelType: 'POLICE', priority: 5 }
 ];
 
@@ -286,7 +286,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeSOSState: 'IDLE',
   currentPanicEvent: null,
   drillMode: false, // Default to Live Mode (not drill) so live SMS and CALLs are dispatched
-  userLocation: { lat: -26.1912, lng: 28.0264 }, // Default Johannesburg (Wits)
+  userLocation: null,
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
@@ -1072,7 +1072,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().activeSOSState !== 'IDLE') return;
 
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
-    const loc = get().userLocation || { lat: -26.1912, lng: 28.0264 };
+    const loc = get().userLocation || { lat: 0, lng: 0 };
     const isDrill = get().drillMode;
 
     // Simulate Offline-first Queueing if in Drill Mode or offline
@@ -1240,7 +1240,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const dispatchResults: { contact: string; type: string; success: boolean; simulated: boolean; error?: string }[] = [];
 
+    
+    let addressString = '';
+    if (loc.lat !== 0 && loc.lng !== 0) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${loc.lat}&lon=${loc.lng}&format=json`);
+        const data = await res.json();
+        if (data && data.address) {
+          const { road, house_number, city, town, state, country } = data.address;
+          const parts = [house_number, road, town || city, state, country].filter(Boolean);
+          if (parts.length > 0) {
+            addressString = ' | Approx Address: ' + parts.join(', ');
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to reverse geocode', e);
+      }
+    }
+    
     // Process contacts sequentially
+
     for (const contact of get().contacts) {
       if (get().activeSOSState === 'IDLE') break;
 
@@ -1254,7 +1273,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         continue;
       }
 
-      const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5));
+      const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5)) + addressString + ' | User: ' + who;
 
       if (isDrill) {
         get().addAuditLog(

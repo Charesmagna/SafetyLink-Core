@@ -80,10 +80,7 @@ export const AdvancedSubsystems: React.FC = () => {
   } = useAppStore();
 
   // --- Subsystem States ---
-  const [sqliteRecords, setSqliteRecords] = useState<SQLiteRecord[]>([
-    { id: 'TX-9048', timestamp: Date.now() - 42000, lat: -26.1912, lng: 28.0264, payload_size: '256 bytes', status: 'SYNCED_CLOUD' },
-    { id: 'TX-9051', timestamp: Date.now() - 15000, lat: -26.1908, lng: 28.0271, payload_size: '312 bytes', status: 'QUEUED_SECURE' }
-  ]);
+  const [sqliteRecords, setSqliteRecords] = useState<SQLiteRecord[]>([]);
   const [destructionSimulated, setDestructionSimulated] = useState(false);
   const [gpsIndoorsFailure, setGpsIndoorsFailure] = useState(false);
   
@@ -143,8 +140,8 @@ export const AdvancedSubsystems: React.FC = () => {
 
   // Handle SQLite item creation
   const forceTriggerLocalSOS = () => {
-    const lat = userLocation?.lat || -26.1912;
-    const lng = userLocation?.lng || 28.0264;
+    const lat = userLocation?.lat || 0;
+    const lng = userLocation?.lng || 0;
     const newRecord: SQLiteRecord = {
       id: `TX-${Math.floor(1000 + Math.random() * 9000)}`,
       timestamp: Date.now(),

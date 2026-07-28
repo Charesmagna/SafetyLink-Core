@@ -150,8 +150,10 @@ export class GeolocationService extends BaseService {
       }
 
       // Simulate slight moving coordinate around Sandton / Wits Campus Johannesburg
-      const baseLat = -26.1912;
-      const baseLng = 28.0264;
+      const state = useAppStore.getState();
+      if (!state.demoMode) return;
+      const baseLat = state.userLocation?.lat || 0;
+      const baseLng = state.userLocation?.lng || 0;
       const dLat = (Math.random() - 0.5) * 0.0005;
       const dLng = (Math.random() - 0.5) * 0.0005;
       

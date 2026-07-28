@@ -147,15 +147,11 @@ export const OfflineMap: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const userLat = userLocation?.lat ?? -26.1912;
-  const userLng = userLocation?.lng ?? 28.0264;
+  const userLat = userLocation?.lat ?? 0;
+  const userLng = userLocation?.lng ?? 0;
 
   // Render tactical security incident icons relative to the user's active zone
-  const liveIncidents = [
-    { name: 'SAPS Blue Team Sector A', lat: userLat + 0.007, lng: userLng - 0.004, status: 'DISPATCHED' },
-    { name: 'Apex Secure Perimeter Patrol', lat: userLat - 0.005, lng: userLng + 0.010, status: 'ACTIVE' },
-    { name: 'Campus Gate Alpha Check-in', lat: userLat + 0.003, lng: userLng + 0.003, status: 'RESOLVED' }
-  ];
+  const liveIncidents: any[] = [];
 
   // Determine active focus coordinate based on HUD view controls
   const activeFocusCenter: [number, number] = 

@@ -18,8 +18,8 @@ export const LocationDisplay: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const latStr = userLocation ? userLocation.lat.toFixed(6) : "-26.191200";
-  const lngStr = userLocation ? userLocation.lng.toFixed(6) : "28.026400";
+  const latStr = userLocation ? userLocation.lat.toFixed(6) : "0.000000";
+  const lngStr = userLocation ? userLocation.lng.toFixed(6) : "0.000000";
 
   return (
     <motion.div 

@@ -50,7 +50,7 @@ export const MotherboardConsole: React.FC = () => {
     prevPanicsRef.current = activeOrgPanics.length;
   }, [activeOrgPanics.length]);
 
-  const mapCenter: [number, number] = activeOrgPanics.length > 0 ? [activeOrgPanics[0].lat, activeOrgPanics[0].lng] : [-26.2041, 28.0473];
+  const mapCenter: [number, number] = activeOrgPanics.length > 0 ? [activeOrgPanics[0].lat, activeOrgPanics[0].lng] : [0, 0];
 
   const handleDownloadClick = async () => {
     try {
@@ -118,37 +118,7 @@ export const MotherboardConsole: React.FC = () => {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               />
               
-              {registeredStudents.map((u, i) => {
-                // Generate a consistent pseudo-random location near Johannesburg or map center for the user
-                const hash = u.username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                const uLat = -26.2041 + ((hash % 100) / 1000 - 0.05);
-                const uLng = 28.0473 + ((hash % 70) / 1000 - 0.035);
-                
-                // Check if this user is in panic
-                const isPanic = activeOrgPanics.some(p => p.description.toLowerCase().includes(u.username.toLowerCase()));
-                
-                return (
-                  <CircleMarker 
-                    key={'user-'+u.id}
-                    center={[uLat, uLng]} 
-                    radius={isPanic ? 14 : 8}
-                    pathOptions={{ 
-                      color: isPanic ? '#ef4444' : (u.role === 'Responder' || u.role === 'Guard' ? '#3b82f6' : '#10b981'), 
-                      fillColor: isPanic ? '#ef4444' : (u.role === 'Responder' || u.role === 'Guard' ? '#3b82f6' : '#10b981'), 
-                      fillOpacity: isPanic ? 0.7 : 0.4,
-                      weight: isPanic ? 3 : 1
-                    }}
-                  >
-                    <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={false}>
-                      <div className="font-mono text-[10px] bg-slate-900 text-slate-200 p-1 rounded">
-                        <strong>{u.fullName || u.username}</strong><br/>
-                        Role: {u.role || 'Member'}<br/>
-                        {isPanic ? <span className="text-red-500 font-bold">⚠️ IN DISTRESS</span> : <span className="text-emerald-500">Secure</span>}
-                      </div>
-                    </Tooltip>
-                  </CircleMarker>
-                );
-              })}
+              
 
               {activeOrgPanics.map(p => (
                 <CircleMarker 
