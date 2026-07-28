@@ -69,6 +69,7 @@ dependencies {
 
     // 4. Firebase Cloud Functions (Required for the HTTPS Callable sync)
     implementation "com.google.firebase:firebase-functions-ktx:20.4.0"
+    implementation "io.coil-kt:coil:2.6.0"
 
 }
 
