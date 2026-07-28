@@ -205,10 +205,6 @@
             />
         </service>
 
-        <service
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-        />
         <receiver android:name=".triggers.PowerButtonReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.SCREEN_ON" />
