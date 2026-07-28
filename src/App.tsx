@@ -360,7 +360,7 @@ const App: React.FC = () => {
               <option value="ve">Tshivenda</option>
               <option value="af">Afrikaans</option>
               <option value="zu">Zulu</option>
-              <option value="in">Indian</option>
+              <option value="hi">Hindi</option>
             </select>
             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-slate-300 transition-colors">
               <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

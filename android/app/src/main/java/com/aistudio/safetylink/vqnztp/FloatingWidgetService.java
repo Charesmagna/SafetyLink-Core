@@ -31,6 +31,29 @@ public class FloatingWidgetService extends Service {
     }
 
     @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Log.w("FloatingWidget", "Task removed – rescheduling widget service restart");
+        Intent restartIntent = new Intent(getApplicationContext(), FloatingWidgetService.class);
+        restartIntent.setPackage(getPackageName());
+        PendingIntent restartPending = PendingIntent.getService(
+                getApplicationContext(),
+                2,
+                restartIntent,
+                PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+        );
+        android.app.AlarmManager alarmManager =
+                (android.app.AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager != null) {
+            alarmManager.set(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + 2000,
+                    restartPending
+            );
+        }
+        super.onTaskRemoved(rootIntent);
+    }
+
+    @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
