@@ -1,3 +1,4 @@
+import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
@@ -1020,6 +1021,7 @@ const App: React.FC = () => {
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
       <CommerceCenter />
+      <FirstLaunchDisclaimer />
 
     </div>
   );
