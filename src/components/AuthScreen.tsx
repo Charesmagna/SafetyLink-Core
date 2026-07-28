@@ -47,6 +47,7 @@ export const AuthScreen: React.FC = () => {
   // User Register States
   const [userUsername, setUserUsername] = useState('');
   const [userRole, setUserRole] = useState<import('../types').UserRole>('Community Member');
+  const [userOrgCode, setUserOrgCode] = useState('');
   const [userPassword, setUserPassword] = useState('');
   const [hasMoya, setHasMoya] = useState(false);
   
@@ -136,7 +137,7 @@ export const AuthScreen: React.FC = () => {
       whatsapp: userWhatsapp,
       avatarUrl: userAvatar,
       email: userEmail,
-      orgCode: '' // Simplified flow: No OrgID on registration screen
+      orgCode: userRole === 'Responder' ? userOrgCode : ''
     });
 
     if (res.success) {
@@ -161,6 +162,7 @@ export const AuthScreen: React.FC = () => {
         setUserWhatsapp('');
         setUserAvatar('');
         setUserEmail('');
+        setUserOrgCode('');
         setView('POST_REGISTER_DECISION');
       }, 1200);
     } else {
@@ -664,6 +666,19 @@ export const AuthScreen: React.FC = () => {
                     <option value="Responder">Responder (Guard/Medical)</option>
                   </select>
                 </div>
+                {userRole === 'Responder' && (
+                  <div className="flex flex-col mt-3">
+                    <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Organization ID</label>
+                    <input
+                      type="text"
+                      value={userOrgCode}
+                      onChange={e => setUserOrgCode(e.target.value)}
+                      placeholder="e.g. SL-WITS-1234"
+                      className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="flex flex-col">
                   <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Full Name</label>

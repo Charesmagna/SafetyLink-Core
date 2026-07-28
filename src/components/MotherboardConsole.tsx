@@ -1,6 +1,7 @@
 
 import { useAppStore } from '../utils/store';
-import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Popup, CircleMarker, Marker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export const MotherboardConsole: React.FC = () => {
@@ -21,6 +22,34 @@ export const MotherboardConsole: React.FC = () => {
   );
 
   // Default to Johannesburg or center of active panics
+
+  const prevPanicsRef = useRef<number>(0);
+  
+  useEffect(() => {
+    if (activeOrgPanics.length > prevPanicsRef.current) {
+      // Play alert sound for new panic
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+      oscillator.frequency.setValueAtTime(1108.73, audioCtx.currentTime + 0.3); // C#6
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.6);
+      oscillator.frequency.setValueAtTime(1108.73, audioCtx.currentTime + 0.9);
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 1.2);
+    }
+    prevPanicsRef.current = activeOrgPanics.length;
+  }, [activeOrgPanics.length]);
+
   const mapCenter: [number, number] = activeOrgPanics.length > 0 ? [activeOrgPanics[0].lat, activeOrgPanics[0].lng] : [-26.2041, 28.0473];
 
   const handleDownloadClick = async () => {
@@ -88,6 +117,39 @@ export const MotherboardConsole: React.FC = () => {
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
               />
+              
+              {registeredStudents.map((u, i) => {
+                // Generate a consistent pseudo-random location near Johannesburg or map center for the user
+                const hash = u.username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const uLat = -26.2041 + ((hash % 100) / 1000 - 0.05);
+                const uLng = 28.0473 + ((hash % 70) / 1000 - 0.035);
+                
+                // Check if this user is in panic
+                const isPanic = activeOrgPanics.some(p => p.description.toLowerCase().includes(u.username.toLowerCase()));
+                
+                return (
+                  <CircleMarker 
+                    key={'user-'+u.id}
+                    center={[uLat, uLng]} 
+                    radius={isPanic ? 14 : 8}
+                    pathOptions={{ 
+                      color: isPanic ? '#ef4444' : (u.role === 'Responder' || u.role === 'Guard' ? '#3b82f6' : '#10b981'), 
+                      fillColor: isPanic ? '#ef4444' : (u.role === 'Responder' || u.role === 'Guard' ? '#3b82f6' : '#10b981'), 
+                      fillOpacity: isPanic ? 0.7 : 0.4,
+                      weight: isPanic ? 3 : 1
+                    }}
+                  >
+                    <Tooltip direction="top" offset={[0, -10]} opacity={1} permanent={false}>
+                      <div className="font-mono text-[10px] bg-slate-900 text-slate-200 p-1 rounded">
+                        <strong>{u.fullName || u.username}</strong><br/>
+                        Role: {u.role || 'Member'}<br/>
+                        {isPanic ? <span className="text-red-500 font-bold">⚠️ IN DISTRESS</span> : <span className="text-emerald-500">Secure</span>}
+                      </div>
+                    </Tooltip>
+                  </CircleMarker>
+                );
+              })}
+
               {activeOrgPanics.map(p => (
                 <CircleMarker 
                   key={p.id}
@@ -103,6 +165,12 @@ export const MotherboardConsole: React.FC = () => {
               ))}
             </MapContainer>
             {/* Map Overlay info box */}
+            
+            <div className="absolute top-2 right-2 bg-slate-950/90 border border-slate-800 p-2 rounded-xl backdrop-blur-md z-[1000] flex flex-col gap-1 text-[9px] font-mono shadow-xl">
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span className="text-slate-300">Clients ({registeredStudents.filter(u => u.role === 'Community Member' || !u.role).length})</span></div>
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div><span className="text-slate-300">Responders ({registeredStudents.filter(u => u.role === 'Responder' || u.role === 'Guard').length})</span></div>
+              <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div><span className="text-slate-300">In Distress ({activeOrgPanics.length})</span></div>
+            </div>
             {activeOrgPanics.length > 0 && (
               <div className="absolute bottom-4 left-4 right-4 bg-slate-950/90 border border-slate-800 p-3 rounded-xl backdrop-blur-md z-[1000]">
                 <h4 className="text-slate-200 text-xs font-bold font-mono uppercase mb-1">
