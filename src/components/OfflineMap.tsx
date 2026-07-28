@@ -88,9 +88,12 @@ export const OfflineMap: React.FC = () => {
   const [isLoadingSat, setIsLoadingSat] = useState(false);
   const [satError, setSatError] = useState<string | null>(null);
   const [mapCenterMode, setMapCenterMode] = useState<'user' | 'satellite'>('user');
-
   const [isDownloadingOfflineMap, setIsDownloadingOfflineMap] = useState(false);
   const [offlineMapProgress, setOfflineMapProgress] = useState(0);
+  const [cachedRegion, setCachedRegion] = useState<{ lat: number, lng: number, timestamp: number } | null>(() => {
+    const saved = localStorage.getItem('sl_offline_map_cache');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const handleDownloadOfflineMap = () => {
     if (isDownloadingOfflineMap) return;
@@ -99,22 +102,33 @@ export const OfflineMap: React.FC = () => {
 
     const interval = setInterval(() => {
       setOfflineMapProgress((prev) => {
-        const next = prev + Math.floor(Math.random() * 15) + 5;
+        const next = prev + Math.floor(Math.random() * 10) + 2;
         if (next >= 100) {
           clearInterval(interval);
           return 100;
         }
         return next;
       });
-    }, 400);
+    }, 200);
+  };
+
+  const handlePurgeCache = () => {
+    localStorage.removeItem('sl_offline_map_cache');
+    setCachedRegion(null);
+    setOfflineMapProgress(0);
   };
 
   useEffect(() => {
     if (offlineMapProgress >= 100) {
-      const timer = setTimeout(() => setIsDownloadingOfflineMap(false), 1000);
+      const timer = setTimeout(() => {
+        setIsDownloadingOfflineMap(false);
+        const region = { lat: userLocation?.lat || 0, lng: userLocation?.lng || 0, timestamp: Date.now() };
+        setCachedRegion(region);
+        localStorage.setItem('sl_offline_map_cache', JSON.stringify(region));
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [offlineMapProgress]);
+  }, [offlineMapProgress, userLocation]);
 
   // Fetch real, live space segment telemetry coordinates
   const fetchLiveSatelliteTelemetry = async () => {
@@ -339,23 +353,33 @@ export const OfflineMap: React.FC = () => {
             <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${isDownloadingOfflineMap ? 'animate-ping' : ''}`} />
             OFFLINE MAP CACHE
           </span>
-          <button
-            onClick={handleDownloadOfflineMap}
-            disabled={isDownloadingOfflineMap}
-            className={`px-2 py-0.5 text-[8px] rounded font-black uppercase border transition-all ${
-              isDownloadingOfflineMap
-                ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed'
-                : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60'
-            }`}
-          >
-            {isDownloadingOfflineMap ? 'Caching...' : 'Download Region'}
-          </button>
+          <div className="flex gap-2">
+            {cachedRegion && !isDownloadingOfflineMap && (
+              <button
+                onClick={handlePurgeCache}
+                className="px-2 py-0.5 text-[8px] rounded font-black uppercase border bg-red-950/40 border-red-500/40 text-red-400 hover:bg-red-900/60 transition-all"
+              >
+                Purge
+              </button>
+            )}
+            <button
+              onClick={handleDownloadOfflineMap}
+              disabled={isDownloadingOfflineMap}
+              className={`px-2 py-0.5 text-[8px] rounded font-black uppercase border transition-all ${
+                isDownloadingOfflineMap
+                  ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed'
+                  : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60'
+              }`}
+            >
+              {isDownloadingOfflineMap ? 'Caching...' : cachedRegion ? 'Update Region' : 'Download Region'}
+            </button>
+          </div>
         </div>
 
         {isDownloadingOfflineMap ? (
           <div className="space-y-1.5 mt-2">
             <div className="flex justify-between text-[8px] text-slate-400">
-              <span>DOWNLOADING SECTOR TILES...</span>
+              <span>DOWNLOADING SECTOR TILES (z10-18)...</span>
               <span>{Math.min(100, offlineMapProgress)}%</span>
             </div>
             <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
@@ -367,9 +391,16 @@ export const OfflineMap: React.FC = () => {
               </div>
             </div>
           </div>
-        ) : offlineMapProgress === 100 ? (
-          <div className="text-[9px] text-emerald-400 text-center py-1 mt-1 font-bold">
-            ✓ REGION CACHED FOR OFFLINE USE
+        ) : cachedRegion ? (
+          <div className="text-[9px] text-emerald-400 text-left py-1 mt-1 font-bold space-y-1">
+            <div className="flex justify-between">
+              <span>✓ CACHED SECTOR:</span>
+              <span className="text-slate-300">{cachedRegion.lat.toFixed(4)}, {cachedRegion.lng.toFixed(4)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>✓ LAST SYNC:</span>
+              <span className="text-slate-300">{new Date(cachedRegion.timestamp).toLocaleTimeString()}</span>
+            </div>
           </div>
         ) : (
           <div className="text-[9px] text-slate-500 text-center py-1 mt-1">
