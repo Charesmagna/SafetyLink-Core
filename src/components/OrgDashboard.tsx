@@ -35,7 +35,7 @@ export const OrgDashboard: React.FC = () => {
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const isResponder = currentUser?.role === 'Responder';
-  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch'>('dispatch');
+  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace'>('dispatch');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Roster detailed editor state
@@ -239,6 +239,15 @@ export const OrgDashboard: React.FC = () => {
             }`}
           >
             📞 Twilio Connection
+          </button>}
+          
+          {!isResponder && <button
+            onClick={() => setActiveSubTab('workspace')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'workspace' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            🏢 Google Workspace
           </button>}
           {!isResponder && <button
             onClick={() => setActiveSubTab('open-platforms')}
@@ -996,6 +1005,10 @@ export const OrgDashboard: React.FC = () => {
         {/* ==================================================== */}
         {/* SUB TAB: OPEN PLATFORMS                              */}
         {/* ==================================================== */}
+        
+        {activeSubTab === 'workspace' && (
+          <WorkspaceIntegrations />
+        )}
         {activeSubTab === 'open-platforms' && (
           <div className="space-y-6 animate-fadeIn">
             <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">

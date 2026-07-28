@@ -920,7 +920,7 @@ const App: React.FC = () => {
             onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
-            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
+            <source src="/petal_20260720_023729.mp4" type="video/mp4" />
           </video>
         </div>
       )}
