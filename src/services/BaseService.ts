@@ -322,5 +322,6 @@ export class OfflineService extends BaseService {
     this.logInfo(`Flushing ${this.sqliteSyncQueue.length} transactions from local cache to secure remote database (Spanner).`);
     this.sqliteSyncQueue = [];
     this.logInfo('Sync complete. Offline database status: In Sync.');
+    useAppStore.getState().syncOfflineQueue(true);
   }
 }

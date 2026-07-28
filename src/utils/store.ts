@@ -29,7 +29,7 @@ interface AppState {
   panicCountdown: number | null;
   localOfflineQueue: { id: string; timestamp: number; description: string; lat: number; lng: number }[];
   startMultiStagePanic: (description: string, durationSec?: number) => void;
-  syncOfflineQueue: () => void;
+  syncOfflineQueue: (silent?: boolean) => void;
   updateOrgBranding: (branding: Partial<Organization>) => void;
   updateClientProfile: (id: string, updated: Partial<UserProfile>) => void;
 
@@ -1538,10 +1538,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     }, 1000);
   },
 
-  syncOfflineQueue: async () => {
+  syncOfflineQueue: async (silent = false) => {
     const queue = get().localOfflineQueue;
     if (queue.length === 0) {
-      get().addToast('Offline dispatch queue is empty.', 'info');
+      if (!silent) get().addToast('Offline dispatch queue is empty.', 'info');
       return;
     }
 
@@ -1625,7 +1625,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_panic_events', get().panicEvents);
 
     if (failedItems.length === 0) {
-      get().addToast('Successfully synced all offline queued alerts!', 'success');
+      if (!silent) get().addToast('Successfully synced all offline queued alerts!', 'success');
       get().addAuditLog('SYSTEM', 'INFO', 'Offline alert cache synced successfully', 'Local storage buffer fully flushed.');
     } else {
       get().addToast(`Sync completed with ${failedItems.length} failures remaining in queue.`, 'warn');
