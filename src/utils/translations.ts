@@ -256,6 +256,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     'auth.beacons_anytime': 'Ni nga panyisa na u laula zwiambara zwa bikhoni ngezwiṅwe zwifhinga kha danga la Bikhoni.'
   },
   // Downloaded languages will inject their translated text dynamically!
+};
 // Simple helper function to get translated terms
 export function translate(lang: string, key: string): string {
   const currentLang = lang || 'en';
