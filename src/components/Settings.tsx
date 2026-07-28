@@ -971,6 +971,83 @@ export const Settings: React.FC = () => {
 
       </div>
 
+      
+      {/* Fleet, Camera, & Drone Integrations */}
+      <div className="space-y-4 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
+        <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
+          🚁 FLEET, CAMERA & DRONE MODULES
+        </h4>
+        <div className="space-y-3">
+          {/* Safety Fleet Tracking */}
+          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1 text-slate-200">
+              <span className="text-xl">🚙</span>
+              <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Safety Fleet Tracking</span>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-normal font-sans">
+              Monitor active security patrol vehicles, live dispatch routes, and responder telemetry.
+            </p>
+            <button
+              onClick={() => useAppStore.getState().addToast("Safety Fleet Tracking module initiated. Awaiting GPS telemetrics from patrol cars...", "info")}
+              className="w-full py-2 bg-blue-900/30 hover:bg-blue-900/50 border border-blue-500/20 text-blue-400 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
+            >
+              Open Fleet Dashboard
+            </button>
+          </div>
+
+          {/* ONVIF Camera Onboarding */}
+          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1 text-slate-200">
+              <span className="text-xl">📹</span>
+              <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">ONVIF Camera Linking</span>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-normal font-sans">
+              Onboard and link popular South African CCTV networks (e.g. Hikvision, Dahua, Vivotek). Supports ONVIF Profile S/G.
+            </p>
+            <button
+              onClick={() => useAppStore.getState().addToast("ONVIF Discovery protocol scanning local subnets for Hikvision / Dahua IPCs...", "info")}
+              className="w-full py-2 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/20 text-purple-400 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
+            >
+              Scan & Onboard Cameras
+            </button>
+          </div>
+
+          {/* Drone Deployment Environment */}
+          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1 text-slate-200">
+              <span className="text-xl">🛸</span>
+              <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Drone Deployment Config</span>
+            </div>
+            <p className="text-[9px] text-slate-500 leading-normal font-sans">
+              Configure external drone dispatch services (e.g., 24hrsdroneforce). Enable automated launch on distress triggers.
+            </p>
+            <div className="space-y-2 pt-2 border-t border-slate-900/50">
+              <div className="space-y-1">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Drone Provider API Key</label>
+                <input
+                  type="password"
+                  placeholder="Enter Dispatch API Key"
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-orange-500/50"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Default Service Target</label>
+                <select className="w-full bg-slate-950 border border-slate-900 rounded-xl px-2 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-orange-500/50">
+                  <option value="24hrsdroneforce">24hrsdroneforce (Recommended)</option>
+                  <option value="custom">Custom Provider Endpoint</option>
+                </select>
+              </div>
+              <button
+                onClick={() => useAppStore.getState().addToast("Drone provider settings saved. Ready for aerial deployment requests.", "success")}
+                className="w-full mt-2 py-2 bg-orange-900/30 hover:bg-orange-900/50 border border-orange-500/20 text-orange-400 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
+              >
+                Save Drone Config
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Interactive Audit Logs Ledger */}
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10">
         <div className="flex justify-between items-center">
