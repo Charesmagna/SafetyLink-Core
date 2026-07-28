@@ -8,6 +8,7 @@ import { DispatchChain } from './components/DispatchChain';
 import { BLEScanner } from './components/BLEScanner';
 const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 import { Settings } from './components/Settings';
+import { WorkspaceIntegrations } from './components/WorkspaceIntegrations';
 import { Profile } from './components/Profile';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
@@ -50,7 +51,7 @@ import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
 import polishLogo from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
 const App: React.FC = () => {
   const [isSosActive, setIsSosActive] = useState(false);
@@ -588,11 +589,18 @@ const App: React.FC = () => {
             </div>
           )}
 
+          
           {activeTab === 'subsystems' && (
             <div className="animate-fadeIn">
               <AdvancedSubsystems />
             </div>
           )}
+          {activeTab === 'workspace' && (
+            <div className="animate-fadeIn p-4 overflow-y-auto h-full">
+              <WorkspaceIntegrations />
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -789,6 +797,8 @@ const App: React.FC = () => {
                   </button>
 
                   {demoMode && (
+                  
+                  <>
                   <button
                     onClick={() => { setActiveTab('subsystems'); setIsDrawerOpen(false); }}
                     className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
@@ -799,10 +809,26 @@ const App: React.FC = () => {
                   >
                     <span className="text-sm shrink-0">💻</span>
                     <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.subsystems')}</p>
-                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Hardware & Chaos Simulator</p>
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Subsystems</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Advanced tactical modules</p>
                     </div>
                   </button>
+                  <button
+                    onClick={() => { setActiveTab('workspace'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'workspace'
+                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🏢</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Google Workspace</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Drive, Docs, Meets & More</p>
+                    </div>
+                  </button>
+                  </>
+
                   )}
                 </div>
 
