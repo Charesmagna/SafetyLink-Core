@@ -76,6 +76,7 @@ export const AuthScreen: React.FC = () => {
   const [showIdApplication, setShowIdApplication] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showClosingLogo, setShowClosingLogo] = useState(false);
+  const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
 
   useEffect(() => {
     let listener: any = null;
