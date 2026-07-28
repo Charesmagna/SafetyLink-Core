@@ -144,7 +144,7 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+    const backButtonListener = CapApp.addListener('backButton', () => {
       // 4. Block Back Button during SOS
       if (isSosActive) {
         console.warn("Back button blocked: SOS Countdown is active.");
