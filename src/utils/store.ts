@@ -756,7 +756,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (isSuperAdmin) {
       set({ currentUser: null, currentOrg: null, superAdminActive: true, token: null });
       setStoredJSON('sl_current_user', null);
-      setStoredJSON('sl_current_org', null);
+      setStoredJSON('sl_current_org', isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id === matchedUser.orgCode) || null : null);
       setStoredJSON('sl_super_admin', true);
       setStoredJSON('sl_jwt_token', null);
 
@@ -778,7 +778,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           return { success: false, error: 'Incorrect password.', role: 'USER' };
         }
         
-        set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false });
+        const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(matchedUser.role);
+        set({ currentUser: matchedUser, currentOrg: isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id === matchedUser.orgCode) || null : null, superAdminActive: false });
         setStoredJSON('sl_current_user', matchedUser);
         setStoredJSON('sl_current_org', null);
         setStoredJSON('sl_super_admin', false);
@@ -830,7 +831,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const isRealSuperAdmin = data.user.username === 'sl-admin-0000' || (data.user.role === 'Control Room Operator' && data.user.orgCode === 'SL-ORG-MAIN');
       const roleType = isRealSuperAdmin ? 'ADMIN' as const : 'USER' as const;
 
-      const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(data.user.role);
+      const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(data.user.role);
       set({
         currentUser: data.user,
         token: data.token,
@@ -842,7 +843,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       setStoredJSON('sl_current_user', data.user);
-      setStoredJSON('sl_current_org', null);
       setStoredJSON('sl_jwt_token', data.token);
       setStoredJSON('sl_super_admin', isRealSuperAdmin);
 
