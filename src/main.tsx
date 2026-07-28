@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { GlobalFooter } from './components/GlobalFooter'
 import './styles/index.css'
 
 // Request background wake lock via cordova-plugin-powermanagement upon application boot
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary tabName="SafetyLink">
       <App />
+      <GlobalFooter />
     </ErrorBoundary>
   </React.StrictMode>,
 )
