@@ -15,7 +15,7 @@ const WorkspacePanel = () => {
     onError: (error) => {
       addLog('OAuth authentication failed: ' + error.error_description);
     },
-    scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/contacts https://mail.google.com/ https://www.googleapis.com/auth/chat.messages https://www.googleapis.com/auth/chat.spaces',
+    scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/contacts https://mail.google.com/ https://www.googleapis.com/auth/chat.messages https://www.googleapis.com/auth/chat.spaces https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/forms.body.readonly https://www.googleapis.com/auth/meetings.space.readonly',
   });
 
   const testSheets = async () => {
@@ -92,6 +92,81 @@ const WorkspacePanel = () => {
     }
   };
 
+  
+  const testCalendar = async () => {
+    if (!accessToken) return addLog('Please authenticate first.');
+    try {
+      addLog('Testing Google Calendar API...');
+      const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addLog(`Fetched ${data.items ? data.items.length : 0} calendars.`);
+      } else {
+        addLog(`Calendar error: ${data.error.message}`);
+      }
+    } catch (e: any) {
+      addLog('Calendar test failed: ' + e.message);
+    }
+  };
+
+  const testTasks = async () => {
+    if (!accessToken) return addLog('Please authenticate first.');
+    try {
+      addLog('Testing Google Tasks API...');
+      const res = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addLog(`Fetched ${data.items ? data.items.length : 0} task lists.`);
+      } else {
+        addLog(`Tasks error: ${data.error.message}`);
+      }
+    } catch (e: any) {
+      addLog('Tasks test failed: ' + e.message);
+    }
+  };
+
+  const testForms = async () => {
+    if (!accessToken) return addLog('Please authenticate first.');
+    try {
+      addLog('Testing Google Forms API (Creating form is restricted, so we use Drive to list forms)...');
+      const res = await fetch("https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.form'", {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addLog(`Fetched ${data.files ? data.files.length : 0} forms.`);
+      } else {
+        addLog(`Forms error: ${data.error.message}`);
+      }
+    } catch (e: any) {
+      addLog('Forms test failed: ' + e.message);
+    }
+  };
+
+  const testMeet = async () => {
+    if (!accessToken) return addLog('Please authenticate first.');
+    try {
+      addLog('Testing Google Meet API...');
+      const res = await fetch('https://meet.googleapis.com/v2/spaces', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addLog(`Created Meet space: ${data.meetingUri}`);
+      } else {
+        addLog(`Meet error: ${data.error.message}`);
+      }
+    } catch (e: any) {
+      addLog('Meet test failed: ' + e.message);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
@@ -110,7 +185,7 @@ const WorkspacePanel = () => {
         </div>
 
         {accessToken && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
             <button onClick={testSheets} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-green-500 transition-colors text-center">
               <div className="text-green-500 text-2xl mb-2">📊</div>
               <div className="text-xs font-bold text-slate-300">Test Sheets</div>
@@ -126,6 +201,23 @@ const WorkspacePanel = () => {
             <button onClick={testChat} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-emerald-400 transition-colors text-center">
               <div className="text-emerald-400 text-2xl mb-2">💬</div>
               <div className="text-xs font-bold text-slate-300">Test Chat</div>
+            </button>
+
+            <button onClick={testCalendar} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-purple-500 transition-colors text-center">
+              <div className="text-purple-500 text-2xl mb-2">📅</div>
+              <div className="text-xs font-bold text-slate-300">Test Calendar</div>
+            </button>
+            <button onClick={testTasks} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-yellow-400 transition-colors text-center">
+              <div className="text-yellow-400 text-2xl mb-2">✅</div>
+              <div className="text-xs font-bold text-slate-300">Test Tasks</div>
+            </button>
+            <button onClick={testForms} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-indigo-400 transition-colors text-center">
+              <div className="text-indigo-400 text-2xl mb-2">📋</div>
+              <div className="text-xs font-bold text-slate-300">Test Forms</div>
+            </button>
+            <button onClick={testMeet} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-teal-400 transition-colors text-center">
+              <div className="text-teal-400 text-2xl mb-2">📹</div>
+              <div className="text-xs font-bold text-slate-300">Test Meet</div>
             </button>
           </div>
         )}
