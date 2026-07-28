@@ -3,6 +3,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { useAppStore, getOrgAbbreviation } from '../utils/store';
 import { LogoSetPart } from './LogoSetPart';
 import { CinematicClosingLogo } from './CinematicClosingLogo';
+import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -249,6 +250,7 @@ export const AuthScreen: React.FC = () => {
     <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
       
       {showClosingLogo && <CinematicClosingLogo onComplete={() => CapacitorApp.exitApp()} />}
+      {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}
       {showExitConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
@@ -306,11 +308,23 @@ export const AuthScreen: React.FC = () => {
         </div>
 
         {/* Demo Mode Toggle Banner */}
-        <div className="mb-5 glass-panel p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between font-mono">
-          <div className="text-left">
+        <div className="mb-5 glass-panel p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between font-mono gap-3">
+          <div className="text-left flex-1">
             <span className="text-[9.5px] font-black tracking-wide text-slate-300 block uppercase">Demo Showcase Mode</span>
             <span className="text-[7.5px] text-slate-500 block leading-tight">Instantly populates mock networks and active supervisor nodes.</span>
           </div>
+          
+          <button
+            type="button"
+            onClick={() => setShowVoiceAssistant(true)}
+            title="Voice Accessibility Setup"
+            className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all shrink-0 shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center justify-center"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </button>
+
           <button
             type="button"
             onClick={toggleDemoMode}
