@@ -8,6 +8,7 @@ import { DispatchChain } from './components/DispatchChain';
 import { BLEScanner } from './components/BLEScanner';
 const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 import { Settings } from './components/Settings';
+import { Profile } from './components/Profile';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
 import { GeolocationService } from './services/BaseService';
@@ -49,7 +50,7 @@ import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
 import polishLogo from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile';
 
 const App: React.FC = () => {
   const [isSosActive, setIsSosActive] = useState(false);
@@ -578,6 +579,9 @@ const App: React.FC = () => {
             </ErrorBoundary>
           )}
 
+          {activeTab === 'profile' && (
+            <Profile />
+          )}
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
               <Settings />
@@ -662,15 +666,16 @@ const App: React.FC = () => {
                 </div>
 
                 {/* User Info inside drawer */}
-                <div className="p-3 bg-slate-900/40 border border-slate-900 rounded-2xl text-left flex items-center gap-3">
+                <button onClick={() => { setActiveTab('profile'); setIsDrawerOpen(false); }} className="w-full p-3 bg-slate-900/40 border border-slate-900 rounded-2xl text-left flex items-center gap-3 hover:bg-slate-900/80 transition-colors cursor-pointer">
                   <div className="w-9 h-9 rounded-full bg-slate-800/80 border border-slate-750 flex items-center justify-center text-base shadow-inner">
                     👤
                   </div>
-                  <div className="space-y-0.5 min-w-0">
+                  <div className="space-y-0.5 min-w-0 flex-1">
                     <div className="text-xs font-black text-slate-200 truncate">{currentUser.fullName}</div>
                     <div className="text-[8.5px] font-mono text-slate-500 uppercase truncate">@{currentUser.username}</div>
                   </div>
-                </div>
+                  <div className="text-[10px] text-slate-500">✎</div>
+                </button>
 
                 {/* Navigation Options */}
                 <div className="space-y-1.5 text-left">
