@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 public final class EmergencyService {
 
     private static final String TAG = "EmergencyService";
-    private static final String BACKEND_BASE_URL = "http://10.0.2.2:3000";
+    private static final String BACKEND_BASE_URL = BuildConfig.BACKEND_BASE_URL;
 
     private static volatile EmergencyService instance;
     private final ExecutorService executor = Executors.newCachedThreadPool();

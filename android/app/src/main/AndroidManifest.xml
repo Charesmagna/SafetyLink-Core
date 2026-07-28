@@ -139,7 +139,7 @@
         </receiver>
 
         <!-- Replace existing BootReceiver with our prioritized one -->
-        <receiver android:name=".services.BootReceiver" android:enabled="true" android:exported="false">
+        <receiver android:name=".services.BootReceiver" android:enabled="true" android:exported="true">
             <intent-filter android:priority="2000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
@@ -185,13 +185,6 @@
             </intent-filter>
         </service>
 
-        <!-- SafetyBackgroundService for BLE Keep-Alive -->
-        <service
-            android:name=".SafetyBackgroundService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice"
-        />
 
         <service
             android:name=".FloatingWidgetService"
@@ -213,7 +206,6 @@
         </service>
 
         <service
-            android:name=".ActiveEmergencyService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
         />

@@ -7,7 +7,6 @@ import android.os.Build
 import android.util.Log
 import com.aistudio.safetylink.vqnztp.LockScreenNotificationService
 import com.aistudio.safetylink.vqnztp.PanicService
-import com.aistudio.safetylink.vqnztp.SafetyBackgroundService
 import com.aistudio.safetylink.vqnztp.SafelinkForegroundService
 
 // Reference: https://developer.android.com/reference/android/Manifest.permission#RECEIVE_BOOT_COMPLETED
@@ -21,7 +20,6 @@ class BootReceiver : BroadcastReceiver() {
             action == "com.htc.intent.action.QUICKBOOT_POWERON"
         ) {
             val services = listOf(
-                Intent(context, SafetyBackgroundService::class.java),
                 Intent(context, SafelinkForegroundService::class.java),
                 Intent(context, PanicService::class.java),
                 Intent(context, LockScreenNotificationService::class.java),

@@ -3,9 +3,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 
 android {
+    buildFeatures { buildConfig = true }
     namespace "com.aistudio.safetylink.vqnztp"
     compileSdkVersion rootProject.ext.compileSdkVersion
     defaultConfig {
+        buildConfigField "String", "BACKEND_BASE_URL", ""http://10.0.2.2:3000""
         multiDexEnabled true
         applicationId "com.aistudio.safetylink.vqnztp"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -21,6 +23,7 @@ android {
     }
     buildTypes {
         release {
+            buildConfigField "String", "BACKEND_BASE_URL", ""https://api.safetylink.app""
             signingConfig signingConfigs.debug
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -81,6 +84,7 @@ try {
 }
 
 android {
+    buildFeatures { buildConfig = true }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

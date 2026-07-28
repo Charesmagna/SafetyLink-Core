@@ -23,12 +23,12 @@ class SafetyLinkTileService : TileService() {
         super.onClick()
         Log.d("SafetyLinkTileService", "SOS Tile Clicked")
         
-        if (!isServiceRunning(SafetyBackgroundService::class.java)) {
-            val serviceIntent = Intent(this, SafetyBackgroundService::class.java)
+        if (!isServiceRunning(SafelinkForegroundService::class.java)) {
+            val serviceIntent = Intent(this, SafelinkForegroundService::class.java)
             try {
                 startForegroundService(serviceIntent)
             } catch (e: Exception) {
-                Log.e("SafetyLinkTileService", "Failed to start SafetyBackgroundService", e)
+                Log.e("SafetyLinkTileService", "Failed to start SafelinkForegroundService", e)
             }
         }
 
@@ -48,7 +48,7 @@ class SafetyLinkTileService : TileService() {
     private fun updateTileState() {
         val tile = qsTile ?: return
         
-        val isRunning = isServiceRunning(SafetyBackgroundService::class.java)
+        val isRunning = isServiceRunning(SafelinkForegroundService::class.java)
         
         tile.state = if (isRunning) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.label = "SOS"

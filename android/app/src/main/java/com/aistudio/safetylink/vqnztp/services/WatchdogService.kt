@@ -12,14 +12,14 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.aistudio.safetylink.vqnztp.SafetyBackgroundService
+import com.aistudio.safetylink.vqnztp.SafelinkForegroundService
 
 // Reference: https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_DATA_SYNC
 class WatchdogService : Service() {
     companion object {
         const val CHANNEL_ID = "safetylink_watchdog"
         const val NOTIFICATION_ID = 4001
-        const val CHECK_INTERVAL_MS = 60000L
+        const val CHECK_INTERVAL_MS = 15 * 60 * 1000L // 15 minutes for battery optimization
     }
 
     override fun onCreate() {
@@ -41,19 +41,19 @@ class WatchdogService : Service() {
         var isRunning = false
         @Suppress("DEPRECATION")
         for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (SafetyBackgroundService::class.java.name == service.service.className) {
+            if (SafelinkForegroundService::class.java.name == service.service.className) {
                 isRunning = true
                 break
             }
         }
 
         if (!isRunning) {
-            Log.w("WatchdogService", "SafetyBackgroundService not running. Restarting...")
-            val serviceIntent = Intent(this, SafetyBackgroundService::class.java)
+            Log.w("WatchdogService", "SafelinkForegroundService not running. Restarting...")
+            val serviceIntent = Intent(this, SafelinkForegroundService::class.java)
             try {
                 startForegroundService(serviceIntent)
             } catch (e: Exception) {
-                Log.e("WatchdogService", "Error restarting SafetyBackgroundService", e)
+                Log.e("WatchdogService", "Error restarting SafelinkForegroundService", e)
             }
         }
     }
