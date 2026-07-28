@@ -350,16 +350,23 @@ const App: React.FC = () => {
 
         {/* Right Side: Language & Account */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-lg p-1 mr-2">
-            {['en', 'zu', 'af', 'st', 'xh'].map((code) => (
-              <button
-                key={code}
-                onClick={() => setLanguage(code)}
-                className={`text-[9px] font-bold px-1.5 py-1 rounded transition-colors uppercase ${language === code ? 'bg-red-500 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                {code}
-              </button>
-            ))}
+          <div className="relative mr-2 group">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="appearance-none bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+            >
+              <option value="en">English</option>
+              <option value="ve">Tshivenda</option>
+              <option value="af">Afrikaans</option>
+              <option value="zu">Zulu</option>
+              <option value="in">Indian</option>
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-slate-300 transition-colors">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
           </div>
           <div className="text-right">
             <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>

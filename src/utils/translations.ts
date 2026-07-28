@@ -9,6 +9,7 @@ export interface LanguageMeta {
 }
 
 export const SA_LANGUAGES: LanguageMeta[] = [
+  { code: 'in', name: 'Indian', nativeName: 'Indian', flag: '🇿🇦', status: 'downloadable' },
   { code: 'en', name: 'English', nativeName: 'English', flag: '🇿🇦', status: 'preloaded' },
   { code: 've', name: 'Tshivenda', nativeName: 'Tshivenda', flag: '🇿🇦', status: 'preloaded' },
   { code: 'zu', name: 'isiZulu', nativeName: 'isiZulu', flag: '🇿🇦', status: 'downloadable' },
@@ -23,6 +24,7 @@ export const SA_LANGUAGES: LanguageMeta[] = [
 ];
 
 export const translationDicts: Record<string, Record<string, string>> = {
+  in: { 'status.secure': 'SAFETY SECURE STATUS: ARMED & ACTIVE (Indian)' },
   en: {
     // Top bars / Status
     'status.secure': 'SAFETY SECURE STATUS: ARMED & ACTIVE',
