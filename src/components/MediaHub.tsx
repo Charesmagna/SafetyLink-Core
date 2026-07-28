@@ -35,20 +35,44 @@ const MEDIA_MANIFEST: VideoAsset[] = [
   {
     title: "Inside the SafetyLink Emergency Ecosystem",
     filename: "Inside_the_SafetyLink_Emergency_Ecosystem.mp4",
-    path: "/assets/video/Inside_the_SafetyLink_Emergency_Ecosystem.mp4",
+    path: "/media/Inside_the_SafetyLink_Emergency_Ecosystem.mp4",
     description: "Full architectural walk-through showing real-time GPS coordinate logging and responder console updates."
   },
   {
     title: "Emergency Workflow Automation Architecture",
     filename: "How_SafetyLink_Automates_Emergency_Responses.mp4",
-    path: "/assets/video/How_SafetyLink_Automates_Emergency_Responses.mp4",
+    path: "/media/How_SafetyLink_Automates_Emergency_Responses.mp4",
     description: "Technical operational demonstration of native Android PanicService background survival threads."
   },
   {
-    title: "Cinematic Logo Smash - 3D Vault Assembly",
-    filename: "SafetyLink 3D Animation Logo.mp4",
-    path: "/assets/video/SafetyLink 3D Animation Logo.mp4",
-    description: "High-fidelity wide-format identity clip deployed across auth gateways and dashboard backdrops."
+    title: "Emergency Escalation Pipelines Work",
+    filename: "How_Emergency_Escalation_Pipelines_Work.mp4",
+    path: "/media/How_Emergency_Escalation_Pipelines_Work.mp4",
+    description: "Demonstration of the escalation pipeline workflow."
+  },
+  {
+    title: "SafetyLink Startup Sequence",
+    filename: "safetylink_startup.mp4",
+    path: "/media/safetylink_startup.mp4",
+    description: "Initialization and boot sequence."
+  },
+  {
+    title: "3D Logo Animation",
+    filename: "Now_I_need_the_d_animation_lo.mp4",
+    path: "/media/Now_I_need_the_d_animation_lo.mp4",
+    description: "3D brand identity clip."
+  },
+  {
+    title: "Neon Power Logo Reveal",
+    filename: "Neon Power Logo Reveal_0p.mp4",
+    path: "/media/Neon Power Logo Reveal_0p.mp4",
+    description: "Neon styling logo reveal."
+  },
+  {
+    title: "Scene Setup Vertical",
+    filename: "Scene_Setup_vertical_.mp4",
+    path: "/media/Scene_Setup_vertical_.mp4",
+    description: "Vertical orientation scene setup."
   }
 ];
 

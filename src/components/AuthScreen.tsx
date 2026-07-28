@@ -284,7 +284,7 @@ export const AuthScreen: React.FC = () => {
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen"
           >
-            <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+            <source src="/media/Scene_Setup_vertical_.mp4" type="video/mp4" />
           </video>
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />

@@ -925,7 +925,7 @@ const App: React.FC = () => {
             onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
-            <source src="/petal_20260720_023729.mp4" type="video/mp4" />
+            <source src="/media/Neon Power Logo Reveal_0p.mp4" type="video/mp4" />
           </video>
         </div>
       )}
@@ -946,7 +946,7 @@ const App: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+          <source src="/media/Scene_Setup_vertical_.mp4" type="video/mp4" />
         </video>
       )}
       {demoMode && (

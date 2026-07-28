@@ -159,7 +159,7 @@ export const OrgDashboard: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/petal_20260720_024055.mp4" type="video/mp4" />
+          <source src="/media/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
         </video>
       )}
       {/* Background with Glowing Heart and Heartbeat Pulse */}
