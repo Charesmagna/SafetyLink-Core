@@ -165,7 +165,7 @@ export class GeolocationService extends BaseService {
       // Cache coordinates offline
       this.offlineCache.push({ lat: nextLat, lng: nextLng, timestamp: Date.now() });
       if (this.offlineCache.length > 50) this.offlineCache.shift();
-    }, 4000);
+    }, 30000); // OPTIMIZED: Reduced simulated GPS fallback frequency
   }
 
   public async startTracking() {

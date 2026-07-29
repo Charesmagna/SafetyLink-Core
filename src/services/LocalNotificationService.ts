@@ -23,6 +23,10 @@ export class LocalNotificationService {
     }
   }
 
+  
+  private static lastTitle = '';
+  private static lastBody = '';
+
   public static async updateStatusNotification(
     isRunning: boolean,
     tickCount: number,
@@ -46,6 +50,13 @@ export class LocalNotificationService {
       title = "🛡️ SafetyLink Active Connection";
       body = `Continuous Link Active • ${devicesStr} • Location: [${locationStr}]`;
     }
+
+    // Optimization: Only push if the content actually changed to save battery
+    if (this.lastTitle === title && this.lastBody === body) {
+      return;
+    }
+    this.lastTitle = title;
+    this.lastBody = body;
 
     // 1. Browser HTML5 Notifications API
     if (typeof window !== 'undefined' && 'Notification' in window) {

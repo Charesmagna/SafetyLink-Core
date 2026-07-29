@@ -224,7 +224,7 @@ const App: React.FC = () => {
       if (isBackgroundServiceRunning) {
         incrementBackgroundServiceTick();
       }
-    }, 4000);
+    }, 30000); // OPTIMIZED: Reduced heartbeat frequency to save battery
     return () => clearInterval(tickInterval);
   }, [isBackgroundServiceRunning]);
 
