@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#020617">
+    <title>Safety-Link Core Ecosystem</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Onboarding and Community Provisioning Matrix -->
+        <div id="auth-screen" class="panel-layer">
+            <header class="auth-header">
+                <div class="brand-badge">SAFETY-LINK SYSTEMS</div>
+                <h1>TERMINAL PROVISIONING</h1>
+                <p class="subtitle">Secure Device Identity Activation Matrix</p>
+            </header>
+
+            <div class="auth-card">
+                <label class="field-label">FULL LEGAL NAME</label>
+                <input type="text" id="auth-name" placeholder="Enter full name" class="matrix-text-field" style="margin-bottom: 15px; width: 100%;">
+
+                <label class="field-label">CELLULAR LINE IDENTIFICATION</label>
+                <div class="input-wrapper" style="margin-bottom: 15px;">
+                    <span class="country-prefix">+27</span>
+                    <input type="tel" id="auth-phone" placeholder="82 123 4567" maxlength="9">
+                </div>
+
+                <label class="field-label">COMMUNITY ONBOARDING CODE (ORG ID)</label>
+                <input type="text" id="auth-org-id" placeholder="e.g., SLK-9X" class="matrix-text-field" style="margin-bottom: 20px; width: 100%; text-transform: uppercase;">
+
+                <button id="activate-terminal-btn" class="prime-btn">INITIALIZE CORE SYSTEM</button>
+            </div>
+            
+            <footer class="tactical-footer" style="margin-top: 30px; text-align: center; font-family: monospace; font-size: 0.75rem; color: #475569; letter-spacing: 1px;">
+                <div style="margin-bottom: 5px;">SYSTEM STATUS: LICENSED UTILITY CONSOLE</div>
+                <div>POWERED BY <span style="color: #f8fafc; font-weight: bold;">TM MEDIA SOLUTIONS</span></div>
+                <div style="font-size: 0.6rem; max-width: 280px; margin: 8px auto 0 auto; line-height: 1.3; color: #334155;">
+                    NOTICE: This terminal interface acts purely as a point-to-point network communication utility channel. Physical response mechanisms are handled entirely by localized civilian subscriber pools.
+                </div>
+            </footer>
+        </div>
+
+        <!-- System Core Tactical Console Dashboard Container -->
+        <div id="console-screen" class="panel-layer hidden">
+            <header class="console-header">
+                <div class="system-status-pill">
+                    <span class="pulse-indicator"></span>
+                    <span id="system-status-lbl">SYSTEM: INITIALIZING</span>
+                </div>
+                <div class="operator-profile">
+                    <span id="profile-name-lbl" class="operator-name">---</span>
+                    <span id="profile-role-lbl" class="operator-role">PATROLLER MODULE</span>
+                </div>
+            </header>
+
+            <div class="console-grid">
+                <div class="grid-left-panel">
+                    <div class="console-card map-card">
+                        <div class="card-header">TACTICAL COORDINATE TELEMETRY RADAR</div>
+                        <div id="gis-radar-viewport"></div>
+                    </div>
+                    <div class="console-card terminal-card">
+                        <div class="card-header">DIAGNOSTIC SYSTEM ORCHESTRATION TERMINAL</div>
+                        <div id="diagnostic-ticker-terminal" class="terminal-log"></div>
+                    </div>
+                </div>
+
+                <div class="grid-right-panel">
+                    <!-- Central Trigger Hub Button Interface -->
+                    <div class="console-card trigger-card">
+                        <div id="trigger-button" class="tactical-panic-hub">
+                            <div class="inner-core-node">
+                                <span class="panic-label">HOLD 2S</span>
+                                <span class="panic-sublabel">EMERGENCY ACTIVATION</span>
+                            </div>
+                        </div>
+                        <div class="drill-mode-panel" style="margin-top: 15px;">
+                            <button id="drill-mode-toggle" class="drill-btn">SYSTEM DRILL / TEST MODE [OFF]</button>
+                        </div>
+                    </div>
+
+                    <!-- 5-Channel Network Emergency Contact Matrix Configuration -->
+                    <div class="console-card config-card">
+                        <div class="card-header">CRITICAL DATA ROUTING MATRIX</div>
+                        <div class="matrix-input-grid">
+                            <div class="input-node-group"><label>1. Primary Contact Line</label><input type="tel" id="input-primary" class="matrix-text-field"></div>
+                            <div class="input-node-group"><label>2. Secondary Contact Line</label><input type="tel" id="input-secondary" class="matrix-text-field"></div>
+                            <div class="input-node-group"><label>3. Tertiary Contact Line</label><input type="tel" id="input-tertiary" class="matrix-text-field"></div>
+                            <div class="input-node-group"><label>4. WhatsApp Dispatch Target</label><input type="tel" id="input-whatsapp" class="matrix-text-field"></div>
+                            <div class="input-node-group"><label>5. Local Police Authority Line</label><input type="tel" id="input-police" class="matrix-text-field"></div>
+                            <button id="save-routing-btn" class="prime-btn" style="margin-top:10px; width:100%;">SAVE TELEPHONY MATRIX</button>
+                            <button id="sign-out-btn" class="prime-btn" style="margin-top:8px; width:100%; background:none; border:1px solid rgba(255,255,255,0.2); color:#94a3b8;">DE-PROVISION DEVICE</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer class="tactical-footer" style="padding: 15px 0; text-align: center; font-family: monospace; font-size: 0.7rem; color: #475569; background: #020617;">
+                <div>UTILITY INTERFACE POWERED BY <span style="color: #64748b; font-weight: bold;">TM MEDIA SOLUTIONS</span></div>
+            </footer>
+        </div>
+
+        <!-- 10-Second Disarm Overlay Module Interface Box -->
+        <div id="countdown-overlay" class="overlay-modal hidden">
+            <div class="overlay-glass-card">
+                <div class="threat-alert-banner">🚨 EXTREME THREAT RESPONDER ESCALATION ENGAGED</div>
+                <div id="countdown-text" class="giant-numerical-countdown">10</div>
+                <p class="escalation-notice-text">Simultaneous isolated community cloud burst deployed. Sequential voice call routing pipeline engages immediately following countdown window.</p>
+                <button id="disarm-btn" class="abort-defense-trigger">DISARM & ABORT PIPELINE</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Core Leaflet Mapping & Native Cordova Bridging Hooks -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="cordova.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

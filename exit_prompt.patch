@@ -1,0 +1,22 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -142,6 +142,8 @@
+   useEffect(() => {
+     let hardwareListener: any;
+     
++    let backPressCount = 0;
++
+     const setupBackButton = async () => {
+       const CapApp = (await import('@capacitor/app')).App;
+       const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+@@ -155,7 +157,11 @@
+       } else if (activeTab !== 'home') {
+         setActiveTab('home');
+       } else {
+-        // Could exit app here
++        if (window.confirm("Are you sure you want to exit SafetyLink?")) {
++            CapApp.exitApp();
++        }
+       }
+     });
+     setupBackButton();

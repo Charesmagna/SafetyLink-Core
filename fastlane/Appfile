@@ -1,0 +1,2 @@
+json_key_file("fastlane/play_store_credentials.json") # Path to your Google Play Service Account JSON
+package_name("com.aistudio.safetylink.vqnztp") # Your app's package name

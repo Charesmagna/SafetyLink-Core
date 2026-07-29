@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SafetyLink</string>
+    <string name="title_activity_main">SafetyLink</string>
+    <string name="login">Login</string>
+    <!-- Translations for EN, ZU, AF, ST, XH would be here -->
+    <string name="accessibility_service_description">SafetyLink Accessibility Service keeps the SOS panic system active and intercepts hardware inputs even when the phone is asleep or locked.</string>
+</resources>

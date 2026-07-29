@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DATABASE_URL=file:./dev.db
+      - OC_URL=http://owncloud:8080
+      - OC_ADMIN=admin
+      - OC_ADMIN_PASS=admin_safetylink
+    depends_on:
+      - owncloud
+      - db
+    volumes:
+      - ./prisma:/app/prisma
+
+  owncloud:
+    image: owncloud/server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - OWNCLOUD_DOMAIN=localhost:8080
+      - OWNCLOUD_ADMIN_USERNAME=admin
+      - OWNCLOUD_ADMIN_PASSWORD=admin_safetylink
+      - OWNCLOUD_DB_TYPE=mysql
+      - OWNCLOUD_DB_NAME=owncloud
+      - OWNCLOUD_DB_USERNAME=owncloud
+      - OWNCLOUD_DB_PASSWORD=owncloud
+      - OWNCLOUD_DB_HOST=db
+    depends_on:
+      - db
+    volumes:
+      - owncloud_data:/mnt/data
+
+  db:
+    image: mariadb:10.11
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=owncloud
+      - MYSQL_USER=owncloud
+      - MYSQL_PASSWORD=owncloud
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  owncloud_data:
+  db_data:
