@@ -34,7 +34,6 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,webp}'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.basemaps\.cartocdn\.com\/.*/i,
@@ -65,7 +64,6 @@ export default defineConfig({
             }
           }
         ]
-
       }
     })
   ],
@@ -79,6 +77,8 @@ export default defineConfig({
           'vendor-motion': ['motion'],
           'vendor-leaflet': ['leaflet', 'react-leaflet'],
           'vendor-zustand': ['zustand'],
+          'vendor-firebase': ['firebase/app', 'firebase/firestore', 'firebase/auth'],
+          'vendor-capacitor': ['@capacitor/core', '@capacitor/app', '@capacitor/geolocation', '@capacitor/haptics']
         },
       },
     },
