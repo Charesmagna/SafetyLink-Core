@@ -111,7 +111,6 @@ public final class EmergencyService {
             return false;
         }
         
-        /*
     }
 
     private boolean logIncidentToBackend(String incidentId, double lat, double lng,
