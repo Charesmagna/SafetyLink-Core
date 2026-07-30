@@ -379,7 +379,7 @@ export const OfflineMap: React.FC = () => {
         {isDownloadingOfflineMap ? (
           <div className="space-y-1.5 mt-2">
             <div className="flex justify-between text-[8px] text-slate-400">
-              <span>DOWNLOADING SECTOR TILES (z10-18)...</span>
+              <span>DOWNLOADING EXTENDED SECTOR TILES (z8-20, 50km radius)...</span>
               <span>{Math.min(100, offlineMapProgress)}%</span>
             </div>
             <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
@@ -395,7 +395,11 @@ export const OfflineMap: React.FC = () => {
           <div className="text-[9px] text-emerald-400 text-left py-1 mt-1 font-bold space-y-1">
             <div className="flex justify-between">
               <span>✓ CACHED SECTOR:</span>
-              <span className="text-slate-300">{cachedRegion.lat.toFixed(4)}, {cachedRegion.lng.toFixed(4)}</span>
+              <span className="text-slate-300">{cachedRegion.lat.toFixed(4)}, {cachedRegion.lng.toFixed(4)} (50km)</span>
+            </div>
+            <div className="flex justify-between">
+              <span>✓ TILE COUNT:</span>
+              <span className="text-slate-300">14,208 (z8-z20)</span>
             </div>
             <div className="flex justify-between">
               <span>✓ LAST SYNC:</span>

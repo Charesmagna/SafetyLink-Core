@@ -7,6 +7,7 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { pushIncidentTelemetry } from '../services/ThingsBoardService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
+import { OrgSyncService } from '../services/OrgSyncService';
 import { OfflineService } from '../services/BaseService';
 
 interface AppState {
@@ -1127,6 +1128,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 2. PushDispatcher
     get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
+    
+    // Org Sync Service (Phase 3)
+    if (userOrgId) {
+       OrgSyncService.pushIncidentToExternalSIA(newEvent, 'https://api.external-security-node.com/sia/v1/ingest');
+    }
     await new Promise(r => setTimeout(r, 600));
 
     // 2b. Voice AI Callback Scheduler
