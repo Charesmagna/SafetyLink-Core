@@ -39,6 +39,7 @@ const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').
 import { DecoyCalculator } from './components/DecoyCalculator';
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
 import { App as CapApp } from '@capacitor/app';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
 import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
@@ -187,6 +188,33 @@ const App: React.FC = () => {
       }
     };
     setupSurvivalListener();
+
+    // FCM Push Notification Setup
+    const registerPush = async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          let permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+          }
+          if (permStatus.receive === 'granted') {
+            await PushNotifications.register();
+            PushNotifications.addListener('registration', (token) => {
+              console.log('FCM Token:', token.value);
+              if (currentUser) {
+                useAppStore.getState().updateUserProfile(currentUser.id, { fcmToken: token.value } as any);
+              }
+            });
+            PushNotifications.addListener('registrationError', (error) => {
+              console.error('FCM Registration error: ', error.error);
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('FCM Registration skipped (not native or error):', e);
+      }
+    };
+    registerPush();
 
     geoService.startTracking();
     startSensors();

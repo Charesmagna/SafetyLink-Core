@@ -29,6 +29,7 @@ export interface UserProfile {
   securityCompany?: string;
   customPresets?: Array<{ id: string; name: string; route: string; icon: string; }>;
   referredByCode?: string;
+  fcmToken?: string;
 }
 
 export type UserRole =

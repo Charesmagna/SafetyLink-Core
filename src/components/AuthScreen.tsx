@@ -46,7 +46,15 @@ export const AuthScreen: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showReferralInput, setShowReferralInput] = useState(false);
-  const [loginReferralCode, setLoginReferralCode] = useState('');
+  const [loginReferralCode, setLoginReferralCode] = useState(() => {
+    return localStorage.getItem('sl_pending_referral') || '';
+  });
+  
+  useEffect(() => {
+    if (localStorage.getItem('sl_pending_referral')) {
+      setShowReferralInput(true);
+    }
+  }, []);
   const [referralApplied, setReferralApplied] = useState(false);
 
   // User Register States
@@ -128,6 +136,7 @@ export const AuthScreen: React.FC = () => {
       if (user && !user.referredByCode) {
         applyReferralCode(loginReferralCode.trim(), user.id);
         setReferralApplied(true);
+        localStorage.removeItem('sl_pending_referral');
       }
     }
   };
