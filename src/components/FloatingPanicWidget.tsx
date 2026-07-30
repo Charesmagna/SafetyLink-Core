@@ -1,8 +1,8 @@
 import { SLShieldLogo } from "./SLShieldLogo";
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
-import { useAppStore } from '../utils/store';
-import { Wifi, WifiOff, Bluetooth, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "motion/react";
+import { useAppStore } from "../utils/store";
+import { Wifi, WifiOff, Bluetooth, RefreshCw } from "lucide-react";
 
 export const FloatingPanicWidget: React.FC = () => {
   const {
@@ -12,14 +12,16 @@ export const FloatingPanicWidget: React.FC = () => {
     startMultiStagePanic,
     panicCountdown,
     isFloatingWidgetDeployed,
-    setFloatingWidgetDeployed
+    setFloatingWidgetDeployed,
   } = useAppStore();
-  
-  const isSOSActive = activeSOSState !== 'IDLE';
-  const bluetoothConnected = bleDevices.some(d => d.connectionState === 'CONNECTED');
+
+  const isSOSActive = activeSOSState !== "IDLE";
+  const bluetoothConnected = bleDevices.some(
+    (d) => d.connectionState === "CONNECTED"
+  );
   const isCountdownActive = panicCountdown !== null;
   const isOfflineMode = false; // Mocking offline mode since it doesn't exist in AppStore
-  
+
   const [position, setPosition] = useState({ x: 10, y: 100 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,7 @@ export const FloatingPanicWidget: React.FC = () => {
       style={{
         left: `${Math.max(0, Math.min(window.innerWidth - 250, position.x))}px`,
         top: `${Math.max(0, Math.min(window.innerHeight - 60, position.y))}px`,
-        touchAction: 'none'
+        touchAction: "none",
       }}
     >
       <motion.div
@@ -84,11 +86,11 @@ export const FloatingPanicWidget: React.FC = () => {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.8, opacity: 0 }}
         className={`flex items-center gap-3 p-2 rounded-full shadow-2xl backdrop-blur-xl border ${
-          isSOSActive 
-            ? 'bg-red-950/80 border-red-500/50' 
+          isSOSActive
+            ? "bg-red-950/80 border-red-500/50"
             : isCountdownActive
-            ? 'bg-amber-950/80 border-amber-500/50'
-            : 'bg-slate-900/90 border-slate-700/50'
+            ? "bg-amber-950/80 border-amber-500/50"
+            : "bg-slate-900/90 border-slate-700/50"
         }`}
       >
         {/* Logo on the left */}
@@ -106,13 +108,18 @@ export const FloatingPanicWidget: React.FC = () => {
           )}
 
           {/* Bluetooth Status */}
-          <Bluetooth 
-            className={`w-5 h-5 ${bluetoothConnected ? 'text-blue-400' : 'text-slate-500'} ${!bluetoothConnected && 'opacity-50'}`} 
-            strokeWidth={2.5} 
+          <Bluetooth
+            className={`w-5 h-5 ${
+              bluetoothConnected ? "text-blue-400" : "text-slate-500"
+            } ${!bluetoothConnected && "opacity-50"}`}
+            strokeWidth={2.5}
           />
 
           {/* Auto-Reconnect */}
-          <button onClick={() => console.log('Reconnecting...')} className="active:scale-90 transition-transform">
+          <button
+            onClick={() => console.log("Reconnecting...")}
+            className="active:scale-90 transition-transform"
+          >
             <RefreshCw className="w-5 h-5 text-slate-300" strokeWidth={2.5} />
           </button>
         </div>
@@ -127,10 +134,10 @@ export const FloatingPanicWidget: React.FC = () => {
           }}
           className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-lg ${
             isSOSActive
-              ? 'bg-red-600 animate-pulse text-white'
+              ? "bg-red-600 animate-pulse text-white"
               : isCountdownActive
-              ? 'bg-amber-500 animate-pulse text-black font-black text-sm'
-              : 'bg-red-500 hover:bg-red-400 text-white active:scale-95'
+              ? "bg-amber-500 animate-pulse text-black font-black text-sm"
+              : "bg-red-500 hover:bg-red-400 text-white active:scale-95"
           }`}
         >
           {isCountdownActive ? (
