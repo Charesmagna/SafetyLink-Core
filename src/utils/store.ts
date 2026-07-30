@@ -89,6 +89,8 @@ interface AppState {
   updateOrganization: (id: string, updated: Partial<Organization>) => void;
   deleteOrganization: (id: string) => Promise<void>;
   approveOrganization: (id: string) => Promise<void>;
+  generateReferralCode: (orgId: string) => string;
+  applyReferralCode: (code: string, userId: string) => { success: boolean; error?: string };
 
   // Custom Tools & Settings Actions
   addCustomTool: (tool: Omit<CustomTool, 'id' | 'createdAt'>) => void;
@@ -1908,6 +1910,33 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ organizations: updated });
     setStoredJSON('sl_organizations', updated);
     get().addAuditLog('SECURITY', 'INFO', 'Organization Registry Accepted', `ID: ${id} is now approved.`);
+  },
+
+  generateReferralCode: (orgId) => {
+    const abbrev = orgId.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 6);
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const code = `REF-${abbrev}-${rand}`;
+    const updated = get().organizations.map(o => o.id === orgId ? { ...o, referralCode: code, referralCount: o.referralCount ?? 0 } : o);
+    set({ organizations: updated });
+    setStoredJSON('sl_organizations', updated);
+    get().addAuditLog('SYSTEM', 'INFO', 'Referral Code Generated', `Org: ${orgId}, Code: ${code}`);
+    return code;
+  },
+
+  applyReferralCode: (code, userId) => {
+    const trimmed = code.trim().toUpperCase();
+    const org = get().organizations.find(o => o.referralCode?.toUpperCase() === trimmed);
+    if (!org) return { success: false, error: 'Referral code not found.' };
+    // Tag the user
+    const updatedUsers = get().userProfiles.map(u => u.id === userId ? { ...u, referredByCode: trimmed } : u);
+    set({ userProfiles: updatedUsers });
+    setStoredJSON('sl_user_profiles', updatedUsers);
+    // Increment org referral count
+    const updatedOrgs = get().organizations.map(o => o.id === org.id ? { ...o, referralCount: (o.referralCount ?? 0) + 1 } : o);
+    set({ organizations: updatedOrgs });
+    setStoredJSON('sl_organizations', updatedOrgs);
+    get().addAuditLog('SYSTEM', 'INFO', 'Referral Code Applied', `Code: ${trimmed}, User: ${userId}, Org: ${org.name}`);
+    return { success: true };
   },
 
   addCustomTool: (tool) => {

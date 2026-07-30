@@ -19,6 +19,8 @@ export const AuthScreen: React.FC = () => {
     login, 
     registerUser, 
     registerOrganization,
+    generateReferralCode,
+    applyReferralCode,
     demoMode,
     toggleDemoMode
   } = useAppStore();
@@ -43,6 +45,9 @@ export const AuthScreen: React.FC = () => {
   const [loginOrgCode, setLoginOrgCode] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [showReferralInput, setShowReferralInput] = useState(false);
+  const [loginReferralCode, setLoginReferralCode] = useState('');
+  const [referralApplied, setReferralApplied] = useState(false);
 
   // User Register States
   const [userUsername, setUserUsername] = useState('');
@@ -102,6 +107,8 @@ export const AuthScreen: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [orgError, setOrgError] = useState('');
   const [orgSuccessMsg, setOrgSuccessMsg] = useState('');
+  const [generatedReferralCode, setGeneratedReferralCode] = useState('');
+  const [showReferralSection, setShowReferralSection] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +122,13 @@ export const AuthScreen: React.FC = () => {
     const res = await login(loginUsername, loginPassword, loginOrgCode);
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
+    } else if (loginReferralCode.trim() && !referralApplied) {
+      const { userProfiles } = useAppStore.getState();
+      const user = userProfiles.find(u => u.username.toLowerCase() === loginUsername.toLowerCase());
+      if (user && !user.referredByCode) {
+        applyReferralCode(loginReferralCode.trim(), user.id);
+        setReferralApplied(true);
+      }
     }
   };
 
@@ -396,6 +410,33 @@ export const AuthScreen: React.FC = () => {
                   className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
+              </div>
+
+              {/* REFERRAL CODE — collapsible */}
+              <div className="glass-panel rounded-2xl overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowReferralInput(v => !v)}
+                  className="w-full flex justify-between items-center px-4 py-3 text-[10px] font-mono font-bold text-slate-400 tracking-wider uppercase hover:text-slate-200 transition-colors"
+                >
+                  <span>🎟️ Have a Referral Code?</span>
+                  <span className="text-sm">{showReferralInput ? '▲' : '▼'}</span>
+                </button>
+                {showReferralInput && (
+                  <div className="px-4 pb-4 pt-1 border-t border-slate-900 space-y-2 animate-fadeIn">
+                    <p className="text-[9px] text-slate-500 leading-relaxed">Enter the referral code given to you by your agent or organization.</p>
+                    <input
+                      type="text"
+                      value={loginReferralCode}
+                      onChange={e => setLoginReferralCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. REF-SLORG-AB12C"
+                      className="w-full bg-slate-950 border border-slate-900 rounded-xl p-3 text-xs text-amber-300 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/10 font-mono tracking-widest transition-all"
+                    />
+                    {referralApplied && (
+                      <p className="text-[9px] text-emerald-400 font-mono">✓ Referral code applied.</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* DEMO MODE QUICK LOGIN CHANNELS (Excluding Super Admin) */}
@@ -960,6 +1001,47 @@ export const AuthScreen: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Referral Code Generation — only available after org ID is generated */}
+              {generatedOrgId && (
+                <div className="glass-panel rounded-2xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowReferralSection(v => !v)}
+                    className="w-full flex justify-between items-center px-4 py-3 text-[10px] font-mono font-bold text-amber-400 tracking-wider uppercase hover:text-amber-300 transition-colors"
+                  >
+                    <span>🎟️ Generate Agent Referral Code</span>
+                    <span className="text-sm">{showReferralSection ? '▲' : '▼'}</span>
+                  </button>
+                  {showReferralSection && (
+                    <div className="px-4 pb-4 pt-1 border-t border-slate-900 space-y-3 animate-fadeIn">
+                      <p className="text-[9px] text-slate-400 leading-relaxed">
+                        Generate a unique referral code for your agents to share with clients. Every client that registers using this code will be tracked under your organization.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = generateReferralCode(generatedOrgId);
+                            setGeneratedReferralCode(code);
+                          }}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 border border-amber-500/10 transition-colors text-white font-mono text-[9px] font-bold rounded-xl uppercase tracking-wider shrink-0"
+                        >
+                          {generatedReferralCode ? 'REGENERATE' : 'GENERATE CODE'}
+                        </button>
+                        {generatedReferralCode && (
+                          <div className="flex-1 bg-slate-950 border border-amber-500/30 px-3 py-2 rounded-xl text-center font-mono font-black text-xs text-amber-400 tracking-widest select-text">
+                            {generatedReferralCode}
+                          </div>
+                        )}
+                      </div>
+                      {generatedReferralCode && (
+                        <p className="text-[9px] text-slate-500 font-mono">Share this code with your agents. Clients enter it on the login screen to be linked to your organization.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button
                 type="submit"

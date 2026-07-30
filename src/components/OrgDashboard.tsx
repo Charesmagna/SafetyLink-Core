@@ -30,13 +30,16 @@ export const OrgDashboard: React.FC = () => {
     localOfflineQueue,
     syncOfflineQueue,
     approvePendingUser,
-    rejectPendingUser
+    rejectPendingUser,
+    generateReferralCode,
+    userProfiles
   } = useAppStore();
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const isResponder = currentUser?.role === 'Responder';
-  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace'>('dispatch');
+  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals'>('dispatch');
+  const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Roster detailed editor state
@@ -273,6 +276,14 @@ export const OrgDashboard: React.FC = () => {
             }`}
           >
             📈 Operations Analytics
+          </button>}
+          {!isResponder && <button
+            onClick={() => setActiveSubTab('referrals')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'referrals' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-500 hover:text-amber-300'
+            }`}
+          >
+            🎟️ Referrals
           </button>}
         </div>
 
@@ -1225,6 +1236,90 @@ export const OrgDashboard: React.FC = () => {
         {activeSubTab === 'mphakati-overwatch' && (
           <div className="animate-fadeIn -mx-4 sm:-mx-8 lg:-mx-8">
             <MphakatiOverwatch />
+          </div>
+        )}
+
+        {activeSubTab === 'referrals' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Referral Code Generator */}
+            <div className="glass-panel rounded-2xl p-5 space-y-4">
+              <div className="border-b border-slate-900 pb-3">
+                <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest font-mono">Agent Referral Code</h3>
+                <p className="text-[10px] text-slate-500 mt-1">Generate a code to give to your agents. Every client that signs up using this code is tracked below.</p>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentOrg) {
+                      const code = generateReferralCode(currentOrg.id);
+                      setOrgReferralCode(code);
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 border border-amber-500/10 transition-colors text-white font-mono text-[10px] font-bold rounded-xl uppercase tracking-wider"
+                >
+                  {orgReferralCode ? '🔄 Regenerate Code' : '🎟️ Generate Referral Code'}
+                </button>
+
+                {(orgReferralCode || currentOrg?.referralCode) && (
+                  <div className="flex-1 min-w-[180px] bg-slate-950 border border-amber-500/30 px-4 py-2.5 rounded-xl font-mono font-black text-sm text-amber-300 tracking-widest select-text text-center">
+                    {orgReferralCode || currentOrg?.referralCode}
+                  </div>
+                )}
+              </div>
+
+              {(orgReferralCode || currentOrg?.referralCode) && (
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3">
+                  <p className="text-[9px] text-amber-400/80 font-mono leading-relaxed">
+                    📋 Share this code with your agents. Clients enter it in the <strong>"Have a Referral Code?"</strong> section on the login screen. Total referrals tracked: <strong className="text-amber-300">{currentOrg?.referralCount ?? 0}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Referred Users List */}
+            <div className="glass-panel rounded-2xl p-5 space-y-4">
+              <div className="border-b border-slate-900 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest font-mono">Referred Clients</h3>
+                  <p className="text-[10px] text-slate-500 mt-1">All users who registered using your referral code.</p>
+                </div>
+                <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 font-mono font-black text-xs">
+                  {userProfiles.filter(u => u.referredByCode && u.referredByCode === (currentOrg?.referralCode || orgReferralCode)).length} clients
+                </span>
+              </div>
+
+              {(() => {
+                const code = currentOrg?.referralCode || orgReferralCode;
+                const referred = userProfiles.filter(u => u.referredByCode && u.referredByCode.toUpperCase() === code?.toUpperCase());
+                if (!code) return (
+                  <p className="text-[10px] text-slate-500 font-mono text-center py-6">Generate a referral code above to start tracking clients.</p>
+                );
+                if (referred.length === 0) return (
+                  <p className="text-[10px] text-slate-500 font-mono text-center py-6">No clients have used your referral code yet. Share it with your agents!</p>
+                );
+                return (
+                  <div className="space-y-2">
+                    {referred.map((u, idx) => (
+                      <div key={u.id} className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-900 rounded-xl">
+                        <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 overflow-hidden">
+                          {u.avatarUrl ? <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-sm">👤</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11px] font-bold text-slate-200 block truncate">{u.fullName || u.username}</span>
+                          <span className="text-[9px] text-slate-500 font-mono block">{u.email} · {u.phone}</span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[8px] font-mono text-slate-500 block">#{idx + 1}</span>
+                          <span className="text-[8px] font-mono text-emerald-400 block">{u.role || 'Member'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
       </main>

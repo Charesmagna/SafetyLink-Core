@@ -28,6 +28,7 @@ export interface UserProfile {
   personalControlRoom?: string;
   securityCompany?: string;
   customPresets?: Array<{ id: string; name: string; route: string; icon: string; }>;
+  referredByCode?: string;
 }
 
 export type UserRole =
@@ -143,6 +144,8 @@ export interface Organization {
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };
+  referralCode?: string;
+  referralCount?: number;
 }
 
 export interface CustomTool {
