@@ -1130,8 +1130,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
     
     // Org Sync Service (Phase 3)
-    if (userOrgId) {
-       OrgSyncService.pushIncidentToExternalSIA(newEvent, 'https://api.external-security-node.com/sia/v1/ingest');
+    const activeOrg = get().currentUser?.orgCode;
+    if (activeOrg) {
+       const syncEvent = {
+         id: incidentId,
+         status: 'ESCALATING' as const,
+         severity: 'CRITICAL' as const,
+         lat: loc.lat,
+         lng: loc.lng,
+         timestamp: Date.now(),
+         description: description,
+         timelineData: [],
+         profileUsed: get().currentUser?.id
+       };
+       OrgSyncService.pushIncidentToExternalSIA(syncEvent, 'https://api.external-security-node.com/sia/v1/ingest');
     }
     await new Promise(r => setTimeout(r, 600));
 

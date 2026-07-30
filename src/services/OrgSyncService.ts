@@ -1,5 +1,5 @@
 import { useAppStore } from '../utils/store';
-import { AuditLog, PanicEvent } from '../types';
+import { PanicEvent } from '../types/index';
 
 export class OrgSyncService {
   /**
@@ -13,10 +13,10 @@ export class OrgSyncService {
       const siaPayload = {
         alarm_type: 'PANIC',
         node_id: event.id,
-        user_id: event.userId,
+        user_id: event.profileUsed || 'unknown',
         coordinates: {
-          lat: event.location.lat,
-          lng: event.location.lng
+          lat: event.lat,
+          lng: event.lng
         },
         timestamp: event.timestamp,
         meta: {
@@ -30,6 +30,7 @@ export class OrgSyncService {
 
       // 1. Fire webhook (mock)
       if (externalWebhookUrl) {
+        console.log("Sending payload:", siaPayload);
         // await fetch(externalWebhookUrl, { method: 'POST', body: JSON.stringify(siaPayload) });
       }
 
@@ -37,7 +38,7 @@ export class OrgSyncService {
         'DISPATCH', 
         'INFO', 
         '[Org API] Deep Sync Complete', 
-        "SIA Protocol Payload delivered to " + externalWebhookUrl + " for user " + event.userId
+        "SIA Protocol Payload delivered to " + externalWebhookUrl + " for user " + (event.profileUsed || 'unknown')
       );
 
       return true;
