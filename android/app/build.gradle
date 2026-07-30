@@ -23,11 +23,13 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('safetylink.keystore')
-            storePassword 'safetylink2026'
-            keyAlias 'safetylink'
-            keyPassword 'safetylink2026'
-            storeType 'pkcs12'
+            def keystoreFile = file("safetylink.keystore")
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword "safetylink2026"
+                keyAlias "safetylink-alias"
+                keyPassword "safetylink2026"
+            }
         }
     }
     buildTypes {
