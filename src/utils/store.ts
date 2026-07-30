@@ -1928,9 +1928,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const org = get().organizations.find(o => o.referralCode?.toUpperCase() === trimmed);
     if (!org) return { success: false, error: 'Referral code not found.' };
     // Tag the user
-    const updatedUsers = get().userProfiles.map(u => u.id === userId ? { ...u, referredByCode: trimmed } : u);
-    set({ userProfiles: updatedUsers });
-    setStoredJSON('sl_user_profiles', updatedUsers);
+    const updatedUsers = get().users.map(u => u.id === userId ? { ...u, referredByCode: trimmed } : u);
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
     // Increment org referral count
     const updatedOrgs = get().organizations.map(o => o.id === org.id ? { ...o, referralCount: (o.referralCount ?? 0) + 1 } : o);
     set({ organizations: updatedOrgs });

@@ -32,7 +32,6 @@ export const OrgDashboard: React.FC = () => {
     approvePendingUser,
     rejectPendingUser,
     generateReferralCode,
-    userProfiles
   } = useAppStore();
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
@@ -1286,13 +1285,13 @@ export const OrgDashboard: React.FC = () => {
                   <p className="text-[10px] text-slate-500 mt-1">All users who registered using your referral code.</p>
                 </div>
                 <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 font-mono font-black text-xs">
-                  {userProfiles.filter(u => u.referredByCode && u.referredByCode === (currentOrg?.referralCode || orgReferralCode)).length} clients
+                  {users.filter(u => u.referredByCode && u.referredByCode === (currentOrg?.referralCode || orgReferralCode)).length} clients
                 </span>
               </div>
 
               {(() => {
                 const code = currentOrg?.referralCode || orgReferralCode;
-                const referred = userProfiles.filter(u => u.referredByCode && u.referredByCode.toUpperCase() === code?.toUpperCase());
+                const referred = users.filter(u => u.referredByCode && u.referredByCode.toUpperCase() === code?.toUpperCase());
                 if (!code) return (
                   <p className="text-[10px] text-slate-500 font-mono text-center py-6">Generate a referral code above to start tracking clients.</p>
                 );

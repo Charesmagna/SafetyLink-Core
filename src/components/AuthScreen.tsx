@@ -123,8 +123,8 @@ export const AuthScreen: React.FC = () => {
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     } else if (loginReferralCode.trim() && !referralApplied) {
-      const { userProfiles } = useAppStore.getState();
-      const user = userProfiles.find(u => u.username.toLowerCase() === loginUsername.toLowerCase());
+      const { users } = useAppStore.getState();
+      const user = users.find(u => u.username.toLowerCase() === loginUsername.toLowerCase());
       if (user && !user.referredByCode) {
         applyReferralCode(loginReferralCode.trim(), user.id);
         setReferralApplied(true);
