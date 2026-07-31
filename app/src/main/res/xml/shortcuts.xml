@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="sos_trigger"
+        android:enabled="true"
+        android:icon="@drawable/ic_red_circle"
+        android:shortcutShortLabel="@string/shortcut_sos_short"
+        android:shortcutLongLabel="@string/shortcut_sos_long"
+        android:shortcutDisabledMessage="@string/shortcut_sos_disabled">
+        <intent
+            android:action="com.example.action.TRIGGER_SOS"
+            android:targetPackage="com.example"
+            android:targetClass="com.example.MainActivity" />
+    </shortcut>
+</shortcuts>
