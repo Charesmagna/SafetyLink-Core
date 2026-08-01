@@ -322,8 +322,7 @@ export const AuthScreen: React.FC = () => {
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md rounded-[2rem] p-7 relative z-10 overflow-hidden"
-        style={{ background: 'rgba(8,12,24,0.92)', backdropFilter: 'blur(24px) saturate(150%)', WebkitBackdropFilter: 'blur(24px) saturate(150%)', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(59,130,246,0.08), inset 0 1px 0 rgba(255,255,255,0.07)' }}
+        className="w-full max-w-md glass-panel rounded-[2rem] p-7 shadow-2xl relative z-10 overflow-hidden"
       >
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-blue-500 to-emerald-500 neon-glow-blue" />
 
@@ -335,7 +334,7 @@ export const AuthScreen: React.FC = () => {
         </div>
 
         {/* Demo Mode Toggle Banner */}
-        <div className="mb-5 p-4 rounded-2xl flex items-center justify-between font-mono gap-3" style={{ background: 'rgba(15,20,38,0.8)', border: '1px solid rgba(255,255,255,0.09)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)' }}>
+        <div className="mb-5 glass-panel p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between font-mono gap-3">
           <div className="text-left flex-1">
             <span className="text-[9.5px] font-black tracking-wide text-slate-300 block uppercase">Demo Showcase Mode</span>
             <span className="text-[7.5px] text-slate-500 block leading-tight">Instantly populates mock networks and active supervisor nodes.</span>
@@ -376,9 +375,9 @@ export const AuthScreen: React.FC = () => {
               onSubmit={handleLoginSubmit} 
               className="space-y-4.5 text-left font-mono"
             >
-              <div className="pb-4 mb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                <h2 className="text-sm font-black text-slate-100 uppercase tracking-widest font-display">Secure Command Gateway</h2>
-                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">Enter authorized credentials or administrative key for network access.</p>
+              <div className="border-b border-slate-900 pb-3.5 mb-4">
+                <h2 className="text-xs font-black text-slate-100 uppercase tracking-widest font-display">Secure Command Gateway</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5">Enter authorized coordinates or administrative key for network access.</p>
               </div>
 
               {loginError && (
@@ -388,36 +387,36 @@ export const AuthScreen: React.FC = () => {
               )}
 
               <div className="flex flex-col">
-                <label className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider letter-spacing-widest">Username / Callsign</label>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Username / Callsign</label>
                 <input
                   type="text"
                   value={loginUsername}
                   onChange={e => setLoginUsername(e.target.value)}
                   placeholder="e.g. thabo_m"
-                  className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/20 font-mono transition-all placeholder:text-slate-600"
+                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider letter-spacing-widest">Organizational Mesh Code</label>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Organizational Mesh Code</label>
                 <input
                   type="text"
                   value={loginOrgCode}
                   onChange={e => setLoginOrgCode(e.target.value)}
                   placeholder="e.g. SL-ORG-XXXX"
-                  className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/20 font-mono transition-all placeholder:text-slate-600"
+                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                 />
                 <span className="text-[9px] text-slate-500 mt-1 pl-1">Leave blank for standalone mesh profile mode.</span>
               </div>
               <div className="flex flex-col mt-2">
-                <label className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider letter-spacing-widest">Password</label>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
                 <input
                   type="password"
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/20 font-mono transition-all placeholder:text-slate-600"
+                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
               </div>
@@ -535,26 +534,24 @@ export const AuthScreen: React.FC = () => {
 
                <button
                 type="submit"
-                className="w-full py-4 px-4 transition-all text-white text-xs font-black rounded-2xl uppercase tracking-widest font-mono relative overflow-hidden group"
-                style={{ background: 'linear-gradient(135deg, #1d4ed8, #2563eb, #3b82f6)', boxShadow: '0 8px 32px rgba(37,99,235,0.45), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)' }}
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
               >
-                <span className="relative z-10">Sign In to Console</span>
-                <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-all" />
+                Sign In to Console
               </button>
 
 
-              <div className="flex gap-2 pt-4 border-t border-slate-800/60">
+              <div className="flex justify-between text-[10px] pt-4 border-t border-slate-900 font-mono font-bold uppercase tracking-wider">
                 <button
                   type="button"
                   onClick={() => setView('REGISTER_USER')}
-                  className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-[9.5px] font-black text-slate-300 hover:text-blue-400 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all uppercase tracking-wider font-mono"
+                  className="text-slate-400 hover:text-blue-400 transition-colors"
                 >
                   Create User / Responder
                 </button>
                 <button
                   type="button"
                   onClick={() => setView('REGISTER_ORG')}
-                  className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700/60 bg-slate-900/60 text-[9.5px] font-black text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all uppercase tracking-wider font-mono"
+                  className="text-slate-400 hover:text-emerald-400 transition-colors"
                 >
                   Register Organization
                 </button>
@@ -693,7 +690,7 @@ export const AuthScreen: React.FC = () => {
                     value={userUsername}
                     onChange={e => setUserUsername(e.target.value)}
                     placeholder="thabo_m"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                     required
                   />
                 </div>
@@ -704,7 +701,7 @@ export const AuthScreen: React.FC = () => {
                     value={userPassword}
                     onChange={e => setUserPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                     required
                   />
                 </div>
@@ -713,7 +710,7 @@ export const AuthScreen: React.FC = () => {
                   <select
                     value={userRole}
                     onChange={e => setUserRole(e.target.value as import('../types').UserRole)}
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                   >
                     <option value="Community Member">Community Member</option>
                     <option value="Responder">Responder (Guard/Medical)</option>
@@ -727,7 +724,7 @@ export const AuthScreen: React.FC = () => {
                       value={userOrgCode}
                       onChange={e => setUserOrgCode(e.target.value)}
                       placeholder="e.g. SL-WITS-1234"
-                      className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                      className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                       required
                     />
                   </div>
@@ -740,7 +737,7 @@ export const AuthScreen: React.FC = () => {
                     value={userFullName}
                     onChange={e => setUserFullName(e.target.value)}
                     placeholder="Tshilidzi Mukwevho"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                     required
                   />
                 </div>
@@ -754,7 +751,7 @@ export const AuthScreen: React.FC = () => {
                     value={userPhone}
                     onChange={e => setUserPhone(e.target.value)}
                     placeholder="+27721234567"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                     required
                   />
                 </div>
@@ -766,7 +763,7 @@ export const AuthScreen: React.FC = () => {
                     value={userWhatsapp}
                     onChange={e => setUserWhatsapp(e.target.value)}
                     placeholder="+27721234567"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                   />
                 </div>
               </div>
@@ -778,7 +775,7 @@ export const AuthScreen: React.FC = () => {
                   value={userEmail}
                   onChange={e => setUserEmail(e.target.value)}
                   placeholder="thabo@meshnet.co.za"
-                  className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 placeholder:text-slate-600"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -929,7 +926,7 @@ export const AuthScreen: React.FC = () => {
               )}
 
               <div className="flex flex-col">
-                <label className="text-[9px] font-black text-slate-400 mb-1.5 uppercase tracking-wider letter-spacing-widest">Organization Entity Name</label>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Organization Entity Name</label>
                 <input
                   type="text"
                   value={orgName}
@@ -948,7 +945,7 @@ export const AuthScreen: React.FC = () => {
                     value={orgContactName}
                     onChange={e => setOrgContactName(e.target.value)}
                     placeholder="Mpho Lekota"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                     required
                   />
                 </div>
@@ -960,7 +957,7 @@ export const AuthScreen: React.FC = () => {
                     value={orgEmail}
                     onChange={e => setOrgEmail(e.target.value)}
                     placeholder="mpho@apex.co.za"
-                    className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 placeholder:text-slate-600"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                     required
                   />
                 </div>
@@ -972,7 +969,7 @@ export const AuthScreen: React.FC = () => {
                   value={orgPassword}
                   onChange={e => setOrgPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-slate-900/80 border border-slate-700/60 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500/70 font-mono placeholder:text-slate-600"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                   required
                 />
               </div>
