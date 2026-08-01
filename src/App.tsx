@@ -191,7 +191,7 @@ const App: React.FC = () => {
     const geoService = GeolocationService.getInstance();
     
     const setupSurvivalListener = async () => {
-      const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
+      const bridge = ((Capacitor as any).Plugins as any).SafetyLinkBridge;
       if (bridge) {
         bridge.addListener('onSurvivalMode', (info: any) => {
           useAppStore.getState().setSurvivalMode(info.isSurvival);
@@ -213,13 +213,13 @@ const App: React.FC = () => {
           }
           if (permStatus.receive === 'granted') {
             await PushNotifications.register();
-            PushNotifications.addListener('registration', (token) => {
+            PushNotifications.addListener('registration', (token: any) => {
               console.log('FCM Token:', token.value);
               if (currentUser) {
                 useAppStore.getState().updateUserProfile(currentUser.id, { fcmToken: token.value } as any);
               }
             });
-            PushNotifications.addListener('registrationError', (error) => {
+            PushNotifications.addListener('registrationError', (error: any) => {
               console.error('FCM Registration error: ', error.error);
             });
           }
@@ -950,7 +950,7 @@ const App: React.FC = () => {
                       setFloatingWidgetDeployed(newState);
                       try {
                         import('@capacitor/core').then(({ Capacitor }) => {
-                          const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
+                          const bridge = ((Capacitor as any).Plugins as any).SafetyLinkBridge;
                           if (bridge) bridge.toggleFloatingWidget({ enable: newState });
                         });
                       } catch (e) {
