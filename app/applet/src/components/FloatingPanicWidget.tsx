@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAppStore } from '../utils/store';
+import { useAppStore } from '../../../../src/utils/store';
 import { Wifi, WifiOff, Bluetooth, RefreshCw } from 'lucide-react';
 
 import { SLShieldLogo } from './SLShieldLogo';
