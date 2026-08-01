@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
@@ -19,6 +20,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.TextView;
 import androidx.core.app.NotificationCompat;
 
 public class FloatingWidgetService extends Service {
@@ -32,7 +34,7 @@ public class FloatingWidgetService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        Log.w("FloatingWidget", "Task removed – rescheduling widget service restart");
+        Log.w("FloatingWidget", "Task removed - rescheduling widget service restart");
         Intent restartIntent = new Intent(getApplicationContext(), FloatingWidgetService.class);
         restartIntent.setPackage(getPackageName());
         PendingIntent restartPending = PendingIntent.getService(
@@ -66,17 +68,17 @@ public class FloatingWidgetService extends Service {
         createNotificationChannel();
         Notification notification = new NotificationCompat.Builder(this, "floating_widget_channel")
             .setContentTitle("SafetyLink Widget Active")
-            .setContentText("Tap to trigger SOS")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setContentText("Emergency controls overlay is active")
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build();
         startForeground(9922, notification);
+
         showFloatingWidget();
     }
 
     private void showFloatingWidget() {
         if (floatingView != null) return;
-
         int layoutType;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             layoutType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
@@ -91,21 +93,23 @@ public class FloatingWidgetService extends Service {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
             PixelFormat.TRANSLUCENT
         );
+
         layoutParams.gravity = Gravity.TOP | Gravity.START;
         layoutParams.x = 0;
-        layoutParams.y = 200;
+        layoutParams.y = 300;
 
-        final FrameLayout container = new FrameLayout(this);
-        
-        ImageView button = new ImageView(this);
-        button.setImageResource(android.R.drawable.ic_dialog_alert);
-        button.setBackgroundColor(Color.parseColor("#EF4444"));
-        int padding = 30;
-        button.setPadding(padding, padding, padding, padding);
-        
-        container.addView(button);
+        floatingView = LayoutInflater.from(this).inflate(R.layout.floating_widget_modern, null);
 
-        button.setOnTouchListener(new View.OnTouchListener() {
+        ImageView iconWifi = floatingView.findViewById(R.id.icon_wifi);
+        ImageView iconBluetooth = floatingView.findViewById(R.id.icon_bluetooth);
+        ImageView iconRefresh = floatingView.findViewById(R.id.icon_refresh);
+        FrameLayout btnSos = floatingView.findViewById(R.id.btn_sos);
+
+        iconWifi.setColorFilter(Color.parseColor("#34D399"), PorterDuff.Mode.SRC_IN);
+        iconBluetooth.setColorFilter(Color.parseColor("#60A5FA"), PorterDuff.Mode.SRC_IN);
+        iconRefresh.setColorFilter(Color.parseColor("#CBD5E1"), PorterDuff.Mode.SRC_IN);
+
+        floatingView.setOnTouchListener(new View.OnTouchListener() {
             private int initialX = 0;
             private int initialY = 0;
             private float initialTouchX = 0f;
@@ -123,10 +127,6 @@ public class FloatingWidgetService extends Service {
                         isMoved = false;
                         return true;
                     case MotionEvent.ACTION_UP:
-                        if (!isMoved) {
-                            Log.i("FloatingWidget", "Widget clicked! Triggering SOS...");
-                            triggerSOS();
-                        }
                         return true;
                     case MotionEvent.ACTION_MOVE:
                         int diffX = (int) (event.getRawX() - initialTouchX);
@@ -136,14 +136,28 @@ public class FloatingWidgetService extends Service {
                         }
                         layoutParams.x = initialX + diffX;
                         layoutParams.y = initialY + diffY;
-                        windowManager.updateViewLayout(container, layoutParams);
+                        windowManager.updateViewLayout(floatingView, layoutParams);
                         return true;
                 }
                 return false;
             }
         });
 
-        floatingView = container;
+        iconRefresh.setOnClickListener(v -> {
+            Log.i("FloatingWidget", "Refresh Clicked! Starting BLE Service...");
+            Intent serviceIntent = new Intent(this, SafelinkForegroundService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        });
+
+        btnSos.setOnClickListener(v -> {
+            Log.i("FloatingWidget", "SOS Button Clicked!");
+            triggerSOS();
+        });
+
         try {
             windowManager.addView(floatingView, layoutParams);
         } catch (Exception e) {
@@ -152,10 +166,9 @@ public class FloatingWidgetService extends Service {
     }
 
     private void triggerSOS() {
-        // We might not have PanicService in Java right now, so we will broadcast an intent to be picked up by the plugin or something, or start PanicService if it exists.
         try {
             Intent sosIntent = new Intent(this, Class.forName("com.aistudio.safetylink.vqnztp.PanicService"));
-            sosIntent.setAction("START_PANIC");
+            sosIntent.setAction("com.aistudio.safetylink.ACTION_TRIGGER_PANIC");
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(sosIntent);
             } else {
@@ -164,6 +177,12 @@ public class FloatingWidgetService extends Service {
         } catch (ClassNotFoundException e) {
             Log.e("FloatingWidget", "PanicService not found", e);
         }
+        
+        // Also wake up MainActivity to show SOS overlay immediately
+        Intent wakeIntent = new Intent(this, MainActivity.class);
+        wakeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        wakeIntent.putExtra("sos_triggered", true);
+        startActivity(wakeIntent);
     }
 
     @Override

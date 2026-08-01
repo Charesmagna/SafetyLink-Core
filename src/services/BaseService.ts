@@ -165,6 +165,7 @@ export class GeolocationService extends BaseService {
       // Cache coordinates offline
       this.offlineCache.push({ lat: nextLat, lng: nextLng, timestamp: Date.now() });
       if (this.offlineCache.length > 50) this.offlineCache.shift();
+      this.purgeStaleLocationData(60); // Privacy limit
     }, 30000); // OPTIMIZED: Reduced simulated GPS fallback frequency
   }
 
@@ -177,6 +178,16 @@ export class GeolocationService extends BaseService {
     }
 
     this.logInfo('Starting high-accuracy Geolocation tracking via watchPosition...');
+
+    const hasBatteryBypass = useAppStore.getState().permissions.batteryBypass;
+    
+    // Battery optimization for Doze mode / restricted backgrounds:
+    // If not bypassing, allow older cached locations and higher timeout
+    const watchOptions = {
+      enableHighAccuracy: true,
+      timeout: hasBatteryBypass ? 10000 : 25000,
+      maximumAge: hasBatteryBypass ? 0 : 15000
+    };
 
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       this.watchId = navigator.geolocation.watchPosition(
@@ -192,16 +203,13 @@ export class GeolocationService extends BaseService {
 
           this.offlineCache.push({ lat, lng, timestamp: Date.now() });
           if (this.offlineCache.length > 50) this.offlineCache.shift();
+          this.purgeStaleLocationData(60); // Privacy limit
         },
         (error) => {
           this.logWarn(`Real Geolocation tracking error: ${error.message}. Engaging simulated fallback.`);
           this.startSimulatedTracking();
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
+        watchOptions
       );
     } else {
       this.logWarn('Geolocation API is not supported in this environment. Engaging simulated fallback.');
@@ -222,7 +230,18 @@ export class GeolocationService extends BaseService {
       this.simulatedIntervalId = null;
       this.logInfo('Simulated backup Geolocation tracking interval cleared.');
     }
-    this.logInfo('Geolocation tracking disabled.');
+    this.offlineCache = [];
+    this.logInfo('Geolocation tracking disabled and offline trajectory cache purged for privacy.');
+  }
+
+  // Privacy feature: Periodic cleanup of stale location data
+  public purgeStaleLocationData(maxAgeMinutes: number = 60) {
+    const cutoff = Date.now() - (maxAgeMinutes * 60 * 1000);
+    const beforeCount = this.offlineCache.length;
+    this.offlineCache = this.offlineCache.filter(loc => loc.timestamp >= cutoff);
+    if (beforeCount > this.offlineCache.length) {
+      this.logInfo(`Privacy purge: Removed ${beforeCount - this.offlineCache.length} stale location points older than ${maxAgeMinutes} minutes.`);
+    }
   }
 
   public getOfflineCache() {

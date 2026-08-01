@@ -1073,6 +1073,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   triggerPanic: async (description) => {
     if (get().activeSOSState !== 'IDLE') return;
+    const user = get().currentUser;
+    const org = get().currentOrg;
+    if (!user && org?.id !== 'kleva') {
+      get().addAuditLog('SECURITY', 'SEVERE', 'Unauthorized Dispatch Attempt', 'Unregistered node attempted to deploy a tactical alert.');
+      return;
+    }
+
 
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
     const loc = get().userLocation || { lat: 0, lng: 0 };
@@ -1537,6 +1544,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   startMultiStagePanic: (description, durationSec = 5) => {
     if (get().activeSOSState !== 'IDLE' || get().panicCountdown !== null) return;
+    const user = get().currentUser;
+    const org = get().currentOrg;
+    if (!user && org?.id !== 'kleva') {
+      get().addAuditLog('SECURITY', 'SEVERE', 'Unauthorized Dispatch Attempt', 'Unregistered node attempted to deploy a tactical alert.');
+      return;
+    }
+
     
     set({ panicCountdown: durationSec });
     get().addAuditLog('SYSTEM', 'WARN', 'Multi-stage SOS Countdown Started', `${durationSec} second grace period. Click CANCEL to abort.`);

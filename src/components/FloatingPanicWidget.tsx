@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useAppStore } from "../utils/store";
 import { Wifi, WifiOff, Bluetooth, RefreshCw } from "lucide-react";
+import { Capacitor } from '@capacitor/core';
 
 export const FloatingPanicWidget: React.FC = () => {
   const {
@@ -35,6 +36,7 @@ export const FloatingPanicWidget: React.FC = () => {
   }, [isSurvivalMode, isFloatingWidgetDeployed, setFloatingWidgetDeployed]);
 
   if (!isFloatingWidgetDeployed) return null;
+  if (Capacitor.isNativePlatform()) return null;
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();

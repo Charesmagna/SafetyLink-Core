@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "orgCode": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "email", "createdAt"]
+    },
+    "PanicEvent": {
+      "title": "PanicEvent",
+      "description": "Emergency alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "status": { "type": "string" },
+        "severity": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "timestamp": { "type": "number" },
+        "userId": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "status", "timestamp", "userId"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "Organizations that users belong to",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "name", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Users"
+    },
+    "panicEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/PanicEvent" },
+      "description": "Panic Events"
+    },
+    "organizations/{orgId}": {
+      "schema": { "$ref": "#/entities/Organization" },
+      "description": "Organizations"
+    }
+  }
+}

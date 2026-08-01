@@ -61,7 +61,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onScanComplete, on
       });
 
       if (barcodes.length > 0) {
-        onScanComplete(barcodes[0].rawValue || '');
+        onScanComplete(barcodes[0].rawValue);
       }
     } catch (error) {
       console.error('Scanning failed', error);

@@ -12,7 +12,7 @@ const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrati
 import { Profile } from './components/Profile';
 import { StatusIndicator } from './components/StatusIndicator';
 import { LocationDisplay } from './components/LocationDisplay';
-import { GeolocationService } from './services/BaseService';
+import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
@@ -189,9 +189,10 @@ const App: React.FC = () => {
   useEffect(() => {
     // Bootstrap tracking and simulated BLE hardware listeners on mount
     const geoService = GeolocationService.getInstance();
+    OfflineService.getInstance(); // Initialize offline listeners
     
     const setupSurvivalListener = async () => {
-      const bridge = ((Capacitor as any).Plugins as any).SafetyLinkBridge;
+      const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
       if (bridge) {
         bridge.addListener('onSurvivalMode', (info: any) => {
           useAppStore.getState().setSurvivalMode(info.isSurvival);
@@ -213,13 +214,13 @@ const App: React.FC = () => {
           }
           if (permStatus.receive === 'granted') {
             await PushNotifications.register();
-            PushNotifications.addListener('registration', (token: any) => {
+            PushNotifications.addListener('registration', (token) => {
               console.log('FCM Token:', token.value);
               if (currentUser) {
                 useAppStore.getState().updateUserProfile(currentUser.id, { fcmToken: token.value } as any);
               }
             });
-            PushNotifications.addListener('registrationError', (error: any) => {
+            PushNotifications.addListener('registrationError', (error) => {
               console.error('FCM Registration error: ', error.error);
             });
           }
@@ -950,7 +951,7 @@ const App: React.FC = () => {
                       setFloatingWidgetDeployed(newState);
                       try {
                         import('@capacitor/core').then(({ Capacitor }) => {
-                          const bridge = ((Capacitor as any).Plugins as any).SafetyLinkBridge;
+                          const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
                           if (bridge) bridge.toggleFloatingWidget({ enable: newState });
                         });
                       } catch (e) {
