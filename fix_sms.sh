@@ -1,1 +1,0 @@
-sed -i 's/smsManager.sendMultipartTextMessage(phone, null, parts, null, null);/smsManager.sendTextMessage(phone, null, message, null, null);/g' android/app/src/main/java/com/aistudio/safetylink/vqnztp/EmergencyDispatchPlugin.java
