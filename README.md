@@ -1,26 +1,20 @@
 # SafetyLink Core
 
-SafetyLink is a unified, highly optimized Sequential Emergency Alert Network designed to function seamlessly under restrictive offline, hardware-constrained, or distress scenarios.
+SafetyLink is a unified, highly optimized **Sequential Emergency Alert Network** designed to function seamlessly under restrictive offline, hardware-constrained, or distress scenarios. 
 
-## Section 1: LOCAL TEST with localhost
-To test locally:
-1. Ensure you have Docker and Docker Compose installed.
-2. Run `docker-compose up --build -d` to start the backend, PostgreSQL database, NTFY server, and OwnCloud.
-3. Access the web interface at `http://localhost:3000`.
-4. Ensure your `.env` contains local endpoints for API calls and WebSockets.
+This repository operates under strict architectural guidelines defined in `AGENTS.md`.
 
-## Section 2: ORACLE DEPLOY - change IPs
-When deploying to an Oracle Cloud instance or similar production environment:
-1. Update `.env` to replace `localhost` with your public instance IP or domain name.
-2. Update the `NTFY_URL` and `OWNCLOUD_URL` similarly.
-3. If deploying Android APK, ensure the API URLs are updated in the Retrofit/HTTP client.
-4. Run `docker-compose -f docker-compose.prod.yml up -d` or use the standard compose file.
+## Features
+* **Background Worker**: Fully decoupled BullMQ dispatch engine for triggering SMS and Voice through Telnyx APIs. (Runs concurrently with the web server)
+* **WebRTC Video**: High-priority real-time video feeds over ConnectyCube for active Distress situations.
+* **Supabase Integration**: Native bindings pulling configuration credentials from the existing Supabase storage without manual user proxy mapping.
 
-## Section 3: HOW TO GET GEMINI API KEY
-To enable the AI capabilities of SafetyLink (e.g., KlevaBot):
-1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Sign in with your Google account.
-3. Click "Create API Key".
-4. Copy the generated key.
-5. Paste it into your project's `.env` file under `GEMINI_API_KEY=your_key_here`.
-6. Restart the backend to apply changes.
+## Setup
+All configurations for Telnyx and ConnectyCube use your persistent cloud environment credentials automatically.
+
+`npm install`
+`npm run dev` 
+
+Build Android locally:
+`npm run cap:sync`
+`cd android && ./gradlew assembleDebug`
