@@ -5,6 +5,8 @@ import express from 'express';
 // In-memory queue fallback for environment without Redis
 import { createClient } from '@supabase/supabase-js';
 import telnyxFactory from 'telnyx';
+import { Queue, Worker } from 'bullmq';
+import twilio from 'twilio';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 
@@ -14,15 +16,23 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true }));
 
   
-  // In-memory queue to replace BullMQ
-  const panicQueue = {
+    // BullMQ / Redis conditionally loaded
+  const hasRedis = !!process.env.REDIS_URL;
+  const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
+  
+  const panicQueue = hasRedis ? new Queue('panic_events', { connection }) : {
     add: async (name, data, options) => {
       const job = { id: Date.now().toString(), name, data };
-      // Process async
       setImmediate(() => processJob(job));
       return job;
     }
   };
+  
+  if (hasRedis) {
+    new Worker('panic_events', async (job) => {
+      await processJob(job);
+    }, { connection });
+  }
 
 
   app.post('/api/integration/save-credentials', async (req, res) => {
@@ -44,6 +54,20 @@ async function startServer() {
 
   
   
+    app.post('/api/twilio/test', async (req, res) => {
+      const { accountSid, authToken, fromNumber } = req.body;
+      if (!accountSid || !authToken || !fromNumber) return res.status(400).json({ error: "Missing Twilio credentials" });
+      try {
+          const client = twilio(accountSid, authToken);
+          // Just validating the client can be initialized and fetch account details
+          const account = await client.api.accounts(accountSid).fetch();
+          return res.status(200).json({ message: "Twilio credentials valid. " + account.friendlyName });
+      } catch (err) {
+          console.error("Twilio test error:", err);
+          return res.status(500).json({ error: err.message || "Failed to authenticate with Twilio." });
+      }
+  });
+
   app.post('/api/dispatch/sms', async (req, res) => {
       // Stub for SMS dispatch from Android native app
       const { phone, message } = req.body;
