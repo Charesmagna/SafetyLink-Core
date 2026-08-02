@@ -2,8 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
-import { Queue, Worker } from 'bullmq';
-import IORedis from 'ioredis';
+// In-memory queue fallback for environment without Redis
 import { createClient } from '@supabase/supabase-js';
 import telnyxFactory from 'telnyx';
 import path from 'path';
@@ -14,21 +13,17 @@ async function startServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+  
+  // In-memory queue to replace BullMQ
+  const panicQueue = {
+    add: async (name, data, options) => {
+      const job = { id: Date.now().toString(), name, data };
+      // Process async
+      setImmediate(() => processJob(job));
+      return job;
+    }
+  };
 
-  // Initialize Supabase Client instead of pg for easy integration
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://oirbmgpfqxojshfoguzo.supabase.co';
-  const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'XC8TtJsb1NefWm63';
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const redisConnection = new IORedis(REDIS_URL, {
-      maxRetriesPerRequest: null,
-      retryStrategy(times) {
-          return Math.min(times * 50, 2000);
-      }
-  });
-
-  const panicQueue = new Queue('panicDispatchPool', { connection: redisConnection });
 
   app.post('/api/integration/save-credentials', async (req, res) => {
       const { accountType, id, telnyx_api_key, telnyx_phone_number } = req.body;
@@ -119,7 +114,9 @@ async function startServer() {
       }
   });
 
-  const panicWorker = new Worker('panicDispatchPool', async (job) => {
+  
+  const processJob = async (job: any) => {
+
       const { userId, latitude, longitude, phone, message } = job.data;
       console.log(`[Queue Worker] Initiating dispatch for Job #${job.id} (name=${job.name})`);
       
@@ -190,10 +187,9 @@ async function startServer() {
       } catch (e: any) {
           console.error(`[Worker Error] ${e.message}`);
       }
-  }, { connection: redisConnection, concurrency: 15 });
+  
+  };
 
-  panicWorker.on('completed', (job) => console.log(`[Audit System] Job #${job.id} completed.`));
-  panicWorker.on('failed', (job, err) => console.error(`[CRITICAL AUDIT FAIL] Job #${job?.id}:`, err.message));
 
   const PORT = 3000;
 
