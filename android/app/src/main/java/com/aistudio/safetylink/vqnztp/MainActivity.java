@@ -28,13 +28,13 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         // Start the persistent foreground service so BLE + GPS stay alive
-        try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
+        // try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
 
         // Enqueue unique 15-minute keepalive work to survive aggressive OEM memory sweeps
         scheduleKeepAlive();
 
         // Prompt the user to whitelist the app from battery optimizations
-        // checkPermissionsAndServices();
+        checkPermissionsAndServices();
         handleSosWake(getIntent());
     }
 
@@ -80,7 +80,7 @@ public class MainActivity extends BridgeActivity {
         super.onStop();
         // App went to background / screen locked – make sure service is running
         // so the "Device Locked" notification banner appears in the shade.
-        try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
+        // try { startSafelinkService(); } catch (Exception e) { Log.e(TAG, "Failed to start service without permissions", e); }
         Log.i(TAG, "App backgrounded – foreground service ensured running");
     }
 
