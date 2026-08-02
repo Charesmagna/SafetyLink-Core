@@ -2,28 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis');
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 const telnyxFactory = require('telnyx');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ensure required variables exist, otherwise mock
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const DATABASE_URL = process.env.DATABASE_URL || 'postgres://localhost:5432/safetylink';
+
+// Initialize Supabase Client instead of pg for easy integration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://oirbmgpfqxojshfoguzo.supabase.co';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'XC8TtJsb1NefWm63';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const redisConnection = new IORedis(REDIS_URL, {
     maxRetriesPerRequest: null,
-    // Add silent retry so app doesn't crash if Redis is unavailable in local testing
     retryStrategy(times) {
         return Math.min(times * 50, 2000);
     }
-});
-
-const db = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 const panicQueue = new Queue('panicDispatchPool', { connection: redisConnection });
@@ -32,9 +29,9 @@ app.post('/api/integration/save-credentials', async (req, res) => {
     const { accountType, id, telnyx_api_key, telnyx_phone_number } = req.body;
     try {
         if (accountType === 'user') {
-            await db.query(`UPDATE user_profiles SET telnyx_api_key = $1, telnyx_phone_number = $2 WHERE id = $3`, [telnyx_api_key, telnyx_phone_number, id]);
+            await supabase.from('user_profiles').update({ telnyx_api_key, telnyx_phone_number }).eq('id', id);
         } else if (accountType === 'organisation') {
-            await db.query(`UPDATE organisations SET telnyx_api_key = $1, telnyx_phone_number = $2 WHERE id = $3`, [telnyx_api_key, telnyx_phone_number, id]);
+            await supabase.from('organisations').update({ telnyx_api_key, telnyx_phone_number }).eq('id', id);
         } else {
             return res.status(400).json({ error: "Invalid account type" });
         }
@@ -73,28 +70,41 @@ const panicWorker = new Worker('panicDispatchPool', async (job) => {
     console.log(`[Queue Worker] Initiating emergency matrix lookup for Job #${job.id}`);
 
     try {
-        const identityQuery = await db.query(`
-            SELECT u.name, u.telnyx_api_key, u.telnyx_phone_number,
-                   o.telnyx_api_key AS org_key, o.telnyx_phone_number AS org_phone, o.control_room_phone 
-            FROM user_profiles u
-            LEFT JOIN organisations o ON u.linked_organisation_id = o.id
-            WHERE u.id = $1`, [userId]
-        );
+        // Query via Supabase
+        const { data: userProfile } = await supabase
+            .from('user_profiles')
+            .select(`
+                name, 
+                telnyx_api_key, 
+                telnyx_phone_number,
+                linked_organisation_id
+            `)
+            .eq('id', userId)
+            .single();
 
-        if (identityQuery.rows.length === 0) {
+        let orgData = null;
+        if (userProfile && userProfile.linked_organisation_id) {
+            const { data } = await supabase
+                .from('organisations')
+                .select('telnyx_api_key, telnyx_phone_number, control_room_phone')
+                .eq('id', userProfile.linked_organisation_id)
+                .single();
+            orgData = data;
+        }
+
+        if (!userProfile) {
             console.log(`[Mock Fallback] Profile ${userId} not in DB. Using fallback dispatch.`);
             return; 
         }
 
-        const resolvedIdentity = identityQuery.rows[0];
-        let targetApiKey = resolvedIdentity.telnyx_api_key || resolvedIdentity.org_key;
-        let targetFromPhone = resolvedIdentity.telnyx_phone_number || resolvedIdentity.org_phone;
-        let controlRoomDestination = resolvedIdentity.control_room_phone;
+        let targetApiKey = userProfile.telnyx_api_key || (orgData && orgData.telnyx_api_key);
+        let targetFromPhone = userProfile.telnyx_phone_number || (orgData && orgData.telnyx_phone_number);
+        let controlRoomDestination = orgData && orgData.control_room_phone;
 
         if (!targetApiKey || !targetFromPhone) throw new Error("No active communication pathways loaded.");
 
         const telnyx = telnyxFactory(targetApiKey);
-        const payload = `SafetyLink Emergency! Panic triggered by ${resolvedIdentity.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
+        const payload = `SafetyLink Emergency! Panic triggered by ${userProfile.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
 
         await Promise.all([
             telnyx.calls.create({
