@@ -11,8 +11,6 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/run-tests.ts",
-    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
-    "start:worker": "node server/dispatch-worker.js",
     "start": "node dist/server.cjs"
   },
   "dependencies": {
@@ -53,8 +51,6 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.5.4",
-    "electron": "^43.1.1",
-    "electron-builder": "^25.1.8",
     "esbuild": "^0.28.1",
     "postcss": "^8.5.19",
     "sharp": "^0.35.3",
@@ -63,24 +59,6 @@
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
     "vite-plugin-pwa": "^1.2.0"
-  },
-  "main": "electron-main.cjs",
-  "build": {
-    "appId": "com.safetylink.console",
-    "productName": "SafetyLink Response Console",
-    "files": [
-      "dist/**/*",
-      "electron-main.cjs",
-      "public/**/*"
-    ],
-    "directories": {
-      "output": "electron-dist"
-    },
-    "win": {
-      "target": [
-        "nsis"
-      ]
-    }
   },
   "overrides": {
     "@capgo/capacitor-audio-recorder": {
