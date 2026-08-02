@@ -61,7 +61,7 @@
     "concurrently": "^10.0.3",
     "drizzle-kit": "^0.18.1",
     "electron": "^43.1.1",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "postcss": "^8.5.19",
     "sharp": "^0.35.3",
