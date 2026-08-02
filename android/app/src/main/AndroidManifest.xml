@@ -185,6 +185,7 @@
             </intent-filter>
         </service>
 
+
         <service
             android:name=".FloatingWidgetService"
             android:exported="false"
@@ -228,12 +229,7 @@
                 android:resource="@xml/accessibility_service_config"
             />
         </service>
-        <!-- Optimized SafetyBackgroundService for BLE Keep-Alive -->
-        <service
-            android:name=".SafetyBackgroundService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="connectedDevice"
-        />
+            <!-- Optimized SafetyBackgroundService for BLE Keep-Alive -->
+        <service android:name=".SafetyBackgroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />
     </application>
 </manifest>
