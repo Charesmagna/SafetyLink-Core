@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
+import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX, Video } from 'lucide-react';
+import { DistressVideoStream } from './DistressVideoStream';
 
 
 export const PanicButton: React.FC = () => {
@@ -10,6 +11,7 @@ export const PanicButton: React.FC = () => {
   const [showCancelPin, setShowCancelPin] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [showDistressVideo, setShowDistressVideo] = useState(false);
 
   
   const { 
@@ -411,6 +413,14 @@ export const PanicButton: React.FC = () => {
                 </div>
                 <span className="text-[9px] text-slate-500">{activeSOSState === 'DISPATCHED' ? "EN-ROUTE" : "QUEUED"}</span>
               </div>
+
+              <button
+                onClick={() => setShowDistressVideo(true)}
+                className="w-full mt-4 flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 py-2 rounded-lg transition-colors"
+              >
+                <Video className="w-4 h-4" />
+                <span className="text-xs font-bold tracking-wider">OPEN DISTRESS CAM</span>
+              </button>
             </div>
           </motion.div>
         )}
@@ -664,6 +674,14 @@ export const PanicButton: React.FC = () => {
                 <button onClick={() => { setShowWatchMeCancel(false); setWatchMePin(''); }} className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 py-4 rounded-xl"><X className="w-6 h-6 mx-auto" /></button>                <button onClick={() => {                   if (watchMePin.length < 4) {                        const newPin = watchMePin + '0';                        setWatchMePin(newPin);                        if (newPin.length === 4) {                          setTimeout(() => {                            if (cancelWatchMeTimer(newPin)) {                              setShowWatchMeCancel(false);                              setWatchMePin('');                            } else {                              setWatchMePin('');                            }                          }, 300);                        }                      }                }} className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xl py-4 rounded-xl border border-slate-700/50">0</button>                <button onClick={() => setWatchMePin(watchMePin.slice(0, -1))} className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 py-4 rounded-xl text-sm font-bold">DEL</button>              </div>            </motion.div>          </motion.div>        )}      </AnimatePresence>
 
 
-    </motion.div>
+    
+      {showDistressVideo && (
+        <DistressVideoStream 
+          callerId={1000} 
+          calleeId={2000} 
+          onCallEnd={() => setShowDistressVideo(false)}
+        />
+      )}
+</motion.div>
   );
 };
