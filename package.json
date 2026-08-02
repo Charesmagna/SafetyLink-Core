@@ -4,15 +4,16 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"vite\" \"node server/dispatch-worker.js\"",
-    "build": "vite build",
+    "dev": "tsx server.ts",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "cap:sync": "npx cap sync android",
     "branding": "node branding/generate-branding.cjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/run-tests.ts",
     "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
-    "start:worker": "node server/dispatch-worker.js"
+    "start:worker": "node server/dispatch-worker.js",
+    "start": "node dist/server.cjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^6.0.0",
@@ -37,6 +38,7 @@
     "capacitor-voice-recorder": "^1.1.1",
     "connectycube": "^6.3.0",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "firebase": "^12.16.0",
     "ioredis": "^6.0.0",
     "leaflet": "^1.9.4",
