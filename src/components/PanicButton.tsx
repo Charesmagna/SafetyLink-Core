@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { NativeDispatchService } from '../services/NativeDispatchService';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
@@ -69,10 +70,12 @@ export const PanicButton: React.FC = () => {
   // Vibrate and trigger screen wake / keyguard bypass simulation when countdown starts
   useEffect(() => {
     if (panicCountdown !== null) {
-      import('../services/NativeDispatchService').then(({ NativeDispatchService }) => {
+      try {
         NativeDispatchService.triggerVibration();
         NativeDispatchService.forceUnlockAndWake();
-      });
+      } catch(e) {
+        console.warn('Native dispatch unavailable in web:', e);
+      }
     }
   }, [panicCountdown]);
 

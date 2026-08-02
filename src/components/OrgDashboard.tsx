@@ -1000,7 +1000,7 @@ export const OrgDashboard: React.FC = () => {
                       setTwilioTestStatus('error');
                       setTwilioTestMessage(`Twilio Error: ${data.error || 'Failed to connect'}`);
                     }
-                  } catch (error) {
+                  } catch (error: any) {
                     setTwilioTestStatus('error');
                     setTwilioTestMessage(`Network Error: ${error.message || 'Failed to reach server'}`);
                   }

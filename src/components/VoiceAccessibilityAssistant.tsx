@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { getLizzyProvider } from '../services/LizzyAIProvider';
 import { useAppStore } from '../utils/store';
 import { motion } from 'framer-motion';
 
@@ -16,18 +17,9 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
   const [tempPhone, setTempPhone] = useState('');
 
   const speak = (text: string, onEnd?: () => void) => {
-    if (!window.speechSynthesis) {
-      if (onEnd) onEnd();
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-ZA'; // South African English if available, or fallback
-    utterance.rate = 0.9;
-    if (onEnd) {
-      utterance.onend = onEnd;
-    }
-    window.speechSynthesis.speak(utterance);
+    getLizzyProvider().speak(text).then(() => {
+      if(onEnd) onEnd();
+    });
   };
   
   const listen = (onResult: (text: string) => void) => {
@@ -65,7 +57,7 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
 
   useEffect(() => {
     return () => {
-      window.speechSynthesis?.cancel();
+      getLizzyProvider().cancel();
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch(e){}
       }

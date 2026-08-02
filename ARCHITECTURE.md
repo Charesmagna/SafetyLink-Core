@@ -57,3 +57,9 @@ Content-Type: application/sdp
 
 // SDP Offer Body
 ```
+
+## 5. Background Services & Telemetry Optimization
+To balance real-time telemetry (BLE iTAG scanning) and Android battery constraints, the native \`SafetyBackgroundService.kt\` was optimized by removing continuous partial wakelocks. Wakelocks are now strictly constrained to 30-second bursts during verified SOS triggers to escalate intents and wake the main application securely.
+
+## 6. Monorepo Integration & Server Architecture
+The repository has been restructured to allow simultaneous development of the Vite/React UI and multiple backend systems. The system integrates \`BullMQ\` (or in-memory fallback) for panic event processing alongside Twilio for SMS/Voice Dispatch, fully exposed in \`server.ts\` and \`standalone-backend\`.
