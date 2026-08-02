@@ -165,8 +165,8 @@ async function startServer() {
               return; 
           }
 
-          let targetApiKey = userProfile.telnyx_api_key || (orgData && orgData.telnyx_api_key);
-          let targetFromPhone = userProfile.telnyx_phone_number || (orgData && orgData.telnyx_phone_number);
+          let targetApiKey = userProfile.telnyx_api_key || (orgData && orgData.telnyx_api_key) || process.env.TELNYX_API_KEY;
+          let targetFromPhone = userProfile.telnyx_phone_number || (orgData && orgData.telnyx_phone_number) || process.env.TELNYX_PHONE_NUMBER;
           let controlRoomDestination = orgData && orgData.control_room_phone;
 
           if (!targetApiKey || !targetFromPhone) throw new Error("No active communication pathways loaded.");
