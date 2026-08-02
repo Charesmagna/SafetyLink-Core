@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ConnectyCube from 'connectycube';
-import { connectyCubeService } from '../services/ConnectyCubeService';
 
 export const DistressVideoStream: React.FC<{
   callerId: number;
   calleeId: number;
   onCallEnd: () => void;
-}> = ({ callerId, calleeId, onCallEnd }) => {
+}> = ({ calleeId, onCallEnd }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [session, setSession] = useState<any>(null);
@@ -17,7 +16,7 @@ export const DistressVideoStream: React.FC<{
     const mediaParams = { audio: true, video: true };
     
     // Set up listeners
-    ConnectyCube.videochat.onCallListener = (session, extension) => {
+    ConnectyCube.videochat.onCallListener = (session, _extension) => {
       setSession(session);
       // Auto-accept in a real distress scenario
       session.getUserMedia(mediaParams).then((localStream: any) => {
@@ -28,20 +27,20 @@ export const DistressVideoStream: React.FC<{
       });
     };
 
-    ConnectyCube.videochat.onAcceptCallListener = (session, userId, extension) => {
+    ConnectyCube.videochat.onAcceptCallListener = (_session, _userId, _extension) => {
       // Call accepted
     };
 
-    ConnectyCube.videochat.onRemoteStreamListener = (session, userId, remoteStream) => {
+    ConnectyCube.videochat.onRemoteStreamListener = (_session, _userId, remoteStream) => {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
       }
     };
 
     return () => {
-      ConnectyCube.videochat.onCallListener = null;
-      ConnectyCube.videochat.onAcceptCallListener = null;
-      ConnectyCube.videochat.onRemoteStreamListener = null;
+      ConnectyCube.videochat.onCallListener = () => {};
+      ConnectyCube.videochat.onAcceptCallListener = () => {};
+      ConnectyCube.videochat.onRemoteStreamListener = () => {};
     };
   }, []);
 

@@ -47,6 +47,24 @@ async function startServer() {
       }
   });
 
+  
+  app.post('/api/gemini/chat', async (req, res) => {
+    try {
+      const { message, location } = req.body;
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const prompt = `User message: "${message}". Current location: ${location ? JSON.stringify(location) : 'unknown'}. You are Kleva, a highly tactical AI assistant for a safety app called SafetyLink. Respond concisely to the user in a professional, tactical tone.`;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+      res.json({ reply: response.text });
+    } catch (e) {
+      console.error('Gemini chat error:', e);
+      res.status(500).json({ error: 'Failed to generate response' });
+    }
+  });
+
   app.post('/api/panic/trigger', async (req, res) => {
       const { userId, latitude, longitude } = req.body;
       if (!userId || !latitude || !longitude) {
