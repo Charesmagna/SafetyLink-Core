@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../utils/store';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 interface Props {
   onClose: () => void;
