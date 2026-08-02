@@ -4,14 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"node server/dispatch-worker.js\"",
     "build": "vite build",
     "cap:sync": "npx cap sync android",
     "branding": "node branding/generate-branding.cjs",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/run-tests.ts",
-    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs"
+    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
+    "start:worker": "node server/dispatch-worker.js"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^6.0.0",
