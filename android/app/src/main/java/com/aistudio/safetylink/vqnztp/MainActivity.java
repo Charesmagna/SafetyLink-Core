@@ -34,7 +34,7 @@ public class MainActivity extends BridgeActivity {
         scheduleKeepAlive();
 
         // Prompt the user to whitelist the app from battery optimizations
-        checkPermissionsAndServices();
+        // checkPermissionsAndServices();
         handleSosWake(getIntent());
     }
 
