@@ -48,6 +48,37 @@ async function startServer() {
   });
 
   
+  
+  app.post('/api/dispatch/sms', async (req, res) => {
+      // Stub for SMS dispatch from Android native app
+      const { phone, message } = req.body;
+      if (!phone || !message) {
+          return res.status(400).json({ error: "Missing required parameters." });
+      }
+      try {
+          // Simply push to the same queue for processing or handle directly
+          await panicQueue.add('sms_dispatch', { phone, message, timestamp: new Date().toISOString() }, {
+              attempts: 3, backoff: { type: 'exponential', delay: 2000 }
+          });
+          return res.status(200).json({ message: "SMS dispatch queued." });
+      } catch (err) {
+          return res.status(500).json({ error: "Internal SMS queue error." });
+      }
+  });
+
+  app.post('/api/incidents', async (req, res) => {
+      // Endpoint for Android app to log incidents
+      const { id, latitude, longitude, description, org_id, triggered_by, status, severity } = req.body;
+      try {
+          await supabase.from('org_events').insert([{
+              id, latitude, longitude, description, org_id, triggered_by, status, severity
+          }]);
+          return res.status(201).json({ message: "Incident logged." });
+      } catch (err) {
+          return res.status(500).json({ error: "Failed to log incident." });
+      }
+  });
+
   app.post('/api/gemini/chat', async (req, res) => {
     try {
       const { message, location } = req.body;
@@ -89,10 +120,28 @@ async function startServer() {
   });
 
   const panicWorker = new Worker('panicDispatchPool', async (job) => {
-      const { userId, latitude, longitude } = job.data;
-      console.log(`[Queue Worker] Initiating emergency matrix lookup for Job #${job.id}`);
+      const { userId, latitude, longitude, phone, message } = job.data;
+      console.log(`[Queue Worker] Initiating dispatch for Job #${job.id} (name=${job.name})`);
+      
       try {
-          // Query via Supabase
+          if (job.name === 'sms_dispatch') {
+              // We just send the SMS if Telnyx credentials are in env, or log if they aren't.
+              // We assume generic dispatch here because it's initiated directly by the native app.
+              const targetApiKey = process.env.TELNYX_API_KEY;
+              const targetFromPhone = process.env.TELNYX_PHONE_NUMBER;
+              
+              if (!targetApiKey || !targetFromPhone) {
+                  console.warn(`[Mock Fallback] sms_dispatch requires TELNYX_API_KEY in env to send to ${phone}`);
+                  return;
+              }
+              const telnyx = telnyxFactory(targetApiKey);
+              await telnyx.messages.create({
+                  to: phone, from: targetFromPhone, text: message
+              });
+              return;
+          }
+
+          // Query via Supabase for standard panic_signal
           const { data: userProfile } = await supabase
               .from('user_profiles')
               .select(`
