@@ -9,6 +9,8 @@ import { UserProfile } from '../types';
 import { LogoSetPart } from './LogoSetPart';
 import { GlowingHeartBackground } from './GlowingHeartBackground';
 import { MphakatiOverwatch } from './MphakatiOverwatch';
+import { NodeMeshOrchestration } from './NodeMeshOrchestration';
+import { IncidentReportingTemplates } from './IncidentReportingTemplates';
 import { MotherboardConsole } from './MotherboardConsole';
 
 export const OrgDashboard: React.FC = () => {
@@ -37,7 +39,7 @@ export const OrgDashboard: React.FC = () => {
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const isResponder = currentUser?.role === 'Responder';
-  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals'>('dispatch');
+  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals' | 'mesh-orchestration' | 'incident-reporting'>('dispatch');
   const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -268,6 +270,22 @@ export const OrgDashboard: React.FC = () => {
           >
             🛡️ Mphakati Overwatch
           </button>
+          {!isResponder && <button
+            onClick={() => setActiveSubTab('mesh-orchestration')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'mesh-orchestration' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            📡 Mesh Orchestration
+          </button>}
+          {!isResponder && <button
+            onClick={() => setActiveSubTab('incident-reporting')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'incident-reporting' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            📄 Incident Templates
+          </button>}
           {!isResponder && <button
             onClick={() => setActiveSubTab('analytics')}
             className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
@@ -1256,6 +1274,14 @@ export const OrgDashboard: React.FC = () => {
           </div>
         )}
 
+        {activeSubTab === 'mesh-orchestration' && (
+          <NodeMeshOrchestration />
+        )}
+        
+        {activeSubTab === 'incident-reporting' && (
+          <IncidentReportingTemplates />
+        )}
+        
         {activeSubTab === 'referrals' && (
           <div className="space-y-6 animate-fadeIn">
             {/* Referral Code Generator */}
