@@ -28,10 +28,24 @@ export class OrgSyncService {
       // Mocking the external network delay
       await new Promise(r => setTimeout(r, 800));
 
-      // 1. Fire webhook (mock)
-      if (externalWebhookUrl) {
+      // 1. Fire webhook
+      if (externalWebhookUrl && externalWebhookUrl.startsWith('http')) {
         console.log("Sending payload:", siaPayload);
-        // await fetch(externalWebhookUrl, { method: 'POST', body: JSON.stringify(siaPayload) });
+        try {
+          const response = await fetch(externalWebhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + import.meta.env.VITE_SIA_TOKEN || 'placeholder'
+            },
+            body: JSON.stringify(siaPayload)
+          });
+          if (!response.ok) {
+            throw new Error('SIA sync failed with status ' + response.status);
+          }
+        } catch (fetchErr) {
+          console.warn("External SIA sync failed, continuing locally.", fetchErr);
+        }
       }
 
       useAppStore.getState().addAuditLog(

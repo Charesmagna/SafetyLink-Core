@@ -11,6 +11,7 @@ import { GlowingHeartBackground } from './GlowingHeartBackground';
 import { MphakatiOverwatch } from './MphakatiOverwatch';
 import { NodeMeshOrchestration } from './NodeMeshOrchestration';
 import { IncidentReportingTemplates } from './IncidentReportingTemplates';
+import { AdvancedOfflineSyncManager } from './AdvancedOfflineSyncManager';
 import { MotherboardConsole } from './MotherboardConsole';
 
 export const OrgDashboard: React.FC = () => {
@@ -39,7 +40,7 @@ export const OrgDashboard: React.FC = () => {
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const isResponder = currentUser?.role === 'Responder';
-  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals' | 'mesh-orchestration' | 'incident-reporting'>('dispatch');
+  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals' | 'mesh-orchestration' | 'incident-reporting' | 'offline-sync'>('dispatch');
   const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -285,6 +286,14 @@ export const OrgDashboard: React.FC = () => {
             }`}
           >
             📄 Incident Templates
+          </button>}
+          {!isResponder && <button
+            onClick={() => setActiveSubTab('offline-sync')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'offline-sync' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            🔄 Offline Sync
           </button>}
           {!isResponder && <button
             onClick={() => setActiveSubTab('analytics')}
@@ -1280,6 +1289,10 @@ export const OrgDashboard: React.FC = () => {
         
         {activeSubTab === 'incident-reporting' && (
           <IncidentReportingTemplates />
+        )}
+        
+        {activeSubTab === 'offline-sync' && (
+          <AdvancedOfflineSyncManager />
         )}
         
         {activeSubTab === 'referrals' && (

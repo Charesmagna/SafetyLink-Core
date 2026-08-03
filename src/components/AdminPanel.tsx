@@ -13,7 +13,7 @@ import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg'
 import newBg1 from '../assets/images/background1.jpeg';
 import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS';
+type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -169,7 +169,7 @@ export const AdminPanel: React.FC = () => {
 
       {/* Admin Nav Bar */}
       <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
-        {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'SETTINGS'] as AdminTab[]).map((tab) => (
+        {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
