@@ -3,6 +3,7 @@ import { useAppStore } from '../utils/store';
 import { useTacticalSensors } from '../hooks/useTacticalSensors';
 import { useSafeAudio } from '../hooks/useSafeAudio';
 import { useDataOverAudio } from '../hooks/useDataOverAudio';
+import { tuyaIoTService } from '../services/TuyaIoTService';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { 
   Database, 
@@ -175,6 +176,16 @@ export const AdvancedSubsystems: React.FC = () => {
   };
 
   // Simulating physical destruction
+  const triggerTuyaIoT = async () => {
+    try {
+      useAppStore.getState().addToast("Triggering Tuya Smart Lock...", "info");
+      await tuyaIoTService.triggerDevice('dummy_lock_id', [{ code: 'doorcontact_state', value: true }]);
+      useAppStore.getState().addToast("Tuya Lock Triggered (Mocked Response)", "success");
+    } catch (e) {
+      useAppStore.getState().addToast("Tuya IoT Trigger Failed", "error");
+    }
+  };
+
   const toggleHardwareDestruction = () => {
     const next = !destructionSimulated;
     setDestructionSimulated(next);

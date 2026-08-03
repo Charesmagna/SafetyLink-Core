@@ -12,7 +12,7 @@
     "lint": "tsc --noEmit",
     "test": "tsx src/tests/run-tests.ts",
     "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
-    "start:worker": "node server/dispatch-worker.js",
+    "start:worker": "node standalone-backend/safetyLinkEngine.js",
     "start": "node dist/server.cjs",
     "dev:all": "concurrently \"npm run dev\" \"cd standalone-backend && npm run dev\""
   },

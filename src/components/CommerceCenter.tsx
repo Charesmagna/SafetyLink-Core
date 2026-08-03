@@ -245,7 +245,7 @@ export const CommerceCenter: React.FC = () => {
   const getCartTotal = () => {
     let total = 0;
     Object.entries(cart).forEach(([id, qty]) => {
-      const prod = HARDWARE_CATALOG.find(p => p.id === id);
+      const prod = hardwareCatalog.find(p => p.id === id);
       if (prod) {
         total += prod.priceZAR * qty;
       }
@@ -425,7 +425,7 @@ Thank you for securing your community with SafetyLink.
                           1. Hardware & Mesh Nodes (Once-off purchase)
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {HARDWARE_CATALOG.map(prod => (
+                          {hardwareCatalog.map(prod => (
                             <div key={prod.id} className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
                               <div>
                                 <div className="flex items-center justify-between mb-2">
@@ -516,7 +516,7 @@ Thank you for securing your community with SafetyLink.
                         ) : (
                           <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                             {Object.entries(cart).map(([id, qty]) => {
-                              const prod = HARDWARE_CATALOG.find(p => p.id === id);
+                              const prod = hardwareCatalog.find(p => p.id === id);
                               if (!prod) return null;
                               return (
                                 <div key={id} className="flex items-center justify-between bg-slate-900/40 p-2.5 rounded-xl border border-slate-900">

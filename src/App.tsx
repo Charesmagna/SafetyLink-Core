@@ -38,7 +38,6 @@ import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
 import { DecoyCalculator } from './components/DecoyCalculator';
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
-import { App as CapApp } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -48,9 +47,9 @@ import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
 import slLogoSet from './assets/images/sl_logoset.jpeg';
 import newBg1 from './assets/images/background1.jpeg';
-import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
-import polishLogo from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
@@ -150,7 +149,7 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    const urlOpenListener = CapApp.addListener('appUrlOpen', data => {
+    const urlOpenListener = CapacitorApp.addListener('appUrlOpen', data => {
       console.log('App opened with URL:', data);
       try {
         const url = new URL(data.url);
@@ -163,7 +162,7 @@ const App: React.FC = () => {
       }
     });
 
-    const backButtonListener = CapApp.addListener('backButton', () => {
+    const backButtonListener = CapacitorApp.addListener('backButton', () => {
       // 4. Block Back Button during SOS
       if (isSosActive) {
         console.warn("Back button blocked: SOS Countdown is active.");
