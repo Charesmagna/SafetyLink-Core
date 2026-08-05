@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from "../utils/store";
-import { Send, X, MapPin } from "lucide-react";
+import { Send, X, MapPin, Volume2, VolumeX } from "lucide-react";
+import { getLizzyProvider } from '../services/LizzyAIProvider';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
 
 export const KlevaBot: React.FC = () => {
@@ -9,6 +10,7 @@ export const KlevaBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   // South African local safety history / chat list
   const [messages, setMessages] = useState<
@@ -22,6 +24,15 @@ export const KlevaBot: React.FC = () => {
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Speak greeting when opened
+  useEffect(() => {
+    if (isOpen && voiceEnabled) {
+      getLizzyProvider().speak(messages[0].text).catch(console.error);
+    } else if (!isOpen) {
+      getLizzyProvider().cancel();
+    }
+  }, [isOpen]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -102,6 +113,10 @@ export const KlevaBot: React.FC = () => {
         { sender: "bot", text: botResponse, timestamp: Date.now() },
       ]);
       setIsTyping(false);
+      
+      if (voiceEnabled) {
+        getLizzyProvider().speak(botResponse).catch(console.error);
+      }
       addAuditLog(
         "SYSTEM",
         "INFO",
@@ -242,6 +257,13 @@ export const KlevaBot: React.FC = () => {
                   </div>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => setVoiceEnabled(!voiceEnabled)}
+                  className="p-1.5 mr-2 rounded-full hover:bg-slate-800/60 border border-slate-850 text-slate-400 hover:text-white transition-colors"
+                >
+                  {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                </button>
                 <button
                   onClick={() => setIsOpen(false)}
                   className="p-1.5 rounded-full hover:bg-slate-800/60 border border-slate-850 text-slate-400 hover:text-white transition-colors"

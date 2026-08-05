@@ -231,7 +231,7 @@ const App: React.FC = () => {
     registerPush();
 
     geoService.startTracking();
-    startSensors();
+    // startSensors(); // Disabled to prevent false auto-alerts as requested
 
     const handleCustomWearableEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
