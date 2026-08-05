@@ -31,9 +31,14 @@ async function startServer() {
   };
   
   if (hasRedis) {
-    new Worker('panic_events', async (job) => {
+    const worker = new Worker('panic_events', async (job) => {
       await processJob(job);
     }, { connection });
+    worker.on('error', err => console.error('Worker error:', err));
+  }
+  
+  if (panicQueue && typeof panicQueue.on === 'function') {
+    panicQueue.on('error', err => console.error('Queue error:', err));
   }
 
 
@@ -239,7 +244,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
