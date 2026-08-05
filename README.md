@@ -18,3 +18,7 @@ All configurations for Telnyx and ConnectyCube use your persistent cloud environ
 Build Android locally:
 `npm run cap:sync`
 `cd android && ./gradlew assembleDebug`
+
+
+## Mobile Application (APK)
+* **Download Android App**: [SafetyLink.apk (120M)](https://drive.google.com/file/d/1MrWZROWqlS00lGSEJ0gNIemjjBknqpMf/view?usp=drivesdk)

@@ -964,6 +964,13 @@ const App: React.FC = () => {
                 </div>
               </div>
 
+              {/* Mobile App Download */}
+              <div className="pt-4 border-t border-slate-900 mt-2 relative z-10">
+                <a href="https://drive.google.com/file/d/1MrWZROWqlS00lGSEJ0gNIemjjBknqpMf/view?usp=drivesdk" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-500/30 text-[9px] font-mono font-black text-emerald-400 hover:text-emerald-300 rounded-xl uppercase tracking-wider transition-all">
+                  📱 DOWNLOAD ANDROID APK (120M)
+                </a>
+              </div>
+
               {/* Drawer footer with partnership info & Sign Out */}
               <div className="space-y-4 pt-4 border-t border-slate-900 mt-6 relative z-10">
                 <div className="space-y-1 text-left opacity-70">
