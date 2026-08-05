@@ -21,6 +21,16 @@ interface AppState {
   discoveredDevices: DiscoveredDevice[];
   thingsBoardToken: string;
   customBackendUrl: string;
+  supabaseUrl: string;
+  setSupabaseUrl: (url: string) => void;
+  supabaseAnonKey: string;
+  setSupabaseAnonKey: (key: string) => void;
+  connectyCubeConfig: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null;
+  setConnectyCubeConfig: (config: any) => void;
+  tuyaConfig: { clientId: string; secret: string; baseUrl: string; } | null;
+  setTuyaConfig: (config: any) => void;
+  auraApiUrl: string;
+  setAuraApiUrl: (url: string) => void;
   auditLogs: AuditLog[];
   isScanning: boolean;
   pairingProgress: string | null;
@@ -294,6 +304,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
   customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', ''),
+  supabaseUrl: getStoredJSON<string>('sl_supabase_url', ''),
+  supabaseAnonKey: getStoredJSON<string>('sl_supabase_anon_key', ''),
+  connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
+  tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
+  auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
   auditLogs: getStoredJSON<AuditLog[]>('sl_audit_logs', [
     { id: '1', timestamp: Date.now() - 60000, category: 'SYSTEM', severity: 'INFO', message: 'SafetyLink Core initialized', details: 'All modular services ready.' }
   ]),
@@ -1114,7 +1129,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // --- Modular Dispatch Engine Pipeline ---
     // 1. Supabase Edge Function
     get().addAuditLog('DISPATCH', 'INFO', '[SupabaseDispatcher] Triggering Cloud Edge Functions', 'Invoking /functions/v1/send-sos');
-    const functionUrl = import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sos` : 'https://oirbmgpfqxojshfoguzo.supabase.co/functions/v1/send-sos';
+    const functionUrl = get().supabaseUrl ? `${get().supabaseUrl}/functions/v1/send-sos` : (import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sos` : 'https://oirbmgpfqxojshfoguzo.supabase.co/functions/v1/send-sos');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.access_token) {
@@ -1994,6 +2009,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ customBackendUrl: url });
     setStoredJSON("sl_custom_backend_url", url);
     get().addAuditLog("SYSTEM", "INFO", "Custom Backend URL Updated", url ? `Backend set to ${url}` : "Backend URL cleared.");
+  },
+  setSupabaseUrl: (url) => {
+    set({ supabaseUrl: url });
+    setStoredJSON("sl_supabase_url", url);
+  },
+  setSupabaseAnonKey: (key) => {
+    set({ supabaseAnonKey: key });
+    setStoredJSON("sl_supabase_anon_key", key);
+  },
+  setConnectyCubeConfig: (config) => {
+    set({ connectyCubeConfig: config });
+    setStoredJSON("sl_connectycube_config", config);
+  },
+  setTuyaConfig: (config) => {
+    set({ tuyaConfig: config });
+    setStoredJSON("sl_tuya_config", config);
+  },
+  setAuraApiUrl: (url) => {
+    set({ auraApiUrl: url });
+    setStoredJSON("sl_aura_api_url", url);
   },
 
   setThingsBoardToken: (token) => {

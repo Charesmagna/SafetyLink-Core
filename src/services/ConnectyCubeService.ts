@@ -1,23 +1,29 @@
 import ConnectyCube from 'connectycube';
-
-const CREDENTIALS = {
-  appId: 10000, // Placeholder, needs actual ID if we have it
-  authKey: "dp_live_YmhfM6zbTN3bgx40lMNftVP5", 
-  authSecret: "104672c2253f80543919ef337b8e4a01ee823bbaa29888278d3783b6b27f5859",
-};
-
-const CONFIG = {
-  debug: { mode: 1 },
-  endpoints: {
-    api: 'https://SafetyLink.connectycube.com',
-    chat: 'SafetyLink.connectycube.com'
-  }
-};
+import { useAppStore } from '../utils/store';
 
 class ConnectyCubeService {
   private static instance: ConnectyCubeService;
 
   private constructor() {
+    this.init();
+  }
+
+  public init() {
+    const customConfig = useAppStore.getState().connectyCubeConfig;
+    const CREDENTIALS = {
+      appId: customConfig?.appId || 10000, 
+      authKey: customConfig?.authKey || "dp_live_YmhfM6zbTN3bgx40lMNftVP5", 
+      authSecret: customConfig?.authSecret || "104672c2253f80543919ef337b8e4a01ee823bbaa29888278d3783b6b27f5859",
+    };
+    
+    const CONFIG = {
+      debug: { mode: 1 },
+      endpoints: {
+        api: customConfig?.apiEndpoint || 'https://SafetyLink.connectycube.com',
+        chat: customConfig?.chatEndpoint || 'SafetyLink.connectycube.com'
+      }
+    };
+    
     ConnectyCube.init(CREDENTIALS, CONFIG);
   }
 

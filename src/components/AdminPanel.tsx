@@ -650,6 +650,154 @@ export const AdminPanel: React.FC = () => {
           <div className="space-y-6 animate-fadeIn text-left">
             {/* Thingsboard Section (Existing top settings block) */}
             
+            {/* Custom Supabase Server */}
+            <div className="glass-panel p-5 md:p-6 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-200">Custom Supabase Platform Link</h3>
+                <p className="text-xs text-slate-500">
+                  Bind this instance to your own remote Supabase project.
+                </p>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Supabase URL (https://xyz.supabase.co)"
+                  value={supabaseUrlInput}
+                  onChange={e => setSupabaseUrlInput(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Supabase Anon Key"
+                  value={supabaseAnonKeyInput}
+                  onChange={e => setSupabaseAnonKeyInput(e.target.value)}
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setSupabaseUrl(supabaseUrlInput);
+                      setSupabaseAnonKey(supabaseAnonKeyInput);
+                      addAuditLog('SYSTEM', 'INFO', 'Supabase Configuration Updated', `URL set to ${supabaseUrlInput}`);
+                      window.location.reload();
+                    }}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
+                  >
+                    SAVE & RELOAD
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tuya IoT Integration */}
+            <div className="glass-panel p-5 md:p-6 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-200">Tuya Smart IoT Connectivity</h3>
+                <p className="text-xs text-slate-500">
+                  Bind this instance to a specific Tuya Cloud API.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input type="text" placeholder="Tuya Client ID" value={tuyaClientId} onChange={e => setTuyaClientId(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                  <input type="text" placeholder="Tuya Secret" value={tuyaSecret} onChange={e => setTuyaSecret(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                  <input type="text" placeholder="Base URL (https://openapi.tuyaeu.com)" value={tuyaBaseUrl} onChange={e => setTuyaBaseUrl(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => { setTuyaConfig({ clientId: tuyaClientId || undefined, secret: tuyaSecret || undefined, baseUrl: tuyaBaseUrl || undefined }); addAuditLog('SYSTEM', 'INFO', 'Tuya Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Aura Platform Integration */}
+            <div className="glass-panel p-5 md:p-6 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-200">Aura Platform (Emergency Bridge)</h3>
+                <p className="text-xs text-slate-500">
+                  Bind this instance to your custom Aura Platform for hardware BLE triggers.
+                </p>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-3">
+                <input type="text" placeholder="Aura API URL (e.g. https://api.auraplatform.com/v1/panic)" value={auraUrlInput} onChange={e => setAuraUrlInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                <div className="flex justify-end">
+                  <button onClick={() => { setAuraApiUrl(auraUrlInput); addAuditLog('SYSTEM', 'INFO', 'Aura Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
+                </div>
+              </div>
+            </div>
+
+            {/* ConnectyCube Integrations */}
+            <div className="glass-panel p-5 md:p-6 space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-200">ConnectyCube Communication Platform</h3>
+                <p className="text-xs text-slate-500">
+                  Bind this instance to your own ConnectyCube chat and video APIs. Replaces hardcoded endpoints.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    placeholder="App ID (e.g. 10000)"
+                    value={ccAppId}
+                    onChange={e => setCcAppId(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Auth Key"
+                    value={ccAuthKey}
+                    onChange={e => setCcAuthKey(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Auth Secret"
+                    value={ccAuthSecret}
+                    onChange={e => setCcAuthSecret(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="API Endpoint (e.g. https://SafetyLink.connectycube.com)"
+                    value={ccApi}
+                    onChange={e => setCcApi(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Chat Endpoint (e.g. SafetyLink.connectycube.com)"
+                    value={ccChat}
+                    onChange={e => setCcChat(e.target.value)}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setConnectyCubeConfig({
+                        appId: ccAppId ? parseInt(ccAppId, 10) : undefined,
+                        authKey: ccAuthKey || undefined,
+                        authSecret: ccAuthSecret || undefined,
+                        apiEndpoint: ccApi || undefined,
+                        chatEndpoint: ccChat || undefined
+                      });
+                      addAuditLog('SYSTEM', 'INFO', 'ConnectyCube Configuration Updated');
+                      window.location.reload();
+                    }}
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
+                  >
+                    SAVE & RELOAD
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Custom Backend URL */}
             <div className="glass-panel p-5 md:p-6 space-y-4">
               <div className="space-y-1">

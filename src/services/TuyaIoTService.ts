@@ -1,3 +1,5 @@
+import { useAppStore } from '../utils/store';
+
 export class TuyaIoTService {
   private static instance: TuyaIoTService;
   
@@ -7,10 +9,11 @@ export class TuyaIoTService {
   private baseUrl: string;
 
   private constructor() {
-    this.clientId = import.meta.env.VITE_TUYA_CLIENT_ID || 'dummy_client_id';
-    this.secret = import.meta.env.VITE_TUYA_SECRET || 'dummy_secret';
+    const storeConfig = useAppStore.getState().tuyaConfig;
+    this.clientId = storeConfig?.clientId || import.meta.env.VITE_TUYA_CLIENT_ID || 'dummy_client_id';
+    this.secret = storeConfig?.secret || import.meta.env.VITE_TUYA_SECRET || 'dummy_secret';
     this.accessToken = import.meta.env.VITE_TUYA_ACCESS_TOKEN || '';
-    this.baseUrl = import.meta.env.VITE_TUYA_BASE_URL || 'https://openapi.tuyaeu.com';
+    this.baseUrl = storeConfig?.baseUrl || import.meta.env.VITE_TUYA_BASE_URL || 'https://openapi.tuyaeu.com';
   }
 
   public static getInstance(): TuyaIoTService {

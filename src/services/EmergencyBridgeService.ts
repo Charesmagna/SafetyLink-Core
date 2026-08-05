@@ -5,9 +5,12 @@ import { Geolocation } from '@capacitor/geolocation';
 import { CapacitorHttp } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
+import { useAppStore } from '../utils/store';
 
 export class EmergencyBridgeService {
-  private readonly AURA_API_URL = 'https://api.auraplatform.example.com/v1/panic';
+  private get AURA_API_URL() {
+    return useAppStore.getState().auraApiUrl || 'https://api.auraplatform.example.com/v1/panic';
+  }
   private readonly DEVICE_ID = 'BEACON_MAC_ADDRESS'; // Replace with actual beacon MAC address
   private readonly SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; // Replace with actual beacon Service UUID
   private readonly CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; // Replace with actual Characteristic UUID
