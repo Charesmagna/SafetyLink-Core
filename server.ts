@@ -220,8 +220,17 @@ async function startServer() {
 
   const PORT = 3000;
 
+  // API routes FIRST
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  const fs = require('fs');
+  const distPath = path.join(process.cwd(), 'dist');
+  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, 'index.html'));
+  
+  if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
