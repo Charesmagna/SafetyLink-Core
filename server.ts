@@ -4,11 +4,14 @@ dotenv.config();
 import express from 'express';
 // In-memory queue fallback for environment without Redis
 import { createClient } from '@supabase/supabase-js';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://dummy.supabase.co';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'dummy';
+const supabase = createClient(supabaseUrl, supabaseKey);
 import telnyxFactory from 'telnyx';
 import { Queue, Worker } from 'bullmq';
 import twilio from 'twilio';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
+
 
 async function startServer() {
   const app = express();
@@ -219,6 +222,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
