@@ -98,7 +98,11 @@ public class SafelinkForegroundService extends Service {
                 .bigText("BLE Linked: Standby\nGPS: Acquiring"))
             .setOngoing(true);
 
-        startForeground(NOTIF_ID_ONGOING, builder.build());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIF_ID_ONGOING, builder.build(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+        } else {
+            startForeground(NOTIF_ID_ONGOING, builder.build());
+        }
         return START_STICKY;
     }
 

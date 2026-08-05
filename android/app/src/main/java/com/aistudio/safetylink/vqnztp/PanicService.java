@@ -65,7 +65,11 @@ public class PanicService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Always promote to foreground immediately to adhere to Android's strict service limits
-        startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+        } else {
+            startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"));
+        }
 
         if (intent != null) {
             String action = intent.getAction();

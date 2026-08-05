@@ -53,7 +53,11 @@ class SafetyBackgroundService : Service() {
         val notification = buildForegroundNotification()
         
         // In Android 14+, foreground service types must be declared. Assuming it is in Manifest.
-        startForeground(NOTIFICATION_ID, notification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
         
         isServiceRunning = true
     }
