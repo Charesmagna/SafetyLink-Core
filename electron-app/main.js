@@ -7,7 +7,7 @@ function createWindow() {
     autoHideMenuBar: true,
   });
   // Connects to the live deployed URL
-  win.loadURL('https://ais-pre-pwn5rlen7ru3evqchy5jfc-123406259969.europe-west2.run.app');
+  win.loadURL('https://ais-pre-7giumhpixkkmwnncr4week-170895240953.europe-west1.run.app');
 }
 app.on('ready', createWindow);
 app.on('window-all-closed', () => app.quit());
