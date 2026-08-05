@@ -226,7 +226,7 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  const fs = require('fs');
+  const fs = await import('fs');
   const distPath = path.join(process.cwd(), 'dist');
   const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, 'index.html'));
   
