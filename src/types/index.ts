@@ -21,7 +21,6 @@ export interface UserProfile {
   pendingRole?: UserRole;
   medicalProfile?: MedicalProfile;
   twilio?: { accountSid: string; authToken: string; fromNumber: string };
-  telnyx?: { apiKey: string; phoneNumber: string };
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };
@@ -141,7 +140,6 @@ export interface Organization {
   falseAlarms?: number;
   averageResponseTimeSec?: number;
   twilio?: { accountSid: string; authToken: string; fromNumber: string };
-  telnyx?: { apiKey: string; phoneNumber: string };
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };

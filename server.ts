@@ -7,7 +7,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://dummy.supabase.co';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'dummy';
 const supabase = createClient(supabaseUrl, supabaseKey);
-import telnyxFactory from 'telnyx';
 import { Queue, Worker } from 'bullmq';
 import twilio from 'twilio';
 import path from 'path';
@@ -39,12 +38,12 @@ async function startServer() {
 
 
   app.post('/api/integration/save-credentials', async (req, res) => {
-      const { accountType, id, telnyx_api_key, telnyx_phone_number } = req.body;
+      const { accountType, id, twilio_account_sid, twilio_auth_token, twilio_phone_number } = req.body;
       try {
           if (accountType === 'user') {
-              await supabase.from('user_profiles').update({ telnyx_api_key, telnyx_phone_number }).eq('id', id);
+              await supabase.from('user_profiles').update({ twilio_account_sid, twilio_auth_token, twilio_phone_number }).eq('id', id);
           } else if (accountType === 'organisation') {
-              await supabase.from('organisations').update({ telnyx_api_key, telnyx_phone_number }).eq('id', id);
+              await supabase.from('organisations').update({ twilio_account_sid, twilio_auth_token, twilio_phone_number }).eq('id', id);
           } else {
               return res.status(400).json({ error: "Invalid account type" });
           }
@@ -149,18 +148,18 @@ async function startServer() {
       
       try {
           if (job.name === 'sms_dispatch') {
-              // We just send the SMS if Telnyx credentials are in env, or log if they aren't.
+              // We just send the SMS if Twilio credentials are in env, or log if they aren't.
               // We assume generic dispatch here because it's initiated directly by the native app.
-              const targetApiKey = process.env.TELNYX_API_KEY;
-              const targetFromPhone = process.env.TELNYX_PHONE_NUMBER;
+              const targetApiKey = process.env.TWILIO_ACCOUNT_SID;
+              const targetFromPhone = process.env.TWILIO_PHONE_NUMBER;
               
               if (!targetApiKey || !targetFromPhone) {
-                  console.warn(`[Mock Fallback] sms_dispatch requires TELNYX_API_KEY in env to send to ${phone}`);
+                  console.warn(`[Mock Fallback] sms_dispatch requires TWILIO_ACCOUNT_SID in env to send to ${phone}`);
                   return;
               }
-              const telnyx = telnyxFactory(targetApiKey);
-              await telnyx.messages.create({
-                  to: phone, from: targetFromPhone, text: message
+              const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
+              await client.messages.create({
+                  to: phone, from: targetFromPhone, body: message
               });
               return;
           }
@@ -170,8 +169,8 @@ async function startServer() {
               .from('user_profiles')
               .select(`
                   name, 
-                  telnyx_api_key, 
-                  telnyx_phone_number,
+                  twilio_account_sid, 
+                  twilio_phone_number,
                   linked_organisation_id
               `)
               .eq('id', userId)
@@ -181,7 +180,7 @@ async function startServer() {
           if (userProfile && userProfile.linked_organisation_id) {
               const { data } = await supabase
                   .from('organisations')
-                  .select('telnyx_api_key, telnyx_phone_number, control_room_phone')
+                  .select('twilio_account_sid, twilio_auth_token, twilio_phone_number, control_room_phone')
                   .eq('id', userProfile.linked_organisation_id)
                   .single();
               orgData = data;
@@ -192,23 +191,23 @@ async function startServer() {
               return; 
           }
 
-          let targetApiKey = userProfile.telnyx_api_key || (orgData && orgData.telnyx_api_key) || process.env.TELNYX_API_KEY;
-          let targetFromPhone = userProfile.telnyx_phone_number || (orgData && orgData.telnyx_phone_number) || process.env.TELNYX_PHONE_NUMBER;
+          let targetApiKey = userProfile.twilio_account_sid || (orgData && orgData.twilio_account_sid) || process.env.TWILIO_ACCOUNT_SID;
+          let targetFromPhone = userProfile.twilio_phone_number || (orgData && orgData.twilio_phone_number) || process.env.TWILIO_PHONE_NUMBER;
           let controlRoomDestination = orgData && orgData.control_room_phone;
 
           if (!targetApiKey || !targetFromPhone) throw new Error("No active communication pathways loaded.");
 
-          const telnyx = telnyxFactory(targetApiKey);
+          const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
           const payload = `SafetyLink Emergency! Panic triggered by ${userProfile.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
           
           await Promise.all([
-              telnyx.calls.create({
+              client.calls.create({
                   to: controlRoomDestination, from: targetFromPhone,
-                  connection_id: process.env.TELNYX_OUTBOUND_PROFILE_ID,
-                  text_to_speech: { voice: "female", language: "en-US", text: payload }
+                  connection_id: process.env.TWILIO_OUTBOUND_PROFILE_ID,
+                  twiml: `<Response><Say voice="alice">${payload}</Say></Response>`
               }).catch((e: any) => console.error("Voice delivery fallback channel failed:", e.message)),
-              telnyx.messages.create({
-                  to: controlRoomDestination, from: targetFromPhone, text: payload
+              client.messages.create({
+                  to: controlRoomDestination, from: targetFromPhone, body: payload
               }).catch((e: any) => console.error("SMS channel execution error:", e.message))
           ]);
       } catch (e: any) {

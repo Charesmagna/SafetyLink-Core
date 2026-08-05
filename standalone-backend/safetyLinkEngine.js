@@ -3,7 +3,7 @@ const express = require('express');
 const { Queue, Worker } = require('bullmq');
 const IORedis = require('ioredis');
 const { Pool } = require('pg');
-const telnyxFactory = require('telnyx');
+const twilio = require("twilio");
 
 const app = express();
 app.use(express.json());
@@ -26,18 +26,18 @@ const panicQueue = new Queue('panicDispatchPool', { connection: redisConnection 
  * MODULE A: Dashboards Credential Sync Target
  */
 app.post('/api/integration/save-credentials', async (req, res) => {
-    const { accountType, id, telnyx_api_key, telnyx_phone_number } = req.body;
+    const { accountType, id, twilio_account_sid, twilio_phone_number } = req.body;
 
     try {
         if (accountType === 'user') {
             await db.query(
-                `UPDATE user_profiles SET telnyx_api_key = $1, telnyx_phone_number = $2 WHERE id = $3`,
-                [telnyx_api_key, telnyx_phone_number, id]
+                `UPDATE user_profiles SET twilio_account_sid = $1, twilio_phone_number = $2 WHERE id = $3`,
+                [twilio_account_sid, twilio_phone_number, id]
             );
         } else if (accountType === 'organisation') {
             await db.query(
-                `UPDATE organisations SET telnyx_api_key = $1, telnyx_phone_number = $2 WHERE id = $3`,
-                [telnyx_api_key, telnyx_phone_number, id]
+                `UPDATE organisations SET twilio_account_sid = $1, twilio_phone_number = $2 WHERE id = $3`,
+                [twilio_account_sid, twilio_phone_number, id]
             );
         } else {
             return res.status(400).json({ error: "Invalid account contextual destination" });
@@ -98,8 +98,8 @@ const panicWorker = new Worker('panicDispatchPool', async (job) => {
 
     // Resolve structural paths for both user and organization hierarchies
     const identityQuery = await db.query(`
-        SELECT u.name, u.telnyx_api_key, u.telnyx_phone_number,
-               o.telnyx_api_key AS org_key, o.telnyx_phone_number AS org_phone, o.control_room_phone 
+        SELECT u.name, u.twilio_account_sid, u.twilio_phone_number,
+               o.twilio_account_sid AS org_key, o.twilio_phone_number AS org_phone, o.control_room_phone 
         FROM user_profiles u
         LEFT JOIN organisations o ON u.linked_organisation_id = o.id
         WHERE u.id = $1`, 
@@ -113,25 +113,25 @@ const panicWorker = new Worker('panicDispatchPool', async (job) => {
     const resolvedIdentity = identityQuery.rows[0];
     
     // RESOLUTION LAYER: User Keys take high priority, fallback to Organisation keys if null
-    let targetApiKey = resolvedIdentity.telnyx_api_key || resolvedIdentity.org_key;
-    let targetFromPhone = resolvedIdentity.telnyx_phone_number || resolvedIdentity.org_phone;
+    let targetApiKey = resolvedIdentity.twilio_account_sid || resolvedIdentity.org_key;
+    let targetFromPhone = resolvedIdentity.twilio_phone_number || resolvedIdentity.org_phone;
     let controlRoomDestination = resolvedIdentity.control_room_phone;
 
     if (!targetApiKey || !targetFromPhone) {
         throw new Error("Aborting background worker pipeline thread. Tenant has no active communication pathways loaded.");
     }
 
-    // Initialize Telnyx dynamically using the specific tenant's personal funding keys
-    const telnyx = telnyxFactory(targetApiKey);
+    // Initialize Twilio dynamically using the specific tenant's personal funding keys
+    const twilio = twilioFactory(targetApiKey);
     const structuredEmergencyPayload = `SafetyLink Emergency! Panic triggered by ${resolvedIdentity.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
 
     // Multi-Channel Telecommunication Dispatches executed in concurrent threads
     await Promise.all([
         // Dispatch Loop 1: Automated Outbound Voice Call via text-to-speech
-        telnyx.calls.create({
+        twilio.calls.create({
             to: controlRoomDestination,
             from: targetFromPhone,
-            connection_id: process.env.TELNYX_OUTBOUND_PROFILE_ID,
+            connection_id: process.env.TWILIO_OUTBOUND_PROFILE_ID,
             text_to_speech: {
                 voice: "female",
                 language: "en-US",
@@ -140,7 +140,7 @@ const panicWorker = new Worker('panicDispatchPool', async (job) => {
         }).catch(e => console.error("Voice delivery fallback channel failed:", e.message)),
 
         // Dispatch Loop 2: Immediate Backup Broadcast SMS
-        telnyx.messages.create({
+        twilio.messages.create({
             to: controlRoomDestination,
             from: targetFromPhone,
             text: structuredEmergencyPayload
