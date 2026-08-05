@@ -1,5 +1,5 @@
 import { WorkspaceIntegrations } from "./WorkspaceIntegrations";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -91,22 +91,24 @@ export const OrgDashboard: React.FC = () => {
   if (!currentOrg) return null;
 
   // Filter students/members belonging to this organization code
-  const registeredStudents = users.filter(u => u.orgCode === currentOrg.id);
+  const registeredStudents = useMemo(() => users.filter(u => u.orgCode === currentOrg.id), [users, currentOrg.id]);
   
   // Filter by search term
-  const filteredStudents = registeredStudents.filter(u => 
+  const filteredStudents = useMemo(() => registeredStudents.filter(u => 
     u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
     u.phone.includes(searchTerm)
-  );
+  ), [registeredStudents, searchTerm]);
 
   // Active panic alerts triggered by people in this organization
-  const orgUserIds = new Set(registeredStudents.map(s => s.username.toLowerCase()));
-  const activeOrgPanics = panicEvents.filter(p => 
-    p.status !== 'RESOLVED' && 
-    (p.description.toLowerCase().includes(currentOrg.name.toLowerCase()) || 
-     orgUserIds.has(p.description.split(' ').pop()?.toLowerCase() || ''))
-  );
+  const activeOrgPanics = useMemo(() => {
+    const orgUserIds = new Set(registeredStudents.map(s => s.username.toLowerCase()));
+    return panicEvents.filter(p => 
+      p.status !== 'RESOLVED' && 
+      (p.description.toLowerCase().includes(currentOrg.name.toLowerCase()) || 
+       orgUserIds.has(p.description.split(' ').pop()?.toLowerCase() || ''))
+    );
+  }, [panicEvents, currentOrg.name, registeredStudents]);
 
   const handleEditClick = (student: UserProfile) => {
     setEditingUserId(student.id);
@@ -494,7 +496,7 @@ export const OrgDashboard: React.FC = () => {
             
             {/* Pending Membership Approvals Board */}
             {(() => {
-              const pendingUsers = users.filter(u => u.pendingOrgCode === currentOrg.id);
+              const pendingUsers = useMemo(() => users.filter(u => u.pendingOrgCode === currentOrg.id), [users, currentOrg.id]);
               if (pendingUsers.length === 0) return null;
               
               return (

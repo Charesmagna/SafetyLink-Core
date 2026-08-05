@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
@@ -16,6 +16,16 @@ import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
 
 export const AdminPanel: React.FC = () => {
+  const userCountsByOrg = useMemo(() => {
+    const counts: Record<string, number> = {};
+    users.forEach(u => {
+      if (u.orgCode) {
+        counts[u.orgCode] = (counts[u.orgCode] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [users]);
+
   const { 
     users, 
     organizations, 
@@ -458,8 +468,8 @@ export const AdminPanel: React.FC = () => {
 
         {/* TAB 3: ORGANIZATIONS MANAGEMENT */}
         {activeTab === 'ORGANIZATIONS' && (() => {
-          const pendingOrgs = organizations.filter(o => o.approved === false);
-          const approvedOrgs = organizations.filter(o => o.approved !== false);
+          const pendingOrgs = useMemo(() => organizations.filter(o => o.approved === false), [organizations]);
+          const approvedOrgs = useMemo(() => organizations.filter(o => o.approved !== false), [organizations]);
 
           return (
             <div className="space-y-4 animate-fadeIn text-left">
@@ -525,7 +535,7 @@ export const AdminPanel: React.FC = () => {
                   .filter(o => o.name.toLowerCase().includes(searchTerm.toLowerCase()))
                   .map(o => {
                     const isEditing = editingOrgId === o.id;
-                    const resCount = users.filter(u => u.orgCode === o.id).length;
+                    const resCount = userCountsByOrg[o.id] || 0; // Intentionally left in place unless we use a lookup map
 
                     return (
                       <div key={o.id} className="p-4 glass-panel space-y-3">
