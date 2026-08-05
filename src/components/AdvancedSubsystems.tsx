@@ -176,7 +176,7 @@ export const AdvancedSubsystems: React.FC = () => {
   };
 
   // Simulating physical destruction
-  const triggerTuyaIoT = async () => {
+  const _triggerTuyaIoT = async () => {
     try {
       useAppStore.getState().addToast("Triggering Tuya Smart Lock...", "info");
       await tuyaIoTService.triggerDevice('dummy_lock_id', [{ code: 'doorcontact_state', value: true }]);

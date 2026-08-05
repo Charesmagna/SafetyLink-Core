@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Network, Activity, Cpu, Shield, Users, Radio } from 'lucide-react';
+import { Network, Cpu, } from 'lucide-react';
 
 export const NodeMeshOrchestration: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);

@@ -34,13 +34,38 @@ export const AdminPanel: React.FC = () => {
     approveOrganization,
     customTools,
     addCustomTool,
-    deleteCustomTool
+    deleteCustomTool,
+    supabaseUrl,
+    setSupabaseUrl,
+    supabaseAnonKey,
+    setSupabaseAnonKey,
+    tuyaConfig,
+    setTuyaConfig,
+    auraApiUrl,
+    setAuraApiUrl,
+    connectyCubeConfig,
+    setConnectyCubeConfig
   } = useAppStore();
 
   // Background slideshow logic
   const adminSlides = [newBg1, newLogo1, slide3, slide4, slide5, slide1, slide2];
   const [currentSlide, setCurrentSlide] = useState(0);
   const [backendUrlInput, setBackendUrlInput] = useState(customBackendUrl);
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(supabaseUrl || '');
+  const [supabaseAnonKeyInput, setSupabaseAnonKeyInput] = useState(supabaseAnonKey || '');
+  
+  const [tuyaClientId, setTuyaClientId] = useState(tuyaConfig?.clientId || '');
+  const [tuyaSecret, setTuyaSecret] = useState(tuyaConfig?.secret || '');
+  const [tuyaBaseUrl, setTuyaBaseUrl] = useState(tuyaConfig?.baseUrl || '');
+  
+  const [auraUrlInput, setAuraUrlInput] = useState(auraApiUrl || '');
+  
+  const [ccAppId, setCcAppId] = useState(connectyCubeConfig?.appId?.toString() || '');
+  const [ccAuthKey, setCcAuthKey] = useState(connectyCubeConfig?.authKey || '');
+  const [ccAuthSecret, setCcAuthSecret] = useState(connectyCubeConfig?.authSecret || '');
+  const [ccApi, setCcApi] = useState(connectyCubeConfig?.apiEndpoint || '');
+  const [ccChat, setCcChat] = useState(connectyCubeConfig?.chatEndpoint || '');
+
 
   useEffect(() => {
     const timer = setInterval(() => {

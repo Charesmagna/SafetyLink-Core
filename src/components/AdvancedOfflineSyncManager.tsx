@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, WifiOff, RefreshCw, Server, ShieldCheck } from 'lucide-react';
+import { Database, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useAppStore } from '../utils/store';
 
 export const AdvancedOfflineSyncManager: React.FC = () => {

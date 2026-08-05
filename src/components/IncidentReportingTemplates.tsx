@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { FileText, Save, CheckCircle, AlertTriangle, Play } from 'lucide-react';
+import { FileText, Play } from 'lucide-react';
 import { useAppStore } from '../utils/store';
 
 export const IncidentReportingTemplates: React.FC = () => {
-  const [activeTemplate, setActiveTemplate] = useState<string | null>(null);
+  const [ activeTemplate, setActiveTemplate] = useState<string | null>(null);
   const { addToast } = useAppStore();
 
   const templates = [
@@ -12,7 +12,7 @@ export const IncidentReportingTemplates: React.FC = () => {
     { id: 't-3', name: 'Severe Security Breach', description: 'High-priority template for verified physical security breaches.', color: 'red' }
   ];
 
-  const handleRunTemplate = (id: string) => {
+  const handleRunTemplate = (_id: string) => {
     addToast('Executing automated report generation...', 'info');
     setTimeout(() => {
       addToast('Report template populated from telemetry logs.', 'success');
