@@ -232,7 +232,10 @@ async function startServer() {
   // Vite middleware for development
   const fs = await import('fs');
   const distPath = path.join(process.cwd(), 'dist');
-  const isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, 'index.html'));
+  let isProduction = process.env.NODE_ENV === "production" || fs.existsSync(path.join(distPath, 'index.html'));
+  if (process.env.NODE_ENV !== 'development' && !fs.existsSync(path.join(process.cwd(), 'node_modules', 'vite'))) {
+    isProduction = true; // Force production if vite is not installed
+  }
   
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
@@ -249,9 +252,21 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", (err) => {
+    if (err) {
+      console.error("Failed to start server:", err);
+      process.exit(1);
+    }
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+  
+  server.on('error', (err) => {
+    console.error('Server error:', err);
+    process.exit(1);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Fatal error during server startup:", err);
+  process.exit(1);
+});
