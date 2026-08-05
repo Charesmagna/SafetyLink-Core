@@ -16,16 +16,6 @@ import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
 
 export const AdminPanel: React.FC = () => {
-  const userCountsByOrg = useMemo(() => {
-    const counts: Record<string, number> = {};
-    users.forEach(u => {
-      if (u.orgCode) {
-        counts[u.orgCode] = (counts[u.orgCode] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [users]);
-
   const { 
     users, 
     organizations, 
@@ -56,6 +46,18 @@ export const AdminPanel: React.FC = () => {
     connectyCubeConfig,
     setConnectyCubeConfig
   } = useAppStore();
+
+  const userCountsByOrg = useMemo(() => {
+    const counts: Record<string, number> = {};
+    users.forEach(u => {
+      if (u.orgCode) {
+        counts[u.orgCode] = (counts[u.orgCode] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [users]);
+
+
 
   // Background slideshow logic
   const adminSlides = [newBg1, newLogo1, slide3, slide4, slide5, slide1, slide2];

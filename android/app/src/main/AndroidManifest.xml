@@ -232,6 +232,6 @@
             />
         </service>
             <!-- Optimized SafetyBackgroundService for BLE Keep-Alive -->
-        <service android:name=".SafetyBackgroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />
+        <service android:name=".SafetyBackgroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location" />
     </application>
 </manifest>
