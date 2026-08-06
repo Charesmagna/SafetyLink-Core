@@ -54,7 +54,9 @@ jobs:
       run: cd android && ./gradlew --stop || true
     - name: Clean Gradle Cache
       run: rm -rf ~/.gradle/caches && rm -rf ${{ github.workspace }}/.gradle/caches
-    - name: Build with Gradle (Debug)
+
+    # Debug APK
+    - name: Build Debug APK
       working-directory: ./android
       run: ./gradlew clean assembleDebug --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache
     - name: Upload Debug APK
@@ -62,3 +64,23 @@ jobs:
       with:
         name: app-debug
         path: android/app/build/outputs/apk/debug/*.apk
+
+    # Release APK (signed with committed keystore)
+    - name: Decode Keystore
+      run: |
+        base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
+    - name: Build Release APK
+      working-directory: ./android
+      run: |
+        ./gradlew assembleRelease \
+          --init-script ../init.gradle \
+          --no-daemon --no-parallel --no-build-cache \
+          -Pandroid.injected.signing.store.file=safetylink-release.keystore \
+          -Pandroid.injected.signing.store.password=SafetyLink2024! \
+          -Pandroid.injected.signing.key.alias=safetylink \
+          -Pandroid.injected.signing.key.password=SafetyLink2024!
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-signed
+        path: android/app/build/outputs/apk/release/*.apk
