@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "dev": "vite",
+    "build": "vite build",
     "cap:sync": "npx cap sync android",
     "branding": "node branding/generate-branding.cjs",
     "preview": "vite preview",
