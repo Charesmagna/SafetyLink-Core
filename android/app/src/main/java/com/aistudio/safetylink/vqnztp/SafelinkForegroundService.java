@@ -91,7 +91,7 @@ public class SafelinkForegroundService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "onStartCommand – promoting to foreground");
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID_ONGOING)
-            .setSmallIcon(R.drawable.ic_safetylink)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("SafetyLink Active")
             .setContentText("Service + Ghost Engine Running")
             .setStyle(new NotificationCompat.BigTextStyle()
