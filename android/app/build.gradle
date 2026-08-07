@@ -34,7 +34,7 @@ android {
             signingConfig signingConfigs.release
                         buildConfigField "String", "BACKEND_BASE_URL", '\"https://api.safetylink.app\"'
             
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
