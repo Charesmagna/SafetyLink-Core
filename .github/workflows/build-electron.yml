@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: org-console
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build React app
         working-directory: org-console
