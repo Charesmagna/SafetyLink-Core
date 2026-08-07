@@ -23,13 +23,10 @@ android {
     }
     signingConfigs {
         release {
-            def keystoreFile = file("safetylink.keystore")
-            if (keystoreFile.exists()) {
-                storeFile keystoreFile
-                storePassword "safetylink2026"
-                keyAlias "safetylink-alias"
-                keyPassword "safetylink2026"
-            }
+            storeFile file(project.findProperty("SAFETYLINK_STORE_FILE") ?: "safetylink-release.keystore")
+            storePassword project.findProperty("SAFETYLINK_STORE_PASSWORD") ?: "SafetyLink2024!"
+            keyAlias project.findProperty("SAFETYLINK_KEY_ALIAS") ?: "safetylink"
+            keyPassword project.findProperty("SAFETYLINK_KEY_PASSWORD") ?: "SafetyLink2024!"
         }
     }
     buildTypes {
