@@ -1018,7 +1018,7 @@ const App: React.FC = () => {
             onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
-            <source src="/media/Neon Power Logo Reveal_0p.mp4" type="video/mp4" />
+            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
           </video>
         </div>
       )}
