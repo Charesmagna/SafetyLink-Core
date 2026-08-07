@@ -58,15 +58,6 @@ jobs:
     - name: Decode keystore
       run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
 
-    - name: Write signing config to gradle.properties
-      run: |
-        cat >> android/gradle.properties << 'PROPS'
-        SAFETYLINK_STORE_FILE=safetylink-release.keystore
-        SAFETYLINK_STORE_PASSWORD=SafetyLink2024!
-        SAFETYLINK_KEY_ALIAS=safetylink
-        SAFETYLINK_KEY_PASSWORD=SafetyLink2024!
-        PROPS
-
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
@@ -88,7 +79,14 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
-      run: ./gradlew assembleRelease --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache
+      run: |
+        ./gradlew assembleRelease \
+          --init-script ../init.gradle \
+          --no-daemon --no-parallel --no-build-cache \
+          -PSAFETYLINK_STORE_FILE=safetylink-release.keystore \
+          -PSAFETYLINK_STORE_PASSWORD=SafetyLink2024! \
+          -PSAFETYLINK_KEY_ALIAS=safetylink \
+          -PSAFETYLINK_KEY_PASSWORD=SafetyLink2024!
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
