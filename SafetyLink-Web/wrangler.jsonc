@@ -1,0 +1,26 @@
+{
+  "name": "safetylink-web",
+  "main": "src/api/index.ts",
+  "compatibility_date": "2024-04-05",
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "safetylink-db",
+      "database_id": "REPLACE_ME_D1_ID"
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "safetylink.online",
+      "custom_domain": true
+    },
+    {
+      "pattern": "safetylink.online/*",
+      "custom_domain": true
+    }
+  ]
+}
