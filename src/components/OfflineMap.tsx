@@ -165,25 +165,27 @@ export const OfflineMap: React.FC = () => {
   const userLng = userLocation?.lng ?? 0;
 
   // Render tactical security incident icons relative to the user's active zone
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; 
-  };
+  const liveIncidents = React.useMemo(() => {
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371e3; // metres
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lon2-lon1) * Math.PI/180;
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c; 
+    };
 
-  const liveIncidents = [
-    { name: 'Patrol Alpha (Node 1)', lat: userLat + 0.005, lng: userLng + 0.005, status: 'SECURE' },
-    { name: 'Safe Zone Bravo (Node 2)', lat: userLat - 0.008, lng: userLng + 0.002, status: 'SECURE' },
-    { name: 'Responder Unit (Node 3)', lat: userLat + 0.002, lng: userLng - 0.007, status: 'DISPATCHED' },
-  ].map(inc => ({
-    ...inc,
-    distance: calculateDistance(userLat, userLng, inc.lat, inc.lng)
-  })).sort((a, b) => a.distance - b.distance);
+    return [
+      { name: 'Patrol Alpha (Node 1)', lat: userLat + 0.005, lng: userLng + 0.005, status: 'SECURE' },
+      { name: 'Safe Zone Bravo (Node 2)', lat: userLat - 0.008, lng: userLng + 0.002, status: 'SECURE' },
+      { name: 'Responder Unit (Node 3)', lat: userLat + 0.002, lng: userLng - 0.007, status: 'DISPATCHED' },
+    ].map(inc => ({
+      ...inc,
+      distance: calculateDistance(userLat, userLng, inc.lat, inc.lng)
+    })).sort((a, b) => a.distance - b.distance);
+  }, [userLat, userLng]);
 
   // Determine active focus coordinate based on HUD view controls
   const activeFocusCenter: [number, number] = 
