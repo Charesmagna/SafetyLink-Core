@@ -28,12 +28,13 @@ interface OrgData {
 interface Props {
   user: User;
   orgId: string;
+  orgName: string;
   onLogout: () => void;
 }
 
 type TabId = 'overview' | 'map' | 'users' | 'incidents';
 
-export default function Dashboard({ user, orgId, onLogout }: Props) {
+export default function Dashboard({ user, orgId, orgName, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [orgData, setOrgData] = useState<OrgData | null>(null);
   const [members, setMembers] = useState<OrgUser[]>([]);
@@ -75,7 +76,7 @@ export default function Dashboard({ user, orgId, onLogout }: Props) {
           <Shield className="w-6 h-6 text-sl-red" />
           <div>
             <h1 className="text-sm font-bold text-white">SafetyLink Org Console</h1>
-            <p className="text-xs text-slate-500">{orgData?.name || orgId} · {user.email}</p>
+            <p className="text-xs text-slate-500">{orgName || orgData?.name || orgId} · {user.email}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">

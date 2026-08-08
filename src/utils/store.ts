@@ -1,3 +1,4 @@
+import { firebaseLogin, firebaseRegisterUser, firebaseRegisterOrg } from '../services/FirebaseAuthService';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -867,6 +868,24 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Live)', `User: ${data.user.username}, Role: ${data.user.role}`);
       return { success: true, role: roleType };
     } catch (e) {
+      // Try Firebase Auth as fallback
+      try {
+        const emailToTry = username.includes('@') ? username : username;
+        if (emailToTry.includes('@') && password) {
+          const fbResult = await firebaseLogin(emailToTry, password);
+          if (fbResult.success) {
+            const isOrgAdmin = fbResult.role === 'Organization Administrator';
+            set({
+              currentUser: { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode } as any,
+              token: fbResult.uid || null,
+              currentOrg: isOrgAdmin && fbResult.orgCode ? { id: fbResult.orgCode, name: fbResult.orgName || fbResult.orgCode } as any : null,
+              superAdminActive: false
+            });
+            setStoredJSON('sl_jwt_token', fbResult.uid || null);
+            return { success: true, role: isOrgAdmin ? 'ORG' : 'USER' };
+          }
+        }
+      } catch (_fbErr) { /* fall through to offline vault */ }
       console.warn('Network unavailable. Falling back to local offline vault for Login.', e);
       const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
       const matchedUser = realUsers.find(u => u.username.toLowerCase() === normUsername);
