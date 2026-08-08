@@ -7,12 +7,13 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (!u) setOrgId(null);
+      if (!u) { setOrgId(null); setOrgName(''); }
       setLoading(false);
     });
     return unsub;
@@ -27,7 +28,16 @@ export default function App() {
     </div>
   );
 
-  if (!user || !orgId) return <LoginScreen onLogin={(u, id) => { setUser(u); setOrgId(id); }} />;
+  if (!user || !orgId) return (
+    <LoginScreen onLogin={(u, id, name) => { setUser(u); setOrgId(id); setOrgName(name); }} />
+  );
 
-  return <Dashboard user={user} orgId={orgId} onLogout={() => { auth.signOut(); setOrgId(null); }} />;
+  return (
+    <Dashboard
+      user={user}
+      orgId={orgId}
+      orgName={orgName}
+      onLogout={() => { auth.signOut(); setOrgId(null); setOrgName(''); }}
+    />
+  );
 }
