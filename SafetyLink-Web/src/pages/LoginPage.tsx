@@ -13,7 +13,7 @@ export default function LoginPage({ onLogin, onBack }: { onLogin: (token: string
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/login', { org_code: code, admin_password: password });
+      const res: any = await api.post('/login', { org_code: code, admin_password: password });
       onLogin(res.token, res.org_name, res.org_code);
     } catch (err: any) {
       setError(err.message || 'Login failed');

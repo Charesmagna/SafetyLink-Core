@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import { Shield, Users, Activity, Settings, LogOut, Map as MapIcon, X } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { Shield, Users, Activity, Settings, LogOut, Map as MapIcon,} from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
 import { User, PanicAlert, EventLog } from '../types';
@@ -18,11 +18,6 @@ const panicIcon = L.divIcon({
   iconSize: [24, 24], iconAnchor: [12, 12]
 });
 
-function RecenterMap({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => { map.setView(center, map.getZoom() || 13); }, [center]);
-  return null;
-}
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [view, setView] = useState<'map' | 'users' | 'events' | 'settings'>('map');
@@ -35,7 +30,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   const fetchData = async () => {
     try {
-      const [uRes, pRes, eRes] = await Promise.all([
+      const [uRes, pRes, eRes]: any = await Promise.all([
         api.get('/users'),
         api.get('/panic'),
         api.get('/events')

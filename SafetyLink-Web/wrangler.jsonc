@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "safetylink-db",
-      "database_id": "REPLACE_ME_D1_ID"
+      "database_id": "e2f71258-d89e-4909-aaca-51090bad0929"
     }
   ],
   "routes": [
@@ -19,7 +19,7 @@
       "custom_domain": true
     },
     {
-      "pattern": "safetylink.online/*",
+      "pattern": "www.safetylink.online",
       "custom_domain": true
     }
   ]
