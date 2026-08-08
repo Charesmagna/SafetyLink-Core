@@ -165,7 +165,25 @@ export const OfflineMap: React.FC = () => {
   const userLng = userLocation?.lng ?? 0;
 
   // Render tactical security incident icons relative to the user's active zone
-  const liveIncidents: any[] = [];
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; 
+  };
+
+  const liveIncidents = [
+    { name: 'Patrol Alpha (Node 1)', lat: userLat + 0.005, lng: userLng + 0.005, status: 'SECURE' },
+    { name: 'Safe Zone Bravo (Node 2)', lat: userLat - 0.008, lng: userLng + 0.002, status: 'SECURE' },
+    { name: 'Responder Unit (Node 3)', lat: userLat + 0.002, lng: userLng - 0.007, status: 'DISPATCHED' },
+  ].map(inc => ({
+    ...inc,
+    distance: calculateDistance(userLat, userLng, inc.lat, inc.lng)
+  })).sort((a, b) => a.distance - b.distance);
 
   // Determine active focus coordinate based on HUD view controls
   const activeFocusCenter: [number, number] = 
@@ -423,7 +441,7 @@ export const OfflineMap: React.FC = () => {
             <div key={idx} className="flex justify-between items-center p-3 bg-slate-950/40 border border-slate-900 rounded-2xl hover:border-slate-800 transition-colors">
               <div className="flex flex-col gap-0.5 text-left">
                 <span className="text-slate-200 font-bold text-[10px]">{incident.name}</span>
-                <span className="text-[8px] text-slate-500">GRID: {incident.lat.toFixed(4)}, {incident.lng.toFixed(4)}</span>
+                <span className="text-[8px] text-slate-500">GRID: {incident.lat.toFixed(4)}, {incident.lng.toFixed(4)} | DIST: {(incident.distance / 1000).toFixed(2)} km</span>
               </div>
               <span className={`px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider border ${
                 incident.status === 'ACTIVE' ? 'bg-red-950/20 border-red-500/20 text-red-400 animate-pulse' :
