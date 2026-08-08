@@ -12,6 +12,8 @@ export interface User {
 export interface PanicAlert {
   id: number;
   user_id: number;
+  name?: string;
+  phone?: string;
   latitude: number;
   longitude: number;
   status: string;
