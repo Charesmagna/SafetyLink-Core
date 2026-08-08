@@ -1,18 +1,17 @@
-name: Deploy Org Console to GitHub Pages
+name: Deploy to Cloudflare Pages (safetylink.online)
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,12 +28,9 @@ jobs:
         working-directory: org-console
         run: npm run build
 
-      - name: Add CNAME for custom domain
-        run: echo "safetylink.online" > org-console/dist/CNAME
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: org-console/dist
-          cname: safetylink.online
+          apiToken: cfat_tlHx1K8hOs4F2qIzQUSsc7CWGmudEORDrYc5DYcLa68f67f3
+          accountId: d089bef8b0b58c5d9506b512ec2f63dc
+          command: pages deploy org-console/dist --project-name=safetylink --branch=main --commit-dirty=true
