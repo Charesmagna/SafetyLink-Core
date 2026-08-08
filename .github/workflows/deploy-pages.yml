@@ -1,9 +1,14 @@
-name: Deploy Org Console to Netlify
+name: Deploy Org Console to GitHub Pages
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
@@ -24,10 +29,12 @@ jobs:
         working-directory: org-console
         run: npm run build
 
-      - name: Deploy to Netlify
-        uses: netlify/actions/cli@master
+      - name: Add CNAME for custom domain
+        run: echo "safetylink.online" > org-console/dist/CNAME
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          args: deploy --dir=org-console/dist --prod
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: org-console/dist
+          cname: safetylink.online
