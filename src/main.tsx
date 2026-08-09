@@ -7,16 +7,16 @@ import './styles/index.css'
 
 // Request background wake lock via cordova-plugin-powermanagement upon application boot
 const acquireWakeLock = () => {
-  const powerManagement = (window as any).powerManagement;
+  const powerManagement = (window as Record<string, any>).powerManagement;
   if (powerManagement) {
     powerManagement.acquire(
       () => console.log('[PowerManagement] Successfully acquired wake lock keep-alive'),
-      (err: any) => console.error('[PowerManagement] Failed to acquire wake lock:', err)
+      (err: unknown) => console.error('[PowerManagement] Failed to acquire wake lock:', err)
     );
     if (typeof powerManagement.setDimOn === 'function') {
       powerManagement.setDimOn(false,
         () => console.log('[PowerManagement] Disabled screen dimming successfully'),
-        (err: any) => console.warn('[PowerManagement] Could not set screen dimming off:', err)
+        (err: unknown) => console.warn('[PowerManagement] Could not set screen dimming off:', err)
       );
     }
   } else {
