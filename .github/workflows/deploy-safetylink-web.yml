@@ -29,6 +29,6 @@ jobs:
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: cfat_tlHx1K8hOs4F2qIzQUSsc7CWGmudEORDrYc5DYcLa68f67f3
+          apiToken: ${{ secrets.CF_PAGES_TOKEN }}
           accountId: d089bef8b0b58c5d9506b512ec2f63dc
           command: pages deploy safetylink-web/dist --project-name=safetylink-online --branch=main --commit-dirty=true
