@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Shield, Smartphone, Monitor, MapPin, Bell, Users, Download, ArrowRight, Zap, Lock, Radio, ChevronRight, Menu, X, CheckCircle } from 'lucide-react';
 
+import WebUserApp from './WebUserApp';
 const APK_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
 const EXE_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-OrgConsole-Setup-1.0.0.exe';
 
@@ -61,85 +62,78 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       </nav>
 
       {/* HERO */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center px-4 pt-20 hero-grid overflow-hidden">
+      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center px-4 pt-32 pb-20 hero-grid overflow-hidden">
         {/* Glows */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sl-red/4 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-blue-900/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-sl-red/3 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-sl-red/4 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-900/8 rounded-full blur-3xl" />
         </div>
-
-        <div className="relative max-w-5xl mx-auto text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-sl-red/10 border border-sl-red/20 text-sl-red text-xs font-bold px-4 py-2 rounded-full mb-8 uppercase tracking-widest">
-            <div className="w-2 h-2 bg-sl-red rounded-full animate-pulse" />
-            South Africa's Emergency Mesh Network
-          </div>
-
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="relative float">
-              <img src="/sl-icon.png" alt="SafetyLink" className="w-32 h-32 object-contain drop-shadow-2xl rounded-3xl"
-                onError={e => {
-                  (e.target as HTMLImageElement).style.display='none';
-                  const fb = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
-                  if (fb) fb.style.display='flex';
-                }} />
-              <div className="hidden w-32 h-32 items-center justify-center bg-sl-red/10 border-2 border-sl-red/30 rounded-3xl">
-                <Shield className="w-16 h-16 text-sl-red" />
-              </div>
-              <div className="absolute -inset-4 bg-sl-red/5 rounded-full blur-2xl" />
+        
+        <div className="relative w-full max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+          {/* Left Column: Text & CTA */}
+          <div className="text-center lg:text-left">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-sl-red/10 border border-sl-red/20 text-sl-red text-xs font-bold px-4 py-2 rounded-full mb-8 uppercase tracking-widest">
+              <div className="w-2 h-2 bg-sl-red rounded-full animate-pulse" />
+              South Africa's Emergency Mesh Network
             </div>
+            
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none mb-6">
+              <span className="gradient-text">Safety</span>
+              <span className="text-white">Link</span>
+            </h1>
+            
+            <p className="text-slate-400 text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+              Offline-capable, hyper-local emergency mesh network. One tap SOS. Live tracking. BLE keyfob support. Built for South African communities.
+            </p>
+            
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-slate-500 mb-12">
+              {['Works offline', 'BLE hardware support', 'Multi-org', 'Android 8+'].map(f => (
+                <span key={f} className="flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400" /> {f}
+                </span>
+              ))}
+            </div>
+            
+            {/* CTA buttons */}
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4 mb-6" id="download">
+              <a href={APK_URL}
+                className="group flex items-center gap-4 bg-sl-red hover:bg-red-600 text-white font-bold px-6 py-4 rounded-2xl transition-all hover:shadow-2xl hover:shadow-red-900/40 hover:-translate-y-0.5 w-full sm:w-auto justify-center">
+                <Smartphone className="w-5 h-5 flex-shrink-0" />
+                <div className="text-left">
+                  <div className="text-xs font-normal opacity-75">Download Android</div>
+                  <div className="text-sm">SafetyLink APK</div>
+                </div>
+                <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
+              </a>
+              
+              <a href={EXE_URL}
+                className="group flex items-center gap-4 bg-sl-card hover:bg-sl-border border border-sl-border text-white font-bold px-6 py-4 rounded-2xl transition-all hover:-translate-y-0.5 w-full sm:w-auto justify-center">
+                <Monitor className="w-5 h-5 flex-shrink-0" />
+                <div className="text-left">
+                  <div className="text-xs font-normal text-slate-400">Windows Desktop</div>
+                  <div className="text-sm">Org Console EXE</div>
+                </div>
+                <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
+              </a>
+              
+              <button onClick={onSignup}
+                className="group flex items-center gap-3 border border-sl-red/40 hover:border-sl-red text-sl-red hover:text-white hover:bg-sl-red font-bold px-6 py-4 rounded-2xl transition-all w-full sm:w-auto justify-center">
+                <Users className="w-5 h-5" />
+                Register Org
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+            <p className="text-slate-600 text-xs text-center lg:text-left">Enable "Install from unknown sources" on Android · Windows 10/11 required for EXE</p>
           </div>
-
-          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tight leading-none mb-6">
-            <span className="gradient-text">Safety</span>
-            <span className="text-white">Link</span>
-          </h1>
-
-          <p className="text-slate-400 text-lg sm:text-xl max-w-2xl mx-auto mb-4 leading-relaxed">
-            Offline-capable, hyper-local emergency mesh network. One tap SOS. Live tracking. BLE keyfob support. Built for South African communities.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500 mb-12">
-            {['Works offline', 'BLE hardware support', 'Multi-org', 'Android 8+'].map(f => (
-              <span key={f} className="flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400" /> {f}
-              </span>
-            ))}
+          
+          {/* Right Column: Web User App Frame Container */}
+          <div className="hidden lg:flex justify-center lg:justify-end perspective-[1000px] relative">
+             <div className="absolute inset-0 bg-sl-red/10 blur-[100px] rounded-full pointer-events-none" />
+             <div className="transform rotate-y-[-5deg] rotate-x-[5deg] hover:rotate-0 transition-transform duration-700 ease-out z-10 w-full max-w-[400px]">
+                <WebUserApp isEmbedded={true} />
+             </div>
           </div>
-
-          {/* CTA buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6" id="download">
-            <a href={APK_URL}
-              className="group flex items-center gap-4 bg-sl-red hover:bg-red-600 text-white font-bold px-8 py-4 rounded-2xl transition-all hover:shadow-2xl hover:shadow-red-900/40 hover:-translate-y-0.5 w-full sm:w-auto justify-center">
-              <Smartphone className="w-5 h-5 flex-shrink-0" />
-              <div className="text-left">
-                <div className="text-xs font-normal opacity-75">Download for Android</div>
-                <div className="text-base">SafetyLink APK</div>
-              </div>
-              <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
-            </a>
-
-            <a href={EXE_URL}
-              className="group flex items-center gap-4 bg-sl-card hover:bg-sl-border border border-sl-border text-white font-bold px-8 py-4 rounded-2xl transition-all hover:-translate-y-0.5 w-full sm:w-auto justify-center">
-              <Monitor className="w-5 h-5 flex-shrink-0" />
-              <div className="text-left">
-                <div className="text-xs font-normal text-slate-400">Windows Desktop App</div>
-                <div className="text-base">Org Console EXE</div>
-              </div>
-              <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
-            </a>
-
-            <button onClick={onSignup}
-              className="group flex items-center gap-3 border border-sl-red/40 hover:border-sl-red text-sl-red hover:text-white hover:bg-sl-red font-bold px-8 py-4 rounded-2xl transition-all w-full sm:w-auto justify-center">
-              <Users className="w-5 h-5" />
-              Register Your Organisation
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </div>
-
-          <p className="text-slate-600 text-xs">Enable "Install from unknown sources" on Android · Windows 10/11 required for EXE</p>
         </div>
       </section>
 

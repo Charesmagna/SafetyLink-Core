@@ -4,7 +4,7 @@ import { Shield, MapPin, Users, Settings, Power, Bell, ArrowLeft } from 'lucide-
 type Tab = 'home' | 'map' | 'contacts' | 'settings';
 type Status = 'safe' | 'warning' | 'danger';
 
-export default function WebUserApp({ onBack }: { onBack: () => void }) {
+export default function WebUserApp({ onBack, isEmbedded = false }: { onBack?: () => void, isEmbedded?: boolean }) {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [status, setStatus] = useState<Status>('safe');
   const [sosActive, setSosActive] = useState(false);
@@ -27,17 +27,19 @@ export default function WebUserApp({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#050505] flex items-center justify-center font-sans text-white sm:py-8 sm:px-4">
+    <div className={`flex items-center justify-center font-sans text-white w-full max-w-[400px] mx-auto ${isEmbedded ? '' : 'min-h-[100dvh]'}`}>
       {/* App Container */}
-      <div className="w-full h-[100dvh] sm:max-w-[400px] sm:h-[800px] sm:border sm:border-white/10 sm:rounded-[40px] bg-[#0a0a0a] relative overflow-hidden flex flex-col shadow-2xl sm:shadow-black/50">
+      <div className={`w-full ${isEmbedded ? 'h-[700px]' : 'h-[100dvh] sm:h-[800px]'} sm:max-w-[400px] sm:border sm:border-white/10 sm:rounded-[40px] bg-[#0a0a0a] relative overflow-hidden flex flex-col shadow-2xl sm:shadow-black/50 ${isEmbedded ? 'rounded-[40px]' : ''}`}>
         
         {/* Header Area */}
         <header className="px-6 pt-12 pb-4 flex items-center justify-between z-10 shrink-0 bg-[#0a0a0a]">
           <div className="flex items-center gap-3">
-            <button onClick={onBack} className="p-2 -ml-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
+            {!isEmbedded && onBack && (
+              <button onClick={onBack} className="p-2 -ml-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:text-white transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div className={!isEmbedded && onBack ? '' : 'ml-2'}>
               <h1 className="font-bold text-lg tracking-tight">SafetyLink Web</h1>
               <p className="text-xs text-emerald-400 font-mono">Live Node Active</p>
             </div>
