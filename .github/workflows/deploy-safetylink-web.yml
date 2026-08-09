@@ -1,0 +1,34 @@
+name: Deploy safetylink.online
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'safetylink-web/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: safetylink-web
+        run: npm install
+
+      - name: Build
+        working-directory: safetylink-web
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: cfat_tlHx1K8hOs4F2qIzQUSsc7CWGmudEORDrYc5DYcLa68f67f3
+          accountId: d089bef8b0b58c5d9506b512ec2f63dc
+          command: pages deploy safetylink-web/dist --project-name=safetylink-online --branch=main --commit-dirty=true
