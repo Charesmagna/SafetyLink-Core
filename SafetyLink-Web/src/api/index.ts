@@ -8,6 +8,7 @@ import usersRoute from './routes/users';
 import locationRoute from './routes/location';
 import panicRoute from './routes/panic';
 import eventsRoute from './routes/events';
+import routingRoute from './routes/routing';
 
 type Bindings = {
   DB: D1Database;
@@ -51,5 +52,6 @@ app.route('/api/users', usersRoute);
 app.route('/api/location', locationRoute);
 app.route('/api/panic', panicRoute);
 app.route('/api/events', eventsRoute);
+app.route('/api/routing', routingRoute);
 
 export default app;
