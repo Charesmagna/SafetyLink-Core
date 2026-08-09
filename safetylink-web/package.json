@@ -13,7 +13,6 @@
     "hono": "^4.6.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^4.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.483.0",
     "motion": "^12.0.0",
@@ -21,7 +20,6 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",
-    "@types/leaflet": "^1.9.14",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
