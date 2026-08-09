@@ -4,7 +4,7 @@ import { Shield, MapPin, Users, Settings, Power, Bell, ArrowLeft } from 'lucide-
 type Tab = 'home' | 'map' | 'contacts' | 'settings';
 type Status = 'safe' | 'warning' | 'danger';
 
-export default function WebUserApp({ onBack, isEmbedded = false }: { onBack?: () => void, isEmbedded?: boolean }) {
+export default function WebUserApp({ onBack, isEmbedded = false, onLogin }: { onBack?: () => void, isEmbedded?: boolean, onLogin?: () => void }) {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [status, setStatus] = useState<Status>('safe');
   const [sosActive, setSosActive] = useState(false);
@@ -27,9 +27,9 @@ export default function WebUserApp({ onBack, isEmbedded = false }: { onBack?: ()
   };
 
   return (
-    <div className={`flex items-center justify-center font-sans text-white w-full max-w-[400px] mx-auto ${isEmbedded ? '' : 'min-h-[100dvh]'}`}>
+    <div className={`flex items-center justify-center font-sans text-white w-full max-w-md mx-auto ${isEmbedded ? '' : 'min-h-[100dvh]'}`}>
       {/* App Container */}
-      <div className={`w-full ${isEmbedded ? 'h-[700px]' : 'h-[100dvh] sm:h-[800px]'} sm:max-w-[400px] sm:border sm:border-white/10 sm:rounded-[40px] bg-[#0a0a0a] relative overflow-hidden flex flex-col shadow-2xl sm:shadow-black/50 ${isEmbedded ? 'rounded-[40px]' : ''}`}>
+      <div className={`w-full ${isEmbedded ? 'h-[700px] rounded-[40px]' : 'h-[100dvh]'} sm:border-x sm:border-white/10 bg-[#0a0a0a] relative overflow-hidden flex flex-col sm:shadow-2xl sm:shadow-black/50`}>
         
         {/* Header Area */}
         <header className="px-6 pt-12 pb-4 flex items-center justify-between z-10 shrink-0 bg-[#0a0a0a]">
@@ -133,19 +133,25 @@ export default function WebUserApp({ onBack, isEmbedded = false }: { onBack?: ()
             {activeTab === 'settings' && (
               <div className="px-6 py-4">
                 <h2 className="text-2xl font-bold mb-6 tracking-tight">Settings</h2>
-                <div className="space-y-2">
+                <div className="space-y-2 mb-6">
                   {['Account Details', 'Emergency Contacts', 'Location Permissions', 'Notification Preferences'].map(s => (
                     <button key={s} className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl text-left hover:bg-white/10 transition-colors">
                       <span className="font-medium text-white/90">{s}</span>
                     </button>
                   ))}
                 </div>
+                
+                {onLogin && (
+                  <button onClick={onLogin} className="w-full flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-left hover:bg-emerald-500/20 transition-colors">
+                    <span className="font-medium text-emerald-400">Organisation Console Login</span>
+                  </button>
+                )}
               </div>
             )}
         </main>
 
         {/* Bottom Navigation */}
-        <nav className="absolute bottom-0 w-full bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10 pb-6 pt-2 px-6 flex justify-between items-center z-20 h-24 sm:rounded-b-[40px]">
+        <nav className={`absolute bottom-0 w-full bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10 pb-6 pt-2 px-6 flex justify-between items-center z-20 h-24 ${isEmbedded ? 'rounded-b-[40px]' : ''}`}>
           {[
             { id: 'home', icon: Shield, label: 'Panic' },
             { id: 'map', icon: MapPin, label: 'Map' },

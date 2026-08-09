@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import WebUserApp from './pages/WebUserApp';
@@ -14,7 +13,7 @@ export interface Session {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('landing');
+  const [page, setPage] = useState<Page>('webapp');
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
@@ -23,25 +22,24 @@ export default function App() {
     if (stored) {
       try { setSession(JSON.parse(stored)); } catch (_) {}
     }
+
     if (path === '/login') setPage('login');
     else if (path === '/signup') setPage('signup');
     else if (path === '/dashboard') setPage('dashboard');
-    else if (path === '/app') setPage('webapp');
-    else setPage('landing');
+    else setPage('webapp');
 
     window.onpopstate = () => {
       const p = window.location.pathname;
       if (p === '/login') setPage('login');
       else if (p === '/signup') setPage('signup');
       else if (p === '/dashboard') setPage('dashboard');
-      else if (p === '/app') setPage('webapp');
-      else setPage('landing');
+      else setPage('webapp');
     };
   }, []);
 
   const nav = (p: Page) => {
     setPage(p);
-    window.history.pushState({}, '', p === 'landing' ? '/' : `/${p}`);
+    window.history.pushState({}, '', p === 'webapp' ? '/' : `/${p}`);
   };
 
   const login = (s: Session) => {
@@ -53,7 +51,7 @@ export default function App() {
   const logout = () => {
     setSession(null);
     localStorage.removeItem('sl_session');
-    nav('landing');
+    nav('webapp');
   };
 
   if (page === 'dashboard') {
@@ -62,12 +60,12 @@ export default function App() {
   }
 
   if (page === 'webapp') {
-    return <WebUserApp onBack={() => nav('landing')} />;
+    return <WebUserApp onLogin={() => nav('login')} />;
   }
 
   if (page === 'login' || page === 'signup') {
-    return <Login mode={page} onLogin={login} onBack={() => nav('landing')} onSwitch={(m) => nav(m)} />;
+    return <Login mode={page} onLogin={login} onBack={() => nav('webapp')} onSwitch={(m) => nav(m)} />;
   }
 
-  return <Landing onLogin={() => nav('login')} onSignup={() => nav('signup')} onLaunchWeb={() => nav('webapp')} />;
+  return <WebUserApp onLogin={() => nav('login')} />;
 }
