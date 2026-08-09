@@ -9,6 +9,7 @@ import locationRoute from './routes/location';
 import panicRoute from './routes/panic';
 import eventsRoute from './routes/events';
 import routingRoute from './routes/routing';
+import syncRoute from './routes/sync';
 
 type Bindings = {
   DB: D1Database;
@@ -37,7 +38,7 @@ async function authMiddleware(c: any, next: any) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const token = authHeader.split(' ')[1];
-  const payload = verifyToken(token);
+  const payload = await verifyToken(token);
   if (!payload) {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
@@ -53,5 +54,6 @@ app.route('/api/location', locationRoute);
 app.route('/api/panic', panicRoute);
 app.route('/api/events', eventsRoute);
 app.route('/api/routing', routingRoute);
+app.route('/api/sync', syncRoute);
 
 export default app;
