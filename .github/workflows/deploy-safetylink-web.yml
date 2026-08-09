@@ -30,5 +30,3 @@ jobs:
           apiToken: ${{ secrets.CF_PAGES_TOKEN }}
           accountId: d089bef8b0b58c5d9506b512ec2f63dc
           command: pages deploy safetylink-web/dist --project-name=safetylink-online --branch=main --commit-dirty=true
-          preCommands: |
-            wrangler pages project create safetylink-online --production-branch=main 2>/dev/null || true
