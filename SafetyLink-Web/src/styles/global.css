@@ -21,3 +21,32 @@ html, body, #root {
   background: #1e293b;
   color: #f8fafc;
 }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Custom Popup Overrides */
+.custom-popup .leaflet-popup-content-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.custom-popup .leaflet-popup-tip-container {
+  display: none !important;
+}
+.custom-popup .leaflet-popup-content {
+  margin: 0 !important;
+}
