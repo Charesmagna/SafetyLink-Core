@@ -27,9 +27,9 @@ export default function WebUserApp({ onBack, isEmbedded = false, onLogin }: { on
   };
 
   return (
-    <div className={`flex items-center justify-center font-sans text-white w-full max-w-md mx-auto ${isEmbedded ? '' : 'min-h-[100dvh]'}`}>
+    <div className={`flex items-center justify-center font-sans text-white w-full mx-auto ${isEmbedded ? 'max-w-md' : 'min-h-[100dvh] bg-[#020617] sm:py-8'}`}>
       {/* App Container */}
-      <div className={`w-full ${isEmbedded ? 'h-[700px] rounded-[40px]' : 'h-[100dvh]'} sm:border-x sm:border-white/10 bg-[#0a0a0a] relative overflow-hidden flex flex-col sm:shadow-2xl sm:shadow-black/50`}>
+      <div className={`w-full max-w-md ${isEmbedded ? 'h-[700px] rounded-[40px] border border-white/10' : 'h-[100dvh] sm:h-[850px] sm:max-h-[calc(100vh-4rem)] sm:rounded-[40px] sm:border-[8px] sm:border-gray-900'} bg-[#0a0a0a] relative overflow-hidden flex flex-col shadow-2xl shadow-black/50 mx-auto`}>
         
         {/* Header Area */}
         <header className="px-6 pt-12 pb-4 flex items-center justify-between z-10 shrink-0 bg-[#0a0a0a]">
@@ -151,7 +151,7 @@ export default function WebUserApp({ onBack, isEmbedded = false, onLogin }: { on
         </main>
 
         {/* Bottom Navigation */}
-        <nav className={`absolute bottom-0 w-full bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10 pb-6 pt-2 px-6 flex justify-between items-center z-20 h-24 ${isEmbedded ? 'rounded-b-[40px]' : ''}`}>
+        <nav className={`absolute bottom-0 w-full bg-[#0a0a0a]/90 backdrop-blur-xl border-t border-white/10 pb-6 pt-2 px-6 flex justify-between items-center z-20 h-24 ${isEmbedded ? 'rounded-b-[40px]' : 'sm:rounded-b-[32px]'}`}>
           {[
             { id: 'home', icon: Shield, label: 'Panic' },
             { id: 'map', icon: MapPin, label: 'Map' },
