@@ -4,7 +4,7 @@ import { Shield, Smartphone, Monitor, MapPin, Bell, Users, Download, ArrowRight,
 const APK_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
 const EXE_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-OrgConsole-Setup-1.0.0.exe';
 
-export default function Landing({ onLogin, onSignup }: { onLogin: () => void; onSignup: () => void }) {
+export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: () => void; onSignup: () => void; onLaunchWeb?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -218,9 +218,14 @@ export default function Landing({ onLogin, onSignup }: { onLogin: () => void; on
                   </div>
                 ))}
               </div>
-              <a href={APK_URL} className="flex items-center justify-center gap-2 bg-sl-red hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-all w-full">
-                <Download className="w-4 h-4" /> Download Android APK
-              </a>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a href={APK_URL} className="flex-1 flex items-center justify-center gap-2 bg-sl-red hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-all">
+                  <Download className="w-4 h-4" /> Android APK
+                </a>
+                <button onClick={onLaunchWeb} className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-sl-border text-white font-bold py-3.5 rounded-xl transition-all">
+                  <Smartphone className="w-4 h-4" /> Web App
+                </button>
+              </div>
             </div>
 
             <div className="bg-sl-card border border-sl-border rounded-3xl p-8">

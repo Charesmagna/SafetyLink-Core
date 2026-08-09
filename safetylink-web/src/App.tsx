@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import WebUserApp from './pages/WebUserApp';
 
-export type Page = 'landing' | 'login' | 'signup' | 'dashboard';
+export type Page = 'landing' | 'login' | 'signup' | 'dashboard' | 'webapp';
 
 export interface Session {
   token: string;
@@ -25,6 +26,7 @@ export default function App() {
     if (path === '/login') setPage('login');
     else if (path === '/signup') setPage('signup');
     else if (path === '/dashboard') setPage('dashboard');
+    else if (path === '/app') setPage('webapp');
     else setPage('landing');
 
     window.onpopstate = () => {
@@ -32,6 +34,7 @@ export default function App() {
       if (p === '/login') setPage('login');
       else if (p === '/signup') setPage('signup');
       else if (p === '/dashboard') setPage('dashboard');
+      else if (p === '/app') setPage('webapp');
       else setPage('landing');
     };
   }, []);
@@ -57,8 +60,14 @@ export default function App() {
     if (!session) { nav('login'); return null; }
     return <Dashboard session={session} onLogout={logout} />;
   }
+
+  if (page === 'webapp') {
+    return <WebUserApp onBack={() => nav('landing')} />;
+  }
+
   if (page === 'login' || page === 'signup') {
     return <Login mode={page} onLogin={login} onBack={() => nav('landing')} onSwitch={(m) => nav(m)} />;
   }
-  return <Landing onLogin={() => nav('login')} onSignup={() => nav('signup')} />;
+
+  return <Landing onLogin={() => nav('login')} onSignup={() => nav('signup')} onLaunchWeb={() => nav('webapp')} />;
 }
