@@ -176,7 +176,7 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
             ].map(f => (
               <div key={f.title} className="group bg-sl-card border border-sl-border rounded-2xl p-6 hover:border-sl-red/30 transition-all duration-300 card-glow cursor-default">
                 <div className={`${f.color} mb-4 w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl`}>
-                  {React.cloneElement(f.icon as React.ReactElement, { className: 'w-5 h-5' })}
+                  {React.cloneElement(f.icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
                 </div>
                 <h3 className="font-bold text-white mb-2 text-lg">{f.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
