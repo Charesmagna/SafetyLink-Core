@@ -1,13 +1,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env, Variables: { orgId: string, email: string } }>();
 
 app.use('*', cors({ origin: ['https://safetylink.online', 'http://localhost:5173'], credentials: true }));
 
