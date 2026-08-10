@@ -24,7 +24,7 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <img src="/sl-icon.png" alt="" className="w-9 h-9 rounded-xl"
+              <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="" className="w-9 h-9 rounded-xl"
                 onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-sl-dark" />
             </div>
@@ -65,6 +65,9 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       <section ref={heroRef} className="relative min-h-screen flex items-center justify-center px-4 pt-32 pb-20 hero-grid overflow-hidden">
         {/* Glows */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-20">
+            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
+          </video>
           <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-sl-red/4 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-900/8 rounded-full blur-3xl" />
         </div>
@@ -153,6 +156,15 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
           ))}
         </div>
       </section>
+      {/* PARTNERS */}
+      <section className="py-12 border-b border-sl-border bg-sl-dark/80">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6">Powered By Advanced AI & Real-time Technologies</div>
+          <div className="flex flex-wrap justify-center items-center gap-12 opacity-70 hover:opacity-100 transition-opacity">
+            <img src="/media/kleva-logo.png" alt="Kleva AI" className="h-8 object-contain" />
+          </div>
+        </div>
+      </section>
 
       {/* FEATURES */}
       <section id="features" className="py-24 px-4">
@@ -186,6 +198,21 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
         </div>
       </section>
 
+      {/* TECHNOLOGY ARCHITECTURE */}
+      <section id="technology" className="py-24 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">
+              <Shield className="w-3.5 h-3.5" /> For Developers & Tech Teams
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black mb-4">Safety Response System Architecture</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">Discover how our hyper-local mesh network routes emergency signals offline, synchronizes securely with Cloudflare Edge, and dispatches responders instantly.</p>
+          </div>
+          <div className="relative rounded-3xl overflow-hidden border border-sl-border shadow-2xl p-4 bg-sl-card">
+            <img src="/media/Safety_Response_System_Architecture.png" alt="Safety Response System Architecture Diagram" className="w-full h-auto rounded-xl" />
+          </div>
+        </div>
+      </section>
       {/* HOW IT WORKS */}
       <section id="how-it-works" className="py-24 px-4 bg-sl-navy/30 border-y border-sl-border">
         <div className="max-w-5xl mx-auto">
@@ -250,6 +277,10 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
               </div>
             </div>
           </div>
+          <div className="mt-16 text-center">
+            <h3 className="text-2xl font-bold mb-6">System Architecture Anatomy</h3>
+            <img src="/media/Emergency_System_Architecture_Anatomy.png" alt="Emergency System Architecture" className="w-full rounded-2xl border border-sl-border shadow-2xl" />
+          </div>
         </div>
       </section>
 
@@ -281,7 +312,7 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       <footer className="border-t border-sl-border py-10 px-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <img src="/sl-icon.png" alt="" className="w-8 h-8 rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+            <img src="/official_safetylink_logo.svg" alt="TM Media Solutions" className="w-24 h-auto rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             <div>
               <div className="font-bold text-sm">SafetyLink</div>
               <div className="text-slate-600 text-xs">TM Media Solutions · Gauteng, South Africa</div>
