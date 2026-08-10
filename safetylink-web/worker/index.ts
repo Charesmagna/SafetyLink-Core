@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
+import { createThingsBoardCustomer } from "../src/api/services/thingsboard";
 import type { D1Database } from '@cloudflare/workers-types';
 
 export interface Env {
@@ -63,7 +64,22 @@ app.post('/api/auth/register-org', async (c) => {
     ).bind(orgId, orgName, contactName, email.toLowerCase(), hashHex, now).run();
 
     const token = btoa(JSON.stringify({ orgId, email, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
-    return c.json({ token, orgId, orgName, email });
+    let tbCustomerId = null;
+    try {
+      tbCustomerId = await createThingsBoardCustomer(orgName, c.env);
+      if (tbCustomerId) {
+        console.log(`ThingsBoard Customer ID: ${tbCustomerId}`);
+      }
+    } catch (err) {
+      console.error("ThingsBoard provisioning error during registration", err);
+    }
+
+        const domain = email.split("@")[1];
+    const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    const qrData = encodeURIComponent(JSON.stringify({ orgId, tbCustomerId }));
+    const qrCodeUrl = `http://api.qrserver.com/v1/create-qr-code/?data=${qrData}&size=200x200`;
+    
+    return c.json({ token, orgId, orgName, email, tbCustomerId, logoUrl, qrCodeUrl });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : '';
     if (msg.includes('UNIQUE')) return c.json({ error: 'Email already registered' }, 409);
