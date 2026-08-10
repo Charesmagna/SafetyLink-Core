@@ -1,0 +1,26 @@
+{
+  "name": "safetylink-console",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.safetylink.console",
+    "productName": "SafetyLink Console",
+    "win": {
+      "target": "nsis"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Charesmagna",
+      "repo": "SafetyLink-Core"
+    }
+  }
+}
