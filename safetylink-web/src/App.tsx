@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import WebUserApp from './pages/WebUserApp';
+import Landing from './pages/Landing';
 
 export type Page = 'landing' | 'login' | 'signup' | 'dashboard' | 'webapp';
 
@@ -13,33 +14,41 @@ export interface Session {
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('webapp');
+  const [page, setPage] = useState<Page>('landing');
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     const path = window.location.pathname;
     const stored = localStorage.getItem('sl_session');
+    
     if (stored) {
       try { setSession(JSON.parse(stored)); } catch (_) {}
     }
-
+    
     if (path === '/login') setPage('login');
     else if (path === '/signup') setPage('signup');
     else if (path === '/dashboard') setPage('dashboard');
-    else setPage('webapp');
+    else if (path === '/app') setPage('webapp');
+    else setPage('landing');
 
     window.onpopstate = () => {
       const p = window.location.pathname;
       if (p === '/login') setPage('login');
       else if (p === '/signup') setPage('signup');
       else if (p === '/dashboard') setPage('dashboard');
-      else setPage('webapp');
+      else if (p === '/app') setPage('webapp');
+      else setPage('landing');
     };
   }, []);
 
   const nav = (p: Page) => {
     setPage(p);
-    window.history.pushState({}, '', p === 'webapp' ? '/' : `/${p}`);
+    let route = '/';
+    if (p === 'login') route = '/login';
+    else if (p === 'signup') route = '/signup';
+    else if (p === 'dashboard') route = '/dashboard';
+    else if (p === 'webapp') route = '/app';
+    window.history.pushState({}, '', route);
   };
 
   const login = (s: Session) => {
@@ -51,7 +60,7 @@ export default function App() {
   const logout = () => {
     setSession(null);
     localStorage.removeItem('sl_session');
-    nav('webapp');
+    nav('landing');
   };
 
   if (page === 'dashboard') {
@@ -60,12 +69,13 @@ export default function App() {
   }
 
   if (page === 'webapp') {
-    return <WebUserApp onLogin={() => nav('login')} />;
+    return <WebUserApp onBack={() => nav('landing')} onLogin={() => nav('login')} />;
   }
 
   if (page === 'login' || page === 'signup') {
-    return <Login mode={page} onLogin={login} onBack={() => nav('webapp')} onSwitch={(m) => nav(m)} />;
+    return <Login mode={page} onLogin={login} onBack={() => nav('landing')} onSwitch={(m) => nav(m)} />;
   }
 
-  return <WebUserApp onLogin={() => nav('login')} />;
+  // Default is landing
+  return <Landing onLogin={() => nav('login')} onSignup={() => nav('signup')} onLaunchWeb={() => nav('webapp')} />;
 }
