@@ -53,7 +53,37 @@ const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
+const TrialLockOverlay = () => (
+  <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6">
+    <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-2xl p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]">
+      <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h1 className="text-3xl font-black mb-4 tracking-tight">System Locked</h1>
+      <p className="text-slate-300 text-lg mb-8 leading-relaxed">
+        Your 30-day SafetyLink trial has concluded. The system has automatically locked your organization's access.
+      </p>
+      <div className="bg-black/40 p-4 rounded-xl text-sm text-slate-400 font-mono mb-8">
+        ERROR CODE: TRIAL_EXPIRED
+      </div>
+      <a href="mailto:sales@safetylink.online" className="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-xl transition-colors w-full">
+        Contact Sales to Unlock
+      </a>
+    </div>
+  </div>
+);
+
 const App: React.FC = () => {
+  const [trialExpired, setTrialExpired] = useState(false);
+  
+  useEffect(() => {
+    const handleTrialExpired = () => setTrialExpired(true);
+    window.addEventListener('trial_expired', handleTrialExpired);
+    return () => window.removeEventListener('trial_expired', handleTrialExpired);
+  }, []);
+
   const [isSosActive, setIsSosActive] = useState(false);
 
   // The custom hook catches the Native Kotlin BLE Broadcast
@@ -1007,6 +1037,7 @@ const App: React.FC = () => {
 
   return (
     <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      {trialExpired && <TrialLockOverlay />}
 
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (

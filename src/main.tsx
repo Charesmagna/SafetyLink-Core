@@ -6,6 +6,22 @@ import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import './styles/index.css'
 
+// Global Fetch Interceptor for Trial Lock
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  try {
+    const clone = response.clone();
+    const data = await clone.json();
+    if (data && data.code === 'TRIAL_EXPIRED') {
+      window.dispatchEvent(new Event('trial_expired'));
+    }
+  } catch (e) {
+    // Ignore JSON parse errors for non-JSON responses
+  }
+  return response;
+};
+
 const initOneSignal = async () => {
   try {
     await OneSignal.init({

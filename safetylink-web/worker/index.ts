@@ -109,9 +109,21 @@ app.post('/api/auth/login', async (c) => {
   if (!org || org.password_hash !== hashHex)
     return c.json({ error: 'Invalid organisation ID, email, or password' }, 401);
 
+  if (await checkTrialExpired(c.env.DB, org.id)) {
+    return c.json({ error: 'Trial expired. Please contact sales.', code: 'TRIAL_EXPIRED' }, 403);
+  }
+
   const token = btoa(JSON.stringify({ orgId: org.id, email, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
   return c.json({ token, orgId: org.id, orgName: org.name, email });
 });
+
+// ─── Trial Enforcement Helper ──────────────────────────────────────────────────
+const checkTrialExpired = async (db: any, orgId: string) => {
+  const org = await db.prepare(`SELECT created_at FROM organisations WHERE id = ?`).bind(orgId).first();
+  if (!org) return false;
+  const trialDuration = 29 * 24 * 60 * 60 * 1000; // 29 days
+  return Date.now() - org.created_at > trialDuration;
+};
 
 // ─── Auth middleware ───────────────────────────────────────────────────────────
 
@@ -121,6 +133,11 @@ const authMiddleware = async (c: any, next: any) => {
   try {
     const payload = JSON.parse(atob(auth.slice(7)));
     if (payload.exp < Date.now()) return c.json({ error: 'Token expired' }, 401);
+
+    if (await checkTrialExpired(c.env.DB, payload.orgId)) {
+      return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
+    }
+
     c.set('orgId', payload.orgId);
     c.set('email', payload.email);
     await next();
@@ -169,6 +186,11 @@ app.post('/api/user/heartbeat', async (c) => {
     userId: string; orgId: string; lat?: number; lng?: number; sosActive?: boolean;
   }>();
   if (!userId || !orgId) return c.json({ error: 'Missing fields' }, 400);
+
+  if (await checkTrialExpired(c.env.DB, orgId)) {
+    return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
+  }
+
   const now = Date.now();
   await c.env.DB.prepare(
     `UPDATE users SET last_seen = ?, lat = ?, lng = ?, sos_active = ? WHERE id = ? AND org_id = ?`
@@ -181,6 +203,11 @@ app.post('/api/user/sos', async (c) => {
     userId: string; orgId: string; lat?: number; lng?: number;
   }>();
   if (!userId || !orgId) return c.json({ error: 'Missing fields' }, 400);
+
+  if (await checkTrialExpired(c.env.DB, orgId)) {
+    return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
+  }
+
   const now = Date.now();
   await c.env.DB.prepare(
     `UPDATE users SET sos_active = 1, last_seen = ?, lat = ?, lng = ? WHERE id = ? AND org_id = ?`
@@ -290,6 +317,10 @@ app.post('/api/sync/offline', async (c) => {
 
   if (!orgId || !payload || !Array.isArray(payload)) {
     return c.json({ error: 'Missing fields or invalid payload' }, 400);
+  }
+
+  if (await checkTrialExpired(c.env.DB, orgId)) {
+    return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
   }
 
   const failedItems = [];
