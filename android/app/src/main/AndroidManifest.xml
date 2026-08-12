@@ -75,10 +75,10 @@
         </provider>
 
         
-        <service android:name=".SafelinkForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location|microphone" />
+        <service android:name=".SafelinkForegroundService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|location|microphone|specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Safety Monitoring" /></service>
 
         
-        <service android:name=".PanicService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice" />
+        <service android:name=".PanicService" android:enabled="true" android:exported="false" android:foregroundServiceType="connectedDevice|specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Emergency Dispatch" /></service>
 
         
         <receiver android:name=".PanicWidgetProvider" android:label="SafetyLink Instant SOS" android:exported="true">
