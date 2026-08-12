@@ -16,11 +16,10 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-slate-900 shadow-xl py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-slate-900" />
-            </div>
+            <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-10 h-10 object-contain" />
             <span className={`text-2xl font-black tracking-tight ${scrolled ? 'text-white' : 'text-white'}`}>SafetyLink</span>
           </div>
+
           
           <div className="hidden md:flex items-center gap-8">
             {['How It Works', 'Solutions', 'Pricing', 'Support'].map(link => (
@@ -38,11 +37,15 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       {/* HERO */}
       <section className="relative pt-32 pb-48 lg:pt-48 lg:pb-64 overflow-hidden bg-slate-900">
         <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=2940&auto=format&fit=crop" 
-            alt="Woman hiking" 
-            className="w-full h-full object-cover object-center opacity-60"
-          />
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+            className="w-full h-full object-cover object-center opacity-40"
+          >
+            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
+          </video>
           <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
         </div>
 

@@ -55,7 +55,7 @@ export default function SuperAdminDashboard({ session, onLogout }: DashboardProp
       <aside className="w-64 bg-[#111c2a] border-r border-slate-800 flex flex-col">
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3 text-red-500 mb-2">
-            <ShieldAlert className="w-8 h-8" />
+            <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink" className="w-8 h-8 object-contain" />
             <h1 className="text-xl font-black">SuperAdmin</h1>
           </div>
           <p className="text-[10px] text-slate-500 font-mono">GLOBAL COMMAND CENTER</p>

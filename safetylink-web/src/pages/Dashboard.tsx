@@ -25,9 +25,7 @@ export default function Dashboard({ session, onLogout }: DashboardProps) {
       {/* SIDEBAR */}
       <aside className="w-[280px] bg-[#111c2a] border-r border-slate-700/50 flex flex-col shrink-0 h-screen overflow-y-auto">
         <div className="p-6 pb-8 border-b border-slate-700/30 flex items-center gap-3">
-          <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center">
-            <ShieldAlert className="w-8 h-8 text-teal-400" />
-          </div>
+          <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink" className="w-12 h-12 object-contain" />
           <div>
             <h1 className="text-xl font-black text-white leading-none tracking-tight">SafetyLink</h1>
             <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Professional Security Solutions</p>

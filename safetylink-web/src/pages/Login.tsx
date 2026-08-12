@@ -40,15 +40,28 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-sl-dark hero-grid flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen bg-sl-dark flex items-center justify-center p-4 overflow-hidden">
+      {/* Background Video */}
+      <div className="absolute inset-0 z-0">
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="w-full h-full object-cover object-center opacity-30"
+        >
+          <source src="/media/safetylink_startup.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md">
         <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-white text-sm mb-8 transition-colors group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" /> Back to home
         </button>
 
         <div className="text-center mb-8">
-          <img src="/sl-icon.png" alt="" className="w-16 h-16 rounded-2xl mx-auto mb-4"
-            onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+          <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-16 h-16 mx-auto mb-4 object-contain" />
           <h1 className="text-2xl font-black text-white">SafetyLink</h1>
           <p className="text-slate-500 text-sm mt-1">Organisation Portal</p>
         </div>
