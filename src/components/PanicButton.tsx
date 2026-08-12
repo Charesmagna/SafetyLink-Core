@@ -3,7 +3,7 @@ import { NativeDispatchService } from '../services/NativeDispatchService';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX, Video, EyeOff } from 'lucide-react';
+import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX, Video } from 'lucide-react';
 import { DistressVideoStream } from './DistressVideoStream';
 
 
