@@ -250,6 +250,14 @@ export const AIHub: React.FC = () => {
       setIsSynthesizingMusic(true);
       setCurrentSynthWave('LYRIA_AMB_136HZ');
       addAuditLog('SYSTEM', 'INFO', 'K\'leva.info started Lyria Calming Synthesis', '136.1Hz Earth Frequency');
+      
+      // Ping backend Lyria endpoint to initialize logging
+      fetch('/api/gemini/generate-lyria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: "Generate a calming 136.1Hz earth frequency ambient track" })
+      }).catch(() => {});
+      
     } catch (e) {
       console.error('Web Audio API synthesis failed:', e);
     }

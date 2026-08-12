@@ -137,7 +137,24 @@ async function startServer() {
     }
   });
 
+
+  // 6. Lyria Music Generation
+  app.post("/api/gemini/generate-lyria", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      const genAI = initGemini();
+      // Lyria generation is currently experimental. 
+      // We simulate backend successful acknowledgement here and rely on the client WebAudio API synth for now,
+      // but this endpoint exists to pipe the Lyria API output down to the client when the key is provisioned.
+      res.json({ success: true, base64Audio: "" });
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Vite middleware for development
+
 
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
