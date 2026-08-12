@@ -1,330 +1,193 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Smartphone, Monitor, MapPin, Bell, Users, Download, ArrowRight, Zap, Lock, Radio, ChevronRight, Menu, X, CheckCircle } from 'lucide-react';
-
-import WebUserApp from './WebUserApp';
-const APK_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
-const EXE_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-OrgConsole-Setup-1.0.0.exe';
+import React, { useState, useEffect } from 'react';
+import { Shield, Headphones, MapPin, PersonStanding, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
 
 export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: () => void; onSignup: () => void; onLaunchWeb?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 60);
+    const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', fn);
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
   return (
-    <div className="min-h-screen bg-sl-dark text-white">
-
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* NAV */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${scrolled ? 'bg-sl-navy/95 backdrop-blur-xl border-b border-sl-border shadow-2xl' : 'bg-transparent'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="" className="w-9 h-9 rounded-xl"
-                onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-sl-dark" />
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-slate-900 shadow-xl py-3' : 'bg-transparent py-5'}`}>
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+              <Shield className="w-6 h-6 text-slate-900" />
             </div>
-            <span className="font-black text-xl tracking-tight">SafetyLink</span>
+            <span className={`text-2xl font-black tracking-tight ${scrolled ? 'text-white' : 'text-white'}`}>SafetyLink</span>
           </div>
-
-          {/* Desktop nav */}
+          
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-slate-400 hover:text-white text-sm transition-colors">Features</a>
-            <a href="#how-it-works" className="text-slate-400 hover:text-white text-sm transition-colors">How it works</a>
-            <a href="#download" className="text-slate-400 hover:text-white text-sm transition-colors">Downloads</a>
-          </div>
-
-          <div className="hidden md:flex items-center gap-3">
-            <button onClick={onLogin} className="text-slate-300 hover:text-white text-sm px-4 py-2 rounded-lg hover:bg-white/5 transition-all">Sign In</button>
-            <button onClick={onSignup} className="bg-sl-red hover:bg-red-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all hover:shadow-lg hover:shadow-red-900/30">
-              Register Organisation
+            {['How It Works', 'Solutions', 'Pricing', 'Support'].map(link => (
+              <a key={link} href="#" className="text-sm font-medium text-white/90 hover:text-white transition-colors">
+                {link}
+              </a>
+            ))}
+            <button onClick={onSignup} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-6 py-2.5 rounded-md font-bold text-sm transition-colors">
+              Get Started
             </button>
           </div>
-
-          <button className="md:hidden text-slate-400" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
-
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="md:hidden bg-sl-navy border-t border-sl-border px-4 py-4 space-y-3">
-            <a href="#features" className="block text-slate-300 py-2" onClick={() => setMenuOpen(false)}>Features</a>
-            <a href="#download" className="block text-slate-300 py-2" onClick={() => setMenuOpen(false)}>Downloads</a>
-            <button onClick={() => { onLogin(); setMenuOpen(false); }} className="block w-full text-left text-slate-300 py-2">Sign In</button>
-            <button onClick={() => { onSignup(); setMenuOpen(false); }} className="w-full bg-sl-red text-white font-semibold py-3 rounded-xl">Register Organisation</button>
-          </div>
-        )}
       </nav>
 
       {/* HERO */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center px-4 pt-32 pb-20 hero-grid overflow-hidden">
-        {/* Glows */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-20">
-            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-sl-red/4 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-900/8 rounded-full blur-3xl" />
+      <section className="relative pt-32 pb-48 lg:pt-48 lg:pb-64 overflow-hidden bg-slate-900">
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=2940&auto=format&fit=crop" 
+            alt="Woman hiking" 
+            className="w-full h-full object-cover object-center opacity-60"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
         </div>
-        
-        <div className="relative w-full max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* Left Column: Text & CTA */}
-          <div className="text-center lg:text-left">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-sl-red/10 border border-sl-red/20 text-sl-red text-xs font-bold px-4 py-2 rounded-full mb-8 uppercase tracking-widest">
-              <div className="w-2 h-2 bg-sl-red rounded-full animate-pulse" />
-              South Africa's Emergency Mesh Network
-            </div>
-            
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-black tracking-tight leading-none mb-6">
-              <span className="gradient-text">Safety</span>
-              <span className="text-white">Link</span>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
+          <div className="max-w-2xl">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-6 uppercase">
+              Peace of mind,<br />always connected.
             </h1>
-            
-            <p className="text-slate-400 text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
-              Offline-capable, hyper-local emergency mesh network. One tap SOS. Live tracking. BLE keyfob support. Built for South African communities.
+            <p className="text-lg md:text-xl text-slate-200 mb-10 max-w-xl leading-relaxed">
+              Instant access to help, GPS location sharing, and emergency response for you and your loved ones. Explore our personal safety solutions today.
             </p>
-            
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-slate-500 mb-12">
-              {['Works offline', 'BLE hardware support', 'Multi-org', 'Android 8+'].map(f => (
-                <span key={f} className="flex items-center gap-1.5">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400" /> {f}
-                </span>
-              ))}
-            </div>
-            
-            {/* CTA buttons */}
-            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4 mb-6" id="download">
-              <a href={APK_URL}
-                className="group flex items-center gap-4 bg-sl-red hover:bg-red-600 text-white font-bold px-6 py-4 rounded-2xl transition-all hover:shadow-2xl hover:shadow-red-900/40 hover:-translate-y-0.5 w-full sm:w-auto justify-center">
-                <Smartphone className="w-5 h-5 flex-shrink-0" />
-                <div className="text-left">
-                  <div className="text-xs font-normal opacity-75">Download Android</div>
-                  <div className="text-sm">SafetyLink APK</div>
-                </div>
-                <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
-              </a>
-              
-              <a href={EXE_URL}
-                className="group flex items-center gap-4 bg-sl-card hover:bg-sl-border border border-sl-border text-white font-bold px-6 py-4 rounded-2xl transition-all hover:-translate-y-0.5 w-full sm:w-auto justify-center">
-                <Monitor className="w-5 h-5 flex-shrink-0" />
-                <div className="text-left">
-                  <div className="text-xs font-normal text-slate-400">Windows Desktop</div>
-                  <div className="text-sm">Org Console EXE</div>
-                </div>
-                <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
-              </a>
-              
-              <button onClick={onSignup}
-                className="group flex items-center gap-3 border border-sl-red/40 hover:border-sl-red text-sl-red hover:text-white hover:bg-sl-red font-bold px-6 py-4 rounded-2xl transition-all w-full sm:w-auto justify-center">
-                <Users className="w-5 h-5" />
-                Register Org
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-            <p className="text-slate-600 text-xs text-center lg:text-left">Enable "Install from unknown sources" on Android · Windows 10/11 required for EXE</p>
-          </div>
-          
-          {/* Right Column: Web User App Frame Container */}
-          <div className="hidden lg:flex justify-center lg:justify-end perspective-[1000px] relative">
-             <div className="absolute inset-0 bg-sl-red/10 blur-[100px] rounded-full pointer-events-none" />
-             <div className="transform rotate-y-[-5deg] rotate-x-[5deg] hover:rotate-0 transition-transform duration-700 ease-out z-10 w-full max-w-[400px]">
-                <WebUserApp isEmbedded={true} />
-             </div>
+            <button onClick={onLaunchWeb} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-4 rounded-md font-bold text-lg transition-all hover:-translate-y-0.5 shadow-lg shadow-orange-500/30">
+              Shop SafetyLink Devices
+            </button>
           </div>
         </div>
       </section>
 
-      {/* STATS */}
-      <section className="py-16 border-y border-sl-border bg-sl-navy/50">
-        <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8">
+      {/* FEATURES FLOATING CARD */}
+      <section className="relative z-20 -mt-24 md:-mt-32 max-w-7xl mx-auto px-6 mb-24">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 grid grid-cols-1 md:grid-cols-3 gap-12 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+          
+          <div className="flex flex-col items-center text-center pt-8 md:pt-0">
+            <div className="w-16 h-16 mb-6 flex items-center justify-center">
+              <Headphones className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xl font-bold mb-4">24/7 Monitoring</h3>
+            <p className="text-slate-600 leading-relaxed">
+              Our dedicated response team is always available when you press the SOS button.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center text-center pt-8 md:pt-0 md:px-8">
+            <div className="w-16 h-16 mb-6 flex items-center justify-center">
+              <MapPin className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xl font-bold mb-4">GPS Tracking</h3>
+            <p className="text-slate-600 leading-relaxed">
+              Real-time location sharing with designated contacts in an emergency.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center text-center pt-8 md:pt-0 md:pl-8">
+            <div className="w-16 h-16 mb-6 flex items-center justify-center">
+              <PersonStanding className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xl font-bold mb-4">Falls Detection</h3>
+            <p className="text-slate-600 leading-relaxed">
+              Automatic alerts sent if a fall is detected (on select devices).
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="py-16 max-w-7xl mx-auto px-6 mb-24">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            { val: '< 1s', label: 'SOS trigger time' },
-            { val: '100m+', label: 'BLE mesh range' },
-            { val: '5', label: 'iTag devices / user' },
-            { val: '100%', label: 'Offline capable' },
-          ].map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-3xl font-black text-white mb-1">{s.val}</div>
-              <div className="text-slate-500 text-sm">{s.label}</div>
+            { name: "Sarah J.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop" },
+            { name: "Michael R.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop" },
+            { name: "Elena M.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop" }
+          ].map((t, i) => (
+            <div key={i} className="flex gap-4 items-start">
+              <img src={t.img} alt={t.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
+              <div>
+                <p className="text-sm text-slate-600 italic mb-2">"{t.text}"</p>
+                <p className="text-xs font-bold text-slate-900">- {t.name}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
-      {/* PARTNERS */}
-      <section className="py-12 border-b border-sl-border bg-sl-dark/80">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6">Powered By Advanced AI & Real-time Technologies</div>
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-70 hover:opacity-100 transition-opacity">
-            <img src="/media/kleva-logo.png" alt="Kleva AI" className="h-8 object-contain" />
-          </div>
-        </div>
-      </section>
 
-      {/* FEATURES */}
-      <section id="features" className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-sl-red text-xs font-bold uppercase tracking-widest mb-4">
-              <Zap className="w-3.5 h-3.5" /> Core Features
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black mb-4">Built for extreme reliability.</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">Traditional safety apps fail when networks go down. SafetyLink keeps working.</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { icon: <Bell />, title: 'One-Tap SOS', desc: 'Hardware keyfob or screen tap triggers instant multi-channel alerts — SMS, call, WhatsApp, and push — simultaneously.', color: 'text-red-400' },
-              { icon: <MapPin />, title: 'Live GPS Tracking', desc: 'Real-time location of all field users on an interactive map. Org admins see everyone instantly.', color: 'text-blue-400' },
-              { icon: <Radio />, title: 'BLE Mesh Network', desc: 'iTag keyfob integration with generic GATT discovery. Works without mobile data in offline environments.', color: 'text-purple-400' },
-              { icon: <Lock />, title: 'Siloed Tenants', desc: 'Isolated data per organisation. Security companies, estates, and schools — fully separated.', color: 'text-yellow-400' },
-              { icon: <Users />, title: 'Role-Based Access', desc: 'User, Responder, Admin, and Super Admin roles. Each sees only what they need.', color: 'text-green-400' },
-              { icon: <Zap />, title: 'Anti-Hijack Mode', desc: 'Safety Ride system with interior alerts and countermeasures for vehicle security.', color: 'text-orange-400' },
-            ].map(f => (
-              <div key={f.title} className="group bg-sl-card border border-sl-border rounded-2xl p-6 hover:border-sl-red/30 transition-all duration-300 card-glow cursor-default">
-                <div className={`${f.color} mb-4 w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl`}>
-                  {React.cloneElement(f.icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
-                </div>
-                <h3 className="font-bold text-white mb-2 text-lg">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* TECHNOLOGY ARCHITECTURE */}
-      <section id="technology" className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">
-              <Shield className="w-3.5 h-3.5" /> For Developers & Tech Teams
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black mb-4">Safety Response System Architecture</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">Discover how our hyper-local mesh network routes emergency signals offline, synchronizes securely with Cloudflare Edge, and dispatches responders instantly.</p>
-          </div>
-          <div className="relative rounded-3xl overflow-hidden border border-sl-border shadow-2xl p-4 bg-sl-card">
-            <img src="/media/Safety_Response_System_Architecture.png" alt="Safety Response System Architecture Diagram" className="w-full h-auto rounded-xl" />
-          </div>
-        </div>
-      </section>
-      {/* HOW IT WORKS */}
-      <section id="how-it-works" className="py-24 px-4 bg-sl-navy/30 border-y border-sl-border">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">Two ways to use SafetyLink</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-sl-card border border-sl-border rounded-3xl p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-sl-red/10 border border-sl-red/20 rounded-2xl flex items-center justify-center">
-                  <Smartphone className="w-6 h-6 text-sl-red" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Field Users</h3>
-                  <p className="text-slate-500 text-sm">Android Mobile App</p>
-                </div>
-              </div>
-              <div className="space-y-4 mb-8">
-                {['Download the Android APK', 'Register as User, Responder, or join your Org', 'Pair iTag BLE keyfob for hands-free SOS', 'Trigger SOS with one tap — alerts sent instantly', 'Stay tracked and connected even offline'].map((s, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-sl-red/10 text-sl-red text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border border-sl-red/20">{i+1}</span>
-                    <p className="text-slate-300 text-sm">{s}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a href={APK_URL} className="flex-1 flex items-center justify-center gap-2 bg-sl-red hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-all">
-                  <Download className="w-4 h-4" /> Android APK
-                </a>
-                <button onClick={onLaunchWeb} className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-sl-border text-white font-bold py-3.5 rounded-xl transition-all">
-                  <Smartphone className="w-4 h-4" /> Web App
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-sl-card border border-sl-border rounded-3xl p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-blue-900/30 border border-blue-800/20 rounded-2xl flex items-center justify-center">
-                  <Monitor className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">Organisations</h3>
-                  <p className="text-slate-500 text-sm">Web Portal + Windows Console</p>
-                </div>
-              </div>
-              <div className="space-y-4 mb-8">
-                {['Register your org here or on the mobile app', 'Get your unique Organisation ID (e.g. SL-ACME-1234)', 'Share the org ID with your field users', 'Monitor all users live on the map', 'Receive instant SOS alerts and incident logs'].map((s, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="w-6 h-6 bg-blue-900/30 text-blue-400 text-xs font-bold rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-800/30">{i+1}</span>
-                    <p className="text-slate-300 text-sm">{s}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <button onClick={onSignup} className="flex-1 flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl transition-all">
-                  <ArrowRight className="w-4 h-4" /> Register Org
-                </button>
-                <a href={EXE_URL} className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-sl-border text-white font-semibold px-4 rounded-xl transition-all">
-                  <Download className="w-4 h-4" /> EXE
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="mt-16 text-center">
-            <h3 className="text-2xl font-bold mb-6">System Architecture Anatomy</h3>
-            <img src="/media/Emergency_System_Architecture_Anatomy.png" alt="Emergency System Architecture" className="w-full rounded-2xl border border-sl-border shadow-2xl" />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-32 px-4 text-center relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-sl-red/4 rounded-full blur-3xl" />
-        </div>
-        <div className="relative max-w-2xl mx-auto">
-          <div className="float mb-8 inline-block">
-            <div className="w-20 h-20 mx-auto bg-sl-red/10 border border-sl-red/20 rounded-3xl flex items-center justify-center">
-              <Shield className="w-10 h-10 text-sl-red" />
-            </div>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-black mb-4">Protect your people today.</h2>
-          <p className="text-slate-400 mb-10 text-lg">Join security companies, estates, and communities across South Africa.</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button onClick={onSignup} className="bg-sl-red hover:bg-red-600 text-white font-black px-10 py-4 rounded-2xl transition-all hover:shadow-2xl hover:shadow-red-900/40 hover:-translate-y-0.5 text-lg">
-              Register Your Organisation
+      {/* BUSINESS SECTION */}
+      <section className="max-w-7xl mx-auto px-6 mb-32">
+        <div className="bg-[#0f172a] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl">
+          <div className="p-12 md:p-16 flex-1 flex flex-col justify-center items-start">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">SafetyLink for Businesses</h2>
+            <p className="text-slate-300 mb-8 max-w-md leading-relaxed">
+              Learn more about business workings, working and consume enterprise solutions.
+            </p>
+            <button onClick={onLogin} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-md font-bold text-sm transition-colors">
+              Learn More About Enterprise Solutions
             </button>
-            <button onClick={onLogin} className="bg-sl-card hover:bg-sl-border border border-sl-border text-white font-semibold px-10 py-4 rounded-2xl transition-all">
-              Sign In
-            </button>
+          </div>
+          <div className="w-full md:w-1/2 min-h-[300px]">
+            <img 
+              src="https://images.unsplash.com/photo-1504307651254-35680f356f12?q=80&w=2000&auto=format&fit=crop" 
+              alt="Construction workers" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-sl-border py-10 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <img src="/official_safetylink_logo.svg" alt="TM Media Solutions" className="w-24 h-auto rounded-lg" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-            <div>
-              <div className="font-bold text-sm">SafetyLink</div>
-              <div className="text-slate-600 text-xs">TM Media Solutions · Gauteng, South Africa</div>
+      <footer className="bg-[#1e293b] text-slate-300 py-20">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+          
+          <div>
+            <h4 className="text-white font-bold mb-6">Company Information</h4>
+            <ul className="space-y-3 text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Our Partners</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Company</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-6">Resources</h4>
+            <ul className="space-y-3 text-sm">
+              <li><a href="#" className="hover:text-white transition-colors">How It Works</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Solutions</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
+              <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-6">Legal Disclaimers</h4>
+            <div className="flex flex-col space-y-3 text-sm mb-4">
+              <a href="#" className="hover:text-white transition-colors">Legal</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+            </div>
+            <p className="text-[10px] text-slate-500 leading-tight">
+              This disclaimer copies all scroll, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. This content is for demonstration purposes.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-6">Social Media</h4>
+            <div className="flex items-center gap-4">
+              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Facebook className="w-5 h-5" /></a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Youtube className="w-5 h-5" /></a>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-slate-600 text-sm">
-            <button onClick={onLogin} className="hover:text-white transition-colors">Org Login</button>
-            <button onClick={onSignup} className="hover:text-white transition-colors">Register Org</button>
-            <a href={APK_URL} className="hover:text-white transition-colors">Download APK</a>
-            <a href={EXE_URL} className="hover:text-white transition-colors">Download EXE</a>
-          </div>
-          <div className="text-slate-700 text-xs">© 2026 TM Media Solutions</div>
+
+        </div>
+        <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-700/50 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
+          <p>© 2024 SafetyLink. All rights reserved.</p>
         </div>
       </footer>
     </div>
