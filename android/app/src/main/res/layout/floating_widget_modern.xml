@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/floating_widget_bg"
+    android:padding="6dp"
+    android:gravity="center_vertical"
+    android:id="@+id/widget_root">
+
+    <ImageView
+        android:id="@+id/icon_wifi"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_wifi"
+        android:layout_marginEnd="6dp"
+        android:layout_marginStart="4dp"/>
+
+    <ImageView
+        android:id="@+id/icon_bluetooth"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_bluetooth"
+        android:layout_marginEnd="6dp"/>
+
+    <ImageView
+        android:id="@+id/icon_refresh"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:src="@drawable/ic_refresh"
+        android:layout_marginEnd="8dp"/>
+
+    <FrameLayout
+        android:id="@+id/btn_sos"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/sos_button_bg">
+        
+        <TextView
+            android:id="@+id/text_sos"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="SOS"
+            android:textStyle="bold"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"/>
+    </FrameLayout>
+
+</LinearLayout>

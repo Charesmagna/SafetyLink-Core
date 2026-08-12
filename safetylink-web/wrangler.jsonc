@@ -1,0 +1,29 @@
+{
+  "name": "safetylink-api",
+  "main": "worker/index.ts",
+  "compatibility_date": "2024-03-20",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "account_id": "d089bef8b0b58c5d9506b512ec2f63dc",
+  "routes": [
+    {
+      "pattern": "safetylink.online/*",
+      "zone_id": "2cf6ad4361012c2aba768b1f0cb97770"
+    },
+    {
+      "pattern": "www.safetylink.online/*",
+      "zone_id": "2cf6ad4361012c2aba768b1f0cb97770"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "safetylink-db",
+      "database_id": "placeholder-will-be-set-after-create"
+    }
+  ],
+  "vars": {
+    "JWT_SECRET": "safetylink-secret-change-in-production"
+  }
+}
