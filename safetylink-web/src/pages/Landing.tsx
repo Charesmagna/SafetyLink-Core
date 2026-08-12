@@ -38,11 +38,17 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
             <span className="text-2xl font-black tracking-tight text-white drop-shadow-md">SafetyLink</span>
           </div>
           
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#about" className="text-sm font-bold text-white/90 hover:text-white transition-colors">About</a>
+            <a href="#pricing" className="text-sm font-bold text-white/90 hover:text-white transition-colors">Pricing</a>
+            <a href="#download-hub" onClick={scrollToDownload} className="text-sm font-bold text-white/90 hover:text-white transition-colors">Downloads</a>
+          </div>
+          
           <div className="flex items-center gap-4 md:gap-8">
             <button onClick={onLogin} className="text-sm font-bold text-white/90 hover:text-white transition-colors">
               Login
             </button>
-            <button onClick={onLogin} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-emerald-500/20">
+            <button onClick={onLogin} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 hidden sm:block">
               Access Commander Deck
             </button>
           </div>
@@ -118,24 +124,27 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
       </section>
 
       {/* RELIABILITY SECTION */}
-      <section className="py-24 bg-white">
+      <section id="about" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 text-white mb-6 shadow-xl">
               <ShieldCheck className="w-8 h-8 text-emerald-400" />
             </div>
-            <h2 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">Built for Extreme Reliability</h2>
-            <p className="text-xl text-slate-600 leading-relaxed">
-              Traditional safety apps fail when data networks go down or in restricted environments. SafetyLink's unified mesh architecture is designed to function seamlessly using simulated Bluetooth Low Energy (BLE) beacons and background location telemetry — operating as a true single source of truth.
+            <h2 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">About SafetyLink Core</h2>
+            <p className="text-xl text-slate-600 leading-relaxed mb-6">
+              SafetyLink is a unified, highly optimized <strong>Sequential Emergency Alert Network</strong> designed to function seamlessly under restrictive offline, hardware-constrained, or distress scenarios.
+            </p>
+            <p className="text-lg text-slate-500 leading-relaxed">
+              Whether you are a security patrol agency, a school protecting its students, a corporate office monitoring lone-workers, or an individual wanting a private escalation contact chain — SafetyLink bridges the gap between end-user distress signals and centralized Commander Deck dispatch.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             {[
-              { icon: WifiOff, title: "Offline Operation", desc: "Works without relying on traditional airtime footprints." },
-              { icon: Key, title: "Hardware Integration", desc: "Physical keychain token support." },
-              { icon: Users, title: "Role-Based Routing", desc: "Command Center vs Node Viewer." },
-              { icon: Layers, title: "Material 3 Design", desc: "Zero unused variables, strict design harmony." }
+              { icon: WifiOff, title: "Offline Operation", desc: "Works without relying on traditional airtime footprints using localized mesh sync." },
+              { icon: Key, title: "Hardware Integration", desc: "Supports physical BLE keychain tokens and panic buttons." },
+              { icon: Users, title: "Role-Based Routing", desc: "Distinct interfaces for Dispatchers, Admins, and End-Users." },
+              { icon: Layers, title: "Unified State", desc: "Single source of truth for telemetry, beacons, and panic events." }
             ].map((f, i) => (
               <div key={i} className="bg-slate-50 border border-slate-200 p-8 rounded-3xl hover:shadow-xl transition-shadow group">
                 <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -156,13 +165,85 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
                 <span className="text-3xl">🧩</span> Siloed Tenants
               </h3>
               <p className="text-slate-300 text-lg">
-                Isolated database schemes ensure strict privacy between organizations.
+                Isolated database schemes ensure strict privacy between organizations. Your security data is strictly yours.
               </p>
             </div>
             <div className="relative z-10">
               <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700">
                 <Shield className="w-8 h-8 text-indigo-400" />
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" className="py-24 bg-slate-50 border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">Transparent Pricing</h2>
+            <p className="text-xl text-slate-600 leading-relaxed">
+              Scale your emergency response capabilities without unpredictable costs. Choose the tier that fits your operational footprint.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Tier 1 */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Personal Shield</h3>
+              <p className="text-slate-500 mb-6">For individuals and families.</p>
+              <div className="mb-6">
+                <span className="text-4xl font-black text-slate-900">$0</span>
+                <span className="text-slate-500">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Up to 5 family nodes</li>
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Basic panic alerts</li>
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Real-time location sharing</li>
+              </ul>
+              <button onClick={onSignup} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-3 rounded-xl transition-colors">
+                Get Started Free
+              </button>
+            </div>
+
+            {/* Tier 2 */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative transform md:-translate-y-4 flex flex-col">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide">
+                MOST POPULAR
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Professional Guard</h3>
+              <p className="text-slate-400 mb-6">For security teams and campuses.</p>
+              <div className="mb-6">
+                <span className="text-4xl font-black text-white">$299</span>
+                <span className="text-slate-400">/mo</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-slate-300"><span className="text-emerald-400 font-bold">✓</span> Up to 500 active nodes</li>
+                <li className="flex items-center gap-3 text-slate-300"><span className="text-emerald-400 font-bold">✓</span> Full Commander Deck access</li>
+                <li className="flex items-center gap-3 text-slate-300"><span className="text-emerald-400 font-bold">✓</span> Hardware BLE token support</li>
+                <li className="flex items-center gap-3 text-slate-300"><span className="text-emerald-400 font-bold">✓</span> Priority audit logs</li>
+              </ul>
+              <button onClick={onSignup} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-emerald-500/25">
+                Start Pro Trial
+              </button>
+            </div>
+
+            {/* Tier 3 */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-shadow flex flex-col">
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Enterprise Grid</h3>
+              <p className="text-slate-500 mb-6">For government & large utilities.</p>
+              <div className="mb-6">
+                <span className="text-4xl font-black text-slate-900">Custom</span>
+              </div>
+              <ul className="space-y-4 mb-8 flex-1">
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Unlimited nodes</li>
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Custom offline mesh routing</li>
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> Dedicated support team</li>
+                <li className="flex items-center gap-3 text-slate-700"><span className="text-emerald-500 font-bold">✓</span> API & SIEM Integration</li>
+              </ul>
+              <button onClick={onSignup} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-colors">
+                Contact Sales
+              </button>
             </div>
           </div>
         </div>
@@ -204,13 +285,13 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
               <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
                 <Smartphone className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">📱 Mobile APK Distribution</h3>
+              <h3 className="text-2xl font-bold mb-4">📱 Mobile APK</h3>
               <p className="text-slate-400 mb-8 flex-1">
                 Download the SafetyLink APK directly to your personnel devices for instant telemetry and panic alert integration.
               </p>
-              <button className="bg-emerald-600 hover:bg-emerald-500 text-white w-full py-4 rounded-xl font-bold transition-colors">
+              <a href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk" className="bg-emerald-600 hover:bg-emerald-500 text-white w-full py-4 rounded-xl font-bold transition-colors text-center inline-block">
                 Download APK
-              </button>
+              </a>
             </div>
 
             {/* COMMANDER DECK */}
@@ -218,13 +299,13 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
               <div className="w-14 h-14 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6">
                 <Monitor className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-4">💻 Commander Deck Access</h3>
+              <h3 className="text-2xl font-bold mb-4">💻 Commander Deck (Windows)</h3>
               <p className="text-slate-400 mb-8 flex-1">
-                Install the Commander Deck interface for centralized monitoring and tactical control.
+                Install the Windows executable Commander Deck interface for centralized monitoring and tactical control.
               </p>
-              <button onClick={onLogin} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-4 rounded-xl font-bold transition-colors">
-                Access Commander Deck
-              </button>
+              <a href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest" target="_blank" rel="noreferrer" className="bg-blue-600 hover:bg-blue-500 text-white w-full py-4 rounded-xl font-bold transition-colors text-center inline-block">
+                Download EXE (Releases)
+              </a>
             </div>
 
             {/* MAP MODULE */}
