@@ -129,6 +129,46 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
             </button>
           </form>
 
+          {mode === 'login' && (
+            <div className="mt-8 pt-6 border-t border-slate-800">
+              <div className="mb-4">
+                <span className="text-xs font-black tracking-widest text-amber-400 uppercase">Exemplary Live Demo Profiles</span>
+              </div>
+              <p className="text-xs text-slate-400 mb-4">Select a simulated role to access the Commander Deck directly without a password:</p>
+              
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => onLogin({ token: 'demo-token-wits', orgId: 'SL-WITS-4829', orgName: 'Wits Campus Security', email: 'commander_wits@demo.com' })}
+                  className="w-full text-left p-3 rounded-2xl border flex items-center gap-3 transition-all hover:bg-emerald-500/5 hover:border-emerald-500/30 text-emerald-400 border-emerald-500/10 bg-emerald-500/2 group"
+                >
+                  <span className="text-2xl">🏫</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-black tracking-wide text-slate-200 block">Wits Security Commander</span>
+                    <span className="text-[10px] font-mono text-slate-500 block">Organization Deck (ORG)</span>
+                  </div>
+                  <div className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    AUTO-LOGIN
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onLogin({ token: 'demo-token-city', orgId: 'SL-CITY-2810', orgName: 'City Patrol Dispatch', email: 'chief_patrol@demo.com' })}
+                  className="w-full text-left p-3 rounded-2xl border flex items-center gap-3 transition-all hover:bg-red-500/5 hover:border-red-500/30 text-red-400 border-red-500/10 bg-red-500/2 group"
+                >
+                  <span className="text-2xl">🚓</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-black tracking-wide text-slate-200 block">City Patrol Dispatcher</span>
+                    <span className="text-[10px] font-mono text-slate-500 block">Organization Deck (ORG)</span>
+                  </div>
+                  <div className="text-[10px] font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                    AUTO-LOGIN
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
           {mode === 'signup' && (
             <p className="text-xs text-slate-600 text-center mt-5 leading-relaxed">
               After registering, your Organisation ID will be displayed on the dashboard. Share it with your field users so they can join on the SafetyLink mobile app.

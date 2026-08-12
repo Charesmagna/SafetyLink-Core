@@ -93,7 +93,7 @@ interface AppState {
   // Actions
   registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'> & { password?: string }) => Promise<{ success: boolean; error?: string }>;
   registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string, password?: string }) => Promise<Organization | null>;
-  login: (username: string, password?: string, orgCode?: string) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
+  login: (username: string, password?: string, orgCode?: string, skipPasswordCheck?: boolean) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
   fetchSuperAdminData: () => Promise<void>;
   unlockOrganizationTrial: (id: string) => Promise<void>;
   logout: () => void;
@@ -768,7 +768,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  login: async (username, password, orgCode = '') => {
+  login: async (username, password, orgCode = '', skipPasswordCheck = false) => {
     const normUsername = username.trim().toLowerCase();
     const normOrgCode = orgCode.trim().toLowerCase();
 
@@ -795,7 +795,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
         
         const userPassword = (matchedUser as any).password;
-        if (userPassword && userPassword !== password) {
+        if (!skipPasswordCheck && userPassword && userPassword !== password) {
           return { success: false, error: 'Incorrect password.', role: 'USER' };
         }
         
@@ -816,7 +816,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           const matchContact = matchedOrg.contactName.toLowerCase();
           if (matchName === normUsername || matchContact === normUsername) {
             const orgPassword = (matchedOrg as any).password;
-            if (orgPassword && orgPassword !== password) {
+            if (!skipPasswordCheck && orgPassword && orgPassword !== password) {
               return { success: false, error: 'Incorrect password.', role: 'USER' };
             }
             set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false });
@@ -920,7 +920,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           const matchContact = matchedOrg.contactName.toLowerCase();
           if (matchName === normUsername || matchContact === normUsername) {
             const orgPassword = (matchedOrg as any).password;
-            if (orgPassword && orgPassword !== password) {
+            if (!skipPasswordCheck && orgPassword && orgPassword !== password) {
               return { success: false, error: 'Incorrect password.', role: 'USER' };
             }
             set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false, token: 'offline-jwt-token' });

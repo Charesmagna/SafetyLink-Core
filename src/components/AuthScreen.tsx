@@ -118,8 +118,8 @@ export const AuthScreen: React.FC = () => {
   const [generatedReferralCode, setGeneratedReferralCode] = useState('');
   const [showReferralSection, setShowReferralSection] = useState(false);
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLoginSubmit = async (e: React.FormEvent, skipPasswordCheck = false) => {
+    if (e?.preventDefault) e.preventDefault();
     setLoginError('');
 
     if (!loginUsername) {
@@ -127,7 +127,7 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    const res = await login(loginUsername, loginPassword, loginOrgCode);
+    const res = await login(loginUsername, skipPasswordCheck ? '' : loginPassword, loginOrgCode, skipPasswordCheck);
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     } else if (loginReferralCode.trim() && !referralApplied) {
@@ -506,6 +506,11 @@ export const AuthScreen: React.FC = () => {
                           setLoginOrgCode(p.orgCode);
                           setLoginPassword('');
                           setLoginError('');
+                          // Auto submit without requiring password
+                          setTimeout(() => {
+                            const e = new Event('submit', { bubbles: true, cancelable: true }) as unknown as React.FormEvent;
+                            handleLoginSubmit(e, true); // true = skip password
+                          }, 50);
                         }}
                         className={`w-full text-left p-3 rounded-2xl border flex items-start gap-3 transition-all ${p.color}`}
                       >
