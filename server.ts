@@ -6,6 +6,10 @@ import { createClient } from "@libsql/client";
 import * as stytch from "stytch";
 import Pusher from "pusher";
 import crypto from "crypto";
+import twilio from "twilio";
+import { Queue, Worker } from "bullmq";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
 
 // --- Database & Auth Initialization ---
 const db = createClient({ url: "file:safetylink.db" });
@@ -68,6 +72,97 @@ const pusher = new Pusher({
   cluster: "ap2",
   useTLS: true
 });
+
+
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://mock.supabase.co";
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "mock-key";
+const supabase = createSupabaseClient(supabaseUrl, supabaseKey);
+
+const hasRedis = !!process.env.REDIS_URL;
+const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
+
+const processJob = async (job: any) => {
+    const { userId, latitude, longitude, phone, message } = job.data;
+    console.log(`[Queue Worker] Initiating dispatch for Job #${job.id} (name=${job.name})`);
+    
+    try {
+        if (job.name === 'sms_dispatch') {
+            const targetApiKey = process.env.TWILIO_ACCOUNT_SID;
+            const targetFromPhone = process.env.TWILIO_PHONE_NUMBER;
+            
+            if (!targetApiKey || !targetFromPhone) {
+                console.warn(`[Mock Fallback] sms_dispatch requires TWILIO_ACCOUNT_SID in env to send to ${phone}`);
+                return;
+            }
+            const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
+            await client.messages.create({
+                to: phone, from: targetFromPhone, body: message
+            });
+            return;
+        }
+
+        const { data: userProfile } = await supabase
+            .from('user_profiles')
+            .select(`
+                name, 
+                twilio_account_sid, 
+                twilio_phone_number,
+                linked_organisation_id
+            `)
+            .eq('id', userId)
+            .single();
+
+        let orgData = null;
+        if (userProfile && userProfile.linked_organisation_id) {
+            const { data } = await supabase
+                .from('organisations')
+                .select('twilio_account_sid, twilio_auth_token, twilio_phone_number, control_room_phone')
+                .eq('id', userProfile.linked_organisation_id)
+                .single();
+            orgData = data;
+        }
+
+        if (!userProfile) {
+            console.log(`[Mock Fallback] Profile ${userId} not in DB. Using fallback dispatch.`);
+            return; 
+        }
+
+        let targetApiKey = userProfile.twilio_account_sid || (orgData && orgData.twilio_account_sid) || process.env.TWILIO_ACCOUNT_SID;
+        let targetFromPhone = userProfile.twilio_phone_number || (orgData && orgData.twilio_phone_number) || process.env.TWILIO_PHONE_NUMBER;
+        let controlRoomDestination = orgData && orgData.control_room_phone;
+
+        if (!targetApiKey || !targetFromPhone) throw new Error("No active communication pathways loaded.");
+
+        const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
+        const payload = `SafetyLink Emergency! Panic triggered by ${userProfile.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
+        
+        await Promise.all([
+            client.calls.create({
+                to: controlRoomDestination, from: targetFromPhone,
+                connection_id: process.env.TWILIO_OUTBOUND_PROFILE_ID,
+                twiml: `<Response><Say voice="alice">${payload}</Say></Response>`
+            }).catch((e: any) => console.error("Voice delivery fallback channel failed:", e.message)),
+            client.messages.create({
+                to: controlRoomDestination, from: targetFromPhone, body: payload
+            }).catch((e: any) => console.error("SMS channel execution error:", e.message))
+        ]);
+    } catch (e: any) {
+        console.error(`[Worker Error] ${e.message}`);
+    }
+};
+
+const panicQueue = hasRedis ? new Queue('panic_events', { connection }) : {
+    add: async (name: string, data: any, options: any) => {
+        const job = { id: Date.now().toString(), name, data };
+        setImmediate(() => processJob(job));
+        return job;
+    }
+};
+
+if (hasRedis) {
+    new Worker('panic_events', processJob, { connection });
+}
 
 
 async function startServer() {
@@ -224,6 +319,84 @@ async function startServer() {
 
   // --- Core SafetyLink API Endpoints ---
   
+
+  app.post('/api/integration/save-credentials', async (req, res) => {
+      try {
+          const { accountType, id, twilio_account_sid, twilio_auth_token, twilio_phone_number } = req.body;
+          if (accountType === 'USER') {
+              await supabase.from('user_profiles').update({ twilio_account_sid, twilio_auth_token, twilio_phone_number }).eq('id', id);
+          } else {
+              await supabase.from('organisations').update({ twilio_account_sid, twilio_auth_token, twilio_phone_number }).eq('id', id);
+          }
+          return res.status(200).json({ message: "Credentials saved securely." });
+      } catch (err) {
+          return res.status(500).json({ error: "Failed to save integration settings." });
+      }
+  });
+
+  app.post('/api/twilio/test', async (req, res) => {
+      const { accountSid, authToken, fromNumber } = req.body;
+      if (!accountSid || !authToken || !fromNumber) return res.status(400).json({ error: "Missing Twilio credentials" });
+      try {
+          const client = twilio(accountSid, authToken);
+          const account = await client.api.accounts(accountSid).fetch();
+          return res.status(200).json({ message: "Twilio credentials valid. " + account.friendlyName });
+      } catch (err: any) {
+          console.error("Twilio test error:", err);
+          return res.status(500).json({ error: err.message || "Failed to authenticate with Twilio." });
+      }
+  });
+
+  app.post('/api/dispatch/sms', async (req, res) => {
+      const { phone, message } = req.body;
+      if (!phone || !message) {
+          return res.status(400).json({ error: "Missing required parameters." });
+      }
+      try {
+          await panicQueue.add('sms_dispatch', { phone, message, timestamp: new Date().toISOString() }, {
+              attempts: 3, backoff: { type: 'exponential', delay: 2000 }
+          });
+          return res.status(200).json({ message: "SMS dispatch queued." });
+      } catch (err) {
+          return res.status(500).json({ error: "Internal SMS queue error." });
+      }
+  });
+
+  app.post('/api/incidents', async (req, res) => {
+      const { id, latitude, longitude, description, org_id, triggered_by, status, severity } = req.body;
+      try {
+          await supabase.from('org_events').insert([{
+              id, latitude, longitude, description, org_id, triggered_by, status, severity
+          }]);
+          return res.status(201).json({ message: "Incident logged." });
+      } catch (err) {
+          return res.status(500).json({ error: "Failed to log incident." });
+      }
+  });
+
+  app.post('/api/panic/trigger', async (req, res) => {
+      const { userId, latitude, longitude } = req.body;
+      if (!userId || !latitude || !longitude) {
+          return res.status(400).json({ error: "Missing required emergency location parameters." });
+      }
+      try {
+          const job = await panicQueue.add(`panic_signal_${Date.now()}`, {
+              userId, latitude, longitude, timestamp: new Date().toISOString()
+          }, {
+              attempts: 5,
+              backoff: { type: 'exponential', delay: 2000 }
+          });
+          return res.status(202).json({ 
+               status: "Accepted", 
+               message: "Emergency pipeline established. Dispatches firing.",
+              eventId: job.id
+          });
+      } catch (error) {
+          console.error("Critical entry-queue storage blockage:", error);
+          return res.status(500).json({ error: "Internal crash entering panic queue buffer." });
+      }
+  });
+
   // Auth Middleware
   const authMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.split(' ')[1];

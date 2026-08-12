@@ -40,3 +40,4 @@ sqlite.db
 .dev.vars*
 !.dev.vars.example
 !.env.example
+safetylink.db
