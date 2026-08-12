@@ -486,12 +486,17 @@ const App: React.FC = () => {
                     <span className="text-lg">📡</span>
                     <div className="text-left">
                       <p className="text-[10px] font-bold text-amber-400">OFFLINE SYNC PENDING</p>
-                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} panic events waiting for network.</p>
+                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} {localOfflineQueue.length === 1 ? 'event' : 'events'} waiting for network.</p>
                     </div>
                   </div>
-                  <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
-                    RETRY
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
+                      RETRY
+                    </button>
+                    <button onClick={() => useAppStore.setState({ localOfflineQueue: [] })} className="text-[8px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+                      CLEAR
+                    </button>
+                  </div>
                 </div>
               )}
 
