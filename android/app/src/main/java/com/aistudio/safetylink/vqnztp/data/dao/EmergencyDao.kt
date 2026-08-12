@@ -1,9 +1,9 @@
-
 package com.aistudio.safetylink.vqnztp.data.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.aistudio.safetylink.vqnztp.data.entities.*
 
 @Dao
@@ -22,4 +22,10 @@ interface EmergencyDao {
 
     @Insert
     suspend fun insertSmsLog(log: SmsLog)
+    
+    @Query("SELECT * FROM emergency_sessions WHERE status LIKE :statusPrefix")
+    suspend fun getPendingSessions(statusPrefix: String): List<EmergencySession>
+
+    @Update
+    suspend fun updateSession(session: EmergencySession)
 }

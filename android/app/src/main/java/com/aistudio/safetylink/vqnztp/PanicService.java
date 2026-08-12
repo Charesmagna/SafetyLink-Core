@@ -189,6 +189,11 @@ public class PanicService extends Service {
                         }
                         updateNotificationState(statusText, detailText);
                         Log.i(TAG, "Dispatch Result - SMS: " + result.smsOk + ", DB: " + result.dbOk);
+                        if (!result.dbOk) {
+                            com.aistudio.safetylink.vqnztp.data.OfflineSyncHelper.recordFailedDispatch(
+                                    PanicService.this, incidentId, pendingLat, pendingLng, pendingDescription, pendingOrgId, pendingTriggeredBy
+                            );
+                        }
                     }
                 }
         );
