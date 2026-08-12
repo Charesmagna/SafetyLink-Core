@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Headphones, MapPin, PersonStanding, Facebook, Twitter, Instagram, Youtube } from 'lucide-react';
+import { Shield, Headphones, MapPin, PersonStanding } from 'lucide-react';
 
 export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: () => void; onSignup: () => void; onLaunchWeb?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
@@ -178,10 +178,10 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
           <div>
             <h4 className="text-white font-bold mb-6">Social Media</h4>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Facebook className="w-5 h-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Twitter className="w-5 h-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Instagram className="w-5 h-5" /></a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors"><Youtube className="w-5 h-5" /></a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">FB</a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">TW</a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">IG</a>
+              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">YT</a>
             </div>
           </div>
 
