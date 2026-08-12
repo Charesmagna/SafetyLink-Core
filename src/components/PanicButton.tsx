@@ -32,22 +32,6 @@ export const PanicButton: React.FC = () => {
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<number | null>(null);
 
-  const [isGhostMode, setIsGhostMode] = useState(false);
-  const [ghostTaps, setGhostTaps] = useState(0);
-  const ghostTapTimeoutRef = useRef<number | null>(null);
-
-  const handleGhostTap = () => {
-    setGhostTaps(prev => prev + 1);
-    if (ghostTapTimeoutRef.current) clearTimeout(ghostTapTimeoutRef.current);
-    ghostTapTimeoutRef.current = window.setTimeout(() => {
-      if (ghostTaps >= 2) {
-        setIsGhostMode(false);
-        setGhostTaps(0);
-      } else {
-        setGhostTaps(0);
-      }
-    }, 1500);
-  };
   const startHolding = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     if (activeSOSState !== 'IDLE') return;
@@ -577,27 +561,7 @@ export const PanicButton: React.FC = () => {
         )}
       </div>
 
-      <div className="mt-3 relative z-10">
-        <motion.button 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setIsGhostMode(true)}
-          className="w-full bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800 rounded-xl p-3 backdrop-blur-sm flex items-center justify-between group transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
-              <EyeOff className="w-4 h-4 text-slate-400 group-hover:text-purple-400 transition-colors" />
-            </div>
-            <div className="text-left">
-              <p className="text-slate-200 text-sm font-bold tracking-wide">Silent Escort Mode</p>
-              <p className="text-slate-500 text-[10px] uppercase">Blackout screen (Triple tap to exit)</p>
-            </div>
-          </div>
-          <div className="text-slate-600 group-hover:text-slate-400">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-          </div>
-        </motion.button>
-      </div>
+
 
       {/* Watch-Me Setup Modal */}
       <AnimatePresence>
@@ -716,19 +680,6 @@ export const PanicButton: React.FC = () => {
 
 
     
-      <AnimatePresence>
-        {isGhostMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black cursor-pointer"
-            onClick={handleGhostTap}
-            onTouchEnd={handleGhostTap}
-          />
-        )}
-      </AnimatePresence>
-
       {showDistressVideo && (
         <DistressVideoStream 
           callerId={1000} 

@@ -168,6 +168,10 @@ interface AppState {
   vaultFiles: { id: string; name: string; size: string; type: string; ciphertext?: string; iv?: string; salt?: string; isEncrypted?: boolean }[];
   vaultApps: { id: string; name: string; packageName: string }[];
   silenceAlerts: boolean;
+  sosCountdownDuration: number;
+  sosSoundSetup: string;
+  setSosCountdownDuration: (val: number) => void;
+  setSosSoundSetup: (val: string) => void;
   firestoreSync: boolean;
 
   setDecoyActive: (value: boolean) => void;
@@ -475,6 +479,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     { id: 'a2', name: 'Tor Browser Client', packageName: 'org.torproject.torbrowser' }
   ]),
   silenceAlerts: getStoredJSON<boolean>('sl_silence_alerts', false),
+  sosCountdownDuration: getStoredJSON<number>('sl_sos_countdown_duration', 5),
+  sosSoundSetup: getStoredJSON<string>('sl_sos_sound_setup', 'Standard Siren'),
   firestoreSync: getStoredJSON<boolean>('sl_firestore_sync', false),
 
   setDecoyActive: (value) => {
@@ -498,6 +504,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_vault_security_question', question);
     setStoredJSON('sl_vault_security_answer', answer);
     get().addAuditLog('SECURITY', 'INFO', 'Confidential Vault Password set/updated', 'PBKDF2 verifier stored; raw password never persisted.');
+  },
+  setSosCountdownDuration: (val) => {
+    set({ sosCountdownDuration: val });
+    setStoredJSON('sl_sos_countdown_duration', val);
+  },
+  setSosSoundSetup: (val) => {
+    set({ sosSoundSetup: val });
+    setStoredJSON('sl_sos_sound_setup', val);
   },
   setSilenceAlerts: (value) => {
     set({ silenceAlerts: value });
@@ -1636,7 +1650,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('SYSTEM', 'WARN', 'SOS Distress Cancelled', 'Operator input or wearable double-click trigger override applied.');
   },
 
-  startMultiStagePanic: (description, durationSec = 5) => {
+  startMultiStagePanic: (description, durationSec = get().sosCountdownDuration) => {
     if (get().activeSOSState !== 'IDLE' || get().panicCountdown !== null) return;
     const user = get().currentUser;
     const org = get().currentOrg;
