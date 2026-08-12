@@ -78,6 +78,9 @@ export const AdminPanel: React.FC = () => {
   const [ccApi, setCcApi] = useState(connectyCubeConfig?.apiEndpoint || '');
   const [ccChat, setCcChat] = useState(connectyCubeConfig?.chatEndpoint || '');
 
+  useEffect(() => {
+    useAppStore.getState().fetchSuperAdminData();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -592,6 +595,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
 
                             <div className="flex gap-2">
+                              <button onClick={() => { if(confirm(`Unlock trial for ${o.name}?`)) useAppStore.getState().unlockOrganizationTrial(o.id); }} className="p-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300">UNLOCK TRIAL</button>
                               <button onClick={() => handleEditOrgClick(o)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
                               <button onClick={() => { if(confirm(`Delete ${o.name} and unbind its users?`)) deleteOrganization(o.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
                             </div>

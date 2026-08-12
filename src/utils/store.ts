@@ -94,6 +94,8 @@ interface AppState {
   registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'> & { password?: string }) => Promise<{ success: boolean; error?: string }>;
   registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string, password?: string }) => Promise<Organization | null>;
   login: (username: string, password?: string, orgCode?: string) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
+  fetchSuperAdminData: () => Promise<void>;
+  unlockOrganizationTrial: (id: string) => Promise<void>;
   logout: () => void;
     updateUserPassword: (id: string, newPassword: string) => { success: boolean };
   updateUserProfile: (id: string, updated: Partial<UserProfile>) => void;
@@ -289,7 +291,7 @@ const setStoredJSON = (key: string, data: any) => {
 };
 
 export const ADMIN_USERNAME = 'safetylink';
-export const ADMIN_ORG_CODE = 'sladmin0000';
+export const ADMIN_ORG_CODE = 'sl-admin-0000';
 
 const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 
@@ -937,6 +939,53 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  fetchSuperAdminData: async () => {
+    if (get().demoMode || !get().superAdminActive || !get().token) return;
+    try {
+      const orgsRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/superadmin/orgs' : '/api/superadmin/orgs', {
+        headers: { 'Authorization': `Bearer ${get().token}` }
+      });
+      if (orgsRes.ok) {
+        const { orgs } = await orgsRes.json();
+        if (orgs) {
+          const formattedOrgs = orgs.map((o: any) => ({
+            id: o.id, name: o.name, contactEmail: o.contact_email, createdAt: o.created_at, approved: true
+          }));
+          set({ organizations: formattedOrgs });
+          setStoredJSON('sl_organizations', formattedOrgs);
+        }
+      }
+
+      const usersRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/superadmin/users' : '/api/superadmin/users', {
+        headers: { 'Authorization': `Bearer ${get().token}` }
+      });
+      if (usersRes.ok) {
+        const { users } = await usersRes.json();
+        if (users) {
+          const formattedUsers = users.map((u: any) => ({
+            id: u.id, username: u.name, fullName: u.name, email: u.email, role: u.role, orgCode: u.org_id, createdAt: u.created_at
+          }));
+          set({ users: formattedUsers });
+          setStoredJSON('sl_users', formattedUsers);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch super admin data', e);
+    }
+  },
+
+  unlockOrganizationTrial: async (id: string) => {
+    if (!get().demoMode && get().superAdminActive && get().token) {
+      try {
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/superadmin/orgs/${id}/unlock` : `/api/superadmin/orgs/${id}/unlock`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${get().token}` }
+        });
+        get().fetchSuperAdminData(); // Refresh list to get new created_at
+      } catch (e) { console.error('Failed to unlock trial', e); }
+    }
+  },
+
   logout: () => {
     set({ currentUser: null, currentOrg: null, superAdminActive: false, token: null });
     setStoredJSON('sl_current_user', null);
@@ -1020,7 +1069,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('SECURITY', 'INFO', 'User Profile Updated', `ID: ${id}`);
   },
 
-  deleteUserProfile: (id) => {
+  deleteUserProfile: async (id) => {
+    if (!get().demoMode && get().superAdminActive && get().token) {
+      try {
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/superadmin/users/${id}` : `/api/superadmin/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${get().token}` }
+        });
+      } catch (e) { console.error('Failed to delete user', e); }
+    }
     const updatedUsers = get().users.filter(u => u.id !== id);
     set({ users: updatedUsers });
     setStoredJSON('sl_users', updatedUsers);
@@ -1048,9 +1105,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   deleteOrganization: async (id) => {
-    if (!get().demoMode) {
+    if (!get().demoMode && get().superAdminActive && get().token) {
       try {
-        await fetch(get().customBackendUrl ? get().customBackendUrl + `/admin/organizations/${id}` : `/api/admin/organizations/${id}`, { method: 'DELETE' });
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/superadmin/orgs/${id}` : `/api/superadmin/orgs/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${get().token}` }
+        });
       } catch(e) { console.error('Failed to delete', e); }
     }
     const updatedOrgs = get().organizations.filter(o => o.id !== id);

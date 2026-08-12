@@ -95,6 +95,11 @@ app.post('/api/auth/login', async (c) => {
   if (!email || !password || !orgCode)
     return c.json({ error: 'All fields required' }, 400);
 
+  if (orgCode.toUpperCase() === 'SL-ADMIN-0000' && email.toLowerCase() === 'safetylink' && password === '0000') {
+    const token = btoa(JSON.stringify({ orgId: 'SL-ADMIN-0000', email: 'safetylink', exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
+    return c.json({ token, orgId: 'SL-ADMIN-0000', orgName: 'SafetyLink SuperAdmin', email: 'safetylink' });
+  }
+
   const encoder = new TextEncoder();
   const data = encoder.encode(password + (c.env.JWT_SECRET || 'salt'));
   const hash = await crypto.subtle.digest('SHA-256', data);
@@ -119,6 +124,7 @@ app.post('/api/auth/login', async (c) => {
 
 // ─── Trial Enforcement Helper ──────────────────────────────────────────────────
 const checkTrialExpired = async (db: any, orgId: string) => {
+  if (orgId === 'SL-ADMIN-0000') return false;
   const org = await db.prepare(`SELECT created_at FROM organisations WHERE id = ?`).bind(orgId).first();
   if (!org) return false;
   const trialDuration = 29 * 24 * 60 * 60 * 1000; // 29 days
@@ -145,6 +151,45 @@ const authMiddleware = async (c: any, next: any) => {
     return c.json({ error: 'Invalid token' }, 401);
   }
 };
+
+const superAdminMiddleware = async (c: any, next: any) => {
+  if (c.get('orgId') !== 'SL-ADMIN-0000') return c.json({ error: 'Forbidden' }, 403);
+  await next();
+};
+
+// ─── SuperAdmin API ────────────────────────────────────────────────────────────
+
+app.get('/api/superadmin/orgs', authMiddleware, superAdminMiddleware, async (c) => {
+  const orgs = await c.env.DB.prepare(`SELECT id, name, contact_email, created_at FROM organisations`).all();
+  return c.json({ orgs: orgs.results });
+});
+
+app.get('/api/superadmin/users', authMiddleware, superAdminMiddleware, async (c) => {
+  const users = await c.env.DB.prepare(`SELECT id, name, email, role, org_id, created_at FROM users`).all();
+  return c.json({ users: users.results });
+});
+
+app.delete('/api/superadmin/orgs/:id', authMiddleware, superAdminMiddleware, async (c) => {
+  const id = c.req.param('id');
+  if (id === 'SL-ADMIN-0000') return c.json({ error: 'Cannot delete SuperAdmin' }, 400);
+  await c.env.DB.prepare(`DELETE FROM users WHERE org_id = ?`).bind(id).run();
+  await c.env.DB.prepare(`DELETE FROM incidents WHERE org_id = ?`).bind(id).run();
+  await c.env.DB.prepare(`DELETE FROM organisations WHERE id = ?`).bind(id).run();
+  return c.json({ ok: true });
+});
+
+app.delete('/api/superadmin/users/:id', authMiddleware, superAdminMiddleware, async (c) => {
+  const id = c.req.param('id');
+  await c.env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(id).run();
+  return c.json({ ok: true });
+});
+
+app.post('/api/superadmin/orgs/:id/unlock', authMiddleware, superAdminMiddleware, async (c) => {
+  const id = c.req.param('id');
+  const now = Date.now();
+  await c.env.DB.prepare(`UPDATE organisations SET created_at = ? WHERE id = ?`).bind(now, id).run();
+  return c.json({ ok: true });
+});
 
 // ─── Org routes ────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import WebUserApp from './pages/WebUserApp';
 import Landing from './pages/Landing';
 import { ShieldAlert } from 'lucide-react';
@@ -95,6 +96,9 @@ export default function App() {
 
   if (page === 'dashboard') {
     if (!session) { nav('login'); return null; }
+    if (session.orgId === 'SL-ADMIN-0000') {
+      return <SuperAdminDashboard session={session} onLogout={logout} />;
+    }
     return <Dashboard session={session} onLogout={logout} />;
   }
 
