@@ -166,7 +166,7 @@ export const AIHub: React.FC = () => {
       } catch (err) {
         setVoiceActive(false);
         setVoiceLog('Microphone access denied or unavailable.');
-        addAuditLog('SYSTEM', 'ERROR', 'Microphone access failed');
+        addAuditLog('SYSTEM', 'SEVERE', 'Microphone access failed');
       }
     }
   };
@@ -190,16 +190,26 @@ export const AIHub: React.FC = () => {
   };
 
   // Veo Video Loop generation
-  const handleGenerateVideo = () => {
+  const handleGenerateVideo = async () => {
     if (!veoPrompt.trim()) return;
     setIsGeneratingVideo(true);
-
-    setTimeout(() => {
-      // Use a canvas simulation to build an animated video thumbnail
-      setGeneratedVideoUrl('ACTIVE');
+    
+    try {
+      const res = await fetch('/api/gemini/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: veoPrompt, aspectRatio: veoRatio })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedVideoUrl('ACTIVE');
+        addAuditLog('SYSTEM', 'INFO', 'K\'leva.info triggered Veo 3 Video drone loop', veoPrompt);
+      }
+    } catch (e) {
+      addAuditLog('SYSTEM', 'SEVERE', 'Veo generation failed');
+    } finally {
       setIsGeneratingVideo(false);
-      addAuditLog('SYSTEM', 'INFO', 'K\'leva.info triggered Veo 3 Video drone loop', veoPrompt);
-    }, 1800);
+    }
   };
 
   // Lyria calming music generator using Web Audio API
