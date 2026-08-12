@@ -501,16 +501,17 @@ export const AuthScreen: React.FC = () => {
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setLoginUsername(p.username);
                           setLoginOrgCode(p.orgCode);
                           setLoginPassword('');
                           setLoginError('');
-                          // Auto submit without requiring password
-                          setTimeout(() => {
-                            const e = new Event('submit', { bubbles: true, cancelable: true }) as unknown as React.FormEvent;
-                            handleLoginSubmit(e, true); // true = skip password
-                          }, 50);
+                          
+                          // Directly authenticate with the store using the demo profile credentials
+                          const res = await login(p.username, '', p.orgCode, true);
+                          if (!res.success) {
+                            setLoginError(res.error || 'Invalid credentials.');
+                          }
                         }}
                         className={`w-full text-left p-3 rounded-2xl border flex items-start gap-3 transition-all ${p.color}`}
                       >
