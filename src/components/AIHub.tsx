@@ -4,7 +4,7 @@ import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AIHub: React.FC = () => {
-  const { userLocation, addAuditLog } = useAppStore();
+  const { addAuditLog } = useAppStore();
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'voice' | 'image' | 'surveillance' | 'lyria'>('chat');
 
   // Chat states
