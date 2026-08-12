@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Headphones, MapPin, PersonStanding } from 'lucide-react';
+import { 
+  Shield, 
+  WifiOff, 
+  Key, 
+  Users, 
+  Layers, 
+  Smartphone, 
+  Monitor, 
+  Globe, 
+  ShieldCheck, 
+  ArrowRight,
+  Cpu,
+  Activity
+} from 'lucide-react';
 
 export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: () => void; onSignup: () => void; onLaunchWeb?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
@@ -10,187 +23,249 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: { onLogin: (
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
+  const scrollToDownload = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById('download-hub')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 overflow-x-hidden">
       {/* NAV */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-slate-900 shadow-xl py-3' : 'bg-transparent py-5'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-10 h-10 object-contain" />
-            <span className={`text-2xl font-black tracking-tight ${scrolled ? 'text-white' : 'text-white'}`}>SafetyLink</span>
+          <div className="flex items-center gap-3">
+            <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+            <span className="text-2xl font-black tracking-tight text-white drop-shadow-md">SafetyLink</span>
           </div>
-
           
-          <div className="hidden md:flex items-center gap-8">
-            {['How It Works', 'Solutions', 'Pricing', 'Support'].map(link => (
-              <a key={link} href="#" className="text-sm font-medium text-white/90 hover:text-white transition-colors">
-                {link}
-              </a>
-            ))}
-            <button onClick={onSignup} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-6 py-2.5 rounded-md font-bold text-sm transition-colors">
-              Get Started
+          <div className="flex items-center gap-4 md:gap-8">
+            <button onClick={onLogin} className="text-sm font-bold text-white/90 hover:text-white transition-colors">
+              Login
+            </button>
+            <button onClick={onLogin} className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-lg shadow-emerald-500/20">
+              Access Commander Deck
             </button>
           </div>
         </div>
       </nav>
 
       {/* HERO */}
-      <section className="relative pt-32 pb-48 lg:pt-48 lg:pb-64 overflow-hidden bg-slate-900">
+      <section className="relative pt-32 pb-32 lg:pt-48 lg:pb-48 overflow-hidden bg-slate-950">
         <div className="absolute inset-0 z-0">
           <video 
             autoPlay 
             loop 
             muted 
             playsInline 
-            className="w-full h-full object-cover object-center opacity-40"
+            className="w-full h-full object-cover object-center opacity-30 mix-blend-screen"
           >
             <source src="/media/safetylink_startup.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/40 to-slate-950" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6">
-          <div className="max-w-2xl">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-6 uppercase">
-              Peace of mind,<br />always connected.
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold tracking-wide uppercase mb-6">
+              <Shield className="w-4 h-4" /> SafetyLink
+            </div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tight">
+              Sequential Emergency<br />Alert Network
             </h1>
-            <p className="text-lg md:text-xl text-slate-200 mb-10 max-w-xl leading-relaxed">
-              Instant access to help, GPS location sharing, and emergency response for you and your loved ones. Explore our personal safety solutions today.
+            <p className="text-xl md:text-2xl text-emerald-400 font-medium mb-6 flex items-center gap-2">
+              <Activity className="w-6 h-6" /> Offline-Capable, Hyper-Local Community Panic Systems
             </p>
-            <button onClick={onLaunchWeb} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-4 rounded-md font-bold text-lg transition-all hover:-translate-y-0.5 shadow-lg shadow-orange-500/30">
-              Shop SafetyLink Devices
-            </button>
+            <p className="text-lg text-slate-300 mb-10 max-w-2xl leading-relaxed">
+              SafetyLink provides private emergency mesh networks tailored for campus safety, security patrols, and corporate sites. Operate seamlessly even under restrictive offline or distress scenarios.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button onClick={onLogin} className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all hover:-translate-y-0.5 shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-2 group">
+                Access Commander Deck
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button onClick={scrollToDownload} className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all hover:-translate-y-0.5 border border-slate-700">
+                Download Hub
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* FEATURES FLOATING CARD */}
-      <section className="relative z-20 -mt-24 md:-mt-32 max-w-7xl mx-auto px-6 mb-24">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12 grid grid-cols-1 md:grid-cols-3 gap-12 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-          
-          <div className="flex flex-col items-center text-center pt-8 md:pt-0">
-            <div className="w-16 h-16 mb-6 flex items-center justify-center">
-              <Headphones className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
+      {/* MOTHERBOARD CONSOLE PREVIEW */}
+      <section className="relative z-20 -mt-16 md:-mt-24 max-w-7xl mx-auto px-6 mb-24">
+        <div className="bg-slate-900 rounded-3xl p-2 shadow-2xl border border-slate-800">
+          <div className="bg-slate-950 rounded-[20px] overflow-hidden">
+            <div className="p-8 pb-0 text-center max-w-2xl mx-auto">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-400 mb-4">
+                <Cpu className="w-6 h-6" />
+              </div>
+              <h2 className="text-3xl font-black text-white mb-4">Motherboard Response Console</h2>
+              <p className="text-slate-400 mb-8">
+                High-fidelity tactical preview of the SafetyLink Commander Deck in action.
+              </p>
             </div>
-            <h3 className="text-xl font-bold mb-4">24/7 Monitoring</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Our dedicated response team is always available when you press the SOS button.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center pt-8 md:pt-0 md:px-8">
-            <div className="w-16 h-16 mb-6 flex items-center justify-center">
-              <MapPin className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
+            <div className="relative aspect-video w-full bg-slate-900">
+              <img 
+                src="/media/Emergency_System_Architecture_Anatomy.png" 
+                alt="Motherboard Console" 
+                className="w-full h-full object-cover opacity-90 border-t border-slate-800"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60" />
             </div>
-            <h3 className="text-xl font-bold mb-4">GPS Tracking</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Real-time location sharing with designated contacts in an emergency.
-            </p>
           </div>
-
-          <div className="flex flex-col items-center text-center pt-8 md:pt-0 md:pl-8">
-            <div className="w-16 h-16 mb-6 flex items-center justify-center">
-              <PersonStanding className="w-10 h-10 text-slate-700" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-xl font-bold mb-4">Falls Detection</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Automatic alerts sent if a fall is detected (on select devices).
-            </p>
-          </div>
-
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="py-16 max-w-7xl mx-auto px-6 mb-24">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            { name: "Sarah J.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop" },
-            { name: "Michael R.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop" },
-            { name: "Elena M.", text: "SafetyLink gives me confidence when I'm out running alone. Highly recommend!", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop" }
-          ].map((t, i) => (
-            <div key={i} className="flex gap-4 items-start">
-              <img src={t.img} alt={t.name} className="w-12 h-12 rounded-full object-cover shrink-0" />
-              <div>
-                <p className="text-sm text-slate-600 italic mb-2">"{t.text}"</p>
-                <p className="text-xs font-bold text-slate-900">- {t.name}</p>
+      {/* RELIABILITY SECTION */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 text-white mb-6 shadow-xl">
+              <ShieldCheck className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h2 className="text-4xl font-black text-slate-900 mb-6 tracking-tight">Built for Extreme Reliability</h2>
+            <p className="text-xl text-slate-600 leading-relaxed">
+              Traditional safety apps fail when data networks go down or in restricted environments. SafetyLink's unified mesh architecture is designed to function seamlessly using simulated Bluetooth Low Energy (BLE) beacons and background location telemetry — operating as a true single source of truth.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            {[
+              { icon: WifiOff, title: "Offline Operation", desc: "Works without relying on traditional airtime footprints." },
+              { icon: Key, title: "Hardware Integration", desc: "Physical keychain token support." },
+              { icon: Users, title: "Role-Based Routing", desc: "Command Center vs Node Viewer." },
+              { icon: Layers, title: "Material 3 Design", desc: "Zero unused variables, strict design harmony." }
+            ].map((f, i) => (
+              <div key={i} className="bg-slate-50 border border-slate-200 p-8 rounded-3xl hover:shadow-xl transition-shadow group">
+                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <f.icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> {f.title}
+                </h3>
+                <p className="text-slate-600">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-slate-900 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 justify-between shadow-2xl relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
+            <div className="relative z-10 max-w-2xl">
+              <h3 className="text-2xl font-bold text-white mb-3 flex items-center gap-3">
+                <span className="text-3xl">🧩</span> Siloed Tenants
+              </h3>
+              <p className="text-slate-300 text-lg">
+                Isolated database schemes ensure strict privacy between organizations.
+              </p>
+            </div>
+            <div className="relative z-10">
+              <div className="w-16 h-16 bg-slate-800 rounded-2xl flex items-center justify-center border border-slate-700">
+                <Shield className="w-8 h-8 text-indigo-400" />
               </div>
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
-      {/* BUSINESS SECTION */}
-      <section className="max-w-7xl mx-auto px-6 mb-32">
-        <div className="bg-[#0f172a] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl">
-          <div className="p-12 md:p-16 flex-1 flex flex-col justify-center items-start">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">SafetyLink for Businesses</h2>
-            <p className="text-slate-300 mb-8 max-w-md leading-relaxed">
-              Learn more about business workings, working and consume enterprise solutions.
-            </p>
-            <button onClick={onLogin} className="bg-[#f97316] hover:bg-[#ea580c] text-white px-8 py-3.5 rounded-md font-bold text-sm transition-colors">
-              Learn More About Enterprise Solutions
-            </button>
+      {/* MONITORING CTA */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 text-blue-600 mb-8">
+            <Globe className="w-10 h-10" />
           </div>
-          <div className="w-full md:w-1/2 min-h-[300px]">
-            <img 
-              src="https://images.unsplash.com/photo-1504307651254-35680f356f12?q=80&w=2000&auto=format&fit=crop" 
-              alt="Construction workers" 
-              className="w-full h-full object-cover"
-            />
+          <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-8 tracking-tight flex items-center justify-center gap-4 flex-wrap">
+            <span>🛰️</span> Real-Time Safety Monitoring for Organizations
+          </h2>
+          <p className="text-xl text-slate-600 mb-10 leading-relaxed">
+            Deploy a private safety network in minutes. Connect field personnel, students, or guards directly to a centralized Commander Deck.
+          </p>
+          <button onClick={onLogin} className="bg-slate-900 hover:bg-slate-800 text-white px-10 py-5 rounded-2xl font-bold text-xl transition-all hover:-translate-y-1 shadow-2xl flex items-center justify-center gap-3 mx-auto">
+            Access Commander Deck <ArrowRight className="w-6 h-6" />
+          </button>
+        </div>
+      </section>
+
+      {/* DOWNLOAD HUB */}
+      <section id="download-hub" className="py-24 bg-slate-950 text-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black mb-6 flex items-center justify-center gap-4">
+              <span>⬇️</span> SafetyLink Download Hub
+            </h2>
+            <p className="text-slate-400 text-xl max-w-2xl mx-auto">
+              Equip your organization with the tools needed for comprehensive emergency management.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* APK */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col hover:border-emerald-500/50 transition-colors">
+              <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mb-6">
+                <Smartphone className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">📱 Mobile APK Distribution</h3>
+              <p className="text-slate-400 mb-8 flex-1">
+                Download the SafetyLink APK directly to your personnel devices for instant telemetry and panic alert integration.
+              </p>
+              <button className="bg-emerald-600 hover:bg-emerald-500 text-white w-full py-4 rounded-xl font-bold transition-colors">
+                Download APK
+              </button>
+            </div>
+
+            {/* COMMANDER DECK */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col hover:border-blue-500/50 transition-colors">
+              <div className="w-14 h-14 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mb-6">
+                <Monitor className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">💻 Commander Deck Access</h3>
+              <p className="text-slate-400 mb-8 flex-1">
+                Install the Commander Deck interface for centralized monitoring and tactical control.
+              </p>
+              <button onClick={onLogin} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-4 rounded-xl font-bold transition-colors">
+                Access Commander Deck
+              </button>
+            </div>
+
+            {/* MAP MODULE */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col hover:border-amber-500/50 transition-colors">
+              <div className="w-14 h-14 bg-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mb-6">
+                <Globe className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">🌍 Global Map Module</h3>
+              <p className="text-slate-400 mb-8 flex-1">
+                Enable live tracking of nodes and panic events with the interactive tactical map.
+              </p>
+              <button onClick={onLogin} className="bg-amber-600 hover:bg-amber-500 text-white w-full py-4 rounded-xl font-bold transition-colors">
+                Activate Map View
+              </button>
+            </div>
+
+            {/* TENANT SECURITY */}
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col hover:border-purple-500/50 transition-colors">
+              <div className="w-14 h-14 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center mb-6">
+                <Key className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4">🔐 Private Tenant Security</h3>
+              <p className="text-slate-400 mb-8 flex-1">
+                Organizations remain siloed — only registered nodes are visible to your network.
+              </p>
+              <button className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white w-full py-4 rounded-xl font-bold transition-colors">
+                Learn More
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-[#1e293b] text-slate-300 py-20">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-          
-          <div>
-            <h4 className="text-white font-bold mb-6">Company Information</h4>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Our Partners</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Company</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-            </ul>
+      <footer className="bg-black text-slate-500 py-8 border-t border-slate-900">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-6 h-6 object-contain grayscale opacity-50" />
+            <span className="font-bold text-sm tracking-widest uppercase">SafetyLink Core</span>
           </div>
-
-          <div>
-            <h4 className="text-white font-bold mb-6">Resources</h4>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:text-white transition-colors">How It Works</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Solutions</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact Us</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-white font-bold mb-6">Legal Disclaimers</h4>
-            <div className="flex flex-col space-y-3 text-sm mb-4">
-              <a href="#" className="hover:text-white transition-colors">Legal</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            </div>
-            <p className="text-[10px] text-slate-500 leading-tight">
-              This disclaimer copies all scroll, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. This content is for demonstration purposes.
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-white font-bold mb-6">Social Media</h4>
-            <div className="flex items-center gap-4">
-              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">FB</a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">TW</a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">IG</a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors text-sm font-bold">YT</a>
-            </div>
-          </div>
-
-        </div>
-        <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-700/50 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
-          <p>© 2024 SafetyLink. All rights reserved.</p>
+          <p className="text-sm">© 2026 SafetyLink Core Systems. All rights reserved.</p>
         </div>
       </footer>
     </div>
