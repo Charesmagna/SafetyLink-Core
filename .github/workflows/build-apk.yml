@@ -60,12 +60,43 @@ jobs:
 
     - name: Write signing properties
       run: |
-        cat > android/signing.properties << 'PROPS'
-        storeFile=app/safetylink-release.keystore
+        cat > signing.properties << 'PROPS'
+        storeFile=android/app/safetylink-release.keystore
         storePassword=SafetyLink2024!
         keyAlias=safetylink
         keyPassword=SafetyLink2024!
         PROPS
+        cat > android/signing.properties << 'PROPS'
+        storeFile=safetylink-release.keystore
+        storePassword=SafetyLink2024!
+        keyAlias=safetylink
+        keyPassword=SafetyLink2024!
+        PROPS
+    - name: Create mock google-services.json
+      run: |
+        cat << 'JSON_EOF' > android/app/google-services.json
+        {
+          "project_info": {
+            "project_number": "1234567890",
+            "project_id": "safetylink-mock",
+            "storage_bucket": "safetylink-mock.appspot.com"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:1234567890:android:mock",
+                "android_client_info": {
+                  "package_name": "com.aistudio.safetylink.vqnztp"
+                }
+              },
+              "oauth_client": [],
+              "api_key": [{"current_key": "MOCK_KEY"}],
+              "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+            }
+          ],
+          "configuration_version": "1"
+        }
+        JSON_EOF
 
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
