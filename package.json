@@ -13,7 +13,6 @@
     "verify": "npm run lint && npm run build",
     "test": "tsx src/tests/run-tests.ts",
     "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
-    "deploy": "npm run build && wrangler deploy",
     "start": "node dist/server.cjs"
   },
   "dependencies": {
@@ -55,12 +54,12 @@
     "react-onesignal": "^3.5.6",
     "stytch": "^14.2.0",
     "twilio": "^6.0.2",
+    "uuid": "^14.0.1",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.4.2",
-    "@cloudflare/vite-plugin": "^1.51.1",
     "@types/express": "^5.0.6",
     "@types/leaflet": "^1.9.12",
     "@types/react": "^18.3.3",
@@ -68,9 +67,9 @@
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "^10.5.4",
     "concurrently": "^10.0.3",
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.31.10",
     "electron": "^43.1.1",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "postcss": "^8.5.19",
     "sharp": "^0.35.3",
@@ -79,8 +78,7 @@
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
     "vite-plugin-pwa": "^1.2.0",
-    "wait-on": "^9.0.10",
-    "wrangler": "^4.120.0"
+    "wait-on": "^9.0.10"
   },
   "main": "electron-main.cjs",
   "build": {
