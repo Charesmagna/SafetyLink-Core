@@ -5,13 +5,13 @@ import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
 import { DispatchChain } from './components/DispatchChain';
-import { BLEScanner } from './components/BLEScanner';
+const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
 const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
 const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations').then(m => ({ default: m.WorkspaceIntegrations })));
-import { Profile } from './components/Profile';
+const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
 import { StatusIndicator } from './components/StatusIndicator';
-import { LocationDisplay } from './components/LocationDisplay';
+const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
@@ -21,13 +21,13 @@ const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ def
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
-import { AppTour } from './components/AppTour';
+const AppTour = lazy(() => import('./components/AppTour').then(m => ({ default: m.AppTour })));
 const AIHub = lazy(() => import('./components/AIHub').then(m => ({ default: m.AIHub })));
-import { MediaHub } from './components/MediaHub';
-import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
+const MediaHub = lazy(() => import('./components/MediaHub').then(m => ({ default: m.MediaHub })));
+const AndroidWidgetSimulator = lazy(() => import('./components/AndroidWidgetSimulator').then(m => ({ default: m.AndroidWidgetSimulator })));
 import { translate, SA_LANGUAGES } from './utils/translations';
-import { KlevaBot } from './components/KlevaBot';
-import { GlobalRadarBackground } from './components/GlobalRadarBackground';
+const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
+const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 const CommerceCenter = lazy(() => import('./components/CommerceCenter').then(m => ({ default: m.CommerceCenter })));
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
@@ -36,7 +36,7 @@ import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
 import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
-import { DecoyCalculator } from './components/DecoyCalculator';
+const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
@@ -323,7 +323,7 @@ const App: React.FC = () => {
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
     if (decoyActive) {
-      return <DecoyCalculator />;
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
     }
 
     if (superAdminActive) {
@@ -567,7 +567,7 @@ const App: React.FC = () => {
           {activeTab === 'deck' && (
             <div className="space-y-5 animate-fadeIn">
               {/* Location telemetry display */}
-              <LocationDisplay />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Location...</div>}><LocationDisplay /></Suspense>
 
               {/* Status metrics bar */}
               <StatusIndicator />
@@ -576,10 +576,10 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading AI Hub...</div>}><AIHub /></Suspense>
 
               {/* Informational Media & Resources Hub (TM Media Solutions) */}
-              <MediaHub />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Media...</div>}><MediaHub /></Suspense>
 
               {/* Interactive Home Screen SOS Widget */}
-              {demoMode && <AndroidWidgetSimulator />}
+              {demoMode && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Simulator...</div>}><AndroidWidgetSimulator /></Suspense>}
 
               {/* Dynamic Pushed Tools & Settings */}
               {(() => {
@@ -663,7 +663,7 @@ const App: React.FC = () => {
 
           {activeTab === 'ble' && (
             <div className="animate-fadeIn">
-              <BLEScanner />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Scanner...</div>}><BLEScanner /></Suspense>
             </div>
           )}
 
@@ -676,7 +676,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'profile' && (
-            <Profile />
+            <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Profile...</div>}><Profile /></Suspense>
           )}
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
@@ -1065,7 +1065,7 @@ const App: React.FC = () => {
         <div className="flare-line flare-line-2" />
       </div>
 
-      {activeTab === 'deck' && !currentOrg && <GlobalRadarBackground />}
+      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
       {/* Background Video */}
       {(activeTab === 'home' && !currentOrg) && (
         <video
@@ -1148,7 +1148,7 @@ const App: React.FC = () => {
       </div>
 
       {/* Floating Lizzy - K'lev.ai South African Safety Assistant Bot */}
-      <KlevaBot />
+      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Bot...</div>}><KlevaBot /></Suspense>
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
