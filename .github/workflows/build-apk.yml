@@ -61,7 +61,7 @@ jobs:
     - name: Write signing properties
       run: |
         cat > android/signing.properties << 'PROPS'
-        storeFile=safetylink-release.keystore
+        storeFile=app/safetylink-release.keystore
         storePassword=SafetyLink2024!
         keyAlias=safetylink
         keyPassword=SafetyLink2024!
