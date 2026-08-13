@@ -170,6 +170,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: "50mb" }));
+  app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
   // Initialize Gemini
   let ai: GoogleGenAI | null = null;
@@ -593,7 +594,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
