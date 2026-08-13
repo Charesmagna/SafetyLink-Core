@@ -3,9 +3,8 @@ import { Database, RefreshCw, } from 'lucide-react';
 import { useAppStore } from '../utils/store';
 
 export const AdvancedOfflineSyncManager: React.FC = () => {
-  const { localOfflineQueue, syncOfflineQueue, addToast } = useAppStore();
+  const { localOfflineQueue, syncOfflineQueue, addToast, syncStrategy, setSyncStrategy } = useAppStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStrategy, setSyncStrategy] = useState<'immediate' | 'batch' | 'wifi-only'>('batch');
 
   const handleManualSync = () => {
     setIsSyncing(true);

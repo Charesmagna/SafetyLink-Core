@@ -40,6 +40,8 @@ interface AppState {
   // New premium Security operations fields
   panicCountdown: number | null;
   localOfflineQueue: { id: string; timestamp: number; description: string; lat: number; lng: number }[];
+  syncStrategy: 'immediate' | 'batch' | 'wifi-only';
+  setSyncStrategy: (strategy: 'immediate' | 'batch' | 'wifi-only') => void;
   startMultiStagePanic: (description: string, durationSec?: number) => void;
   syncOfflineQueue: (silent?: boolean) => void;
   updateOrgBranding: (branding: Partial<Organization>) => void;
@@ -332,6 +334,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   panicCountdown: null,
 
   localOfflineQueue: getStoredJSON<{ id: string; timestamp: number; description: string; lat: number; lng: number }[]>('sl_offline_queue', []),
+  syncStrategy: (localStorage.getItem('sl_sync_strategy') as 'immediate' | 'batch' | 'wifi-only') || 'batch',
+  setSyncStrategy: (strategy) => {
+    set({ syncStrategy: strategy });
+    localStorage.setItem('sl_sync_strategy', strategy);
+  },
 
   // Background service initial state
   isBackgroundServiceRunning: getStoredJSON<boolean>('sl_bg_service_running', true),
