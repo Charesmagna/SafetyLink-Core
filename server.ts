@@ -12,7 +12,8 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 
 // --- Database & Auth Initialization ---
-const db = createClient({ url: "file:safetylink.db" });
+const dbPath = process.env.NODE_ENV === "production" ? "file:/tmp/safetylink.db" : "file:safetylink.db";
+const db = createClient({ url: dbPath });
 
 async function initDb() {
   await db.execute(`
