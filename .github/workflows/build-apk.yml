@@ -70,18 +70,9 @@ jobs:
 
     - name: Write signing properties
       run: |
-        cat > signing.properties << 'PROPS'
-        storeFile=android/app/safetylink-release.keystore
-        storePassword=SafetyLink2024!
-        keyAlias=safetylink
-        keyPassword=SafetyLink2024!
-        PROPS
-        cat > android/signing.properties << 'PROPS'
-        storeFile=safetylink-release.keystore
-        storePassword=SafetyLink2024!
-        keyAlias=safetylink
-        keyPassword=SafetyLink2024!
-        PROPS
+        printf 'storeFile=app/safetylink-release.keystore\nstorePassword=SafetyLink2024!\nkeyAlias=safetylink\nkeyPassword=SafetyLink2024!\n' > android/signing.properties
+        echo "signing.properties written:"
+        cat android/signing.properties
     - name: Create mock google-services.json
       run: |
         cat << 'JSON_EOF' > android/app/google-services.json
