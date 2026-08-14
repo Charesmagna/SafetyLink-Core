@@ -1,4 +1,4 @@
-import { firebaseLogin } from '../services/FirebaseAuthService';
+import { firebaseLogin, firebaseRegisterUser } from '../services/FirebaseAuthService';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -683,6 +683,29 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live)', `Username: ${newUser.username}, Token Provisioned`);
       return { success: true };
     } catch (e) {
+      // Try Firebase Auth as fallback
+      try {
+        const emailToTry = user.email || user.username + '@safetylink.local';
+        const fbResult = await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
+        if (fbResult.success) {
+          const newUser = {
+            ...user,
+            id: fbResult.uid || `usr-${Math.random().toString(36).substring(2, 9)}`,
+            createdAt: Date.now()
+          };
+          set({
+            currentUser: newUser as any,
+            token: fbResult.uid || null,
+            superAdminActive: false,
+            users: [...get().users, newUser as any]
+          });
+          setStoredJSON('sl_jwt_token', fbResult.uid || null);
+          setStoredJSON('sl_current_user', newUser);
+          setStoredJSON('sl_super_admin', false);
+          return { success: true };
+        }
+      } catch (_fbErr) { /* fall through */ }
+      
       console.warn('Network unavailable. Falling back to local offline vault for User Registration.', e);
       const realUsers = getStoredJSON('sl_real_users', []);
       const exists = realUsers.some((u: any) => u.username.toLowerCase() === user.username.toLowerCase());
@@ -893,8 +916,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) {
       // Try Firebase Auth as fallback
       try {
-        const emailToTry = username.includes('@') ? username : username;
-        if (emailToTry.includes('@') && password) {
+        const emailToTry = username.includes('@') ? username : username + '@safetylink.local';
+        if (emailToTry && password) {
           const fbResult = await firebaseLogin(emailToTry, password);
           if (fbResult.success) {
             const isOrgAdmin = fbResult.role === 'Organization Administrator';

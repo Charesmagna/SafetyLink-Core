@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { useAppStore, getOrgAbbreviation } from '../utils/store';
 import { LogoSetPart } from './LogoSetPart';
+import { PricingModal } from './PricingModal';
 import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
@@ -91,6 +92,7 @@ export const AuthScreen: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showClosingLogo, setShowClosingLogo] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
 
   useEffect(() => {
     let listener: any = null;
@@ -277,6 +279,7 @@ export const AuthScreen: React.FC = () => {
       
       {showClosingLogo && <CinematicClosingLogo onComplete={() => CapacitorApp.exitApp()} />}
       {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}
+      <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
       {showExitConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
@@ -335,6 +338,15 @@ export const AuthScreen: React.FC = () => {
 
         {/* Demo Mode Toggle Banner */}
         <div className="mb-5 glass-panel p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between font-mono gap-3">
+
+          <button
+            type="button"
+            onClick={() => setShowPricing(true)}
+            title="View Pricing & Plans"
+            className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex items-center justify-center font-mono text-[9px] font-bold uppercase"
+          >
+            Plans
+          </button>
           <div className="text-left flex-1">
             <span className="text-[9.5px] font-black tracking-wide text-slate-300 block uppercase">Demo Showcase Mode</span>
             <span className="text-[7.5px] text-slate-500 block leading-tight">Instantly populates mock networks and active supervisor nodes.</span>

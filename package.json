@@ -13,7 +13,7 @@
     "verify": "npm run lint && npm run build",
     "test": "tsx src/tests/run-tests.ts",
     "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
-    "start": "NODE_ENV=production node dist/server.cjs"
+    "start": "node dist/server.cjs"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^6.0.0",
