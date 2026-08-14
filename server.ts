@@ -587,7 +587,7 @@ async function startServer() {
 
 
 
-  if (process.env.NODE_ENV !== "production" && !process.argv[1].endsWith("server.cjs")) {
+  if (process.env.NODE_ENV !== "production" && (!process.argv[1] || !process.argv[1].endsWith("server.cjs"))) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
