@@ -614,3 +614,5 @@ async function startServer() {
 }
 
 startServer();
+
+// Keep process alive
