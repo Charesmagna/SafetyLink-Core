@@ -66,13 +66,11 @@ jobs:
         INNER_EOF
 
     - name: Decode keystore
-      run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
-
-    - name: Write signing properties
       run: |
-        printf 'storeFile=safetylink-release.keystore\nstorePassword=SafetyLink2024!\nkeyAlias=safetylink\nkeyPassword=SafetyLink2024!\n' > android/signing.properties
-        echo "signing.properties written:"
-        cat android/signing.properties
+        base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
+        ls -la android/app/safetylink-release.keystore
+        echo "Keystore decoded successfully"
+
     - name: Create mock google-services.json
       run: |
         cat << 'JSON_EOF' > android/app/google-services.json
@@ -120,6 +118,11 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
+      env:
+        KEYSTORE_PATH: ${{ github.workspace }}/android/app/safetylink-release.keystore
+        KEYSTORE_PASSWORD: SafetyLink2024!
+        KEY_ALIAS: safetylink
+        KEY_PASSWORD: SafetyLink2024!
       run: ./gradlew assembleRelease --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -100
 
     - name: Rename APKs for release
