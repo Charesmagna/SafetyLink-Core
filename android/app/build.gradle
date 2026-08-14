@@ -23,15 +23,10 @@ android {
     }
     signingConfigs {
         release {
-            def propsFile = rootProject.file("signing.properties")
-            if (propsFile.exists()) {
-                def props = new Properties()
-                props.load(new FileInputStream(propsFile))
-                storeFile file(props['storeFile'])
-                storePassword props['storePassword']
-                keyAlias props['keyAlias']
-                keyPassword props['keyPassword']
-            }
+            storeFile file(System.getenv('KEYSTORE_PATH') ?: new File(rootProject.projectDir, 'app/safetylink-release.keystore').absolutePath)
+            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'SafetyLink2024!'
+            keyAlias System.getenv('KEY_ALIAS') ?: 'safetylink'
+            keyPassword System.getenv('KEY_PASSWORD') ?: 'SafetyLink2024!'
         }
     }
     buildTypes {
