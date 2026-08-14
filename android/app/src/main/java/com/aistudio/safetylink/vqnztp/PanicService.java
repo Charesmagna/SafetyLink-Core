@@ -11,6 +11,10 @@ import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import androidx.core.content.ContextCompat;
+import android.content.pm.ServiceInfo;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -66,7 +70,22 @@ public class PanicService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Always promote to foreground immediately to adhere to Android's strict service limits
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE);
+            int type = 0;
+            if (Build.VERSION.SDK_INT >= 34) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+                } else {
+                    type = 0x40000000; // FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                }
+            } else {
+                type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE;
+            }
+            try {
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"), type);
+            } catch (Exception e) {
+                Log.e(TAG, "Foreground service type error: " + e.getMessage());
+                startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"));
+            }
         } else {
             startForeground(NOTIFICATION_ID, buildForegroundNotification("SafetyLink Ghost Engine", "Listening in background for SOS signals"));
         }

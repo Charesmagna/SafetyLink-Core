@@ -921,13 +921,18 @@ export const useAppStore = create<AppState>((set, get) => ({
           const fbResult = await firebaseLogin(emailToTry, password);
           if (fbResult.success) {
             const isOrgAdmin = fbResult.role === 'Organization Administrator';
+            const currentUserObj = { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode, email: fbResult.email, id: fbResult.uid };
+            const currentOrgObj = isOrgAdmin && fbResult.orgCode ? { id: fbResult.orgCode, name: fbResult.orgName || fbResult.orgCode } : null;
             set({
-              currentUser: { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode } as any,
+              currentUser: currentUserObj as any,
               token: fbResult.uid || null,
-              currentOrg: isOrgAdmin && fbResult.orgCode ? { id: fbResult.orgCode, name: fbResult.orgName || fbResult.orgCode } as any : null,
+              currentOrg: currentOrgObj as any,
               superAdminActive: false
             });
             setStoredJSON('sl_jwt_token', fbResult.uid || null);
+            setStoredJSON('sl_current_user', currentUserObj);
+            setStoredJSON('sl_current_org', currentOrgObj);
+            setStoredJSON('sl_super_admin', false);
             return { success: true, role: isOrgAdmin ? 'ORG' : 'USER' };
           }
         }

@@ -73,7 +73,11 @@ public class FloatingWidgetService extends Service {
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(9922, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            try {
+                startForeground(9922, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+            } catch (Exception e) {
+                startForeground(9922, notification);
+            }
         } else {
             startForeground(9922, notification);
         }

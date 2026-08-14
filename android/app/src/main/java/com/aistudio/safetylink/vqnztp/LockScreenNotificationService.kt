@@ -38,7 +38,11 @@ class LockScreenNotificationService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, buildBanner(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            try {
+                startForeground(NOTIFICATION_ID, buildBanner(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } catch (e: Exception) {
+                startForeground(NOTIFICATION_ID, buildBanner())
+            }
         } else {
             startForeground(NOTIFICATION_ID, buildBanner())
         }
