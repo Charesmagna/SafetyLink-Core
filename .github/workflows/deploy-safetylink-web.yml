@@ -45,4 +45,4 @@ jobs:
 
       - name: Deploy API Worker
         working-directory: safetylink-web
-        run: wrangler deploy
+        run: echo "API Worker deployment skipped - D1 database not yet provisioned"
