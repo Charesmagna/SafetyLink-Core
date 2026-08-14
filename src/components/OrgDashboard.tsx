@@ -195,7 +195,7 @@ export const OrgDashboard: React.FC = () => {
             <img 
               src={brandLogoUrl} 
               alt="Org Logo" 
-              className="w-16 h-16 rounded-xl border object-cover border-slate-700 shadow-md"
+              className="w-16 h-16 rounded-2xl border object-cover border-slate-700 shadow-md"
               onError={() => setBrandLogoUrl('')}
             />
           ) : (
@@ -328,7 +328,7 @@ export const OrgDashboard: React.FC = () => {
         
         {/* Offline Queuing Synchronizer Alerts Banner */}
         {localOfflineQueue.length > 0 && (
-          <div className="p-4 bg-amber-950/20 border border-amber-500/20 rounded-xl flex justify-between items-center gap-3 text-left">
+          <div className="p-4 bg-amber-950/20 border border-amber-500/20 rounded-2xl flex justify-between items-center gap-3 text-left">
             <div>
               <h4 className="text-xs font-bold text-amber-400 uppercase font-mono">
                 ⚠️ Local Offline Alerts Pending Sync ({localOfflineQueue.length})
@@ -367,7 +367,7 @@ export const OrgDashboard: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                 {/* Creator form */}
-                <div className="bg-slate-900/20 border border-slate-900 rounded-xl p-4 space-y-3.5 md:col-span-1">
+                <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-4 space-y-3.5 md:col-span-1">
                   <span className="text-[9px] font-mono font-black uppercase text-cyan-400 block tracking-wider">
                     Push New Client Tool
                   </span>
@@ -448,7 +448,7 @@ export const OrgDashboard: React.FC = () => {
                 </div>
 
                 {/* List of current tools for this Org */}
-                <div className="bg-slate-900/20 border border-slate-900 rounded-xl p-4 space-y-4 md:col-span-2">
+                <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-4 space-y-4 md:col-span-2">
                   <span className="text-[9px] font-mono font-black uppercase text-slate-400 block tracking-wider">
                     Published Active Tools
                   </span>
@@ -500,7 +500,7 @@ export const OrgDashboard: React.FC = () => {
               if (pendingUsers.length === 0) return null;
               
               return (
-                <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-xl text-left space-y-3.5 shadow-md font-mono">
+                <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-2xl text-left space-y-3.5 shadow-md font-mono">
                   <div className="flex justify-between items-center border-b border-amber-500/10 pb-2">
                     <div className="space-y-0.5">
                       <span className="text-amber-400 font-black uppercase text-[10px] tracking-widest block font-display">
@@ -587,7 +587,7 @@ export const OrgDashboard: React.FC = () => {
             </div>
 
             {filteredStudents.length === 0 ? (
-              <div className="p-10 bg-slate-900/10 border border-slate-900 rounded-xl text-center">
+              <div className="p-10 bg-slate-900/10 border border-slate-900 rounded-2xl text-center">
                 <span className="text-2xl">👥</span>
                 <p className="text-[11px] text-slate-500 font-mono mt-2">
                   No subscribers matching your filters. Provide your code {currentOrg.id} to register new clients!
@@ -610,7 +610,7 @@ export const OrgDashboard: React.FC = () => {
                   return (
                     <div
                       key={student.id}
-                      className="p-4 bg-slate-900/30 border border-slate-900 hover:border-slate-800 rounded-xl transition-all text-left space-y-4 shadow-sm"
+                      className="p-4 bg-slate-900/30 border border-slate-900 hover:border-slate-800 rounded-2xl transition-all text-left space-y-4 shadow-sm"
                     >
                       {isEditing ? (
                         <div className="space-y-3 font-mono text-[10px] grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
@@ -823,7 +823,7 @@ export const OrgDashboard: React.FC = () => {
         {/* SUB TAB: ORGANIZATION BRANDING & SLA SETTINGS        */}
         {/* ==================================================== */}
         {activeSubTab === 'branding' && (
-          <form onSubmit={handleSaveBranding} className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md">
+          <form onSubmit={handleSaveBranding} className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto glass-panel rounded-3xl p-6 shadow-md">
             <h3 className="text-sm font-black text-slate-200 font-mono uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-2">
               <span>🎨 Configure Control Room Branding & SLA Escalations</span>
             </h3>
@@ -912,7 +912,7 @@ export const OrgDashboard: React.FC = () => {
         {/* SUB TAB: TWILIO CONNECTION SETUP                    */}
         {/* ==================================================== */}
         {activeSubTab === 'twilio' && (
-          <div className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-md">
+          <div className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto glass-panel rounded-3xl p-6 shadow-md">
             <div className="border-b border-slate-800 pb-3 flex justify-between items-center flex-wrap gap-2">
               <div>
                 <h3 className="text-sm font-black text-slate-200 font-mono uppercase tracking-wider flex items-center gap-2">
@@ -931,7 +931,7 @@ export const OrgDashboard: React.FC = () => {
               </span>
             </div>
 
-            <div className="bg-slate-950/60 border border-slate-850 p-4 rounded-xl text-xs space-y-2 text-slate-300">
+            <div className="bg-slate-950/60 border border-slate-850 p-4 rounded-2xl text-xs space-y-2 text-slate-300">
               <span className="text-[8px] font-mono font-black text-indigo-400 uppercase tracking-widest block">HOW TO ACTIVATE CLOUD DISPATCH</span>
               <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-slate-400">
                 <li>Create a free account at <a href="https://console.twilio.com" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">console.twilio.com</a></li>
@@ -1196,25 +1196,25 @@ export const OrgDashboard: React.FC = () => {
           <div className="space-y-6 animate-fadeIn">
             {/* KPI grid panel */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
-              <div className="bg-slate-900 border border-slate-800 p-4 space-y-1">
+              <div className="glass-panel p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Monthly Alert Incidents</span>
                 <span className="text-xl font-mono font-black text-slate-100 block">42</span>
                 <span className="text-[8px] font-mono text-cyan-400 block">▼ 14% vs last month</span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 space-y-1">
+              <div className="glass-panel p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">False Alarm Incident Ratio</span>
                 <span className="text-xl font-mono font-black text-red-400 block">8.2%</span>
                 <span className="text-[8px] font-mono text-slate-500 block">Target Threshold &lt; 10%</span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 space-y-1">
+              <div className="glass-panel p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Avg Responder Response SLA</span>
                 <span className="text-xl font-mono font-black text-teal-400 block">4m 22s</span>
                 <span className="text-[8px] font-mono text-cyan-400 block">▲ 18s faster response</span>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 p-4 space-y-1">
+              <div className="glass-panel p-4 space-y-1">
                 <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Active Device Connectivity</span>
                 <span className="text-xl font-mono font-black text-indigo-400 block">99.4%</span>
                 <span className="text-[8px] font-mono text-indigo-300 block">78 paired nodes active</span>
@@ -1223,7 +1223,7 @@ export const OrgDashboard: React.FC = () => {
 
             {/* Simulated Heat Map and telemetry metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
-              <div className="bg-slate-900/20 border border-slate-900 rounded-xl p-5 space-y-3.5 flex flex-col justify-between">
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-3.5 flex flex-col justify-between">
                 <div>
                   <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Localized GIS Heat Map Matrix</h4>
                   <p className="text-[10px] text-slate-500 font-mono mt-0.5">
@@ -1249,7 +1249,7 @@ export const OrgDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-slate-900/20 border border-slate-900 rounded-xl p-5 space-y-4">
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-4">
                 <div>
                   <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Device Online Heartbeat Monitor</h4>
                   <p className="text-[10px] text-slate-500 font-mono mt-0.5">
@@ -1300,7 +1300,7 @@ export const OrgDashboard: React.FC = () => {
         {activeSubTab === 'referrals' && (
           <div className="space-y-6 animate-fadeIn">
             {/* Referral Code Generator */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="glass-panel rounded-2xl p-5 space-y-4">
               <div className="border-b border-slate-900 pb-3">
                 <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest font-mono">Agent Referral Code</h3>
                 <p className="text-[10px] text-slate-500 mt-1">Generate a code to give to your agents. Every client that signs up using this code is tracked below.</p>
@@ -1348,7 +1348,7 @@ export const OrgDashboard: React.FC = () => {
             </div>
 
             {/* Referred Users List */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <div className="glass-panel rounded-2xl p-5 space-y-4">
               <div className="border-b border-slate-900 pb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-black text-slate-100 uppercase tracking-widest font-mono">Referred Clients & Earnings</h3>

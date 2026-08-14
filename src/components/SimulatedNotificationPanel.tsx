@@ -63,7 +63,7 @@ export const SimulatedNotificationPanel: React.FC = () => {
               </div>
 
               {/* SafetyLink Foreground Service Notification */}
-              <div className="p-4 mx-2 mt-2 bg-slate-800 rounded-xl border border-slate-700 shadow-lg">
+              <div className="p-4 mx-2 mt-2 bg-slate-800 rounded-2xl border border-slate-700 shadow-lg">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-8 h-8 rounded-full overflow-hidden border border-emerald-500">
                     <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SL" className="w-full h-full object-cover" />

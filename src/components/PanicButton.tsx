@@ -83,13 +83,13 @@ export const PanicButton: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="carbon-panel rounded-xl p-6 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden  lens-flare-overlay"
+      className="carbon-panel rounded-3xl p-6 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden scanlines lens-flare-overlay"
     >
       {/* Absolute top neon signal guide lines */}
       <div className={`absolute top-0 left-0 right-0 h-[3px] transition-all duration-500 ${
         activeSOSState !== 'IDLE' 
-          ? 'bg-red-600 ' 
-          : 'bg-emerald-600 '
+          ? 'bg-gradient-to-r from-red-500 via-orange-500 to-red-500 neon-glow-red' 
+          : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 neon-glow-emerald'
       }`} />
 
       {/* Grid Pattern overlay */}
@@ -172,7 +172,7 @@ export const PanicButton: React.FC = () => {
         {/* 3D Depth Actuator Ring */}
         <div className={`absolute w-48 h-48 rounded-full border transition-all duration-500 flex items-center justify-center ${
           activeSOSState !== 'IDLE'
-            ? 'border-red-500/50 bg-red-950/30 shadow-sm animate-glow-ring'
+            ? 'border-red-500/50 bg-red-950/30 shadow-[0_0_50px_rgba(239,68,68,0.45)] animate-glow-ring'
             : 'border-slate-800 bg-slate-950/70 shadow-[inset_0_4px_16px_rgba(0,0,0,0.85)]'
         }`}>
           
@@ -190,7 +190,7 @@ export const PanicButton: React.FC = () => {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm overflow-hidden shadow-2xl relative"
+              className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative"
             >
               <div className="bg-red-900/40 p-4 text-center border-b border-red-500/30">
                 <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2 animate-pulse" />
@@ -205,7 +205,7 @@ export const PanicButton: React.FC = () => {
                       key={i}
                       className={`w-12 h-14 rounded-lg flex items-center justify-center text-2xl font-mono font-bold transition-all ${
                         pinError ? 'bg-red-500/20 border-2 border-red-500 text-red-400' :
-                        pinInput.length > i ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 shadow-sm' : 'bg-slate-800 border-2 border-slate-700 text-slate-500'
+                        pinInput.length > i ? 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-800 border-2 border-slate-700 text-slate-500'
                       }`}
                     >
                       {pinInput.length > i ? '*' : '-'}
@@ -241,7 +241,7 @@ export const PanicButton: React.FC = () => {
                           }
                         }
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xl py-4 rounded-xl border border-slate-700/50  transition-all focus:outline-none"
+                      className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xl py-4 rounded-xl border border-slate-700/50 active:scale-95 transition-all focus:outline-none"
                     >
                       {num}
                     </button>
@@ -251,7 +251,7 @@ export const PanicButton: React.FC = () => {
                       setShowCancelPin(false);
                       setPinInput('');
                     }}
-                    className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 font-medium py-4 rounded-xl  transition-all focus:outline-none flex items-center justify-center"
+                    className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 font-medium py-4 rounded-xl active:scale-95 transition-all focus:outline-none flex items-center justify-center"
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -274,13 +274,13 @@ export const PanicButton: React.FC = () => {
                         }
                       }
                     }}
-                    className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xl py-4 rounded-xl border border-slate-700/50  transition-all focus:outline-none"
+                    className="bg-slate-800 hover:bg-slate-700 text-white font-mono text-xl py-4 rounded-xl border border-slate-700/50 active:scale-95 transition-all focus:outline-none"
                   >
                     0
                   </button>
                   <button
                     onClick={() => setPinInput(pinInput.slice(0, -1))}
-                    className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 font-medium py-4 rounded-xl  transition-all focus:outline-none text-sm uppercase tracking-wider"
+                    className="bg-slate-800/50 hover:bg-slate-700 text-slate-400 font-medium py-4 rounded-xl active:scale-95 transition-all focus:outline-none text-sm uppercase tracking-wider"
                   >
                     DEL
                   </button>
@@ -309,7 +309,7 @@ export const PanicButton: React.FC = () => {
 
             className={`w-40 h-40 rounded-full flex flex-col items-center justify-center transition-all duration-300 relative overflow-hidden select-none outline-none ${
               activeSOSState === 'IDLE'
-                ? 'bg-red-600 hover:bg-red-500 hover:-translate-y-1 transition-all duration-300 shadow-lg '
+                ? 'glossy-sos-btn active:scale-95'
                 : 'bg-slate-950 border border-red-500/40 hover:bg-slate-900 shadow-[inset_0_4px_12px_rgba(0,0,0,0.9)]'
             }`}
           >
@@ -360,7 +360,7 @@ export const PanicButton: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="w-full mt-4 p-4 bg-slate-950/60 rounded-xl border border-red-500/20 font-mono text-[11px]"
+            className="w-full mt-4 p-4 bg-slate-950/60 rounded-2xl border border-red-500/20 font-mono text-[11px]"
           >
             <div className="flex justify-between text-[9px] text-slate-500 border-b border-slate-900 pb-1.5 mb-2.5">
               <span>SECURITY ROUTING PIPELINE</span>
@@ -409,7 +409,7 @@ export const PanicButton: React.FC = () => {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full ${activeSOSState === 'DISPATCHED' ? 'bg-emerald-500 animate-pulse ' : 'bg-slate-800'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeSOSState === 'DISPATCHED' ? 'bg-emerald-500 animate-pulse neon-glow-emerald' : 'bg-slate-800'}`} />
                   <span className={activeSOSState === 'DISPATCHED' ? 'text-emerald-400 font-bold' : 'opacity-60 text-slate-400'}>
                     4. Security Dispatch Dispatched
                   </span>
@@ -430,7 +430,7 @@ export const PanicButton: React.FC = () => {
       </AnimatePresence>
 
       {/* Recent Activity Log Engine */}
-      <div className="mt-5 p-3.5 bg-slate-950/85 border border-slate-900 rounded-xl text-left relative z-10 font-mono hidden">
+      <div className="mt-5 p-3.5 bg-slate-950/85 border border-slate-900 rounded-2xl text-left relative z-10 font-mono hidden">
         <div className="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
           <span className="text-[9px] font-black text-blue-400 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -576,7 +576,7 @@ export const PanicButton: React.FC = () => {
               initial={{ y: 400 }}
               animate={{ y: 0 }}
               exit={{ y: 400 }}
-              className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm overflow-hidden shadow-2xl relative"
+              className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative"
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
@@ -615,7 +615,7 @@ export const PanicButton: React.FC = () => {
                     startWatchMeTimer(watchMeMinutes);
                     setShowWatchMe(false);
                   }}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all shadow-sm"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                 >
                   Start Protection
                 </button>
@@ -638,7 +638,7 @@ export const PanicButton: React.FC = () => {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-sm p-6 text-center shadow-2xl relative"
+              className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl relative"
             >
               <h3 className="text-white font-bold text-lg mb-2">Cancel Watch-Me</h3>
               <p className="text-slate-400 text-sm mb-6">Enter PIN to stop the timer.</p>

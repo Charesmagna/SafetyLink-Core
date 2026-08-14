@@ -1,4 +1,3 @@
-import { SkeletonLoader } from "./components/SkeletonLoader";
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -56,7 +55,7 @@ type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings'
 
 const TrialLockOverlay = () => (
   <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6">
-    <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-xl p-8 text-center shadow-sm">
+    <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-2xl p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]">
       <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
         <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -324,15 +323,15 @@ const App: React.FC = () => {
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
     if (decoyActive) {
-      return <Suspense fallback={<SkeletonLoader />}><DecoyCalculator /></Suspense>;
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
     }
 
     if (superAdminActive) {
-      return <ErrorBoundary tabName="Admin"><Suspense fallback={<SkeletonLoader />}><AdminPanel /></Suspense></ErrorBoundary>;
+      return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
     if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder'].includes(currentUser.role || ''))) {
-      return <Suspense fallback={<SkeletonLoader />}><OrgDashboard /></Suspense>;
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
     }
 
     if (!currentUser) {
@@ -347,7 +346,7 @@ const App: React.FC = () => {
       
       {showExitConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full text-center space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
               <span className="text-2xl">🚪</span>
             </div>
@@ -509,7 +508,7 @@ const App: React.FC = () => {
               {/* BOTTOM: iTAG status + reassurance */}
               <div className="shrink-0 w-full space-y-2 pb-1">
                 {bleDevices.length > 0 && (
-                  <div className="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+                  <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-3 py-2 flex items-center gap-2 flex-wrap">
                     {bleDevices.slice(0, 2).map((d: any) => (
                       <div key={d.macAddress} className="flex items-center gap-2 flex-1 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${d.connectionState === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : d.connectionState === 'CONNECTING' ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
@@ -527,7 +526,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 )}
-                <div className="w-full bg-slate-900/40 border border-slate-900 rounded-xl px-3 py-2.5 flex items-center gap-3">
+                <div className="w-full bg-slate-900/40 border border-slate-900 rounded-2xl px-3 py-2.5 flex items-center gap-3">
                   <span className="text-lg shrink-0">🛡️</span>
                   <div className="text-left min-w-0">
                     <p className="text-[10px] font-bold text-slate-200 leading-none">{t('home.reassurance_title')}, {currentUser.fullName?.split(' ')[0]}!</p>
@@ -568,7 +567,7 @@ const App: React.FC = () => {
           {activeTab === 'deck' && (
             <div className="space-y-5 animate-fadeIn">
               {/* Location telemetry display */}
-              <Suspense fallback={<SkeletonLoader />}><LocationDisplay /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Location...</div>}><LocationDisplay /></Suspense>
 
               {/* Status metrics bar */}
               <StatusIndicator />
@@ -577,10 +576,10 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading AI Hub...</div>}><AIHub /></Suspense>
 
               {/* Informational Media & Resources Hub (TM Media Solutions) */}
-              <Suspense fallback={<SkeletonLoader />}><MediaHub /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Media...</div>}><MediaHub /></Suspense>
 
               {/* Interactive Home Screen SOS Widget */}
-              {demoMode && <Suspense fallback={<SkeletonLoader />}><AndroidWidgetSimulator /></Suspense>}
+              {demoMode && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Simulator...</div>}><AndroidWidgetSimulator /></Suspense>}
 
               {/* Dynamic Pushed Tools & Settings */}
               {(() => {
@@ -589,7 +588,7 @@ const App: React.FC = () => {
                 if (visibleTools.length === 0) return null;
 
                 return (
-                  <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 text-left space-y-4 shadow animate-fadeIn">
+                  <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 text-left space-y-4 shadow animate-fadeIn">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                       <h3 className="text-xs font-black uppercase text-purple-300 font-mono tracking-wider">
@@ -621,7 +620,7 @@ const App: React.FC = () => {
                         };
 
                         return (
-                          <div key={t.id} className="p-3.5 bg-slate-950/85 border border-slate-900 rounded-xl flex flex-col gap-2.5">
+                          <div key={t.id} className="p-3.5 bg-slate-950/85 border border-slate-900 rounded-2xl flex flex-col gap-2.5">
                             <div className="space-y-0.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-slate-100">{t.title}</span>
@@ -650,7 +649,7 @@ const App: React.FC = () => {
 
           {activeTab === 'vault' && (
             <ErrorBoundary tabName="Vault">
-              <Suspense fallback={<SkeletonLoader />}>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Vault...</div>}>
                 <div className="animate-fadeIn"><ConfidentialVault /></div>
               </Suspense>
             </ErrorBoundary>
@@ -664,36 +663,36 @@ const App: React.FC = () => {
 
           {activeTab === 'ble' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<SkeletonLoader />}><BLEScanner /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Scanner...</div>}><BLEScanner /></Suspense>
             </div>
           )}
 
           {activeTab === 'map' && (
             <ErrorBoundary tabName="Map">
-              <Suspense fallback={<SkeletonLoader />}>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Map...</div>}>
                 <div className="animate-fadeIn"><OfflineMap /></div>
               </Suspense>
             </ErrorBoundary>
           )}
 
           {activeTab === 'profile' && (
-            <Suspense fallback={<SkeletonLoader />}><Profile /></Suspense>
+            <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Profile...</div>}><Profile /></Suspense>
           )}
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<SkeletonLoader />}><Settings /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Settings...</div>}><Settings /></Suspense>
             </div>
           )}
 
           
           {activeTab === 'subsystems' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<SkeletonLoader />}><AdvancedSubsystems /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Subsystems...</div>}><AdvancedSubsystems /></Suspense>
             </div>
           )}
           {activeTab === 'workspace' && (
             <div className="animate-fadeIn p-4 overflow-y-auto h-full">
-              <Suspense fallback={<SkeletonLoader />}><WorkspaceIntegrations /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Workspace...</div>}><WorkspaceIntegrations /></Suspense>
             </div>
           )}
 
@@ -739,12 +738,12 @@ const App: React.FC = () => {
                       referrerPolicy="no-referrer"
                     />
                     {/* Shadow overlay to integrate nicely with UI */}
-                    <div className="absolute inset-0 bg-slate-900 border border-slate-800" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950" />
                   </motion.div>
                 </AnimatePresence>
                 {/* HUD Overlay Scanlines and digital grid */}
                 <div className="absolute inset-0 digital-grid opacity-[0.06]" />
-                <div className="absolute inset-0 bg-red-600 mix-blend-color" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-red-500/5 mix-blend-color" />
               </div>
 
               <div className="space-y-6 relative z-10">
@@ -770,7 +769,7 @@ const App: React.FC = () => {
                 </div>
 
                 {/* User Info inside drawer */}
-                <button onClick={() => { setActiveTab('profile'); setIsDrawerOpen(false); }} className="w-full p-3 bg-slate-900/40 border border-slate-900 rounded-xl text-left flex items-center gap-3 hover:bg-slate-900/80 transition-colors cursor-pointer">
+                <button onClick={() => { setActiveTab('profile'); setIsDrawerOpen(false); }} className="w-full p-3 bg-slate-900/40 border border-slate-900 rounded-2xl text-left flex items-center gap-3 hover:bg-slate-900/80 transition-colors cursor-pointer">
                   <div className="w-9 h-9 rounded-full bg-slate-800/80 border border-slate-750 flex items-center justify-center text-base shadow-inner">
                     👤
                   </div>
@@ -1042,7 +1041,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? '' : ''}`}>
+    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       {trialExpired && <TrialLockOverlay />}
 
       {/* High fidelity cyber background lighting elements */}
@@ -1066,7 +1065,7 @@ const App: React.FC = () => {
         <div className="flare-line flare-line-2" />
       </div>
 
-      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<SkeletonLoader />}><GlobalRadarBackground /></Suspense>}
+      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
       {/* Background Video */}
       {(activeTab === 'home' && !currentOrg) && (
         <video
@@ -1114,7 +1113,7 @@ const App: React.FC = () => {
               initial={{ opacity: 0, y: 35, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.15 } }}
-              className={`p-3 rounded-xl shadow-2xl border flex items-start gap-2.5 pointer-events-auto relative overflow-hidden font-mono text-[9.5px] ${
+              className={`p-3 rounded-2xl shadow-2xl border flex items-start gap-2.5 pointer-events-auto relative overflow-hidden font-mono text-[9.5px] ${
                 toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/20 text-emerald-300' :
                 toast.type === 'error' ? 'bg-red-950/90 border-red-500/20 text-red-300' :
                 toast.type === 'warn' ? 'bg-amber-950/90 border-amber-500/20 text-amber-300' :
@@ -1149,13 +1148,13 @@ const App: React.FC = () => {
       </div>
 
       {/* Floating Lizzy - K'lev.ai South African Safety Assistant Bot */}
-      <Suspense fallback={<SkeletonLoader />}><KlevaBot /></Suspense>
+      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Bot...</div>}><KlevaBot /></Suspense>
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
-      <Suspense fallback={<SkeletonLoader />}><CommerceCenter /></Suspense>
+      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Commerce...</div>}><CommerceCenter /></Suspense>
       <FirstLaunchDisclaimer />
 
     </div>

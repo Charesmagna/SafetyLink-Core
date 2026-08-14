@@ -339,11 +339,11 @@ Thank you for securing your community with SafetyLink.
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="relative w-full max-w-5xl bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-2xl shadow-blue-950/20 text-slate-100 font-sans my-8"
+              className="relative w-full max-w-5xl bg-slate-900/90 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl shadow-blue-950/20 text-slate-100 font-sans my-8"
               id="commerce-center-modal"
             >
               {/* Header Accent Bar */}
-              <div className="h-2 w-full bg-slate-800 border border-slate-700" />
+              <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
 
               {/* Close button */}
               <button 
@@ -358,7 +358,7 @@ Thank you for securing your community with SafetyLink.
                 {/* Header branding */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6 mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400">
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400">
                       <Shield className="w-8 h-8" />
                     </div>
                     <div>
@@ -426,7 +426,7 @@ Thank you for securing your community with SafetyLink.
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {HARDWARE_CATALOG.map(prod => (
-                            <div key={prod.id} className="p-4 bg-slate-950/50 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
+                            <div key={prod.id} className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
                               <div>
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-2xl">{prod.icon}</span>
@@ -457,7 +457,7 @@ Thank you for securing your community with SafetyLink.
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {SUBSCRIPTION_PLANS.map(plan => (
-                            <div key={plan.id} className="p-4 bg-slate-950/50 rounded-xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
+                            <div key={plan.id} className="p-4 bg-slate-950/50 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between">
                               <div>
                                 <h4 className="text-sm font-mono font-bold text-slate-200">{plan.name}</h4>
                                 <p className="text-[11px] text-slate-400 mt-1">{plan.description}</p>
@@ -493,7 +493,7 @@ Thank you for securing your community with SafetyLink.
                     </div>
 
                     {/* Cart / Invoice Summary Panel */}
-                    <div className="p-5 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <div className="p-5 bg-slate-950/60 rounded-3xl border border-slate-800 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
                           <h3 className="text-xs font-mono font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
@@ -592,7 +592,7 @@ Thank you for securing your community with SafetyLink.
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     {/* Input sliders */}
                     <div className="lg:col-span-3 space-y-6">
-                      <div className="p-5 bg-slate-950/40 rounded-xl border border-slate-800">
+                      <div className="p-5 bg-slate-950/40 rounded-3xl border border-slate-800">
                         <h3 className="text-xs font-mono font-black text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
                           <Building className="w-4 h-4 text-blue-400" />
                           <span>1. Select Subscription Tier</span>
@@ -601,7 +601,7 @@ Thank you for securing your community with SafetyLink.
                           {SUBSCRIPTION_PLANS.map(plan => (
                             <label 
                               key={plan.id}
-                              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
+                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
                                 calcPlanId === plan.id 
                                   ? 'bg-blue-950/30 border-blue-500/80 shadow' 
                                   : 'bg-slate-950 border-slate-900 hover:border-slate-800'
@@ -625,7 +625,7 @@ Thank you for securing your community with SafetyLink.
                       </div>
 
                       {/* SLA Resource Scales */}
-                      <div className="p-5 bg-slate-950/40 rounded-xl border border-slate-800 space-y-5">
+                      <div className="p-5 bg-slate-950/40 rounded-3xl border border-slate-800 space-y-5">
                         <h3 className="text-xs font-mono font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
                           <Users className="w-4 h-4 text-blue-400" />
                           <span>2. Service Resources & Scalability</span>
@@ -715,7 +715,7 @@ Thank you for securing your community with SafetyLink.
                     </div>
 
                     {/* Cost breakdown & Proceed */}
-                    <div className="lg:col-span-2 p-5 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col justify-between">
+                    <div className="lg:col-span-2 p-5 bg-slate-950/60 rounded-3xl border border-slate-800 flex flex-col justify-between">
                       <div>
                         <h3 className="text-xs font-mono font-black text-slate-300 uppercase tracking-widest border-b border-slate-800 pb-3 mb-4 flex items-center gap-2">
                           <CreditCard className="w-4 h-4 text-blue-400" />
@@ -760,7 +760,7 @@ Thank you for securing your community with SafetyLink.
                       <div className="border-t border-slate-800 pt-4 mt-6">
                         <button
                           onClick={() => setActiveTab('invoice')}
-                          className="w-full py-3 bg-slate-800 border border-slate-700 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+                          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
                         >
                           <FileText className="w-4 h-4" />
                           <span>Generate Tax Invoice</span>
@@ -775,7 +775,7 @@ Thank you for securing your community with SafetyLink.
                 {activeTab === 'invoice' && (
                   <div className="space-y-6">
                     {/* Invoice View */}
-                    <div className="p-6 md:p-8 bg-white text-slate-900 rounded-xl border border-slate-300 shadow-xl max-w-3xl mx-auto font-mono text-xs relative overflow-hidden" id="tax-invoice-printable">
+                    <div className="p-6 md:p-8 bg-white text-slate-900 rounded-3xl border border-slate-300 shadow-xl max-w-3xl mx-auto font-mono text-xs relative overflow-hidden" id="tax-invoice-printable">
                       
                       {/* Diagonal watermark for demo safety */}
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-12 text-slate-100 text-6xl font-black select-none pointer-events-none uppercase tracking-widest">

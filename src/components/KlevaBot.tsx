@@ -215,7 +215,7 @@ export const KlevaBot: React.FC = () => {
         <img
           src={klevaLogo}
           alt="K'lev.ai Mascot"
-          className="w-[44px] h-[44px] rounded-full object-cover shadow-sm animate-pulse"
+          className="w-[44px] h-[44px] rounded-full object-cover shadow-[0_0_10px_rgba(59,130,246,0.3)] animate-pulse"
         />
       </motion.button>
 
@@ -228,11 +228,11 @@ export const KlevaBot: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, scale: 0.85, y: 50, x: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className="fixed bottom-24 right-6 z-50 w-[340px] sm:w-[380px] h-[520px] bg-slate-950 border border-slate-900 rounded-xl shadow-2xl flex flex-col overflow-hidden "
+            className="fixed bottom-24 right-6 z-50 w-[340px] sm:w-[380px] h-[520px] bg-slate-950 border border-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden scanlines"
           >
             {/* Header branding lockup requested by user */}
             <div className="bg-slate-900/90 border-b border-slate-900 p-4 shrink-0 relative">
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 to-emerald-500" />
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2.5 text-left">
@@ -285,7 +285,7 @@ export const KlevaBot: React.FC = () => {
                   }`}
                 >
                   <div
-                    className={`p-3 rounded-xl text-xs leading-relaxed font-mono ${
+                    className={`p-3 rounded-2xl text-xs leading-relaxed font-mono ${
                       m.sender === "user"
                         ? "bg-blue-600 border border-blue-500/20 text-white rounded-br-none"
                         : "bg-slate-900 border border-slate-850 text-slate-200 rounded-bl-none whitespace-pre-line"
@@ -318,7 +318,7 @@ export const KlevaBot: React.FC = () => {
                       className="w-[24px] h-[24px] rounded-full object-cover"
                     />
                   </motion.div>
-                  <div className="p-3 bg-slate-900 border border-slate-850 text-slate-500 text-xs rounded-xl rounded-bl-none font-mono italic animate-pulse">
+                  <div className="p-3 bg-slate-900 border border-slate-850 text-slate-500 text-xs rounded-2xl rounded-bl-none font-mono italic animate-pulse">
                     Lizzy is evaluating safety parameters...
                   </div>
                 </div>

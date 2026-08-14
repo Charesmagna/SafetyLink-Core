@@ -25,10 +25,10 @@ export const LocationDisplay: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-900 border border-slate-800 rounded-xl p-4 w-full max-w-md mx-auto flex items-center justify-between font-mono text-xs relative overflow-hidden"
+      className="glass-panel rounded-2xl p-4 w-full max-w-md mx-auto flex items-center justify-between font-mono text-xs relative overflow-hidden"
     >
       {/* Background glow lines */}
-      <div className="absolute inset-y-0 left-0 w-1 bg-emerald-600 opacity-80" />
+      <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-500 via-teal-400 to-emerald-500 opacity-80" />
 
       <div className="flex flex-col gap-1.5 text-left relative z-10">
         <span className="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] font-display flex items-center gap-1.5">
@@ -49,7 +49,7 @@ export const LocationDisplay: React.FC = () => {
 
       <div className="flex flex-col items-end justify-between h-full gap-2 text-right relative z-10">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block text-[8px] font-black text-emerald-400 border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+          <span className="inline-block text-[8px] font-black text-emerald-400 border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-[0_0_10px_rgba(52,211,153,0.15)]">
             GNSS LOCK
           </span>
         </div>

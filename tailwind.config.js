@@ -7,6 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Material Design 3 Palette
+        primary: {
+          DEFAULT: '#0066cc',
+          light: '#e6f0ff',
+          dark: '#004c99',
+        },
+        secondary: {
+          DEFAULT: '#ff6d00',
+          light: '#fff0e0',
+          dark: '#cc5600',
+        },
+        error: {
+          DEFAULT: '#b3261e',
+          light: '#fdf4f3',
+          dark: '#8c1d18',
+        },
         slate: {
           50: '#f8fafc',
           100: '#f1f5f9',
@@ -22,23 +38,10 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-        display: ['"Outfit"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        sans: ['Inter', 'sans-serif'],
+        display: ['Space Grotesk', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
-      transitionTimingFunction: {
-        'smooth': 'cubic-bezier(0.2, 0, 0, 1)',
-      },
-      borderRadius: {
-        'sm': '4px',
-        'md': '8px',
-        'lg': '12px',
-        'xl': '16px',
-        'pill': '9999px',
-      },
-      boxShadow: {
-        'hover-lift': '0 4px 20px -2px rgba(0, 0, 0, 0.4)',
-      }
     },
   },
   plugins: [],

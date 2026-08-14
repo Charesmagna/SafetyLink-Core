@@ -93,7 +93,7 @@ export const DecoyCalculator: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden ">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden scanlines">
       {/* Absolute background effects */}
       <div className="absolute inset-0 digital-grid opacity-10" />
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
@@ -121,7 +121,7 @@ export const DecoyCalculator: React.FC = () => {
         </div>
 
         {/* Display Screen */}
-        <div className="bg-slate-950/80 border border-slate-900/60 rounded-xl p-4 text-right font-mono space-y-1 shadow-inner relative overflow-hidden">
+        <div className="bg-slate-950/80 border border-slate-900/60 rounded-2xl p-4 text-right font-mono space-y-1 shadow-inner relative overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-[1px] bg-white/5" />
           
           {/* History / Tape */}
@@ -156,7 +156,7 @@ export const DecoyCalculator: React.FC = () => {
                     key={btn}
                     className={`h-14 rounded-xl flex items-center justify-center font-bold transition-all text-xs border ${
                       isEquals
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20  col-span-1'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 neon-glow-emerald col-span-1'
                         : isZero
                         ? 'col-span-2 bg-slate-900/40 border-slate-850 text-slate-300 hover:bg-slate-800/40'
                         : isOperator

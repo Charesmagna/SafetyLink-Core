@@ -26,7 +26,7 @@ export const LizzyPopup: React.FC = () => {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-slate-900 border border-purple-500/50 shadow-2xl shadow-purple-500/20 rounded-xl p-6 max-w-sm w-full text-center relative overflow-hidden"
+            className="bg-slate-900 border border-purple-500/50 shadow-2xl shadow-purple-500/20 rounded-3xl p-6 max-w-sm w-full text-center relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 to-transparent pointer-events-none" />
             

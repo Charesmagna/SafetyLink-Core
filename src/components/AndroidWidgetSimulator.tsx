@@ -24,7 +24,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
 
       {/* Bento-Grid Glassmorphic Widget */}
       <div
-        className="w-72 rounded-xl overflow-hidden relative"
+        className="w-72 rounded-3xl overflow-hidden relative"
         style={{
           background: 'linear-gradient(135deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.85) 100%)',
           backdropFilter: 'blur(20px)',
@@ -73,7 +73,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
             )}
             <button
               onClick={() => isActive ? cancelSOS() : triggerPanic('Widget SOS trigger')}
-              className="w-20 h-20 rounded-full flex flex-col items-center justify-center font-black text-white transition-all  relative z-10"
+              className="w-20 h-20 rounded-full flex flex-col items-center justify-center font-black text-white transition-all active:scale-95 relative z-10"
               style={{
                 background: isActive
                   ? 'radial-gradient(circle, #ef4444 0%, #b91c1c 70%)'
@@ -92,7 +92,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
           </div>
 
           {/* GPS Cell */}
-          <div className="bg-slate-900/60 rounded-xl p-2 flex flex-col gap-1 border border-slate-800/50">
+          <div className="bg-slate-900/60 rounded-2xl p-2 flex flex-col gap-1 border border-slate-800/50">
             <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">GPS</span>
             <span className="text-[10px] font-bold text-emerald-400">
               {userLocation ? `${userLocation.lat.toFixed(3)}` : 'Acquiring'}
@@ -101,7 +101,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
           </div>
 
           {/* BLE RSSI Cell */}
-          <div className="bg-slate-900/60 rounded-xl p-2 flex flex-col gap-1 border border-slate-800/50">
+          <div className="bg-slate-900/60 rounded-2xl p-2 flex flex-col gap-1 border border-slate-800/50">
             <span className="text-[8px] text-slate-500 uppercase tracking-wider font-mono">iTAG</span>
             <div className="flex items-end gap-0.5 h-4">
               {[25, 50, 75, 100].map((threshold, i) => (

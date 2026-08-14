@@ -134,7 +134,7 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl z-[999999] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden ">
+    <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl z-[999999] flex flex-col items-center justify-center p-6 text-center select-none overflow-hidden scanlines">
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950" />
       
       <motion.div 
@@ -143,7 +143,7 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
         className="relative z-10 w-full max-w-sm flex flex-col items-center gap-8"
       >
         <div className="relative">
-          <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center bg-slate-900 transition-colors duration-500 ${isListening ? 'border-emerald-500 shadow-sm' : 'border-blue-500 shadow-sm'}`}>
+          <div className={`w-32 h-32 rounded-full border-4 flex items-center justify-center bg-slate-900 transition-colors duration-500 ${isListening ? 'border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.3)]' : 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)]'}`}>
             <svg className={`w-14 h-14 ${isListening ? 'text-emerald-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
@@ -166,7 +166,7 @@ export const VoiceAccessibilityAssistant: React.FC<Props> = ({ onClose }) => {
           </p>
         </div>
 
-        <div className="w-full h-24 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center justify-center p-4">
+        <div className="w-full h-24 bg-slate-900/50 border border-slate-800 rounded-2xl flex items-center justify-center p-4">
           <p className="text-slate-300 font-mono text-lg truncate">
             {transcript || (isListening ? "Speak now..." : "Please wait...")}
           </p>

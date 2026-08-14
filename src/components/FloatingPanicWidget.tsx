@@ -137,7 +137,7 @@ export const FloatingPanicWidget: React.FC = () => {
               ? "bg-red-600 animate-pulse text-white"
               : isCountdownActive
               ? "bg-amber-500 animate-pulse text-black font-black text-sm"
-              : "bg-red-500 hover:bg-red-400 text-white "
+              : "bg-red-500 hover:bg-red-400 text-white active:scale-95"
           }`}
         >
           {isCountdownActive ? (

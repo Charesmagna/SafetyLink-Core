@@ -42,7 +42,7 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-6 shadow-sm">
+      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col items-center gap-4 mb-6">
           <div className="relative group cursor-pointer">
             <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center text-3xl border-2 border-slate-700 overflow-hidden">
