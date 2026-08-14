@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
-import { createThingsBoardCustomer } from "../src/api/services/thingsboard";
+// REMOVED: import { createThingsBoardCustomer } from "../src/api/services/thingsboard";
 import type { D1Database } from '@cloudflare/workers-types';
 
 export interface Env {
@@ -66,7 +66,7 @@ app.post('/api/auth/register-org', async (c) => {
     const token = btoa(JSON.stringify({ orgId, email, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
     let tbCustomerId = null;
     try {
-      tbCustomerId = await createThingsBoardCustomer(orgName, c.env);
+// REMOVED: tbCustomerId = await createThingsBoardCustomer(orgName, c.env);
       if (tbCustomerId) {
         console.log(`ThingsBoard Customer ID: ${tbCustomerId}`);
       }
@@ -309,7 +309,7 @@ app.get('/api/init-db', async (c) => {
 
 
 
-import { GoogleGenAI } from "@google/genai";
+// REMOVED: import { GoogleGenAI } from "@google/genai";
 
 app.post('/api/ai/chat', authMiddleware, async (c) => {
   const { message } = await c.req.json<{ message: string }>();
@@ -319,7 +319,7 @@ app.post('/api/ai/chat', authMiddleware, async (c) => {
   if (!apiKey) return c.json({ error: 'Gemini API Key not configured' }, 500);
 
   try {
-    const ai = new GoogleGenAI({ 
+// REMOVED: const ai = new GoogleGenAI({
       apiKey,
       httpOptions: {
         headers: { 'User-Agent': 'aistudio-build' }
