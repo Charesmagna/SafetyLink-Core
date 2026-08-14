@@ -190,7 +190,7 @@ export const ForcedCountdownOverlay: React.FC = () => {
             <motion.div
               animate={{ scale: [1, 1.12, 1] }}
               transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-2 rounded-full bg-red-950/40 border-2 border-red-500/60 shadow-[0_0_25px_rgba(239,68,68,0.25)]"
+              className="absolute inset-2 rounded-full bg-red-950/40 border-2 border-red-500/60 shadow-sm"
             />
 
             {/* Giant High-Tech Animated Disarm Circle Button */}
@@ -198,7 +198,7 @@ export const ForcedCountdownOverlay: React.FC = () => {
               id="forced-disarm-trigger"
               type="button"
               onClick={cancelSOS}
-              className="absolute inset-6 rounded-full bg-red-650 hover:bg-red-500 border border-red-400/30 flex flex-col items-center justify-center text-white transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.4)] cursor-pointer focus:outline-none"
+              className="absolute inset-6 rounded-full bg-red-650 hover:bg-red-500 border border-red-400/30 flex flex-col items-center justify-center text-white transition-all duration-300 btn-lift  shadow-sm cursor-pointer focus:outline-none"
             >
               <span className="text-6xl font-black font-mono leading-none tracking-tight">
                 {panicCountdown}

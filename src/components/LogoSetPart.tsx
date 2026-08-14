@@ -21,7 +21,7 @@ export const LogoSetPart: React.FC<LogoSetPartProps> = ({
   const roundedClasses = {
     full: 'rounded-full',
     xl: 'rounded-xl',
-    '2xl': 'rounded-2xl',
+    '2xl': 'rounded-xl',
     none: 'rounded-none'
   };
 

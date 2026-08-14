@@ -172,21 +172,21 @@ export const AdminPanel: React.FC = () => {
               className="w-full h-full object-cover filter brightness-[0.35] contrast-[1.1] saturate-[0.8]"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950" />
+            <div className="absolute inset-0 bg-slate-900 border border-slate-800" />
           </motion.div>
         </AnimatePresence>
         <div className="absolute inset-0 digital-grid opacity-[0.04]" />
       </div>
 
       {/* Super Admin Top Badge */}
-      <div className="w-full bg-gradient-to-r from-amber-600 via-orange-600 to-blue-600 text-white font-mono text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 shadow-md">
+      <div className="w-full bg-red-600 text-white font-mono text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 shadow-md">
         <span className="w-2 h-2 rounded-full bg-red-400 animate-ping" />
         <span>🔒 SECURED CORE ADMINISTRATIVE INTERACTION PROTOCOL LOCKED 🔒</span>
       </div>
 
       {/* Admin Header */}
       <header className="bg-slate-900 border-b border-slate-900 py-4 px-6 flex justify-between items-center shadow-lg relative z-10">
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60" />
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 opacity-60" />
         <div className="flex items-center gap-3 text-left">
           <LogoSetPart part="badge" size={44} rounded="xl" />
           <div>
@@ -235,19 +235,19 @@ export const AdminPanel: React.FC = () => {
           <div className="space-y-6 animate-fadeIn text-left">
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="glass-panel p-5 space-y-1">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Total Residents / Users</span>
                 <span className="text-2xl font-black font-mono text-slate-100">{users.length}</span>
                 <p className="text-[9px] text-slate-400">Offline keyfob enabled</p>
               </div>
 
-              <div className="glass-panel p-5 space-y-1">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Organizations</span>
                 <span className="text-2xl font-black font-mono text-slate-100">{organizations.length}</span>
                 <p className="text-[9px] text-slate-400">University residences & sites</p>
               </div>
 
-              <div className="glass-panel p-5 space-y-1">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Active Alerts</span>
                 <span className={`text-2xl font-black font-mono ${panicEvents.filter(p => p.status !== 'RESOLVED').length > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
                   {panicEvents.filter(p => p.status !== 'RESOLVED').length}
@@ -255,7 +255,7 @@ export const AdminPanel: React.FC = () => {
                 <p className="text-[9px] text-slate-400">Real-time GPS tracking</p>
               </div>
 
-              <div className="glass-panel p-5 space-y-1">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">System Health</span>
                 <span className="text-2xl font-black font-mono text-emerald-400">100%</span>
                 <p className="text-[9px] text-slate-400">Firebase stack connected</p>
@@ -263,7 +263,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* Quick Info / Guide Card */}
-            <div className="glass-panel p-6 flex items-start gap-4">
+            <div className="bg-slate-900 border border-slate-800 p-6 flex items-start gap-4">
               <span className="text-2xl">🛡️</span>
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">SafetyLink Master Node Administration</h3>
@@ -274,7 +274,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* ThingsBoard Cloud Integration */}
-            <div className="glass-panel p-6 space-y-4 text-left">
+            <div className="bg-slate-900 border border-slate-800 p-6 space-y-4 text-left">
               <div>
                 <h3 className="text-sm font-bold text-slate-200">ThingsBoard Cloud Integration</h3>
                 <p className="text-xs text-slate-400 leading-relaxed mt-1">
@@ -319,7 +319,7 @@ export const AdminPanel: React.FC = () => {
               <h3 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">
                 System Administrative Audit Trails
               </h3>
-              <div className="bg-slate-950/80 border border-slate-900 rounded-3xl p-4 h-64 overflow-y-auto font-mono text-[10px] space-y-2.5">
+              <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4 h-64 overflow-y-auto font-mono text-[10px] space-y-2.5">
                 {users.map((u, i) => (
                   <div key={i} className="border-b border-slate-900/40 pb-2 last:border-0 text-slate-400">
                     <span className="text-slate-500">[{new Date(u.createdAt).toLocaleTimeString()}]</span> USER_REGISTRY: Resident <span className="text-amber-400">@{u.username}</span> registered under organization <span className="text-blue-400">{u.orgCode || 'Independent Node'}</span>.
@@ -383,7 +383,7 @@ export const AdminPanel: React.FC = () => {
                   const uOrg = organizations.find(o => o.id === u.orgCode);
 
                   return (
-                    <div key={u.id} className="p-4 glass-panel space-y-3">
+                    <div key={u.id} className="p-4 bg-slate-900 border border-slate-800 space-y-3">
                       {isEditing ? (
                         <div className="space-y-2.5 font-mono text-xs">
                           <div>
@@ -495,7 +495,7 @@ export const AdminPanel: React.FC = () => {
 
               {/* Pending Approvals */}
               {pendingOrgs.length > 0 && (
-                <div className="bg-amber-950/25 border border-amber-500/30 p-5 rounded-3xl space-y-3.5 mb-6">
+                <div className="bg-amber-950/25 border border-amber-500/30 p-5 rounded-xl space-y-3.5 mb-6">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
                     <h3 className="text-xs font-mono font-black uppercase text-amber-300 tracking-wider">
@@ -504,7 +504,7 @@ export const AdminPanel: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {pendingOrgs.map((o) => (
-                      <div key={o.id} className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-between gap-3 shadow-md">
+                      <div key={o.id} className="p-4 bg-slate-900 border border-slate-800 rounded-xl flex flex-col justify-between gap-3 shadow-md">
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <h4 className="text-xs font-black text-slate-100">{o.name}</h4>
@@ -543,7 +543,7 @@ export const AdminPanel: React.FC = () => {
                     const resCount = userCountsByOrg[o.id] || 0; // Intentionally left in place unless we use a lookup map
 
                     return (
-                      <div key={o.id} className="p-4 glass-panel space-y-3">
+                      <div key={o.id} className="p-4 bg-slate-900 border border-slate-800 space-y-3">
                         {isEditing ? (
                           <div className="space-y-2.5 font-mono text-xs">
                             <div>
@@ -634,7 +634,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {panicEvents.length === 0 ? (
-              <div className="p-12 bg-slate-900/20 border border-slate-900/60 rounded-3xl text-center">
+              <div className="p-12 bg-slate-900/20 border border-slate-900/60 rounded-xl text-center">
                 <span className="text-3xl">🛡️</span>
                 <p className="text-xs text-slate-500 font-mono mt-2">All locations stabilized. No active panic distress signals found in core database.</p>
               </div>
@@ -643,7 +643,7 @@ export const AdminPanel: React.FC = () => {
                 {panicEvents.map(p => {
                   const isResolved = p.status === 'RESOLVED';
                   return (
-                    <div key={p.id} className={`p-5 rounded-3xl border text-left space-y-3.5 transition-all ${isResolved ? 'bg-slate-900/30 border-slate-900' : 'bg-red-950/15 border-red-500/20 animate-pulse'}`}>
+                    <div key={p.id} className={`p-5 rounded-xl border text-left space-y-3.5 transition-all ${isResolved ? 'bg-slate-900/30 border-slate-900' : 'bg-red-950/15 border-red-500/20 animate-pulse'}`}>
                       <div className="flex justify-between items-start gap-3 flex-wrap">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
@@ -667,7 +667,7 @@ export const AdminPanel: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="bg-slate-950/80 border border-slate-900 p-3.5 rounded-2xl space-y-2">
+                      <div className="bg-slate-950/80 border border-slate-900 p-3.5 rounded-xl space-y-2">
                         <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest block">Sequential Dispatch Log</span>
                         <div className="space-y-1 font-mono text-[9px] text-slate-400">
                           {p.timelineData.map((log, lidx) => (
@@ -692,7 +692,7 @@ export const AdminPanel: React.FC = () => {
             {/* Thingsboard Section (Existing top settings block) */}
             
             {/* Custom Supabase Server */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Custom Supabase Platform Link</h3>
                 <p className="text-xs text-slate-500">
@@ -706,14 +706,14 @@ export const AdminPanel: React.FC = () => {
                   placeholder="Supabase URL (https://xyz.supabase.co)"
                   value={supabaseUrlInput}
                   onChange={e => setSupabaseUrlInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                 />
                 <input
                   type="text"
                   placeholder="Supabase Anon Key"
                   value={supabaseAnonKeyInput}
                   onChange={e => setSupabaseAnonKeyInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                 />
                 <div className="flex justify-end">
                   <button
@@ -732,7 +732,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* Tuya IoT Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Tuya Smart IoT Connectivity</h3>
                 <p className="text-xs text-slate-500">
@@ -742,9 +742,9 @@ export const AdminPanel: React.FC = () => {
 
               <div className="flex flex-col gap-3">
                 <div className="flex gap-3">
-                  <input type="text" placeholder="Tuya Client ID" value={tuyaClientId} onChange={e => setTuyaClientId(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Tuya Secret" value={tuyaSecret} onChange={e => setTuyaSecret(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Base URL (https://openapi.tuyaeu.com)" value={tuyaBaseUrl} onChange={e => setTuyaBaseUrl(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                  <input type="text" placeholder="Tuya Client ID" value={tuyaClientId} onChange={e => setTuyaClientId(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                  <input type="text" placeholder="Tuya Secret" value={tuyaSecret} onChange={e => setTuyaSecret(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                  <input type="text" placeholder="Base URL (https://openapi.tuyaeu.com)" value={tuyaBaseUrl} onChange={e => setTuyaBaseUrl(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
                 </div>
                 <div className="flex justify-end">
                   <button onClick={() => { setTuyaConfig({ clientId: tuyaClientId || undefined, secret: tuyaSecret || undefined, baseUrl: tuyaBaseUrl || undefined }); addAuditLog('SYSTEM', 'INFO', 'Tuya Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
@@ -753,7 +753,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* Aura Platform Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Aura Platform (Emergency Bridge)</h3>
                 <p className="text-xs text-slate-500">
@@ -762,7 +762,7 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" placeholder="Aura API URL (e.g. https://api.auraplatform.com/v1/panic)" value={auraUrlInput} onChange={e => setAuraUrlInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
+                <input type="text" placeholder="Aura API URL (e.g. https://api.auraplatform.com/v1/panic)" value={auraUrlInput} onChange={e => setAuraUrlInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
                 <div className="flex justify-end">
                   <button onClick={() => { setAuraApiUrl(auraUrlInput); addAuditLog('SYSTEM', 'INFO', 'Aura Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
                 </div>
@@ -770,7 +770,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* ConnectyCube Integrations */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">ConnectyCube Communication Platform</h3>
                 <p className="text-xs text-slate-500">
@@ -785,21 +785,21 @@ export const AdminPanel: React.FC = () => {
                     placeholder="App ID (e.g. 10000)"
                     value={ccAppId}
                     onChange={e => setCcAppId(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                   />
                   <input
                     type="text"
                     placeholder="Auth Key"
                     value={ccAuthKey}
                     onChange={e => setCcAuthKey(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                   />
                   <input
                     type="text"
                     placeholder="Auth Secret"
                     value={ccAuthSecret}
                     onChange={e => setCcAuthSecret(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div className="flex gap-3">
@@ -808,14 +808,14 @@ export const AdminPanel: React.FC = () => {
                     placeholder="API Endpoint (e.g. https://SafetyLink.connectycube.com)"
                     value={ccApi}
                     onChange={e => setCcApi(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                   />
                   <input
                     type="text"
                     placeholder="Chat Endpoint (e.g. SafetyLink.connectycube.com)"
                     value={ccChat}
                     onChange={e => setCcChat(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                   />
                 </div>
                 <div className="flex justify-end">
@@ -840,7 +840,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* Custom Backend URL */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Custom Backend Integration (API Route)</h3>
                 <p className="text-xs text-slate-500">
@@ -854,7 +854,7 @@ export const AdminPanel: React.FC = () => {
                   placeholder="https://your-custom-api-server.com"
                   value={backendUrlInput}
                   onChange={e => setBackendUrlInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
                 />
                 
                 <div className="flex gap-2">
@@ -863,7 +863,7 @@ export const AdminPanel: React.FC = () => {
                       setCustomBackendUrl(backendUrlInput);
                       addAuditLog('SYSTEM', 'INFO', 'Custom Backend URL saved');
                     }}
-                    className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
+                    className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold rounded-xl transition-colors shrink-0"
                   >
                     SAVE ROUTE
                   </button>
@@ -871,7 +871,7 @@ export const AdminPanel: React.FC = () => {
               </div>
             </div>
 
-            <div className="glass-panel p-5 md:p-6 space-y-4">
+            <div className="bg-slate-900 border border-slate-800 p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">ThingsBoard Edge Telemetry Route Configuration</h3>
                 <p className="text-xs text-slate-500">
@@ -885,7 +885,7 @@ export const AdminPanel: React.FC = () => {
                   placeholder="Paste ThingsBoard device access token..."
                   value={tbTokenInput}
                   onChange={e => setTbTokenInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
                 />
                 
                 <div className="flex gap-2">
@@ -894,7 +894,7 @@ export const AdminPanel: React.FC = () => {
                       setThingsBoardToken(tbTokenInput);
                       addAuditLog('SYSTEM', 'INFO', 'ThingsBoard token saved');
                     }}
-                    className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
+                    className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-xl transition-colors shrink-0"
                   >
                     SAVE ROUTE
                   </button>
@@ -908,7 +908,7 @@ export const AdminPanel: React.FC = () => {
                       setTimeout(() => setTbTestStatus('idle'), 3000);
                     }}
                     disabled={tbTestStatus === 'sending'}
-                    className={`px-4 py-3 border text-xs font-mono font-bold rounded-2xl transition-colors shrink-0 ${
+                    className={`px-4 py-3 border text-xs font-mono font-bold rounded-xl transition-colors shrink-0 ${
                       tbTestStatus === 'ok' ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-400' :
                       tbTestStatus === 'fail' ? 'bg-red-950/20 border-red-500/40 text-red-400' :
                       'border-slate-800 hover:bg-slate-850 text-slate-300'
@@ -923,7 +923,7 @@ export const AdminPanel: React.FC = () => {
             {/* Custom Tools Builder */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Creator Form */}
-              <div className="glass-panel p-5 space-y-4 md:col-span-1">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-4 md:col-span-1">
                 <div className="space-y-1">
                   <h3 className="text-xs font-black uppercase text-amber-400 font-mono tracking-wider">🛠️ Add New Custom Tool / Setting</h3>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
@@ -1006,7 +1006,7 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               {/* Tools List */}
-              <div className="glass-panel p-5 space-y-4 md:col-span-2">
+              <div className="bg-slate-900 border border-slate-800 p-5 space-y-4 md:col-span-2">
                 <div className="space-y-1">
                   <h3 className="text-xs font-black uppercase text-slate-300 font-mono tracking-wider">Active Globally-Pushed Tools & Settings</h3>
                   <p className="text-xs text-slate-500">
@@ -1015,13 +1015,13 @@ export const AdminPanel: React.FC = () => {
                 </div>
 
                 {customTools.filter(t => !t.targetOrgId).length === 0 ? (
-                  <div className="p-12 border border-dashed border-slate-800 rounded-2xl text-center">
+                  <div className="p-12 border border-dashed border-slate-800 rounded-xl text-center">
                     <p className="text-xs text-slate-500 font-mono">No custom global tools have been created yet. Use the form on the left to add one.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {customTools.filter(t => !t.targetOrgId).map((t) => (
-                      <div key={t.id} className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex justify-between items-start gap-3 shadow-sm">
+                      <div key={t.id} className="p-4 bg-slate-950 border border-slate-850 rounded-xl flex justify-between items-start gap-3 shadow-sm">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-100">{t.title}</span>

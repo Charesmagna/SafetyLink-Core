@@ -88,7 +88,7 @@ export const SosCountdownOverlay: React.FC<OverlayProps> = ({
       </div>
 
       {/* The Massive Tactical Countdown */}
-      <div className="text-[12rem] font-black tracking-tighter leading-none text-[#ff4d4d] drop-shadow-[0_0_20px_rgba(255,77,77,0.5)]">
+      <div className="text-[12rem] font-black tracking-tighter leading-none text-[#ff4d4d] drop-shadow-sm">
         {timeLeft}
       </div>
       <p className="text-[#5c7b85] font-semibold tracking-widest mt-2 uppercase">

@@ -49,7 +49,7 @@ export const DeviceAlertOverlay: React.FC = () => {
                 initial={{ opacity: 0, y: -20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                className="pointer-events-auto bg-slate-950/95 border border-amber-500/30 shadow-[0_12px_40px_rgba(245,158,11,0.15)] rounded-2xl p-4 flex flex-col gap-3 backdrop-blur-md relative overflow-hidden"
+                className="pointer-events-auto bg-slate-950/95 border border-amber-500/30 shadow-[0_12px_40px_rgba(245,158,11,0.15)] rounded-xl p-4 flex flex-col gap-3 backdrop-blur-md relative overflow-hidden"
               >
                 {/* Visual Accent Glow */}
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />

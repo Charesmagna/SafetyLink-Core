@@ -274,7 +274,7 @@ export const AIHub: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 text-left space-y-4 shadow relative overflow-hidden">
+    <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 text-left space-y-4 shadow relative overflow-hidden">
       {/* Decorative side accent */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
 
@@ -292,7 +292,7 @@ export const AIHub: React.FC = () => {
       </div>
 
       {/* Internal Navigation Subtabs */}
-      <div className="flex gap-1.5 p-1 bg-slate-950 rounded-2xl border border-slate-850">
+      <div className="flex gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-850">
         {[
           { id: 'chat', label: 'Chatbot', icon: '💬' },
           { id: 'voice', label: 'Voice', icon: '🎙️' },
@@ -321,7 +321,7 @@ export const AIHub: React.FC = () => {
         {activeSubTab === 'chat' && (
           <div className="space-y-3 flex-1 flex flex-col justify-between">
             {/* Scrollable messages thread */}
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2.5 text-xs font-mono">
+            <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 max-h-48 overflow-y-auto space-y-2.5 text-xs font-mono">
               {chatMessages.map((m, idx) => (
                 <div
                   key={idx}
@@ -344,7 +344,7 @@ export const AIHub: React.FC = () => {
             {/* Input & Image Analyzer Trigger */}
             <form onSubmit={handleChatSubmit} className="flex gap-2">
               {/* Evidence photo trigger */}
-              <label className="p-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl cursor-pointer flex items-center justify-center text-sm shrink-0 hover:scale-105 transition-transform" title="Upload Evidence/Hazard Photo to Analyze">
+              <label className="p-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-xl cursor-pointer flex items-center justify-center text-sm shrink-0 btn-lift" title="Upload Evidence/Hazard Photo to Analyze">
                 📸
                 <input
                   type="file"
@@ -377,7 +377,7 @@ export const AIHub: React.FC = () => {
           <div className="space-y-4 text-center py-4">
             <div className="flex flex-col items-center justify-center space-y-3">
               {/* Pulsing microphone waveform representing gemini-3.1-flash-live-preview */}
-              <div className="flex items-center justify-center gap-1 h-12 w-full max-w-xs bg-slate-950 rounded-2xl border border-slate-800 px-4">
+              <div className="flex items-center justify-center gap-1 h-12 w-full max-w-xs bg-slate-950 rounded-xl border border-slate-800 px-4">
                 {voiceWaves.map((val, idx) => (
                   <motion.div
                     key={idx}
@@ -463,7 +463,7 @@ export const AIHub: React.FC = () => {
             </div>
 
             {/* Simulated Live preview frame */}
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-2.5 min-h-[120px] flex items-center justify-center relative overflow-hidden">
+            <div className="bg-slate-950 border border-slate-850 rounded-xl p-2.5 min-h-[120px] flex items-center justify-center relative overflow-hidden">
               {generatedImage ? (
                 <div className="space-y-1.5 text-center">
                   <img src={generatedImage} alt="Generated Asset" className="max-h-24 object-contain rounded-lg border border-slate-800 shadow" />
@@ -525,7 +525,7 @@ export const AIHub: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-2.5 min-h-[100px] flex items-center justify-center relative overflow-hidden">
+            <div className="bg-slate-950 border border-slate-850 rounded-xl p-2.5 min-h-[100px] flex items-center justify-center relative overflow-hidden">
               {generatedVideoUrl ? (
                 <div className="w-full aspect-[16/9] max-h-[100px] bg-slate-900 border border-purple-500/20 rounded-lg flex flex-col items-center justify-center gap-1.5 relative overflow-hidden">
                   {/* Drone grid lines & simulation clip overlay */}

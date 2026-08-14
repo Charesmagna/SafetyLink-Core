@@ -57,9 +57,9 @@ export const DispatchChain: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel rounded-3xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden scanlines"
+      className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden "
     >
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 neon-glow-blue" />
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-slate-800 border border-slate-700 " />
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
 
       <div className="flex justify-between items-center border-b border-slate-900 pb-3.5 relative z-10">
@@ -92,7 +92,7 @@ export const DispatchChain: React.FC = () => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             onSubmit={handleAddSubmit} 
-            className="p-4 bg-slate-950/40 rounded-2xl border border-slate-900 space-y-3.5 text-left mt-4 relative z-10"
+            className="p-4 bg-slate-950/40 rounded-xl border border-slate-900 space-y-3.5 text-left mt-4 relative z-10"
           >
             <h4 className="text-[10px] font-black text-blue-400 font-display tracking-widest uppercase">
               PROVISION DISPATCH NODE
@@ -210,9 +210,9 @@ export const DispatchChain: React.FC = () => {
             <motion.div
               layout
               key={contact.id}
-              className={`p-4 rounded-2xl border transition-all duration-300 ${
+              className={`p-4 rounded-xl border transition-all duration-300 ${
                 isLiveActive && index === 0
-                  ? 'bg-slate-950 border-orange-500/40 shadow-[0_0_20px_rgba(245,158,11,0.15)] scale-[1.01]'
+                  ? 'bg-slate-950 border-orange-500/40 shadow-sm scale-[1.01]'
                   : 'bg-slate-950/40 border-slate-900/80 hover:border-slate-800'
               }`}
             >

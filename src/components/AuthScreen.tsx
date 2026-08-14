@@ -273,13 +273,13 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
+    <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto ">
       
       {showClosingLogo && <CinematicClosingLogo onComplete={() => CapacitorApp.exitApp()} />}
       {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}
       {showExitConfirm && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-sm w-full text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
               <span className="text-2xl">🚪</span>
             </div>
@@ -322,9 +322,9 @@ export const AuthScreen: React.FC = () => {
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="w-full max-w-md glass-panel rounded-[2rem] p-7 shadow-2xl relative z-10 overflow-hidden"
+        className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-7 shadow-2xl relative z-10 overflow-hidden"
       >
-        <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-red-500 via-blue-500 to-emerald-500 neon-glow-blue" />
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-red-600 " />
 
         {/* Branding Header with Crisp High-Fidelity Still Brand Logo */}
         <div className="text-center mb-5 -mt-1">
@@ -334,7 +334,7 @@ export const AuthScreen: React.FC = () => {
         </div>
 
         {/* Demo Mode Toggle Banner */}
-        <div className="mb-5 glass-panel p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between font-mono gap-3">
+        <div className="mb-5 bg-slate-900 border border-slate-800 p-4 rounded-xl border border-slate-700/50 flex items-center justify-between font-mono gap-3">
           <div className="text-left flex-1">
             <span className="text-[9.5px] font-black tracking-wide text-slate-300 block uppercase">Demo Showcase Mode</span>
             <span className="text-[7.5px] text-slate-500 block leading-tight">Instantly populates mock networks and active supervisor nodes.</span>
@@ -344,7 +344,7 @@ export const AuthScreen: React.FC = () => {
             type="button"
             onClick={() => setShowVoiceAssistant(true)}
             title="Voice Accessibility Setup"
-            className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all shrink-0 shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center justify-center"
+            className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-all shrink-0 shadow-sm flex items-center justify-center"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -381,7 +381,7 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               {loginError && (
-                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono leading-relaxed">
+                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono leading-relaxed">
                   ⚠️ {loginError}
                 </div>
               )}
@@ -393,7 +393,7 @@ export const AuthScreen: React.FC = () => {
                   value={loginUsername}
                   onChange={e => setLoginUsername(e.target.value)}
                   placeholder="e.g. thabo_m"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
               </div>
@@ -405,7 +405,7 @@ export const AuthScreen: React.FC = () => {
                   value={loginOrgCode}
                   onChange={e => setLoginOrgCode(e.target.value)}
                   placeholder="e.g. SL-ORG-XXXX"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                 />
                 <span className="text-[9px] text-slate-500 mt-1 pl-1">Leave blank for standalone mesh profile mode.</span>
               </div>
@@ -416,13 +416,13 @@ export const AuthScreen: React.FC = () => {
                   value={loginPassword}
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
               </div>
 
               {/* REFERRAL CODE — collapsible */}
-              <div className="glass-panel rounded-2xl overflow-hidden">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setShowReferralInput(v => !v)}
@@ -450,7 +450,7 @@ export const AuthScreen: React.FC = () => {
 
               {/* DEMO MODE QUICK LOGIN CHANNELS (Excluding Super Admin) */}
               {demoMode && (
-                <div className="glass-panel rounded-2.5xl p-4.5 space-y-3 animate-fadeIn">
+                <div className="bg-slate-900 border border-slate-800 rounded-2.5xl p-4.5 space-y-3 animate-fadeIn">
                   <div className="flex items-center justify-between border-b border-slate-900 pb-2">
                     <span className="text-[8.5px] font-black tracking-widest text-amber-400 uppercase">Exemplary Live Demo Profiles</span>
                     <span className="text-[7.5px] font-mono text-slate-500 uppercase">Excludes Admin</span>
@@ -513,7 +513,7 @@ export const AuthScreen: React.FC = () => {
                             setLoginError(res.error || 'Invalid credentials.');
                           }
                         }}
-                        className={`w-full text-left p-3 rounded-2xl border flex items-start gap-3 transition-all ${p.color}`}
+                        className={`w-full text-left p-3 rounded-xl border flex items-start gap-3 transition-all ${p.color}`}
                       >
                         <span className="text-base pt-0.5">{p.icon}</span>
                         <div className="flex-1 min-w-0">
@@ -540,7 +540,7 @@ export const AuthScreen: React.FC = () => {
 
                <button
                 type="submit"
-                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
               >
                 Sign In to Console
               </button>
@@ -581,13 +581,13 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               {userError && (
-                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
+                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono">
                   {userError}
                 </div>
               )}
 
               {userSuccessMsg && (
-                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl text-emerald-400 text-xs font-mono">
+                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-mono">
                   ✓ {userSuccessMsg}
                 </div>
               )}
@@ -596,7 +596,7 @@ export const AuthScreen: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Profile Identity Vector</label>
                 
-                <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-slate-950/40 rounded-2xl border border-slate-900">
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-slate-950/40 rounded-xl border border-slate-900">
                   <div className="relative w-12 h-12 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center overflow-hidden shrink-0">
                     {userAvatar ? (
                       <img src={userAvatar} alt="Vector" className="w-full h-full object-cover" />
@@ -677,7 +677,7 @@ export const AuthScreen: React.FC = () => {
                             key={idx}
                             type="button"
                             onClick={selectPreset}
-                            className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs hover:scale-105 transition-all bg-slate-900 border-slate-900"
+                            className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs btn-lift transition-all bg-slate-900 border-slate-900"
                           >
                             {preset.emoji}
                           </button>
@@ -810,7 +810,7 @@ export const AuthScreen: React.FC = () => {
               )}
               <button
                 type="submit"
-                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
+                className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 border border-blue-500/20 transition-all text-white text-xs font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-blue-950 font-mono"
               >
                 Create Account Profile
               </button>
@@ -851,7 +851,7 @@ export const AuthScreen: React.FC = () => {
                   onClick={() => {
                     login(registeredUsername, registeredPassword);
                   }}
-                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-blue-500/50 rounded-2xl transition-all cursor-pointer group"
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-blue-500/50 rounded-xl transition-all cursor-pointer group"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors mt-0.5">
@@ -874,7 +874,7 @@ export const AuthScreen: React.FC = () => {
                   onClick={() => {
                     setView('REGISTER_ORG');
                   }}
-                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-emerald-500/50 rounded-2xl transition-all cursor-pointer group"
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-emerald-500/50 rounded-xl transition-all cursor-pointer group"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors mt-0.5">
@@ -920,13 +920,13 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               {orgError && (
-                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-2xl text-red-400 text-xs font-mono">
+                <div className="p-3.5 bg-red-950/20 border border-red-500/20 rounded-xl text-red-400 text-xs font-mono">
                   {orgError}
                 </div>
               )}
 
               {orgSuccessMsg && (
-                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl text-emerald-400 text-xs font-mono">
+                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs font-mono">
                   ✓ {orgSuccessMsg}
                 </div>
               )}
@@ -938,7 +938,7 @@ export const AuthScreen: React.FC = () => {
                   value={orgName}
                   onChange={e => setOrgName(e.target.value)}
                   placeholder="e.g. Wits Security, Apex patrol, TechCorp, CityCenter"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                   required
                 />
               </div>
@@ -981,7 +981,7 @@ export const AuthScreen: React.FC = () => {
               </div>
 
               {/* Organization ID Application */}
-              <div className="glass-panel rounded-2xl p-3.5 space-y-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-3">
                 <button
                   type="button"
                   onClick={() => setShowIdApplication(!showIdApplication)}
@@ -1019,7 +1019,7 @@ export const AuthScreen: React.FC = () => {
 
               {/* Referral Code Generation — only available after org ID is generated */}
               {generatedOrgId && (
-                <div className="glass-panel rounded-2xl overflow-hidden">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                   <button
                     type="button"
                     onClick={() => setShowReferralSection(v => !v)}
@@ -1060,7 +1060,7 @@ export const AuthScreen: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/20 transition-all text-white text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg shadow-emerald-950 font-mono"
+                className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 border border-emerald-500/20 transition-all text-white text-xs font-bold rounded-xl uppercase tracking-widest shadow-lg shadow-emerald-950 font-mono"
               >
                 Register Safety Node
               </button>

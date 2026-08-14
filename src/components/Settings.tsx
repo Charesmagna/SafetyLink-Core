@@ -114,9 +114,9 @@ export const Settings: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel rounded-3xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden scanlines"
+      className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden "
     >
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500 neon-glow-blue" />
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-slate-800 border border-slate-700 " />
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
       <div className="flex justify-center mb-6 mt-2 relative z-10">
         <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Official Logo" className="h-10 object-contain drop-shadow-xl" />
@@ -145,13 +145,13 @@ export const Settings: React.FC = () => {
               useAppStore.getState().addAuditLog('SYSTEM', 'INFO', 'Self-Test Initiated', 'Checking GATT profiles, GPS providers, and local caches.');
               useAppStore.getState().addToast("All system diagnostics are functional. BLE: Stable, GPS: High accuracy locked.", "success");
             }}
-            className="bg-slate-950/40 border border-slate-900 rounded-2xl p-3 text-slate-200 hover:bg-slate-900 hover:text-white transition-all text-center"
+            className="bg-slate-950/40 border border-slate-900 rounded-xl p-3 text-slate-200 hover:bg-slate-900 hover:text-white transition-all text-center"
           >
             {t('settings.diagnose_btn')}
           </button>
           <button
             onClick={clearAuditLogs}
-            className="bg-slate-950/40 border border-red-500/10 rounded-2xl p-3 text-red-400 hover:bg-red-950/20 transition-all text-center"
+            className="bg-slate-950/40 border border-red-500/10 rounded-xl p-3 text-red-400 hover:bg-red-950/20 transition-all text-center"
           >
             {t('settings.purge_btn')}
           </button>
@@ -164,7 +164,7 @@ export const Settings: React.FC = () => {
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
           🚨 ALERTS & COUNTDOWN
         </h4>
-        <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+        <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex justify-between items-center">
             <div className="text-left">
               <span className="text-[10px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">Panic Countdown Timer</span>
@@ -220,7 +220,7 @@ export const Settings: React.FC = () => {
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
           💼 Commercial & Quotations
         </h4>
-        <div className="bg-slate-950/40 border border-slate-900/80 rounded-2xl p-4 flex flex-col gap-3">
+        <div className="bg-slate-950/40 border border-slate-900/80 rounded-xl p-4 flex flex-col gap-3">
           <div className="text-left space-y-1">
             <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
               SafetyLink Hardware & Subscriptions
@@ -231,7 +231,7 @@ export const Settings: React.FC = () => {
           </div>
           <button
             onClick={() => useAppStore.getState().setCommerceModalOpen(true)}
-            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400/20 rounded-xl text-[10px] font-bold uppercase tracking-wider text-center cursor-pointer font-mono flex items-center justify-center gap-2 shadow-lg shadow-blue-950/20"
+            className="w-full py-2.5 bg-slate-800 border border-slate-700 hover:from-blue-500 hover:to-indigo-500 text-white border border-blue-400/20 rounded-xl text-[10px] font-bold uppercase tracking-wider text-center cursor-pointer font-mono flex items-center justify-center gap-2 shadow-lg shadow-blue-950/20"
           >
             <span className="text-sm">💼</span> OPEN COMMERCE & QUOTES PORTAL
           </button>
@@ -243,7 +243,7 @@ export const Settings: React.FC = () => {
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
           🛡️ SYSTEM TRAY & ACTIVE CONNECTION
         </h4>
-        <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+        <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1 text-left flex-1">
               <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
@@ -337,7 +337,7 @@ export const Settings: React.FC = () => {
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
           {t('settings.language_title')}
         </h4>
-        <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+        <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="space-y-1">
             <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
               {t('settings.language_subtitle')}
@@ -424,7 +424,7 @@ export const Settings: React.FC = () => {
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
           {t('settings.shortcut_title')}
         </h4>
-        <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3">
+        <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 text-left pr-4">
               <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
@@ -462,7 +462,7 @@ export const Settings: React.FC = () => {
                   onClick={() => {
                     useAppStore.getState().triggerPanic("DISTRESS: Instant trigger activated from homescreen red circle quick-shortcut.");
                   }}
-                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-b from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 hover:scale-105 active:scale-95 transition-all duration-300 shadow-xl shadow-red-950 border border-red-500/20"
+                  className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-red-600 hover:from-red-500 hover:to-red-700 btn-lift shadow-sm border border-red-500/20"
                 >
                   <span className="absolute inset-0 rounded-full bg-red-500/20 animate-ping opacity-75 pointer-events-none" />
                   <span className="absolute inset-1 rounded-full border-2 border-dashed border-red-300/20 group-hover:rotate-45 transition-transform duration-1000" />
@@ -562,7 +562,7 @@ export const Settings: React.FC = () => {
           <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
             🛡️ EMERGENCY DISPATCH ROUTING FILTER
           </h4>
-          <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4">
+          <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1 text-left flex-1">
                 <span className="text-[11px] font-extrabold text-slate-200 block font-display uppercase tracking-wide">
@@ -591,7 +591,7 @@ export const Settings: React.FC = () => {
             <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
               👤 EDIT SAFETY PROFILE & MEDICAL DETAILS
             </h4>
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-3">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold text-slate-400 block uppercase">Full Name</label>
                 <input
@@ -648,7 +648,7 @@ export const Settings: React.FC = () => {
               </div>
 
               
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
               <div className="space-y-3">
@@ -733,7 +733,7 @@ export const Settings: React.FC = () => {
             <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
               🔒 SECURITY PIN SETTINGS
             </h4>
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-3 font-mono">
               <div className="space-y-1">
                 
                 <div className="pt-2 pb-3 border-b border-slate-900/60 mb-2">
@@ -800,7 +800,7 @@ export const Settings: React.FC = () => {
             <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
               🏢 CAMPUS / SECURITY ORGANIZATION HUB
             </h4>
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-3">
               
               {/* Scenario 1: Already has approved Organization */}
               {currentUser.orgCode ? (() => {
@@ -815,7 +815,7 @@ export const Settings: React.FC = () => {
                       Your profile is securely bound to the organization <strong>{boundOrg?.name || 'Authorized Responders Network'}</strong>. Alert dispatches are shared with the organization's central control room console in real time.
                     </p>
                     
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
               
@@ -903,7 +903,7 @@ export const Settings: React.FC = () => {
                       You requested to join <strong>{pendingOrg?.name || currentUser.pendingOrgCode}</strong>. Requests require supervisor approval inside the Safety Node Commander Deck.
                     </p>
                     
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-4">
+            <div className="bg-slate-950/30 border border-slate-900 rounded-xl p-4 space-y-4">
               <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-2">Personal Integrations</h4>
               
               
@@ -1056,7 +1056,7 @@ export const Settings: React.FC = () => {
         </h4>
         <div className="space-y-3">
           {/* Safety Fleet Tracking */}
-          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+          <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1 text-slate-200">
               <span className="text-xl">🚙</span>
               <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Safety Fleet Tracking</span>
@@ -1073,7 +1073,7 @@ export const Settings: React.FC = () => {
           </div>
 
           {/* ONVIF Camera Onboarding */}
-          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+          <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1 text-slate-200">
               <span className="text-xl">📹</span>
               <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">ONVIF Camera Linking</span>
@@ -1090,7 +1090,7 @@ export const Settings: React.FC = () => {
           </div>
 
           {/* Drone Deployment Environment */}
-          <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
+          <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2 mb-1 text-slate-200">
               <span className="text-xl">🛸</span>
               <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Drone Deployment Config</span>
@@ -1135,7 +1135,7 @@ export const Settings: React.FC = () => {
             v1.0.0 (Latest)
           </span>
         </div>
-        <div className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 flex items-center justify-between gap-4">
+        <div className="bg-slate-950 border border-slate-900 rounded-xl p-3.5 flex items-center justify-between gap-4">
           <div className="flex-1">
             <p className="text-[10px] font-bold text-slate-200">Over-the-Air Update</p>
             <p className="text-[8px] text-slate-500 font-mono mt-0.5">Fetch and install the latest SafetyLink core APK directly from our secure repository.</p>
@@ -1192,7 +1192,7 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* Audit Log Box */}
-        <div className="h-44 bg-slate-950/40 border border-slate-900 rounded-2xl overflow-y-auto p-3.5 font-mono text-[10px] space-y-3.5 scrollbar-none">
+        <div className="h-44 bg-slate-950/40 border border-slate-900 rounded-xl overflow-y-auto p-3.5 font-mono text-[10px] space-y-3.5 scrollbar-none">
           {filteredLogs.length === 0 ? (
             <p className="text-slate-600 text-center py-10 italic">Ledger buffer empty.</p>
           ) : (

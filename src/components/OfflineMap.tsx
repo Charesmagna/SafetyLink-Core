@@ -24,7 +24,7 @@ const userIcon = L.divIcon({
   html: `
     <div class="relative flex items-center justify-center">
       <div class="absolute w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 animate-pulse"></div>
-      <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 border border-slate-950 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+      <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 border border-slate-950 shadow-sm"></div>
     </div>
   `,
   iconSize: [32, 32],
@@ -36,7 +36,7 @@ const activeUserIcon = L.divIcon({
   html: `
     <div class="relative flex items-center justify-center">
       <div class="absolute w-10 h-10 rounded-full bg-red-500/30 border border-red-500/50 animate-pulse"></div>
-      <div class="w-4 h-4 rounded-full bg-red-500 border border-slate-950 shadow-[0_0_12px_rgba(239,68,68,0.9)]"></div>
+      <div class="w-4 h-4 rounded-full bg-red-500 border border-slate-950 shadow-sm"></div>
     </div>
   `,
   iconSize: [40, 40],
@@ -48,7 +48,7 @@ const satelliteIcon = L.divIcon({
   html: `
     <div class="relative flex items-center justify-center">
       <div class="absolute w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 animate-pulse"></div>
-      <div class="w-8 h-8 rounded-full bg-slate-950 border border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.6)] flex items-center justify-center text-xs">
+      <div class="w-8 h-8 rounded-full bg-slate-950 border border-amber-500/60 shadow-sm flex items-center justify-center text-xs">
         🛰️
       </div>
     </div>
@@ -197,9 +197,9 @@ export const OfflineMap: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel rounded-3xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden scanlines"
+      className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden "
     >
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-emerald-400 to-indigo-500 neon-glow-emerald" />
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-emerald-600 " />
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
 
       {/* Top HUD banner */}
@@ -221,7 +221,7 @@ export const OfflineMap: React.FC = () => {
       </div>
 
       {/* Leaflet Interactive Map View */}
-      <div className="relative w-full h-72 bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden mt-4 z-10">
+      <div className="relative w-full h-72 bg-slate-950 border border-slate-900 rounded-xl overflow-hidden mt-4 z-10">
         <MapContainer 
           center={[userLat, userLng]} 
           zoom={13} 
@@ -317,7 +317,7 @@ export const OfflineMap: React.FC = () => {
       </div>
 
       {/* Real-time Space Segment Uplink console */}
-      <div className="mt-3.5 p-3.5 bg-slate-950/70 border border-slate-900 rounded-2xl text-left font-mono z-10 relative">
+      <div className="mt-3.5 p-3.5 bg-slate-950/70 border border-slate-900 rounded-xl text-left font-mono z-10 relative">
         <div className="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
           <span className="text-[9px] font-black text-amber-400 flex items-center gap-1">
             <span className={`w-1.5 h-1.5 rounded-full bg-amber-400 ${isLoadingSat ? 'animate-ping' : 'animate-pulse'}`} />
@@ -367,7 +367,7 @@ export const OfflineMap: React.FC = () => {
       </div>
 
       {/* Offline Map Cache Controls */}
-      <div className="mt-3.5 p-3.5 bg-slate-950/70 border border-slate-900 rounded-2xl text-left font-mono z-10 relative">
+      <div className="mt-3.5 p-3.5 bg-slate-950/70 border border-slate-900 rounded-xl text-left font-mono z-10 relative">
         <div className="flex justify-between items-center border-b border-slate-900 pb-1.5 mb-2">
           <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1">
             <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 ${isDownloadingOfflineMap ? 'animate-ping' : ''}`} />
@@ -440,7 +440,7 @@ export const OfflineMap: React.FC = () => {
         </span>
         <div className="grid grid-cols-1 gap-2">
           {liveIncidents.map((incident, idx) => (
-            <div key={idx} className="flex justify-between items-center p-3 bg-slate-950/40 border border-slate-900 rounded-2xl hover:border-slate-800 transition-colors">
+            <div key={idx} className="flex justify-between items-center p-3 bg-slate-950/40 border border-slate-900 rounded-xl hover:border-slate-800 transition-colors">
               <div className="flex flex-col gap-0.5 text-left">
                 <span className="text-slate-200 font-bold text-[10px]">{incident.name}</span>
                 <span className="text-[8px] text-slate-500">GRID: {incident.lat.toFixed(4)}, {incident.lng.toFixed(4)} | DIST: {(incident.distance / 1000).toFixed(2)} km</span>

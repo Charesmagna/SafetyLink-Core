@@ -285,9 +285,9 @@ export const AdvancedSubsystems: React.FC = () => {
     <div className="space-y-5 text-left font-mono text-slate-300">
       
       {/* HEADER BAR FOR SUB-TAB */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 flex items-center justify-between">
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <Cpu className="w-5 h-5 animate-pulse" />
           </div>
           <div>
@@ -304,7 +304,7 @@ export const AdvancedSubsystems: React.FC = () => {
       </div>
 
       {/* TIER 1: SQLITE LOCAL PERSISTENCE VIEWER */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
@@ -381,7 +381,7 @@ export const AdvancedSubsystems: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         {/* Cell Triangulation Panel */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-3.5">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-3.5">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-teal-400" />
@@ -392,7 +392,7 @@ export const AdvancedSubsystems: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3 space-y-2">
+          <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-3 space-y-2">
             <div className="flex justify-between items-center text-[9px] border-b border-slate-900 pb-1.5">
               <span className="text-slate-400 font-bold uppercase">Cell Mast Telemetry</span>
               <span className={gpsIndoorsFailure ? 'text-amber-400 font-black animate-pulse' : 'text-slate-500 font-bold'}>
@@ -444,7 +444,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* BLE AlarmManager Wake-Lock Sweep */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-3.5">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-3.5">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
               <Cpu className="w-3.5 h-3.5 text-indigo-400" />
@@ -455,7 +455,7 @@ export const AdvancedSubsystems: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3 space-y-2 text-left relative overflow-hidden">
+          <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-3 space-y-2 text-left relative overflow-hidden">
             <div className="flex justify-between items-center text-[9px] border-b border-slate-900 pb-1.5">
               <span className="text-slate-400 font-bold uppercase">BLE Wake-Lock Stream</span>
               <div className="flex items-center gap-1">
@@ -481,7 +481,7 @@ export const AdvancedSubsystems: React.FC = () => {
       </div>
 
       {/* COMPLETELY DIFFERENT ARCHITECTURES: AD-HOC DECENTRALIZED MESH */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
@@ -502,7 +502,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Visual node hop network */}
-        <div className="bg-slate-950/60 border border-slate-900 p-4 rounded-2xl flex flex-col items-center justify-center relative">
+        <div className="bg-slate-950/60 border border-slate-900 p-4 rounded-xl flex flex-col items-center justify-center relative">
           <div className="grid grid-cols-4 gap-4 w-full relative">
             
             {/* Visual Connections SVG Overlay */}
@@ -520,7 +520,7 @@ export const AdvancedSubsystems: React.FC = () => {
               
               return (
                 <div key={node.id} className="flex flex-col items-center gap-2 relative z-10">
-                  <div className={`w-12 h-12 rounded-2xl border flex flex-col justify-center items-center transition-all duration-300 ${
+                  <div className={`w-12 h-12 rounded-xl border flex flex-col justify-center items-center transition-all duration-300 ${
                     isCurrentActive ? 'bg-indigo-600/30 border-indigo-500 ring-2 ring-indigo-500/20 scale-105' :
                     hasPassed ? 'bg-slate-900 border-indigo-500/40 text-indigo-400' :
                     node.type === 'Satellite Base' ? 'bg-slate-950 border-emerald-900 text-emerald-500/70' :
@@ -548,7 +548,7 @@ export const AdvancedSubsystems: React.FC = () => {
       </div>
 
       {/* MULTI-VECTOR CHAOS INJECTOR CONTAINER */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
         <div className="space-y-0.5">
           <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
@@ -562,7 +562,7 @@ export const AdvancedSubsystems: React.FC = () => {
         <div className="grid grid-cols-3 gap-3">
           
           {/* Chaos Switch 1: Signal Blackout */}
-          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-2xl flex flex-col justify-between h-36">
+          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-xl flex flex-col justify-between h-36">
             <div className="space-y-1 text-left">
               <span className="text-[8.5px] font-black text-slate-200 block">SIGNAL BLACKOUT</span>
               <span className="text-[7px] text-slate-500 block leading-tight">
@@ -587,7 +587,7 @@ export const AdvancedSubsystems: React.FC = () => {
           </div>
 
           {/* Chaos Switch 2: GATT Disconnect */}
-          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-2xl flex flex-col justify-between h-36">
+          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-xl flex flex-col justify-between h-36">
             <div className="space-y-1 text-left">
               <span className="text-[8.5px] font-black text-slate-200 block">GATT DISCONNECTION</span>
               <span className="text-[7px] text-slate-500 block leading-tight">
@@ -612,7 +612,7 @@ export const AdvancedSubsystems: React.FC = () => {
           </div>
 
           {/* Chaos Switch 3: Flood Gateway */}
-          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-2xl flex flex-col justify-between h-36">
+          <div className="bg-slate-950/80 border border-slate-900 p-3 rounded-xl flex flex-col justify-between h-36">
             <div className="space-y-1 text-left">
               <span className="text-[8.5px] font-black text-slate-200 block">GATEWAY CONGESTION</span>
               <span className="text-[7px] text-slate-500 block leading-tight">
@@ -646,7 +646,7 @@ export const AdvancedSubsystems: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         {/* Latency benchmark profiling */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-3.5">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-3.5">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
@@ -657,7 +657,7 @@ export const AdvancedSubsystems: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3.5 space-y-3 font-mono">
+          <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-3.5 space-y-3 font-mono">
             
             <div className="space-y-2.5">
               {/* Click to SMS backup */}
@@ -699,7 +699,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Local Acoustic Threat Detector */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-3.5">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-3.5">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
               <Mic className="w-3.5 h-3.5 text-indigo-400" />
@@ -710,7 +710,7 @@ export const AdvancedSubsystems: React.FC = () => {
             </span>
           </div>
 
-          <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-3.5 space-y-3 flex flex-col justify-between min-h-[120px]">
+          <div className="bg-slate-950/60 border border-slate-900 rounded-xl p-3.5 space-y-3 flex flex-col justify-between min-h-[120px]">
             {micListening ? (
               <div className="flex flex-col items-center justify-center space-y-2 py-2">
                 <span className="text-[8px] text-indigo-400 font-bold uppercase animate-pulse">
@@ -764,8 +764,8 @@ export const AdvancedSubsystems: React.FC = () => {
       </div>
 
       {/* TACTICAL APN AND SYSTEM VPN BINDING (NRCONNECTOR PROTOCOL) */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 space-y-4 text-left relative z-10">
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-blue-500 via-teal-400 to-blue-500" />
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 space-y-4 text-left relative z-10">
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
         
         <div className="flex justify-between items-start gap-4">
           <div className="space-y-0.5">
@@ -780,7 +780,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Credentials Display Panel */}
-        <div className="bg-slate-950/80 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono text-[9px]">
+        <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4 space-y-3 font-mono text-[9px]">
           <div className="flex items-center justify-between border-b border-slate-900 pb-2">
             <span className="text-[8.5px] font-bold text-blue-400 uppercase tracking-widest">Manual Android Settings Credentials</span>
             <span className="text-[7px] text-slate-500">Add to Settings &gt; Connections &gt; VPN</span>
@@ -814,7 +814,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* NRConnector Auto-Compiler Panel */}
-        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3.5">
+        <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-4 space-y-3.5">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <span className="text-[10px] font-black text-slate-200 block uppercase tracking-wide">Intelligent APN Auto-Connector</span>
@@ -934,7 +934,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 3 & 6: Tactical Sensors */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Lock className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">TACTICAL HARDWARE SENSORS</h3>
@@ -957,7 +957,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 1 & 2: Transparent Audio Intelligence */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Mic className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">AUDIO INTELLIGENCE (DSP)</h3>
@@ -991,7 +991,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 8: Data-Over-Audio Fallback (SSTV Chirp) */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Mic className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">DATA-OVER-AUDIO FALLBACK</h3>
@@ -1014,7 +1014,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 7: Extreme Battery Preservation */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Cpu className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">EXTREME BATTERY SURVIVAL</h3>
@@ -1039,7 +1039,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 9: Decentralized Alert Dispatch (ntfy.sh) */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Share2 className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">DECENTRALIZED DISPATCH</h3>
@@ -1064,7 +1064,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 10: Data Sovereignty Black Box */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Database className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">DATA SOVEREIGNTY BLACK BOX</h3>
@@ -1090,7 +1090,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 11: Network Obfuscation (VPN) & APN Tunneling */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">NETWORK OBFUSCATION (TUNNELING)</h3>
@@ -1113,7 +1113,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 12: Uncensorable OTA Deployments */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Compass className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">UNCENSORABLE OTA DEPLOYMENTS</h3>
@@ -1136,7 +1136,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 13: Anonymous De-Googled Distribution */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">ANONYMOUS DISTRIBUTION (DE-GOOGLED)</h3>
@@ -1161,7 +1161,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 14: Camouflage & Stealth Mode */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">STEALTH CAMOUFLAGE (DURESS UI)</h3>
@@ -1184,7 +1184,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 15: P2P Bluetooth Mesh (Offline) */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Compass className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">P2P BLUETOOTH MESH ROUTING</h3>
@@ -1209,7 +1209,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
       
         {/* Module 16: Local Edge AI (TFLite) */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Cpu className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">LOCAL EDGE AI (TFLITE)</h3>
@@ -1232,7 +1232,7 @@ export const AdvancedSubsystems: React.FC = () => {
         </div>
 
         {/* Module 17: Advanced Hardware (LoRa/SDR) */}
-        <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+        <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Radio className="w-5 h-5 text-emerald-500" />
             <h3 className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide">ADVANCED HARDWARE INTEGRATION</h3>
@@ -1256,7 +1256,7 @@ export const AdvancedSubsystems: React.FC = () => {
 
 
       {/* FUTURE-PROOF: ZERO-KNOWLEDGE PROOFS */}
-      <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-4 space-y-4">
+      <div className="bg-slate-900/40 border border-slate-900 rounded-xl p-4 space-y-4">
         <div className="flex justify-between items-start">
           <div className="space-y-0.5">
             <span className="text-[10px] font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">

@@ -142,10 +142,10 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 15 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="w-full max-w-md carbon-panel rounded-3xl p-6.5 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[500px] lens-flare-overlay my-auto animate-fade-in"
+          className="w-full max-w-md carbon-panel rounded-xl p-6.5 shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[500px] lens-flare-overlay my-auto animate-fade-in"
         >
           {/* Top glowing indicators */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-emerald-400 to-red-500 opacity-80" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-red-600 opacity-80" />
 
           {/* Header branding */}
           <div className="flex items-center justify-between border-b border-slate-900 pb-4 mb-4">
@@ -166,9 +166,9 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
               initial={{ scale: 0.7, rotate: -15, opacity: 0 }}
               animate={{ scale: 1, rotate: 0, opacity: 1 }}
               transition={{ type: 'spring', damping: 12, stiffness: 100 }}
-              className="w-18 h-18 rounded-2xl bg-slate-950 border border-slate-900 flex items-center justify-center text-3xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] relative"
+              className="w-18 h-18 rounded-xl bg-slate-950 border border-slate-900 flex items-center justify-center text-3xl shadow-[inset_0_2px_8px_rgba(0,0,0,0.8)] relative"
             >
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-transparent rounded-2xl animate-pulse" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/10 to-transparent rounded-xl animate-pulse" />
               {step.emoji}
             </motion.div>
 
@@ -192,7 +192,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
               
               {/* STEP 0: Active Operating Mode selection */}
               {currentStep === 0 && (
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-2xl">
+                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-xl">
                   <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest">
                     ACTIVE OPERATIONAL PROFILE
                   </span>
@@ -204,7 +204,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
                       }}
                       className={`py-2 px-3 rounded-xl text-[10px] font-mono font-bold border transition-all flex flex-col items-center gap-1 ${
                         drillMode 
-                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]' 
+                          ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400 shadow-sm' 
                           : 'bg-slate-900/40 border-slate-800 text-slate-500 hover:text-slate-300'
                       }`}
                     >
@@ -218,7 +218,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
                       }}
                       className={`py-2 px-3 rounded-xl text-[10px] font-mono font-bold border transition-all flex flex-col items-center gap-1 ${
                         !drillMode 
-                          ? 'bg-red-950/30 border-red-500/40 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.15)]' 
+                          ? 'bg-red-950/30 border-red-500/40 text-red-400 shadow-sm' 
                           : 'bg-slate-900/40 border-slate-800 text-slate-500 hover:text-slate-300'
                       }`}
                     >
@@ -234,7 +234,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
 
               {/* STEP 1: Main Call routing input */}
               {currentStep === 1 && (
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-2xl text-left">
+                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-xl text-left">
                   <label className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest block mb-0.5">
                     1st Priority Voice Dispatch Number
                   </label>
@@ -263,7 +263,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
 
               {/* STEP 2: Intelligent Bot Query Sandbox */}
               {currentStep === 2 && (
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-2xl text-left">
+                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-xl text-left">
                   <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest block">
                     Fast Sandbox AI Test Triggers
                   </span>
@@ -310,7 +310,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
 
               {/* STEP 3: BLE Discovery & Pairing Trigger */}
               {currentStep === 3 && (
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-2xl">
+                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-xl">
                   <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest text-left block">
                     GATT Beacon Discovery
                   </span>
@@ -366,7 +366,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
 
               {/* STEP 4: Launcher Countdown configuration */}
               {currentStep === 4 && (
-                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-2xl text-left">
+                <div className="flex flex-col gap-2 p-3 bg-slate-950/80 border border-slate-900 rounded-xl text-left">
                   <span className="text-[8px] font-mono font-bold text-slate-500 uppercase tracking-widest block">
                     Launcher Widget Countdown Timer
                   </span>

@@ -96,7 +96,7 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
               initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.92 }}
-              className="absolute inset-x-0 -inset-y-3 rounded-2xl border border-emerald-500/10 bg-slate-950/20 backdrop-blur-[1px] pointer-events-none z-0 shadow-[inset_0_0_15px_rgba(16,185,129,0.02)]"
+              className="absolute inset-x-0 -inset-y-3 rounded-xl border border-emerald-500/10 bg-slate-950/20 backdrop-blur-[1px] pointer-events-none z-0 shadow-[inset_0_0_15px_rgba(16,185,129,0.02)]"
               style={{ transform: 'translateZ(-15px)' }}
             >
               <div className="absolute top-1.5 left-1.5 w-2 h-2 border-t border-l border-emerald-500/30 rounded-tl" />

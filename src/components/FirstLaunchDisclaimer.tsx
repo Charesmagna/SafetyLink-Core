@@ -20,11 +20,11 @@ export const FirstLaunchDisclaimer: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[9999999] bg-slate-950 flex flex-col items-center justify-center p-6 text-slate-200 select-none overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 via-red-500 to-red-600 pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-1 bg-red-600 pointer-events-none" />
       
       <div className="relative z-10 w-full max-w-sm flex flex-col items-center gap-6">
         {/* Shield Icon / Logo Placeholder */}
-        <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+        <div className="w-16 h-16 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-sm">
           <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
@@ -52,7 +52,7 @@ export const FirstLaunchDisclaimer: React.FC = () => {
 
         <button
           onClick={handleAccept}
-          className="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-emerald-500/50 py-3.5 px-6 rounded-xl font-mono font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95"
+          className="w-full mt-4 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-emerald-500/50 py-3.5 px-6 rounded-xl font-mono font-bold text-xs uppercase tracking-widest transition-all shadow-lg "
         >
           I Understand & Accept
         </button>

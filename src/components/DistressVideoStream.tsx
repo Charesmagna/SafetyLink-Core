@@ -103,14 +103,14 @@ export const DistressVideoStream: React.FC<{
         {!isCalling && (
           <button 
             onClick={initiateDistressCall}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform btn-lift"
           >
             START STREAM
           </button>
         )}
         <button 
           onClick={endCall}
-          className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105"
+          className="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform btn-lift"
         >
           END STREAM
         </button>

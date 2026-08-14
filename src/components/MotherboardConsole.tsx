@@ -76,7 +76,7 @@ export const MotherboardConsole: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#020617] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col h-[700px]">
+    <div className="bg-[#020617] border border-slate-800 rounded-xl p-6 shadow-sm relative overflow-hidden flex flex-col h-[700px]">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl font-black text-slate-200 tracking-widest font-mono">
@@ -107,7 +107,7 @@ export const MotherboardConsole: React.FC = () => {
       <div className="flex-1 grid grid-cols-12 gap-6 min-h-0">
         
         {/* Left Column: GPS Map (5 cols) */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-4 flex flex-col bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
           <div className="p-3 border-b border-slate-800 bg-slate-950/80">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">GPS Map</h3>
           </div>
@@ -156,7 +156,7 @@ export const MotherboardConsole: React.FC = () => {
 
         {/* Center Column: Active Threat Queue (3 cols) */}
         <div className="col-span-12 lg:col-span-3 flex flex-col">
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl flex-1 flex flex-col overflow-hidden relative">
+          <div className="bg-slate-950/80 border border-slate-800 rounded-xl flex-1 flex flex-col overflow-hidden relative">
             <div className="p-3 border-b border-slate-800 bg-slate-950">
               <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">Active Threat Queue</h3>
             </div>
@@ -172,7 +172,7 @@ export const MotherboardConsole: React.FC = () => {
                       <div 
                         key={p.id} 
                         className={`absolute w-full bg-gradient-to-br from-red-950 to-[#2c0505] border border-red-500 rounded-xl p-5 shadow-2xl transition-all duration-300 ${
-                          isTop ? 'z-40 relative shadow-[0_0_30px_rgba(239,68,68,0.3)]' : 'z-30 opacity-80'
+                          isTop ? 'z-40 relative shadow-sm' : 'z-30 opacity-80'
                         }`}
                         style={{
                           transform: isTop ? 'none' : `translateY(-${index * 12}px) scale(${1 - index * 0.04})`,
@@ -227,7 +227,7 @@ export const MotherboardConsole: React.FC = () => {
         </div>
 
         {/* Third Column: Active Field Units (3 cols) */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-3 flex flex-col bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden">
           <div className="p-3 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">Field Units</h3>
             <span className="text-[9px] font-mono font-bold bg-blue-900/50 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
@@ -259,7 +259,7 @@ export const MotherboardConsole: React.FC = () => {
         </div>
 
         {/* Right Column: System Status (2 cols) */}
-        <div className="col-span-12 lg:col-span-2 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-2 flex flex-col bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden">
           <div className="p-3 border-b border-slate-800 bg-slate-950">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">System Status</h3>
           </div>
@@ -318,7 +318,7 @@ export const MotherboardConsole: React.FC = () => {
               <h4 className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">System Status</h4>
               <div className="flex justify-between items-center text-[10px] font-mono text-slate-500">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm animate-pulse"></span>
                   Core Telemetry
                 </div>
                 <span className="text-emerald-500 font-bold">ONLINE</span>

@@ -13,21 +13,21 @@ export const StatusIndicator: React.FC = () => {
       label: 'BLE LINK',
       value: isBleConnected ? 'LINKED' : 'TERMINATED',
       status: isBleConnected ? 'OK' : 'ERR',
-      colorClass: isBleConnected ? 'bg-emerald-500 neon-glow-emerald' : 'bg-red-500 neon-glow-red',
+      colorClass: isBleConnected ? 'bg-emerald-500 ' : 'bg-red-500 ',
       textColor: isBleConnected ? 'text-emerald-400' : 'text-red-400',
     },
     {
       label: 'GNSS LOCK',
       value: isSosBeaconActive ? 'HPE LOCK' : 'SECURE LOCK',
       status: 'OK',
-      colorClass: 'bg-emerald-500 neon-glow-emerald',
+      colorClass: 'bg-emerald-500 ',
       textColor: 'text-emerald-400',
     },
     {
       label: 'SOS SECURE',
       value: isSosBeaconActive ? 'BROADCASTING' : 'STANDBY',
       status: isSosBeaconActive ? 'DISTRESS' : 'SECURE',
-      colorClass: isSosBeaconActive ? 'bg-red-500 neon-glow-red animate-ping' : 'bg-emerald-500 neon-glow-emerald',
+      colorClass: isSosBeaconActive ? 'bg-red-500  animate-ping' : 'bg-emerald-500 ',
       textColor: isSosBeaconActive ? 'text-red-400' : 'text-emerald-400',
     }
   ];
@@ -40,7 +40,7 @@ export const StatusIndicator: React.FC = () => {
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: idx * 0.05 }}
-          className="glass-panel rounded-2xl p-3 flex flex-col justify-between h-18 shadow-xl relative overflow-hidden"
+          className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between h-18 shadow-xl relative overflow-hidden"
         >
           {/* Subtle inside glow */}
           <div className="absolute top-0 right-0 p-1.5 opacity-30 text-[8px] font-black text-slate-500 uppercase">

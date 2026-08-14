@@ -235,9 +235,9 @@ export const BLEScanner: React.FC = () => {
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel rounded-3xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden scanlines"
+      className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl w-full max-w-md mx-auto relative overflow-hidden "
     >
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 neon-glow-emerald" />
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-emerald-600 " />
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
       
       {/* BACKGROUND SERVICE INDICATOR */}
@@ -300,7 +300,7 @@ export const BLEScanner: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-3.5 bg-slate-950/90 border border-slate-800 rounded-2xl space-y-3 font-mono text-[10px] text-left mt-3.5 relative z-10"
+            className="p-3.5 bg-slate-950/90 border border-slate-800 rounded-xl space-y-3 font-mono text-[10px] text-left mt-3.5 relative z-10"
           >
             <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider block">✍️ PAIR HARDWARE BUTTON BY ID</span>
             
@@ -382,7 +382,7 @@ export const BLEScanner: React.FC = () => {
       </AnimatePresence>
 
       {/* Custom Native iTAG Plugin Controller */}
-      <div className="p-3.5 bg-emerald-950/5 border border-emerald-500/20 rounded-2xl space-y-3 mt-4 relative z-10 text-left">
+      <div className="p-3.5 bg-emerald-950/5 border border-emerald-500/20 rounded-xl space-y-3 mt-4 relative z-10 text-left">
         <div className="flex justify-between items-center">
           <div>
             <p className="text-[10px] font-bold text-emerald-400 font-display uppercase tracking-wider">
@@ -464,7 +464,7 @@ export const BLEScanner: React.FC = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-3.5 bg-slate-950/80 border border-emerald-500/20 rounded-2xl space-y-2 font-mono text-[10px] text-left mt-3.5"
+            className="p-3.5 bg-slate-950/80 border border-emerald-500/20 rounded-xl space-y-2 font-mono text-[10px] text-left mt-3.5"
           >
             <div className="flex justify-between text-emerald-400 font-bold">
               <span>PAIRING SEQUENCER</span>
@@ -485,7 +485,7 @@ export const BLEScanner: React.FC = () => {
             DISCOVERED NEARBY ({discoveredDevices.length})
           </span>
           {discoveredDevices.map((d) => (
-            <div key={d.deviceId} className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-900 rounded-2xl">
+            <div key={d.deviceId} className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-900 rounded-xl">
               <div>
                 <p className="text-xs font-bold text-slate-100">{d.name}</p>
                 <p className="text-[9px] font-mono text-slate-500">{d.deviceId} · 📶 {d.rssi} dBm</p>
@@ -509,7 +509,7 @@ export const BLEScanner: React.FC = () => {
         </span>
 
         {bleDevices.length === 0 ? (
-          <div className="p-6 text-center border border-dashed border-slate-800/80 rounded-2xl bg-slate-950/20">
+          <div className="p-6 text-center border border-dashed border-slate-800/80 rounded-xl bg-slate-950/20">
             <span className="text-xl block mb-1">🔑</span>
             <p className="text-[10px] font-mono text-slate-500">No physical buttons bonded yet.</p>
             <p className="text-[9px] font-mono text-slate-600 mt-1 leading-relaxed">
@@ -550,7 +550,7 @@ export const BLEScanner: React.FC = () => {
             const isEditingThis = editingMac === device.macAddress;
 
             return (
-              <div key={device.macAddress} className="p-4 bg-slate-950/20 rounded-2xl border border-slate-900/80 space-y-3.5 transition-all hover:border-slate-800/80">
+              <div key={device.macAddress} className="p-4 bg-slate-950/20 rounded-xl border border-slate-900/80 space-y-3.5 transition-all hover:border-slate-800/80">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1 flex-1 pr-2">
                     {isEditingThis ? (
@@ -602,7 +602,7 @@ export const BLEScanner: React.FC = () => {
                     <p className="text-[9px] font-mono text-slate-500">{device.macAddress}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse neon-glow-emerald' : isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-red-500'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse ' : isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-red-500'}`} />
                     <span className={`text-[9px] font-mono font-bold ${isConnected ? 'text-emerald-400' : isConnecting ? 'text-amber-400' : 'text-slate-500'}`}>
                       {device.connectionState}
                     </span>
@@ -688,7 +688,7 @@ export const BLEScanner: React.FC = () => {
       {demoMode && (
       <>
       {/* SafetyLink Active Connection Keep-Alive Background Service Explanation Panel */}
-      <div className="mt-5 p-4 bg-slate-950/60 border border-slate-900 rounded-2xl text-left font-mono relative z-10 space-y-3">
+      <div className="mt-5 p-4 bg-slate-950/60 border border-slate-900 rounded-xl text-left font-mono relative z-10 space-y-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-[11px]">🔑</span>

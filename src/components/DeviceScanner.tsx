@@ -81,7 +81,7 @@ export const DeviceScanner: React.FC<DeviceScannerProps> = ({ onScanComplete, on
   if (isScanning) {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/40 flex flex-col justify-center items-center">
-        <div className="w-[250px] h-[250px] border-4 border-emerald-500 rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+        <div className="w-[250px] h-[250px] border-4 border-emerald-500 rounded-xl shadow-sm"></div>
         <button
           onClick={() => {
             stopScan();
