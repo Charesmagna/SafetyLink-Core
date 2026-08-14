@@ -319,20 +319,9 @@ app.post('/api/ai/chat', authMiddleware, async (c) => {
   if (!apiKey) return c.json({ error: 'Gemini API Key not configured' }, 500);
 
   try {
-// REMOVED: const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: { 'User-Agent': 'aistudio-build' }
-      }
-    });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: message,
-      config: {
-        tools: [{ googleMaps: {} }],
-        systemInstruction: "You are a helpful safety and location assistant for SafetyLink. Provide accurate information about locations and safety using Google Maps grounding."
-      },
+// Gemini AI removed - dependency not available in Cloudflare Worker
+    return c.json({ error: 'AI features not available' }, 503);
+    const _unused = {
     });
 
     const text = response.text;
