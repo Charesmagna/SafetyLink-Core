@@ -162,7 +162,8 @@ const panicQueue = hasRedis ? new Queue('panic_events', { connection }) : {
 };
 
 if (hasRedis) {
-    new Worker('panic_events', processJob, { connection });
+    const worker = new Worker('panic_events', processJob, { connection });
+    worker.on('error', err => console.error('Worker error:', err.message));
 }
 
 
@@ -596,12 +597,16 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (req, res) => {
+    app.use((req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  await initDb();
+  try {
+    await initDb();
+  } catch (err) {
+    console.error("Failed to initialize database:", err);
+  }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
