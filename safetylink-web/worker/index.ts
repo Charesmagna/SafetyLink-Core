@@ -312,26 +312,7 @@ app.get('/api/init-db', async (c) => {
 // REMOVED: import { GoogleGenAI } from "@google/genai";
 
 app.post('/api/ai/chat', authMiddleware, async (c) => {
-  const { message } = await c.req.json<{ message: string }>();
-  if (!message) return c.json({ error: 'Message required' }, 400);
-
-  const apiKey = c.env.GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : undefined);
-  if (!apiKey) return c.json({ error: 'Gemini API Key not configured' }, 500);
-
-  try {
-// Gemini AI removed - dependency not available in Cloudflare Worker
-    return c.json({ error: 'AI features not available' }, 503);
-    const _unused = {
-    });
-
-    const text = response.text;
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-
-    return c.json({ text, groundingChunks });
-  } catch (error) {
-    console.error("Gemini API error:", error);
-    return c.json({ error: 'AI request failed' }, 500);
-  }
+  return c.json({ error: 'AI features not available in this build' }, 503);
 });
 
 
