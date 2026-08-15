@@ -1,15 +1,13 @@
-import { firebaseLogin, firebaseRegisterUser } from '../services/FirebaseAuthService';
 import { create } from 'zustand';
-import { supabase } from '../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
-import { pushIncidentTelemetry } from '../services/ThingsBoardService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
 import { OrgSyncService } from '../services/OrgSyncService';
-import { OfflineService } from '../services/BaseService';
+// Firebase, Supabase, ThingsBoard, OfflineService removed - server handles all backend
+const pushIncidentTelemetry = async (..._args: any[]) => {};
 
 interface AppState {
   contacts: Contact[];
@@ -686,7 +684,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Try Firebase Auth as fallback
       try {
         const emailToTry = user.email || user.username + '@safetylink.local';
-        const fbResult = await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
+        const fbResult = // await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
         if (fbResult.success) {
           const newUser = {
             ...user,
