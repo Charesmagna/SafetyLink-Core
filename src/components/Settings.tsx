@@ -54,14 +54,21 @@ export const Settings: React.FC = () => {
   const [twilioFromNumber, setTwilioFromNumber] = useState(currentUser?.twilio?.fromNumber || '');
   
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const handleCheckForUpdates = () => {
+  const handleCheckForUpdates = async () => {
     setIsCheckingUpdate(true);
-    setTimeout(() => {
+    try {
+      const updateInfo = await checkForUpdate();
+      if (updateInfo.available && updateInfo.apkUrl) {
+        useAppStore.getState().addToast(`Version ${updateInfo.version} found! Downloading...`, "success");
+        openDownloadUrl(updateInfo.apkUrl);
+      } else {
+        useAppStore.getState().addToast("You are already on the latest version.", "info");
+      }
+    } catch (e) {
+      useAppStore.getState().addToast("Failed to check for updates.", "error");
+    } finally {
       setIsCheckingUpdate(false);
-      useAppStore.getState().addToast("Fetching latest SafetyLink APK build...", "success");
-      // Fallback/direct link to GitHub releases or a known APK endpoint
-      window.open("https://github.com/Charesmagna/SafetyLink-Core/releases/latest", "_system");
-    }, 2000);
+    }
   };
 
   const [tbEnabled, setTbEnabled] = useState(currentUser?.sensorStream?.enabled || false);

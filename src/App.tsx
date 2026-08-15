@@ -1,5 +1,6 @@
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -140,7 +141,14 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
-  useEffect(() => { const timer = setTimeout(() => setShowSplash(false), 7000); return () => clearTimeout(timer); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 7000);
+    // Hide native splash screen once React has mounted and our custom cinematic splash is ready
+    if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide().catch(console.warn);
+    }
+    return () => clearTimeout(timer);
+  }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
