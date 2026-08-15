@@ -877,41 +877,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { success: false, error: 'Account not found in local Demo Database.', role: 'USER' };
     }
 
-    // 3. Otherwise, make real network request to /api/auth/login
+    // 3. Real network request to unified /api/login endpoint
     try {
-      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/auth/login' : '/api/auth/login', {
+      const API_BASE = 'https://safetylink.online';
+      const res = await fetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          password: password
-        })
+        body: JSON.stringify({ username, password, org_code: orgCode })
       });
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.trialExpired) return { success: false, error: 'Trial expired. Contact SafetyLink to activate.', role: 'USER' };
         return { success: false, error: data.error || 'Login failed', role: 'USER' };
       }
 
-      const isRealSuperAdmin = data.user.username === 'sl-admin-0000' || (data.user.role === 'Control Room Operator' && data.user.orgCode === 'SL-ORG-MAIN');
+      const isRealSuperAdmin = data.superAdmin === true;
       const roleType = isRealSuperAdmin ? 'ADMIN' as const : 'USER' as const;
 
-      const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(data.user.role);
+      // Build minimal user profile from server response — all data lives on server
+      const serverUser = { username, orgCode: data.org_code, role: isRealSuperAdmin ? 'Super Admin' : 'Organization Administrator' };
       set({
-        currentUser: data.user,
+        currentUser: serverUser as any,
         token: data.token,
         superAdminActive: isRealSuperAdmin,
-        currentOrg: (isOrgRole && data.org) ? data.org : null
+        currentOrg: isRealSuperAdmin ? null : { id: data.org_code, name: data.org_name, orgCode: data.org_code } as any
       });
-      if (data.org) {
-        setStoredJSON('sl_current_org', (isOrgRole && data.org) ? data.org : null);
-      }
 
-      setStoredJSON('sl_current_user', data.user);
+      // Store only the token — user data always fetched from server on next login
       setStoredJSON('sl_jwt_token', data.token);
+      setStoredJSON('sl_org_code', data.org_code);
       setStoredJSON('sl_super_admin', isRealSuperAdmin);
 
-      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Live)', `User: ${data.user.username}, Role: ${data.user.role}`);
+      if (data.trialDaysLeft !== null && data.trialDaysLeft <= 3) {
+        get().addAuditLog('SECURITY', 'WARNING', 'Trial Expiring', `${data.trialDaysLeft} day(s) remaining`);
+      }
+
+      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Server)', `Org: ${data.org_name}`);
       return { success: true, role: roleType };
     } catch (e) {
       // Try Firebase Auth as fallback
