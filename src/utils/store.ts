@@ -199,8 +199,8 @@ interface AppState {
 // Initial Demo Data
 const DEFAULT_CONTACTS: Contact[] = [
   { id: '1', label: '1st Contact - Tactical Voice Dispatch', phone: '+27829110000', template: 'Direct call sequence enqueued.', channelType: 'CALL', priority: 1 },
-  { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: 'EMERGENCY: Distress beacon active. GPS: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS', priority: 2 },
-  { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: 'CRITICAL: RFD_Beacon keyfob click verified. GPS: {LAT},{LNG}', channelType: 'WHATSAPP', priority: 3 },
+  { id: '2', label: '2nd Contact - SMS GPS Broadcast', phone: '+27839119112', template: '🚨 SAFETYLINK SOS: {NAME} needs help! Location: {ADDRESS} | Map: https://maps.google.com/?q={LAT},{LNG}', channelType: 'SMS', priority: 2 },
+  { id: '3', label: '3rd Contact - WhatsApp Dispatcher', phone: '+27600123456', template: '🚨 SAFETYLINK SOS: {NAME} needs help! Location: {ADDRESS} | Map: https://maps.google.com/?q={LAT},{LNG}', channelType: 'WHATSAPP', priority: 3 },
   { id: '4', label: '4th Contact - Community Radio Link', phone: '+27650987654', template: 'SafetyLink Broadcast alert: {LAT}, {LNG}', channelType: 'GROUP', priority: 4 },
   { id: '5', label: '5th Contact - SAPS Emergency Police', phone: '10111', template: 'Tactical coordinator distress ping.', channelType: 'POLICE', priority: 5 }
 ];
@@ -1422,7 +1422,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           const { road, house_number, city, town, state, country } = data.address;
           const parts = [house_number, road, town || city, state, country].filter(Boolean);
           if (parts.length > 0) {
-            addressString = ' | Approx Address: ' + parts.join(', ');
+            addressString = parts.join(', ');
           }
         }
       } catch (e) {
@@ -1445,7 +1445,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         continue;
       }
 
-      const message = contact.template.replace('{LAT}', loc.lat.toFixed(5)).replace('{LNG}', loc.lng.toFixed(5)) + addressString + ' | User: ' + who;
+      const message = contact.template
+        .replace('{LAT}', loc.lat.toFixed(5))
+        .replace('{LNG}', loc.lng.toFixed(5))
+        .replace('{NAME}', who)
+        .replace('{ADDRESS}', addressString ? addressString.replace(' | Approx Address: ', '') : `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`);
 
       if (isDrill) {
         get().addAuditLog(
