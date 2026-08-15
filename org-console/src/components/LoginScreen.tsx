@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { User } from 'firebase/auth';
+// Unified SafetyLink auth — same backend as APK and web
 import { Shield, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface Props {
@@ -27,7 +24,21 @@ export default function LoginScreen({ mode, onLogin, onBack, onSwitchMode }: Pro
     if (!email || !password || !orgCode) { setError('All fields are required.'); return; }
     setLoading(true); setError('');
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const API = import.meta.env.VITE_API_URL || 'https://safetylink.online';
+      const res = await fetch(`${API}/api/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, org_code: orgCode, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.trialExpired) throw new Error('Trial expired. Contact SafetyLink.');
+        throw new Error(data.error || 'Login failed');
+      }
+      localStorage.setItem('sl_token', data.token);
+      localStorage.setItem('sl_org', JSON.stringify({ name: data.org_name, code: data.org_code, superAdmin: data.superAdmin || false }));
+      onLogin({ uid: data.org_code, email } as any);
+      return;
+      const cred = { user: null } as any; // unreachable — kept for type compat
       const orgCodeUpper = orgCode.trim().toUpperCase();
       let foundOrgName = orgCodeUpper;
 
