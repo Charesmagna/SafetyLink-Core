@@ -21,20 +21,15 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    signingConfigs {
+        signingConfigs {
         release {
-            def propsFile = rootProject.file("signing.properties")
-            if (propsFile.exists()) {
-                def props = new Properties()
-                props.load(new FileInputStream(propsFile))
-                storeFile file(props['storeFile'])
-                storePassword props['storePassword']
-                keyAlias props['keyAlias']
-                keyPassword props['keyPassword']
-            }
+            storeFile file(project.hasProperty('KEYSTORE_PATH') ? KEYSTORE_PATH : System.getenv('KEYSTORE_PATH') ?: "${rootDir}/app/safetylink-release.keystore")
+            storePassword project.hasProperty('KEYSTORE_PASSWORD') ? KEYSTORE_PASSWORD : (System.getenv('KEYSTORE_PASSWORD') ?: 'SafetyLink2024!')
+            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : (System.getenv('KEY_ALIAS') ?: 'safetylink')
+            keyPassword project.hasProperty('KEY_PASSWORD') ? KEY_PASSWORD : (System.getenv('KEY_PASSWORD') ?: 'SafetyLink2024!')
         }
     }
-    buildTypes {
+buildTypes {
         release {
             signingConfig signingConfigs.release
                         buildConfigField "String", "BACKEND_BASE_URL", '\"https://api.safetylink.app\"'
