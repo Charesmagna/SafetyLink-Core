@@ -82,7 +82,7 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://mock.supabase.co";
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "mock-key";
 const supabase = createSupabaseClient(supabaseUrl, supabaseKey);
 
-const hasRedis = !!process.env.REDIS_URL;
+const hasRedis = false; // Forced false to prevent ECONNREFUSED on Cloud Run
 const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
 
 const processJob = async (job: any) => {
