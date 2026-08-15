@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+// REMOVED (firebase not installed): import { initializeApp, getApps } from 'firebase/app';
+// REMOVED (firebase not installed): import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
