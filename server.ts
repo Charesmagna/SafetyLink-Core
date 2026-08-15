@@ -484,6 +484,46 @@ async function startServer() {
         args: [orgRes.rows[0].id, "REGISTER", name, `User ${name} registered`]
       });
       
+      // Twilio SMS + Voice dispatch to org emergency contacts
+      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          const userName = (userRes.rows[0] as any).name || phone;
+
+          // Reverse geocode for address
+          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
+          try {
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const geoData = await geo.json() as any;
+            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
+          } catch {}
+
+          // Get org emergency contacts
+          const contactsRes = await db.execute({
+            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
+            args: [orgId, phone]
+          });
+
+          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
+          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
+
+          for (const contact of contactsRes.rows as any[]) {
+            if (!contact.phone) continue;
+            // SMS
+            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
+              .catch(e => console.error('Twilio SMS failed:', e.message));
+            // Voice call
+            twilioClient.calls.create({
+              twiml: twimlVoice,
+              from: TWILIO_PHONE_NUMBER,
+              to: contact.phone
+            }).catch(e => console.error('Twilio call failed:', e.message));
+          }
+        } catch (twilioErr: any) {
+          console.error('Twilio dispatch error:', twilioErr.message);
+        }
+      }
+
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -561,6 +601,46 @@ async function startServer() {
         args: [latitude, longitude, orgRes.rows[0].id, phone]
       });
       
+      // Twilio SMS + Voice dispatch to org emergency contacts
+      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          const userName = (userRes.rows[0] as any).name || phone;
+
+          // Reverse geocode for address
+          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
+          try {
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const geoData = await geo.json() as any;
+            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
+          } catch {}
+
+          // Get org emergency contacts
+          const contactsRes = await db.execute({
+            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
+            args: [orgId, phone]
+          });
+
+          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
+          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
+
+          for (const contact of contactsRes.rows as any[]) {
+            if (!contact.phone) continue;
+            // SMS
+            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
+              .catch(e => console.error('Twilio SMS failed:', e.message));
+            // Voice call
+            twilioClient.calls.create({
+              twiml: twimlVoice,
+              from: TWILIO_PHONE_NUMBER,
+              to: contact.phone
+            }).catch(e => console.error('Twilio call failed:', e.message));
+          }
+        } catch (twilioErr: any) {
+          console.error('Twilio dispatch error:', twilioErr.message);
+        }
+      }
+
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -601,6 +681,46 @@ async function startServer() {
         console.error("Pusher broadcast failed:", err);
       }
       
+      // Twilio SMS + Voice dispatch to org emergency contacts
+      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          const userName = (userRes.rows[0] as any).name || phone;
+
+          // Reverse geocode for address
+          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
+          try {
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const geoData = await geo.json() as any;
+            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
+          } catch {}
+
+          // Get org emergency contacts
+          const contactsRes = await db.execute({
+            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
+            args: [orgId, phone]
+          });
+
+          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
+          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
+
+          for (const contact of contactsRes.rows as any[]) {
+            if (!contact.phone) continue;
+            // SMS
+            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
+              .catch(e => console.error('Twilio SMS failed:', e.message));
+            // Voice call
+            twilioClient.calls.create({
+              twiml: twimlVoice,
+              from: TWILIO_PHONE_NUMBER,
+              to: contact.phone
+            }).catch(e => console.error('Twilio call failed:', e.message));
+          }
+        } catch (twilioErr: any) {
+          console.error('Twilio dispatch error:', twilioErr.message);
+        }
+      }
+
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -643,6 +763,46 @@ async function startServer() {
         args: [req.orgId, "RESOLVED", user_name, `Panic alert resolved for ${user_name}`]
       });
       
+      // Twilio SMS + Voice dispatch to org emergency contacts
+      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          const userName = (userRes.rows[0] as any).name || phone;
+
+          // Reverse geocode for address
+          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
+          try {
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+            const geoData = await geo.json() as any;
+            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
+          } catch {}
+
+          // Get org emergency contacts
+          const contactsRes = await db.execute({
+            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
+            args: [orgId, phone]
+          });
+
+          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
+          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
+
+          for (const contact of contactsRes.rows as any[]) {
+            if (!contact.phone) continue;
+            // SMS
+            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
+              .catch(e => console.error('Twilio SMS failed:', e.message));
+            // Voice call
+            twilioClient.calls.create({
+              twiml: twimlVoice,
+              from: TWILIO_PHONE_NUMBER,
+              to: contact.phone
+            }).catch(e => console.error('Twilio call failed:', e.message));
+          }
+        } catch (twilioErr: any) {
+          console.error('Twilio dispatch error:', twilioErr.message);
+        }
+      }
+
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
