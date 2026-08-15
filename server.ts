@@ -22,6 +22,8 @@ async function initDb() {
       org_code TEXT NOT NULL UNIQUE,
       org_name TEXT NOT NULL,
       admin_password_hash TEXT NOT NULL,
+      trial_expires_at TEXT,
+      trial_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -417,21 +419,45 @@ async function startServer() {
 
   app.post("/api/login", async (req, res) => {
     try {
-      const { org_code, admin_password } = req.body;
+      const { username, org_code, admin_password, password } = req.body;
+      const pass = admin_password || password || '';
+
+      // Super admin bypass — full platform access, no trial restrictions
+      const SUPER_ADMIN_USER = 'safetylink';
+      const SUPER_ADMIN_PASS_HASH = crypto.createHash('sha256').update('sl-admin-000').digest('hex');
+      if ((username === SUPER_ADMIN_USER || org_code === 'SL-ADMIN-000') &&
+          crypto.createHash('sha256').update(pass).digest('hex') === SUPER_ADMIN_PASS_HASH) {
+        const token = Buffer.from(JSON.stringify({
+          superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-000',
+          exp: Date.now() + 86400000 * 30
+        })).toString('base64');
+        return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-000', superAdmin: true });
+      }
+
       const result = await db.execute({
         sql: "SELECT * FROM organizations WHERE org_code = ?",
         args: [org_code]
       });
-      if (result.rows.length === 0) return res.status(401).json({ error: "Invalid organization" });
-      
-      const org = result.rows[0];
-      const hash = crypto.createHash('sha256').update(admin_password).digest('hex');
+      if (result.rows.length === 0) return res.status(401).json({ error: "Invalid organization code" });
+
+      const org = result.rows[0] as any;
+      const hash = crypto.createHash('sha256').update(pass).digest('hex');
       if (org.admin_password_hash !== hash) return res.status(401).json({ error: "Invalid password" });
-      
+
+      // Trial check
+      if (org.trial_active === 1 && org.trial_expires_at) {
+        if (new Date(org.trial_expires_at) < new Date()) {
+          return res.status(403).json({ error: "Trial expired. Contact SafetyLink to activate your plan.", trialExpired: true });
+        }
+      }
+
       const tokenPayload = { orgId: org.id, orgCode: org.org_code, exp: Date.now() + 86400000 };
       const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
-      
-      res.json({ token, org_name: org.org_name, org_code: org.org_code });
+      const trialDaysLeft = org.trial_expires_at
+        ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
+        : null;
+
+      res.json({ token, org_name: org.org_name, org_code: org.org_code, trialDaysLeft });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -458,6 +484,54 @@ async function startServer() {
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // Super admin middleware
+  const superAdminMiddleware = (req: any, res: any, next: any) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    try {
+      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+      if (!payload.superAdmin) return res.status(403).json({ error: 'Super admin only' });
+      if (payload.exp < Date.now()) return res.status(401).json({ error: 'Session expired' });
+      next();
+    } catch { return res.status(401).json({ error: 'Invalid token' }); }
+  };
+
+  // Super admin: list all orgs
+  app.get("/api/super-admin/orgs", superAdminMiddleware, async (_req: any, res: any) => {
+    try {
+      const result = await db.execute({ sql: "SELECT id, org_name, org_code, trial_active, trial_expires_at, created_at FROM organizations ORDER BY created_at DESC", args: [] });
+      res.json({ orgs: result.rows });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Super admin: unlock org / extend trial
+  app.post("/api/super-admin/unlock", superAdminMiddleware, async (req: any, res: any) => {
+    try {
+      const { org_code, days } = req.body;
+      const expires = new Date(Date.now() + (days || 30) * 86400000).toISOString();
+      await db.execute({
+        sql: "UPDATE organizations SET trial_active = 0, trial_expires_at = ? WHERE org_code = ?",
+        args: [expires, org_code]
+      });
+      res.json({ success: true, message: `${org_code} unlocked until ${expires}` });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Register new org with 14-day trial
+  app.post("/api/register-org", async (req: any, res: any) => {
+    try {
+      const { org_name, admin_password } = req.body;
+      const org_code = 'SL-' + org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000);
+      const hash = crypto.createHash('sha256').update(admin_password).digest('hex');
+      const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
+      await db.execute({
+        sql: "INSERT INTO organizations (org_code, org_name, admin_password_hash, trial_active, trial_expires_at) VALUES (?, ?, ?, 1, ?)",
+        args: [org_code, org_name, hash, trial_expires]
+      });
+      res.json({ success: true, org_code, trial_expires, trial_days: 14 });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
   app.get("/api/users", authMiddleware, async (req: any, res) => {
