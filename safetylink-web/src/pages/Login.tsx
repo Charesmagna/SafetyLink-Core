@@ -23,17 +23,33 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register-org';
-      const body = mode === 'login'
-        ? { email, password, orgCode }
-        : { email, password, orgName, contactName };
-      const res = await fetch(endpoint, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json() as { error?: string; token?: string; orgId?: string; orgName?: string; email?: string };
-      if (!res.ok) throw new Error(data.error || 'Request failed');
-      onLogin({ token: data.token!, orgId: data.orgId!, orgName: data.orgName!, email: data.email || email });
+      if (mode === 'login') {
+        // Unified login — same endpoint as APK
+        const res = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: email, org_code: orgCode, password })
+        });
+        const data = await res.json() as any;
+        if (!res.ok) {
+          if (data.trialExpired) throw new Error('Your trial has expired. Contact SafetyLink to activate your plan.');
+          throw new Error(data.error || 'Login failed');
+        }
+        if (data.trialDaysLeft !== null && data.trialDaysLeft <= 3) {
+          setError(`Trial expires in ${data.trialDaysLeft} day(s). Upgrade to continue.`);
+        }
+        onLogin({ token: data.token!, orgId: String(data.superAdmin ? 0 : data.org_code), orgName: data.org_name!, email });
+      } else {
+        // Register new org — 14-day trial starts now
+        const res = await fetch('/api/register-org', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ org_name: orgName, admin_password: password })
+        });
+        const data = await res.json() as any;
+        if (!res.ok) throw new Error(data.error || 'Registration failed');
+        setError('');
+        alert(\`Organisation registered! Your code: \${data.org_code}\n14-day trial started. Share this code with your members.\`);
+        onSwitch('login' as Page);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally { setLoading(false); }
