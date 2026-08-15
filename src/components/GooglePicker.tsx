@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+// REMOVED (firebase not installed): import { initializeApp, getApp, getApps } from 'firebase/app';
+// REMOVED (firebase not installed): import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 declare var gapi: any;
