@@ -1,15 +1,19 @@
 import express from "express";
 import path from "path";
-
-import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@libsql/client";
-import * as stytch from "stytch";
-import Pusher from "pusher";
 import crypto from "crypto";
 import twilio from "twilio";
-import { Queue, Worker } from "bullmq";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
+// --- Environment Variables (from GitHub Secrets via CI) ---
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '+16055695774';
+const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY      || 'a6b0a27f24d054a44ada';
+const PUSHER_APP_ID       = process.env.PUSHER_APP_ID       || '2184826';
+const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET   || '';
+const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID    || 'e7c4fd21-764f-465d-b98f-c44f4489662e';
+const JWT_SECRET          = process.env.JWT_SECRET          || 'safetylink-secure-jwt-2026-tmmedia';
+const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL || 'https://eomnz1lxw9o2hyq.m.pipedream.net';
 
 // --- Database & Auth Initialization ---
 const dbPath = process.env.NODE_ENV === "production" ? "file:/tmp/safetylink.db" : "file:safetylink.db";
