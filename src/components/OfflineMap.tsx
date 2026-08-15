@@ -82,7 +82,7 @@ interface SatTelemetry {
 }
 
 export const OfflineMap: React.FC = () => {
-  const { userLocation, gpsAccuracy, activeSOSState } = useAppStore();
+  const { userLocation, updateLocation, gpsAccuracy, activeSOSState } = useAppStore();
 
   const [satelliteData, setSatelliteData] = useState<SatTelemetry | null>(null);
   const [isLoadingSat, setIsLoadingSat] = useState(false);
@@ -161,8 +161,20 @@ export const OfflineMap: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const userLat = userLocation?.lat ?? 0;
-  const userLng = userLocation?.lng ?? 0;
+  // Request GPS if not yet acquired
+  React.useEffect(() => {
+    if (!userLocation || (userLocation.lat === 0 && userLocation.lng === 0)) {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => updateLocation(pos.coords.latitude, pos.coords.longitude, `±${Math.round(pos.coords.accuracy)}m`),
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
+
+  // Default to Lenasia South if GPS not yet acquired
+  const userLat = (userLocation?.lat && userLocation.lat !== 0) ? userLocation.lat : -26.3085;
+  const userLng = (userLocation?.lng && userLocation.lng !== 0) ? userLocation.lng : 27.8344;
 
   // Render tactical security incident icons relative to the user's active zone
   const liveIncidents = React.useMemo(() => {
