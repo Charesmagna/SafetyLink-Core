@@ -1062,11 +1062,6 @@ const App: React.FC = () => {
             onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
             className="absolute inset-0 w-full h-full object-cover"
           >
-            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
-          </video>
-        </div>
-      )}
-      <div className="police-wash pointer-events-none" />
       
       <div className="flare-line-container pointer-events-none">
         <div className="flare-line flare-line-1" />
@@ -1083,11 +1078,6 @@ const App: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/Scene_Setup_vertical_.mp4" type="video/mp4" />
-        </video>
-      )}
-      {demoMode && (
-        <div className="demo-simulated-overlay select-none pointer-events-none">
           <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
         </div>
       )}
