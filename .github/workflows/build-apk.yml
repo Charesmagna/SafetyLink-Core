@@ -119,7 +119,17 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
-      run: ./gradlew assembleRelease --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -100
+      run: |
+        KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
+        echo "Keystore path: $KEYSTORE_ABS"
+        ls -la "$KEYSTORE_ABS"
+        ./gradlew assembleRelease \
+          -PKEYSTORE_PATH="$KEYSTORE_ABS" \
+          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
+          -PKEY_ALIAS="safetylink" \
+          -PKEY_PASSWORD="SafetyLink2024!" \
+          --init-script ../init.gradle \
+          --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -60
 
     - name: Rename APKs for release
       run: |
