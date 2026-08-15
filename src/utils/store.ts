@@ -650,7 +650,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 2. Otherwise, make a real network request to our backend
     try {
-      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register' : 'https://safetylink.online/api/register', {
+      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -761,7 +761,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 2. Otherwise, make a real network request
     try {
-      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register-org' : 'https://safetylink.online/api/register-org', {
+      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register-org' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/register-org', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -993,7 +993,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   fetchSuperAdminData: async () => {
     if (get().demoMode || !get().superAdminActive || !get().token) return;
     try {
-      const orgsRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/super-admin/orgs' : 'https://safetylink.online/api/super-admin/orgs', {
+      const orgsRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/super-admin/orgs' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/super-admin/orgs', {
         headers: { 'Authorization': `Bearer ${get().token}` }
       });
       if (orgsRes.ok) {
@@ -1007,7 +1007,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         }
       }
 
-      const usersRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/super-admin/users' : 'https://safetylink.online/api/super-admin/users', {
+      const usersRes = await fetch(get().customBackendUrl ? get().customBackendUrl + '/super-admin/users' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/super-admin/users', {
         headers: { 'Authorization': `Bearer ${get().token}` }
       });
       if (usersRes.ok) {
@@ -1028,7 +1028,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   unlockOrganizationTrial: async (id: string) => {
     if (!get().demoMode && get().superAdminActive && get().token) {
       try {
-        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/orgs/${id}/unlock` : `https://safetylink.online/api/super-admin/orgs/${id}/unlock`, {
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/orgs/${id}/unlock` : get().customBackendUrl ? get().customBackendUrl + `/api` : `/api/super-admin/orgs/${id}/unlock`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${get().token}` }
         });
@@ -1123,7 +1123,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteUserProfile: async (id) => {
     if (!get().demoMode && get().superAdminActive && get().token) {
       try {
-        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/users/${id}` : `https://safetylink.online/api/super-admin/users/${id}`, {
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/users/${id}` : get().customBackendUrl ? get().customBackendUrl + `/api` : `/api/super-admin/users/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${get().token}` }
         });
@@ -1158,7 +1158,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteOrganization: async (id) => {
     if (!get().demoMode && get().superAdminActive && get().token) {
       try {
-        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/orgs/${id}` : `https://safetylink.online/api/super-admin/orgs/${id}`, {
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/super-admin/orgs/${id}` : get().customBackendUrl ? get().customBackendUrl + `/api` : `/api/super-admin/orgs/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${get().token}` }
         });
@@ -1332,7 +1332,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     // Direct Sync to Local Full-Stack Server (POST https://safetylink.online/api/incidents)
-    fetch(get().customBackendUrl ? get().customBackendUrl + '/incidents' : 'https://safetylink.online/api/incidents', {
+    fetch(get().customBackendUrl ? get().customBackendUrl + '/incidents' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/incidents', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1361,7 +1361,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 4.5 Open Platforms (ntfy, ownCloud, SensorStream)
     if (get().currentOrg?.ntfy?.serverUrl) {
       get().addAuditLog('DISPATCH', 'INFO', '[NtfyDispatcher] Pushing to Ntfy topic', `Target: ${get().currentOrg?.ntfy?.topic}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/ntfy' : 'https://safetylink.online/api/dispatch/ntfy', {
+      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/ntfy' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/ntfy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1374,7 +1374,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     if (get().currentOrg?.ownCloud?.serverUrl) {
       get().addAuditLog('DISPATCH', 'INFO', '[OwnCloudDispatcher] Syncing evidence block', `Target folder: ${get().currentOrg?.ownCloud?.folder}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/owncloud' : 'https://safetylink.online/api/dispatch/owncloud', {
+      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/owncloud' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/owncloud', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1387,7 +1387,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     if (get().currentOrg?.sensorStream?.enabled) {
       get().addAuditLog('DISPATCH', 'INFO', '[SensorStream] Opening UDP Telemetry stream', `Target: ${get().currentOrg?.sensorStream?.udpHost}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/sensorstream' : 'https://safetylink.online/api/dispatch/sensorstream', {
+      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/sensorstream' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/sensorstream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1783,7 +1783,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         
         // 2. Also, if there is a backend base URL, we can sync to backend (POST /incidents)
         try {
-          const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/incidents' : 'https://safetylink.online/api/incidents', {
+          const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/incidents' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/incidents', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1883,7 +1883,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     if (get().currentOrg?.sensorStream?.enabled) {
       get().addAuditLog('DISPATCH', 'INFO', '[SensorStream] Closing UDP Telemetry stream', `Incident ${id} resolved.`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/sensorstream' : 'https://safetylink.online/api/dispatch/sensorstream', {
+      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/sensorstream' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/sensorstream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2113,7 +2113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   approveOrganization: async (id) => {
     if (!get().demoMode) {
       try {
-        await fetch(get().customBackendUrl ? get().customBackendUrl + `/admin/organizations/${id}/approve` : `https://safetylink.online/api/admin/organizations/${id}/approve`, { method: 'POST' });
+        await fetch(get().customBackendUrl ? get().customBackendUrl + `/admin/organizations/${id}/approve` : get().customBackendUrl ? get().customBackendUrl + `/api` : `/api/admin/organizations/${id}/approve`, { method: 'POST' });
       } catch(e) { console.error('Failed to approve', e); }
     }
     const updated = get().organizations.map(o => o.id === id ? { ...o, approved: true } : o);
