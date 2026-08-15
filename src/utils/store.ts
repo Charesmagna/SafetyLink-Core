@@ -684,7 +684,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Try Firebase Auth as fallback
       try {
         const emailToTry = user.email || user.username + '@safetylink.local';
-        const fbResult = // await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
+// REMOVED (firebase not installed): const fbResult = // await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
         if (fbResult.success) {
           const newUser = {
             ...user,
@@ -918,7 +918,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       try {
         const emailToTry = username.includes('@') ? username : username + '@safetylink.local';
         if (emailToTry && password) {
-          const fbResult = await firebaseLogin(emailToTry, password);
+// REMOVED (firebase not installed): const fbResult = await firebaseLogin(emailToTry, password);
           if (fbResult.success) {
             const isOrgAdmin = fbResult.role === 'Organization Administrator';
             const currentUserObj = { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode, email: fbResult.email, id: fbResult.uid };
