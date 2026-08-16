@@ -23,11 +23,26 @@ android {
     }
         signingConfigs {
         release {
-            def ks = new File("${rootDir}/app/safetylink-release.keystore")
-            storeFile ks.exists() ? ks : new File("${System.getenv('HOME') ?: ''}/.android/debug.keystore")
-            storePassword 'SafetyLink2024!'
-            keyAlias 'safetylink'
-            keyPassword 'SafetyLink2024!'
+            // Try multiple paths — CI puts keystore in android/app/
+            def paths = [
+                "${projectDir}/safetylink-release.keystore",
+                "${rootDir}/app/safetylink-release.keystore",
+                "${System.getenv('GITHUB_WORKSPACE') ?: ''}/android/app/safetylink-release.keystore"
+            ]
+            def ksFile = paths.collect { new File(it) }.find { it.exists() }
+            if (ksFile) {
+                println "Using keystore: ${ksFile.absolutePath}"
+                storeFile ksFile
+                storePassword 'SafetyLink2024!'
+                keyAlias 'safetylink'
+                keyPassword 'SafetyLink2024!'
+            } else {
+                println "WARNING: No keystore found, release will be unsigned"
+                storeFile new File("${System.getenv('HOME') ?: '/root'}/.android/debug.keystore")
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
         }
     }
 buildTypes {
