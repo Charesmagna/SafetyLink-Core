@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { auth } from './firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
 import LandingPage from './components/LandingPage';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './components/Dashboard';
 
 type Page = 'landing' | 'login' | 'signup' | 'dashboard';
+type User = { uid: string; email: string };
 
 export default function App() {
   const [page, setPage] = useState<Page>('landing');
@@ -15,7 +14,20 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle URL routing
+    // Restore session from token
+    const token = localStorage.getItem('sl_token');
+    const org = localStorage.getItem('sl_org');
+    if (token && org) {
+      try {
+        const orgData = JSON.parse(org);
+        setUser({ uid: orgData.code, email: '' });
+        setOrgId(orgData.code);
+        setOrgName(orgData.name);
+        setPage('dashboard');
+      } catch {}
+    }
+    setLoading(false);
+
     const path = window.location.pathname;
     if (path === '/login') setPage('login');
     else if (path === '/signup') setPage('signup');
