@@ -1057,6 +1057,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
           <video autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-cover" />
         </div>
+      )}
       
       <div className="flare-line-container pointer-events-none">
         <div className="flare-line flare-line-1" />

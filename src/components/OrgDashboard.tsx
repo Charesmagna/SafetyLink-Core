@@ -1,4 +1,4 @@
-import { WorkspaceIntegrations } from "./WorkspaceIntegrations";
+import WorkspaceIntegrations from "./WorkspaceIntegrations";
 import React, { useState, useMemo } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';

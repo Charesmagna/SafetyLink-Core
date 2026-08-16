@@ -3,7 +3,7 @@ import { derivePasswordVerifier } from '../utils/crypto';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { encryptFileData, decryptFileData } from '../utils/crypto';
-import { GooglePicker } from './GooglePicker';
+import GooglePicker from "./GooglePicker";
 
 export const ConfidentialVault: React.FC = () => {
   const {
