@@ -23,10 +23,11 @@ android {
     }
         signingConfigs {
         release {
-            storeFile file(project.hasProperty('KEYSTORE_PATH') ? KEYSTORE_PATH : System.getenv('KEYSTORE_PATH') ?: "${rootDir}/app/safetylink-release.keystore")
-            storePassword project.hasProperty('KEYSTORE_PASSWORD') ? KEYSTORE_PASSWORD : (System.getenv('KEYSTORE_PASSWORD') ?: 'SafetyLink2024!')
-            keyAlias project.hasProperty('KEY_ALIAS') ? KEY_ALIAS : (System.getenv('KEY_ALIAS') ?: 'safetylink')
-            keyPassword project.hasProperty('KEY_PASSWORD') ? KEY_PASSWORD : (System.getenv('KEY_PASSWORD') ?: 'SafetyLink2024!')
+            def ks = new File("${rootDir}/app/safetylink-release.keystore")
+            storeFile ks.exists() ? ks : new File("${System.getenv('HOME') ?: ''}/.android/debug.keystore")
+            storePassword 'SafetyLink2024!'
+            keyAlias 'safetylink'
+            keyPassword 'SafetyLink2024!'
         }
     }
 buildTypes {
