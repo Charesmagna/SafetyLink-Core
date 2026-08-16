@@ -45,6 +45,14 @@ export default function LandingPage({ onOrgLogin, onOrgSignup }: Props) {
 
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center px-6 pt-20 overflow-hidden">
+        {/* 3D Animation background */}
+        <video
+          autoPlay muted loop playsInline
+          className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none"
+          onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }}
+        >
+          <source src="/media/SafetyLink_3D_Animation_Logo.mp4" type="video/mp4" />
+        </video>
         {/* Background glow */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-sl-red/5 rounded-full blur-3xl" />
