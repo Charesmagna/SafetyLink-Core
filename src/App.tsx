@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
         <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-cover"></video>
+          <video autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-cover" />
         </div>
       
       <div className="flare-line-container pointer-events-none">
@@ -1066,16 +1066,12 @@ const App: React.FC = () => {
       {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
       {/* Background Video */}
       {(activeTab === 'home' && !currentOrg) && (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50">
-        </video>
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-3 py-1 rounded-full text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10">
-          <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
-        </div>
+        <>
+          <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50" />
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-3 py-1 rounded-full text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10">
+            <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
+          </div>
+        </>
       )}
 
       {/* Persistent System Status Bar & Background Notification Tray */}
