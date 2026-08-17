@@ -47,7 +47,7 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
         const data = await res.json() as any;
         if (!res.ok) throw new Error(data.error || 'Registration failed');
         setError('');
-        alert(\`Organisation registered! Your code: \${data.org_code}\n14-day trial started. Share this code with your members.\`);
+        alert(`Organisation registered! Your code: ${data.org_code}\n14-day trial started. Share this code with your members.`);
         onSwitch('login' as Page);
       }
     } catch (err: unknown) {
@@ -77,7 +77,7 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
         </button>
 
         <div className="text-center mb-8">
-          <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-16 h-16 mx-auto mb-4 object-contain" />
+          <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Logo" className="w-16 h-16 mx-auto mb-4 object-contain bg-white p-2 rounded-2xl shadow-lg" />
           <h1 className="text-2xl font-black text-white">SafetyLink</h1>
           <p className="text-slate-500 text-sm mt-1">Organisation Portal</p>
         </div>

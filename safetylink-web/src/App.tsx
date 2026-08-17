@@ -19,7 +19,7 @@ const TrialLockOverlay = () => (
   <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6">
     <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-2xl p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]">
       <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-        <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Locked" className="w-12 h-12 object-contain" style={{ filter: 'grayscale(100%) brightness(0.8) sepia(100%) hue-rotate(320deg) saturate(500%)' }} />
+        <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Locked" className="w-12 h-12 object-contain bg-white p-1.5 rounded-xl" style={{ filter: 'grayscale(100%) brightness(0.8) sepia(100%) hue-rotate(320deg) saturate(500%)' }} />
       </div>
       <h1 className="text-3xl font-black mb-4 tracking-tight">System Locked</h1>
       <p className="text-slate-300 text-lg mb-8 leading-relaxed">
