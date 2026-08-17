@@ -5,15 +5,15 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "account_id": "d089bef8b0b58c5d9506b512ec2f63dc",
+  "account_id": "${CLOUDFLARE_ACCOUNT_ID}",
   "routes": [
     {
       "pattern": "safetylink.online/*",
-      "zone_id": "2cf6ad4361012c2aba768b1f0cb97770"
+      "zone_id": "${CLOUDFLARE_ZONE_ID}"
     },
     {
       "pattern": "www.safetylink.online/*",
-      "zone_id": "2cf6ad4361012c2aba768b1f0cb97770"
+      "zone_id": "${CLOUDFLARE_ZONE_ID}"
     }
   ],
 
