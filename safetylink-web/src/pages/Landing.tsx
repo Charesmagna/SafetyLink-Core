@@ -88,7 +88,7 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: LandingProps
           playsInline
           className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-screen pointer-events-none"
         >
-          <source src="/media/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
+          <source src="/media/SafetyLink_3D_Animation_Logo.mp4" type="video/mp4" />
         </video>
         
         {/* Overlays */}
@@ -400,6 +400,10 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: LandingProps
             <p className="text-sm text-slate-500 max-w-sm leading-relaxed">
               The leading enterprise safety platform for real-time panic telemetry, personnel tracking, and sequential emergency networking.
             </p>
+            <div className="mt-6 flex items-center gap-3">
+              <span className="text-xs font-mono uppercase tracking-widest text-slate-600">A product of</span>
+              <img src="/media/new_logo/Official_Umbrella_Logo.png" alt="TM Media Solutions" className="h-8 object-contain opacity-70 hover:opacity-100 transition-opacity bg-white p-1 rounded" />
+            </div>
           </div>
 
           <div>

@@ -191,7 +191,10 @@ export default function Login({ mode, onLogin, onBack, onSwitch }: Props) {
             </p>
           )}
         </div>
-        <p className="text-center text-xs text-slate-700 mt-6">SafetyLink · TM Media Solutions · South Africa</p>
+        <div className="flex flex-col items-center mt-6 gap-2">
+          <img src="/media/new_logo/Official_Umbrella_Logo.png" alt="TM Media Solutions" className="h-6 object-contain opacity-50 bg-white p-1 rounded" />
+          <p className="text-center text-xs text-slate-700">SafetyLink · TM Media Solutions · South Africa</p>
+        </div>
       </div>
     </div>
   );

@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
         <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-cover" />
+          <video src="/media/SafetyLink_3D_Animation_Logo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
         </div>
       )}
       

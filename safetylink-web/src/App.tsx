@@ -39,6 +39,12 @@ export default function App() {
   const [page, setPage] = useState<Page>('landing');
   const [session, setSession] = useState<Session | null>(null);
   const [trialExpired, setTrialExpired] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowSplash(false), 8000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const handleTrialExpired = () => setTrialExpired(true);
@@ -91,6 +97,8 @@ export default function App() {
     localStorage.removeItem('sl_session');
     nav('landing');
   };
+
+  if (showSplash) return <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center"><video src="/media/SafetyLink_3D_Animation_Logo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" /></div>;
 
   if (trialExpired) return <TrialLockOverlay />;
 
