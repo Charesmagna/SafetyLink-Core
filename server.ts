@@ -68,7 +68,7 @@ async function initDb() {
 
 const stytchClient = new stytch.Client({
   project_id: process.env.STYTCH_PROJECT_ID || "project-test-10aaf6e8-7a3c-4d79-a069-2cc7b9c8f5d8",
-  secret: process.env.STYTCH_SECRET || "secret-test-r8MU3m1mwseFc9t0WJ39oMICtBvvzoid_Wk=",
+  secret: process.env.STYTCH_SECRET || "process.env.STYTCH_SECRET || ''",
   env: stytch.envs.test,
 });
 
