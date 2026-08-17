@@ -1,47 +1,21 @@
-# SafetyLink R8/ProGuard Rules
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# Capacitor bridge
--keep class com.getcapacitor.** { *; }
--keep class com.aistudio.safetylink.** { *; }
--keepclassmembers class * extends com.getcapacitor.Plugin { *; }
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
 
-# JavaScript interface
--keepattributes JavascriptInterface
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
 
-# WebView
--keepclassmembers class * extends android.webkit.WebViewClient { *; }
--keepclassmembers class * extends android.webkit.WebChromeClient { *; }
-
-# Bluetooth
--keep class android.bluetooth.** { *; }
-
-# WorkManager
--keep class androidx.work.** { *; }
-
-# SafetyLink native services
--keep class com.aistudio.safetylink.SafelinkForegroundService { *; }
--keep class com.aistudio.safetylink.PanicService { *; }
--keep class com.aistudio.safetylink.PanicWidgetProvider { *; }
--keep class com.aistudio.safetylink.SafelinkWidgetProvider { *; }
--keep class com.aistudio.safetylink.BootReceiver { *; }
-
-# Stack traces readable in crash logs
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
-
-# Cordova SMS plugin
--keep class com.cordova.plugins.sms.** { *; }
-
-# Prevent R8 from obfuscating Room Entity data classes
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class * { *; }
-
-# Prevent R8 from stripping the CoroutineWorker class used for background syncing
--keep class com.aistudio.safetylink.vqnztp.SosSyncWorker { *; }
-# (Ensure you replace 'com.aistudio.safetylink.vqnztp' with your actual package name)
-
-# Firebase Functions Keep Rules
--keep class com.google.firebase.functions.** { *; }
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile

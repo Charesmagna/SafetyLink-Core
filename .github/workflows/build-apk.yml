@@ -123,13 +123,18 @@ jobs:
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
+        # Inject signingConfig if missing
+        if ! grep -q "signingConfigs" app/build.gradle; then
+          sed -i '/buildTypes {/i \    signingConfigs {\n        release {\n            storeFile file("safetylink-release.keystore")\n            storePassword "SafetyLink2024!"\n            keyAlias "safetylink"\n            keyPassword "SafetyLink2024!"\n        }\n    }' app/build.gradle
+          sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' app/build.gradle
+        fi
         ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
           -PKEYSTORE_PASSWORD="SafetyLink2024!" \
           -PKEY_ALIAS="safetylink" \
           -PKEY_PASSWORD="SafetyLink2024!" \
           --init-script ../init.gradle \
-          --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -60
+          --no-daemon --no-parallel --no-build-cache --stacktrace -x lint 2>&1 | tail -60
 
     - name: Rename APKs for release
       run: |

@@ -99,10 +99,3 @@ app/src/main/assets/public
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json
 app/src/main/res/xml/config.xml
-
-# Force-include Gradle wrapper jar and configuration even if .jar is globally ignored
-!gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.jar
-!gradle-wrapper.properties
-!gradle/wrapper/gradle-wrapper.properties
-

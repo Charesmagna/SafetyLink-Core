@@ -41,3 +41,4 @@ sqlite.db
 !.dev.vars.example
 !.env.example
 safetylink.db
+android/keystore.properties

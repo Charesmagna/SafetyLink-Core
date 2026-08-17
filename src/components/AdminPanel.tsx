@@ -35,6 +35,7 @@ export const AdminPanel: React.FC = () => {
     customTools,
     addCustomTool,
     deleteCustomTool,
+    adminUpdateSubscription,
   } = useAppStore();
 
   const userCountsByOrg = useMemo(() => {
@@ -431,12 +432,19 @@ export const AdminPanel: React.FC = () => {
                               </div>
                               <div>
                                 <h4 className="text-xs font-black text-slate-100">{u.fullName}</h4>
-                                <p className="text-[10px] font-mono text-slate-400">@{u.username}</p>
+                                
+  <p className="text-[10px] font-mono text-slate-400">@{u.username}</p>
+  <p className="text-[8px] font-bold mt-1 uppercase tracking-wider" style={{ color: u.subscriptionStatus === 'active' ? '#10b981' : u.subscriptionStatus === 'trial' ? '#f59e0b' : '#ef4444' }}>Status: {u.subscriptionStatus || 'active'}</p>
+
                               </div>
                             </div>
 
                             <div className="flex gap-2">
-                              <button onClick={() => handleEditUserClick(u)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
+                              
+  <button onClick={() => adminUpdateSubscription(u.id, 'user', u.subscriptionStatus === 'trial' ? 'active' : 'trial')} className="p-1 text-[9px] font-mono text-amber-400 hover:text-amber-300">{u.subscriptionStatus === 'trial' ? 'ACTIVATE' : 'TRIAL'}</button>
+  <button onClick={() => adminUpdateSubscription(u.id, 'user', u.subscriptionStatus === 'locked' ? 'active' : 'locked')} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">{u.subscriptionStatus === 'locked' ? 'UNLOCK' : 'LOCK'}</button>
+  <button onClick={() => handleEditUserClick(u)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
+
                               <button onClick={() => { if(confirm(`Delete ${u.fullName}?`)) deleteUserProfile(u.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
                             </div>
                           </div>
@@ -579,16 +587,25 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                   <h4 className="text-xs font-black text-slate-100">{o.name}</h4>
-                                <span className="text-[8px] font-mono font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-500/10">
-                                  ID: {o.id}
-                                </span>
+                                
+  <span className="text-[8px] font-mono font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-500/10">
+    ID: {o.id}
+  </span>
+  <span className="text-[8px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-full border" style={{ color: o.subscriptionStatus === 'active' ? '#10b981' : o.subscriptionStatus === 'trial' ? '#f59e0b' : '#ef4444', borderColor: 'currentColor', marginLeft: '4px' }}>
+    STATUS: {o.subscriptionStatus || 'active'}
+  </span>
+
                               </div>
                             </div>
 
                             <div className="flex gap-2">
                               <button onClick={() => { if(confirm(`Unlock trial for ${o.name}?`)) useAppStore.getState().unlockOrganizationTrial(o.id); }} className="p-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300">UNLOCK TRIAL</button>
                               <button onClick={() => handleEditOrgClick(o)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
-                              <button onClick={() => { if(confirm(`Delete ${o.name} and unbind its users?`)) deleteOrganization(o.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
+                              
+  <button onClick={() => adminUpdateSubscription(o.id, 'org', o.subscriptionStatus === 'trial' ? 'active' : 'trial')} className="p-1 text-[9px] font-mono text-amber-400 hover:text-amber-300">{o.subscriptionStatus === 'trial' ? 'ACTIVATE' : 'TRIAL'}</button>
+  <button onClick={() => adminUpdateSubscription(o.id, 'org', o.subscriptionStatus === 'locked' ? 'active' : 'locked')} className="p-1 text-[9px] font-mono text-purple-400 hover:text-purple-300">{o.subscriptionStatus === 'locked' ? 'UNLOCK' : 'LOCK'}</button>
+  <button onClick={() => { if(confirm(`Delete ${o.name} and unbind its users?`)) deleteOrganization(o.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
+
                             </div>
                           </div>
 

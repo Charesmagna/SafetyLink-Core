@@ -43,6 +43,9 @@ interface AppState {
   syncOfflineQueue: (silent?: boolean) => void;
   updateOrgBranding: (branding: Partial<Organization>) => void;
   updateClientProfile: (id: string, updated: Partial<UserProfile>) => void;
+  adminUpdateSubscription: (id: string, type: "user" | "org", status: "active" | "trial" | "locked") => void;
+  showTrialReminder: boolean;
+  setShowTrialReminder: (show: boolean) => void;
 
   
   userPin: string;
@@ -232,6 +235,7 @@ const MOCK_ORGANIZATIONS: any[] = []; /* MOCK_ORGANIZATIONS: Organization[] = [
     contactName: 'commander_wits',
     contactEmail: 'dispatch@wits.ac.za',
     createdAt: Date.now() - 86400000 * 5,
+    subscriptionStatus: "trial",
     approved: true
   },
   {
@@ -240,6 +244,7 @@ const MOCK_ORGANIZATIONS: any[] = []; /* MOCK_ORGANIZATIONS: Organization[] = [
     contactName: 'chief_patrol',
     contactEmail: 'patrol@citysecurity.co.za',
     createdAt: Date.now() - 86400000 * 3,
+    subscriptionStatus: "trial",
     approved: true
   }
 ]; */
@@ -254,7 +259,7 @@ const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
     avatarUrl: '',
     email: 'thabo@meshnet.co.za',
     orgCode: 'SL-WITS-4829',
-    createdAt: Date.now() - 86400000 * 2
+    createdAt: Date.now(), subscriptionStatus: "trial" - 86400000 * 2
   },
   {
     id: 'usr-demo2',
@@ -265,7 +270,8 @@ const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
     avatarUrl: '',
     email: 'lerato.k@gmail.com',
     orgCode: '', // Standalone user with no organization!
-    createdAt: Date.now() - 86400000
+    createdAt: Date.now() - 86400000,
+    subscriptionStatus: "trial"
   }
 ]; */
 
@@ -668,7 +674,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newUser: UserProfile = {
         ...user,
         id: `usr-${Math.random().toString(36).substring(2, 9)}`,
-        createdAt: Date.now()
+        createdAt: Date.now(), subscriptionStatus: "trial"
       };
       const updatedUsers = [...users, newUser];
       set({ users: updatedUsers });
@@ -722,7 +728,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
           const newUser = {
             ...user,
             id: fbResult.uid || `usr-${Math.random().toString(36).substring(2, 9)}`,
-            createdAt: Date.now()
+            createdAt: Date.now(), subscriptionStatus: "trial"
           };
           set({
             currentUser: newUser as any,
@@ -746,7 +752,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       const newUser = {
         ...user,
         id: `usr-${Math.random().toString(36).substring(2, 9)}`,
-        createdAt: Date.now()
+        createdAt: Date.now(), subscriptionStatus: "trial"
       };
       set({
         currentUser: newUser as UserProfile,
@@ -776,7 +782,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         contactName: org.contactName,
         contactEmail: org.contactEmail,
         id: generatedId,
-        createdAt: Date.now(),
+        createdAt: Date.now(), subscriptionStatus: "trial",
         approved: true,
         password: (org as any).password
       } as any;
@@ -827,7 +833,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         contactName: org.contactName,
         contactEmail: org.contactEmail,
         id: generatedId,
-        createdAt: Date.now(),
+        createdAt: Date.now(), subscriptionStatus: "trial",
         approved: true,
         password: (org as any).password
       };
@@ -1832,6 +1838,15 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     get().addAuditLog('SYSTEM', 'INFO', 'Organization Branding Configured', 'Custom control room logo, colors, and helpline updated.');
   },
 
+  showTrialReminder: false,
+  setShowTrialReminder: (show) => set({ showTrialReminder: show }),
+  adminUpdateSubscription: (id, type, status) => {
+    if (type === 'user') {
+      set(state => ({ users: state.users.map(u => u.id === id ? { ...u, subscriptionStatus: status } : u) }));
+    } else {
+      set(state => ({ organizations: state.organizations.map(o => o.id === id ? { ...o, subscriptionStatus: status } : o) }));
+    }
+  },
   updateClientProfile: (id, updated) => {
     const updatedUsers = get().users.map(u => u.id === id ? { ...u, ...updated } : u);
     set({ users: updatedUsers });

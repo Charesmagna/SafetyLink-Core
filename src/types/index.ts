@@ -29,6 +29,7 @@ export interface UserProfile {
   referredByCode?: string;
   fcmToken?: string;
   liveSmsEnabled?: boolean;
+  subscriptionStatus?: 'active' | 'trial' | 'locked';
 }
 
 export type UserRole =
@@ -144,6 +145,7 @@ export interface Organization {
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };
   referralCode?: string;
   referralCount?: number;
+  subscriptionStatus?: 'active' | 'trial' | 'locked';
 }
 
 export interface CustomTool {

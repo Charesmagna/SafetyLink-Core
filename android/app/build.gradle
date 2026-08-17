@@ -1,55 +1,23 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
 
 android {
-    buildFeatures { buildConfig = true }
-    namespace "com.aistudio.safetylink.vqnztp"
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    namespace = "com.aistudio.safetylink.vqnztp"
+    compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-                buildConfigField "String", "BACKEND_BASE_URL", '\"http://10.0.2.2:3000\"'
-        multiDexEnabled true
         applicationId "com.aistudio.safetylink.vqnztp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode System.getenv("GITHUB_RUN_NUMBER")?.toInteger() ?: 1
+        versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-        signingConfigs {
+    buildTypes {
         release {
-            // Try multiple paths — CI puts keystore in android/app/
-            def paths = [
-                "${projectDir}/safetylink-release.keystore",
-                "${rootDir}/app/safetylink-release.keystore",
-                "${System.getenv('GITHUB_WORKSPACE') ?: ''}/android/app/safetylink-release.keystore"
-            ]
-            def ksFile = paths.collect { new File(it) }.find { it.exists() }
-            if (ksFile) {
-                println "Using keystore: ${ksFile.absolutePath}"
-                storeFile ksFile
-                storePassword 'SafetyLink2024!'
-                keyAlias 'safetylink'
-                keyPassword 'SafetyLink2024!'
-            } else {
-                println "WARNING: No keystore found, release will be unsigned"
-                storeFile new File("${System.getenv('HOME') ?: '/root'}/.android/debug.keystore")
-                storePassword 'android'
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-            }
-        }
-    }
-buildTypes {
-        release {
-            signingConfig signingConfigs.release
-                        buildConfigField "String", "BACKEND_BASE_URL", '\"https://api.safetylink.app\"'
-            
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -63,12 +31,6 @@ repositories {
 }
 
 dependencies {
-    implementation "androidx.multidex:multidex:2.0.1"
-
-    implementation "androidx.security:security-crypto:1.1.0-alpha06"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
-
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
@@ -78,22 +40,6 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-    
-    // 1. AndroidX Core KTX (Required for Coroutines and modern WorkManager)
-    implementation "androidx.core:core-ktx:1.12.0"
-
-    // 2. Room Persistence Library (The SQLite Vault)
-    def room_version = "2.6.1"
-    implementation "androidx.room:room-runtime:$room_version"
-    implementation "androidx.room:room-ktx:$room_version" // Kotlin Extensions and Coroutines support for Room
-    kapt "androidx.room:room-compiler:$room_version"
-    
-    // 3. WorkManager (The Background Sync Engine)
-    def work_version = "2.9.0"
-    implementation "androidx.work:work-runtime-ktx:$work_version"
-
-    implementation "io.coil-kt:coil:2.6.0"
-
 }
 
 apply from: 'capacitor.build.gradle'
@@ -105,15 +51,4 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-}
-
-android {
-    buildFeatures { buildConfig = true }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
 }
