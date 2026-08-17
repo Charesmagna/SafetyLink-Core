@@ -7,12 +7,12 @@ import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
-import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
-import newBg1 from '../assets/images/background1.jpeg';
+import slide4 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide5 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
 import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
 export const AuthScreen: React.FC = () => {

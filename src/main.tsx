@@ -1,3 +1,4 @@
+import { setupDeepLinks } from './utils/DeepLinkHandler';
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
@@ -62,6 +63,8 @@ const acquireWakeLock = () => {
 document.addEventListener('deviceready', acquireWakeLock, false);
 // Fallback for immediate invocation or web simulation testing
 setTimeout(acquireWakeLock, 1500);
+
+setupDeepLinks();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

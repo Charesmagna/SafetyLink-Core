@@ -5,7 +5,7 @@ import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AIHub: React.FC = () => {
   const { addAuditLog } = useAppStore();
-  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'voice' | 'image' | 'surveillance' | 'lyria'>('chat');
+  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'voice' | 'image' | 'surveillance' | 'lyria' | 'research'>('chat');
 
   // Chat states
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; timestamp: number }>>([
@@ -35,9 +35,62 @@ export const AIHub: React.FC = () => {
   // Lyria Music States
   const [isSynthesizingMusic, setIsSynthesizingMusic] = useState(false);
   const [currentSynthWave, setCurrentSynthWave] = useState('IDLE');
+
+  const [researchQuery, setResearchQuery] = useState('');
+  const [researchStatus, setResearchStatus] = useState<'IDLE' | 'RESEARCHING' | 'COMPLETED' | 'FAILED'>('IDLE');
+  const [researchResult, setResearchResult] = useState('');
+  const researchIntervalRef = useRef<any>(null);
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
+
+  const handleResearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!researchQuery.trim() || researchStatus === 'RESEARCHING') return;
+
+    setResearchStatus('RESEARCHING');
+    setResearchResult('Starting deep research...');
+    try {
+      const startRes = await fetch('/api/gemini/research/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: researchQuery })
+      });
+      const { interactionId } = await startRes.json();
+      if (!interactionId) throw new Error("No interaction ID returned");
+
+      setResearchResult('Research started... polling for progress.');
+      researchIntervalRef.current = setInterval(async () => {
+         try {
+            const pollRes = await fetch(`/api/gemini/research/${interactionId}`);
+            const data = await pollRes.json();
+            if (data.status === 'completed') {
+               setResearchStatus('COMPLETED');
+               setResearchResult(data.text);
+               clearInterval(researchIntervalRef.current);
+            } else if (data.status === 'failed' || data.status === 'cancelled') {
+               setResearchStatus('FAILED');
+               setResearchResult('Research failed or cancelled.');
+               clearInterval(researchIntervalRef.current);
+            } else {
+               setResearchResult(`Researching... (${data.status})`);
+            }
+         } catch(err) {
+            console.error(err);
+         }
+      }, 5000);
+    } catch(err: any) {
+      setResearchStatus('FAILED');
+      setResearchResult('Failed to start research: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+       if (researchIntervalRef.current) clearInterval(researchIntervalRef.current);
+    }
+  }, []);
 
   // Handle Chat Submit
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -50,10 +103,30 @@ export const AIHub: React.FC = () => {
     setIsTyping(true);
 
     try {
+      let lat, lng;
+      // Try to get location for grounding
+      if (navigator.geolocation) {
+         try {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+               navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+            });
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+         } catch(err) {
+            console.warn("Could not get location for grounding:", err);
+         }
+      }
+
       const response = await fetch(`/api/gemini/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userMsg, useThinking: true, useGrounding: 'search' })
+        body: JSON.stringify({ 
+           prompt: userMsg, 
+           useThinking: false, 
+           useGrounding: 'maps', // Always use Maps grounding for tactical queries
+           lat, 
+           lng 
+        })
       });
       
       if (!response.ok) {
@@ -61,7 +134,22 @@ export const AIHub: React.FC = () => {
       }
       
       const data = await response.json();
-      const reply = data.text || 'I could not process your request at this time.';
+      let reply = data.text || 'I could not process your request at this time.';
+      
+      // If there are maps grounding chunks, append links to the UI
+      if (data.chunks && Array.isArray(data.chunks)) {
+         const links = data.chunks.map((chunk: any) => {
+            const place = chunk.web?.title || "Map Location";
+            const uri = chunk.web?.uri;
+            if (uri) return `<a href="${uri}" target="_blank" class="text-emerald-400 underline">${place}</a>`;
+            return null;
+         }).filter(Boolean);
+         
+         if (links.length > 0) {
+            reply += `<br/><br/>📍 <b>Relevant Map Data:</b><br/>` + links.join('<br/>');
+         }
+      }
+
       setChatMessages(prev => [...prev, { sender: 'bot', text: reply, timestamp: Date.now() }]);
     } catch (error) {
       setChatMessages(prev => [...prev, { sender: 'bot', text: 'Error: Could not connect to AI services. Check console.', timestamp: Date.now() }]);
@@ -118,51 +206,127 @@ export const AIHub: React.FC = () => {
     return () => clearInterval(interval);
   }, [voiceActive]);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const voiceAudioCtxRef = useRef<AudioContext | null>(null);
+  const voiceProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const mediaRecorderRef = useRef<any>(null);
 
   const toggleVoiceLink = async () => {
     if (voiceActive) {
       setVoiceActive(false);
       setVoiceLog('Voice link terminated.');
       addAuditLog('SYSTEM', 'INFO', 'K\'leva.info voice chat disconnected');
+      
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({ type: 'end' }));
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (voiceProcessorRef.current) {
+        voiceProcessorRef.current.disconnect();
+        voiceProcessorRef.current = null;
+      }
+      if (voiceAudioCtxRef.current) {
+        voiceAudioCtxRef.current.close();
+        voiceAudioCtxRef.current = null;
+      }
       if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+        mediaRecorderRef.current.stream.getTracks().forEach((t: any) => t.stop());
+        mediaRecorderRef.current = null;
       }
     } else {
       setVoiceActive(true);
       setVoiceLog('Connecting to gemini-3.1-flash-live-preview...');
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
+        // Start WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/live`;
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const inputAudioCtx = new AudioContextClass({ sampleRate: 16000 });
+        const outputAudioCtx = new AudioContextClass({ sampleRate: 24000 });
+        voiceAudioCtxRef.current = outputAudioCtx;
         
-        mediaRecorder.ondataavailable = async (e) => {
-          if (e.data.size > 0) {
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-              const base64Audio = reader.result?.toString().split(',')[1];
-              try {
-                const res = await fetch('/api/gemini/transcribe', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ audioBase64: base64Audio, mimeType: mediaRecorder.mimeType })
-                });
-                const data = await res.json();
-                if (data.text) {
-                  setVoiceLog(`Transcription: ${data.text.substring(0, 50)}...`);
-                }
-              } catch (err) {}
-            };
-            reader.readAsDataURL(e.data);
+        const source = inputAudioCtx.createMediaStreamSource(stream);
+        const processor = inputAudioCtx.createScriptProcessor(4096, 1, 1);
+        voiceProcessorRef.current = processor;
+
+        mediaRecorderRef.current = { stream } as any;
+
+        ws.onopen = () => {
+          setVoiceLog('Live audio link established! Speak to transmit.');
+          addAuditLog('SYSTEM', 'INFO', 'K\'leva.info voice chat connected', 'Using Live audio processing');
+
+          processor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(inputData.length);
+            for (let i = 0; i < inputData.length; i++) {
+              pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+            }
+            const bytes = new Uint8Array(pcm16.buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'audio', data: base64 }));
+            }
+          };
+
+          source.connect(processor);
+          processor.connect(inputAudioCtx.destination);
+        };
+
+        let nextStartTime = 0;
+
+        ws.onmessage = async (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'audio' && msg.data) {
+              const binary = atob(msg.data);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+              }
+              const pcm16 = new Int16Array(bytes.buffer);
+              const float32 = new Float32Array(pcm16.length);
+              for (let i = 0; i < pcm16.length; i++) {
+                 float32[i] = pcm16[i] / 0x7FFF;
+              }
+              
+              const audioBuffer = outputAudioCtx.createBuffer(1, float32.length, 24000);
+              audioBuffer.getChannelData(0).set(float32);
+              
+              const bufSource = outputAudioCtx.createBufferSource();
+              bufSource.buffer = audioBuffer;
+              bufSource.connect(outputAudioCtx.destination);
+              
+              if (nextStartTime < outputAudioCtx.currentTime) {
+                 nextStartTime = outputAudioCtx.currentTime;
+              }
+              bufSource.start(nextStartTime);
+              nextStartTime += audioBuffer.duration;
+
+              setVoiceLog('Receiving transmission...');
+            } else if (msg.type === 'interrupted') {
+              nextStartTime = outputAudioCtx.currentTime;
+            }
+          } catch (err) {
+            console.error(err);
           }
         };
-        
-        // Collect chunks every 3 seconds
-        mediaRecorder.start(3000);
 
-        setVoiceLog('Live audio link established! Audio is streaming to backend...');
-        addAuditLog('SYSTEM', 'INFO', 'K\'leva.info voice chat connected', 'Using Live audio processing');
+        ws.onerror = () => {
+          setVoiceLog('WebSocket connection failed.');
+        };
+
+        ws.onclose = () => {
+          if (voiceActive) toggleVoiceLink();
+        };
       } catch (err) {
         setVoiceActive(false);
         setVoiceLog('Microphone access denied or unavailable.');
@@ -298,7 +462,8 @@ export const AIHub: React.FC = () => {
           { id: 'voice', label: 'Voice', icon: '🎙️' },
           { id: 'image', label: 'Tactical Img', icon: '🎨' },
           { id: 'surveillance', label: 'Drone Veo', icon: '📹' },
-          { id: 'lyria', label: 'Lyria Music', icon: '🎵' }
+          { id: 'lyria', label: 'Lyria Music', icon: '🎵' },
+          { id: 'research', label: 'Research', icon: '🔍' }
         ].map((sub) => (
           <button
             key={sub.id}
@@ -331,7 +496,7 @@ export const AIHub: React.FC = () => {
                       : 'bg-slate-900 border border-slate-800 text-slate-300'
                   }`}
                 >
-                  <p>{m.text}</p>
+                  <div dangerouslySetInnerHTML={{ __html: m.text.replace(/\n/g, '<br/>') }} />
                 </div>
               ))}
               {isTyping && (
@@ -571,6 +736,40 @@ export const AIHub: React.FC = () => {
                   {currentSynthWave}
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+        {activeSubTab === 'research' && (
+          <div className="space-y-3 flex-1 flex flex-col justify-between">
+            <p className="text-[10px] font-mono text-slate-400 leading-normal">
+              Deep Research Agent (deep-research-preview-04-2026). Initiates a comprehensive, multi-step analysis across broad data sources.
+            </p>
+
+            <form onSubmit={handleResearchSubmit} className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter deep research query..."
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-purple-500"
+                value={researchQuery}
+                onChange={e => setResearchQuery(e.target.value)}
+                disabled={researchStatus === 'RESEARCHING'}
+              />
+              <button
+                type="submit"
+                disabled={researchStatus === 'RESEARCHING'}
+                className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-500 text-white rounded-lg px-4 py-2 text-xs font-mono font-bold uppercase tracking-widest transition-colors"
+              >
+                {researchStatus === 'RESEARCHING' ? 'Running' : 'Start'}
+              </button>
+            </form>
+
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 max-h-48 overflow-y-auto text-xs font-mono text-slate-300">
+              {researchStatus === 'IDLE' && !researchResult && (
+                <div className="text-slate-600 text-center py-4">Awaiting research query.</div>
+              )}
+              {researchResult && (
+                <div className={`whitespace-pre-wrap ${researchStatus === 'RESEARCHING' ? 'animate-pulse text-purple-300' : ''}`} dangerouslySetInnerHTML={{ __html: researchResult.replace(/\n/g, '<br/>') }} />
+              )}
             </div>
           </div>
         )}

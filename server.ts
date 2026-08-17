@@ -1,8 +1,14 @@
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import Pusher from "pusher";
+import * as stytch from "stytch";
 import express from "express";
 import path from "path";
 import { createClient } from "@libsql/client";
 import crypto from "crypto";
 import twilio from "twilio";
+import { Queue, Worker } from "bullmq";
+import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { WebSocketServer } from "ws";
 
 // --- Environment Variables (from GitHub Secrets via CI) ---
 const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
@@ -68,7 +74,7 @@ async function initDb() {
 
 const stytchClient = new stytch.Client({
   project_id: process.env.STYTCH_PROJECT_ID || "project-test-10aaf6e8-7a3c-4d79-a069-2cc7b9c8f5d8",
-  secret: process.env.STYTCH_SECRET || "process.env.STYTCH_SECRET || ''",
+  secret: process.env.STYTCH_SECRET || "secret-test-r8MU3m1mwseFc9t0WJ39oMICtBvvzoid_Wk=",
   env: stytch.envs.test,
 });
 
@@ -90,7 +96,7 @@ const hasRedis = false; // Forced false to prevent ECONNREFUSED on Cloud Run
 const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
 
 const processJob = async (job: any) => {
-    const { userId, latitude, longitude, phone, message } = job.data;
+    const { userId, latitude, longitude, phone, message, liveSmsEnabled } = job.data;
     console.log(`[Queue Worker] Initiating dispatch for Job #${job.id} (name=${job.name})`);
     
     try {
@@ -102,6 +108,12 @@ const processJob = async (job: any) => {
                 console.warn(`[Mock Fallback] sms_dispatch requires TWILIO_ACCOUNT_SID in env to send to ${phone}`);
                 return;
             }
+
+            if (!liveSmsEnabled) {
+                console.log(`[Twilio Dry-Run Guard] liveSmsEnabled is false/undefined for this user. Simulating dispatch to ${phone}.`);
+                return;
+            }
+
             const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
             await client.messages.create({
                 to: phone, from: targetFromPhone, body: message
@@ -147,7 +159,6 @@ const processJob = async (job: any) => {
         await Promise.all([
             client.calls.create({
                 to: controlRoomDestination, from: targetFromPhone,
-                connection_id: process.env.TWILIO_OUTBOUND_PROFILE_ID,
                 twiml: `<Response><Say voice="alice">${payload}</Say></Response>`
             }).catch((e: any) => console.error("Voice delivery fallback channel failed:", e.message)),
             client.messages.create({
@@ -200,7 +211,7 @@ async function startServer() {
   // 1. Text / Thinking / Chat / Grounding (Map/Search)
   app.post("/api/gemini/generate", async (req, res) => {
     try {
-      const { prompt, useThinking, useGrounding, useFlashLite } = req.body;
+      const { prompt, useThinking, useGrounding, useFlashLite, lat, lng } = req.body;
       const genAI = initGemini();
       
       let modelName = "gemini-3.5-flash"; // Default
@@ -217,6 +228,16 @@ async function startServer() {
         config.tools = [{ googleSearch: {} }];
       } else if (useGrounding === "maps") {
         config.tools = [{ googleMaps: {} }];
+        if (lat !== undefined && lng !== undefined) {
+           config.toolConfig = {
+             retrievalConfig: {
+               latLng: {
+                 latitude: lat,
+                 longitude: lng
+               }
+             }
+           };
+        }
       }
 
       const response = await genAI.models.generateContent({
@@ -225,7 +246,8 @@ async function startServer() {
         config
       });
 
-      res.json({ text: response.text });
+      let chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+      res.json({ text: response.text, chunks });
     } catch (e: any) {
       console.error(e);
       res.status(500).json({ error: e.message });
@@ -326,7 +348,40 @@ async function startServer() {
 
 
 
-  // --- Core SafetyLink API Endpoints ---
+  // 7. Deep Research Agent
+  app.post("/api/gemini/research/start", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      const ai = initGemini();
+      const initialInteraction = await ai.interactions.create({
+          agent: "deep-research-preview-04-2026",
+          input: prompt,
+          background: true,
+      });
+      res.json({ interactionId: initialInteraction.id });
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/gemini/research/:id", async (req, res) => {
+    try {
+      const ai = initGemini();
+      const interaction = await ai.interactions.get(req.params.id);
+      let fullReport = "";
+      for (const step of interaction.steps) {
+          if (step.type === 'model_output') {
+              const textContent = step.content?.find((c: any) => c.type === 'text');
+              if (textContent) fullReport += textContent.text;
+          }
+      }
+      res.json({ status: interaction.status, text: fullReport, steps: interaction.steps });
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
+  });
   
 
   app.post('/api/integration/save-credentials', async (req, res) => {
@@ -357,12 +412,12 @@ async function startServer() {
   });
 
   app.post('/api/dispatch/sms', async (req, res) => {
-      const { phone, message } = req.body;
+      const { phone, message, accountSid, authToken, fromNumber, liveSmsEnabled } = req.body;
       if (!phone || !message) {
           return res.status(400).json({ error: "Missing required parameters." });
       }
       try {
-          await panicQueue.add('sms_dispatch', { phone, message, timestamp: new Date().toISOString() }, {
+          await panicQueue.add('sms_dispatch', { phone, message, accountSid, authToken, fromNumber, liveSmsEnabled, timestamp: new Date().toISOString() }, {
               attempts: 3, backoff: { type: 'exponential', delay: 2000 }
           });
           return res.status(200).json({ message: "SMS dispatch queued." });
@@ -421,7 +476,7 @@ async function startServer() {
     }
   };
 
-  app.post("/api/login", rateLimit(5), async (req, res) => {
+  app.post("/api/login", async (req, res) => {
     try {
       const { username, org_code, admin_password, password } = req.body;
       const pass = admin_password || password || '';
@@ -467,7 +522,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/register", rateLimit(3), async (req, res) => {
+  app.post("/api/register", async (req, res) => {
     try {
       const { org_code, name, phone, password } = req.body;
       const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [org_code] });
@@ -484,46 +539,6 @@ async function startServer() {
         args: [orgRes.rows[0].id, "REGISTER", name, `User ${name} registered`]
       });
       
-      // Twilio SMS + Voice dispatch to org emergency contacts
-      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-        try {
-          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-          const userName = (userRes.rows[0] as any).name || phone;
-
-          // Reverse geocode for address
-          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
-          try {
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-            const geoData = await geo.json() as any;
-            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
-          } catch {}
-
-          // Get org emergency contacts
-          const contactsRes = await db.execute({
-            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
-            args: [orgId, phone]
-          });
-
-          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
-          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
-
-          for (const contact of contactsRes.rows as any[]) {
-            if (!contact.phone) continue;
-            // SMS
-            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
-              .catch(e => console.error('Twilio SMS failed:', e.message));
-            // Voice call
-            twilioClient.calls.create({
-              twiml: twimlVoice,
-              from: TWILIO_PHONE_NUMBER,
-              to: contact.phone
-            }).catch(e => console.error('Twilio call failed:', e.message));
-          }
-        } catch (twilioErr: any) {
-          console.error('Twilio dispatch error:', twilioErr.message);
-        }
-      }
-
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -564,7 +579,7 @@ async function startServer() {
   });
 
   // Register new org with 14-day trial
-  app.post("/api/register-org", rateLimit(3), async (req: any, res: any) => {
+  app.post("/api/register-org", async (req: any, res: any) => {
     try {
       const { org_name, admin_password } = req.body;
       const org_code = 'SL-' + org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000);
@@ -601,47 +616,40 @@ async function startServer() {
         args: [latitude, longitude, orgRes.rows[0].id, phone]
       });
       
-      // Twilio SMS + Voice dispatch to org emergency contacts
-      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/sync/offline", async (req, res) => {
+    try {
+      const { orgId, payload } = req.body;
+      if (!orgId || !payload || !Array.isArray(payload)) {
+        return res.status(400).json({ error: 'Missing fields or invalid payload' });
+      }
+
+      const failedItems = [];
+      const now = Date.now();
+
+      for (const item of payload) {
         try {
-          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-          const userName = (userRes.rows[0] as any).name || phone;
-
-          // Reverse geocode for address
-          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
-          try {
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-            const geoData = await geo.json() as any;
-            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
-          } catch {}
-
-          // Get org emergency contacts
-          const contactsRes = await db.execute({
-            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
-            args: [orgId, phone]
+          await db.execute({
+            sql: "INSERT INTO panic_alerts (user_id, latitude, longitude, status, created_at) VALUES ((SELECT id FROM users WHERE org_id = ? LIMIT 1), ?, ?, 'resolved', ?)",
+            args: [orgId, item.lat, item.lng, new Date(item.timestamp || now).toISOString()]
           });
-
-          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
-          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
-
-          for (const contact of contactsRes.rows as any[]) {
-            if (!contact.phone) continue;
-            // SMS
-            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
-              .catch(e => console.error('Twilio SMS failed:', e.message));
-            // Voice call
-            twilioClient.calls.create({
-              twiml: twimlVoice,
-              from: TWILIO_PHONE_NUMBER,
-              to: contact.phone
-            }).catch(e => console.error('Twilio call failed:', e.message));
-          }
-        } catch (twilioErr: any) {
-          console.error('Twilio dispatch error:', twilioErr.message);
+          
+          await db.execute({
+            sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
+            args: [orgId, "OFFLINE_SYNC", "SYNCED", `Offline alert synced: ${item.description || ''}`]
+          });
+        } catch (err) {
+          console.error('Failed to sync offline item', item.id, err);
+          failedItems.push(item);
         }
       }
 
-      res.json({ success: true });
+      res.json({ success: true, failedItems });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -762,46 +770,6 @@ async function startServer() {
         sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
         args: [req.orgId, "RESOLVED", user_name, `Panic alert resolved for ${user_name}`]
       });
-      
-      // Twilio SMS + Voice dispatch to org emergency contacts
-      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-        try {
-          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-          const userName = (userRes.rows[0] as any).name || phone;
-
-          // Reverse geocode for address
-          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
-          try {
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-            const geoData = await geo.json() as any;
-            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
-          } catch {}
-
-          // Get org emergency contacts
-          const contactsRes = await db.execute({
-            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
-            args: [orgId, phone]
-          });
-
-          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
-          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
-
-          for (const contact of contactsRes.rows as any[]) {
-            if (!contact.phone) continue;
-            // SMS
-            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
-              .catch(e => console.error('Twilio SMS failed:', e.message));
-            // Voice call
-            twilioClient.calls.create({
-              twiml: twimlVoice,
-              from: TWILIO_PHONE_NUMBER,
-              to: contact.phone
-            }).catch(e => console.error('Twilio call failed:', e.message));
-          }
-        } catch (twilioErr: any) {
-          console.error('Twilio dispatch error:', twilioErr.message);
-        }
-      }
 
       res.json({ success: true });
     } catch (e: any) {
@@ -846,8 +814,58 @@ async function startServer() {
     console.error("Failed to initialize database:", err);
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  const wss = new WebSocketServer({ server: httpServer, path: '/live' });
+
+  wss.on("connection", async (clientWs) => {
+    const ai = initGemini();
+    
+    // Connect to Live API
+    const session = await ai.live.connect({
+      model: "gemini-3.1-flash-live-preview",
+      config: {
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
+          },
+        },
+        systemInstruction: {
+          parts: [{ text: "You are K'leva.info, the secure AI voice coordinator for SafetyLink. Provide tactical support, short responses, and assertive guidance." }],
+        },
+      },
+      callbacks: {
+        onmessage: (message: any) => {
+          const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+          if (audio && clientWs.readyState === 1) {
+            clientWs.send(JSON.stringify({ type: "audio", data: audio }));
+          }
+          if (message.serverContent?.interrupted && clientWs.readyState === 1) {
+            clientWs.send(JSON.stringify({ type: "interrupted" }));
+          }
+        }
+      }
+    });
+
+    clientWs.on("message", (message: string) => {
+      try {
+        const msg = JSON.parse(message);
+        if (msg.type === "audio") {
+          session.sendRealtimeInput({
+            audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+          });
+        }
+      } catch (err) {
+        console.error("Live API WS message error", err);
+      }
+    });
+
+    clientWs.on("close", () => {
+      session.close();
+    });
   });
 }
 

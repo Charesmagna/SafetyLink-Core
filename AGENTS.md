@@ -44,3 +44,32 @@ While initially contextualized around campus safety and housing complexes, the a
 
 **Generated on: 2026-06-29T16:15:00-07:00**
 *SafetyLink Project Core Team & DeepMind Secure Gateway Integrations.*
+
+---
+
+## 5. Platform Secrets & Environment Variables
+You are the Lead Full-Stack Architect for the SafetyLink Core emergency platform (Repository: Charesmagna/SafetyLink-Core).
+
+PLATFORM SECRETS REFERENCE & VARIABLE MAPPINGS:
+The backend ecosystem runs using the following environment variable keys and active credentials:
+
+- TWILIO_ACCOUNT_SID: REDACTED
+- TWILIO_AUTH_TOKEN: REDACTED
+- TWILIO_PHONE_NUMBER: +16055695774
+- CLOUDFLARE_API_TOKEN: REDACTED
+- CLOUDFLARE_ACCOUNT_ID: REDACTED
+- CLOUDFLARE_ZONE_ID: 2cf6ad4361012c2aba768b1f0cb97770
+- PUSHER_APP_KEY: REDACTED
+- PUSHER_APP_ID: 2184826
+- PUSHER_APP_SECRET: REDACTED
+- ONESIGNAL_APP_ID: e7c4fd21-764f-465d-b98f-c44f4489662e
+- STYTCH_PROJECT_ID: project-test-10aaf6e8-7a3c-4d79-a069-2cc7b9c8f5d8
+- STYTCH_SECRET: REDACTED
+- PIPEDREAM_WEBHOOK_URL: https://eomnz1lxw9o2hyq.m.pipedream.net
+- AUTOCHANGELOG_SECRET: 4764b141f03da77834419f11f00031780c5db9e7a090d41f6d666dafd1ff960a
+- JWT_SECRET: safetylink-secure-jwt-2026-tmmedia
+
+OPERATIONAL RULES:
+1. When generating client-side components (Capacitor/Android APK, Desktop EXE, or Web frontend), NEVER embed private secrets (Twilio Auth Token, Cloudflare Token, Pusher Secret, Stytch Secret, JWT Secret). Client apps only interact with the backend API.
+2. For backend modules, pull configurations dynamically via process.env.<KEY_NAME>.
+

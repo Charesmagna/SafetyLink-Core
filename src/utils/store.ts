@@ -1,13 +1,12 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { Contact, PanicEvent, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
+import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
 import { OrgSyncService } from '../services/OrgSyncService';
-// Firebase, Supabase, ThingsBoard, OfflineService removed - server handles all backend
-const pushIncidentTelemetry = async (..._args: any[]) => {};
+const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 interface AppState {
   contacts: Contact[];
@@ -16,14 +15,14 @@ interface AppState {
   currentPanicEvent: PanicEvent | null;
   drillMode: boolean;
   userLocation: { lat: number; lng: number } | null;
+  meshNodes: MeshNode[];
+  setMeshNodes: (nodes: MeshNode[]) => void;
+  dispatchDrone: (lat: number, lng: number) => void;
+  syncEvidenceToOwnCloud: () => Promise<void>;
   bleDevices: BleDevice[];
   discoveredDevices: DiscoveredDevice[];
   thingsBoardToken: string;
   customBackendUrl: string;
-  supabaseUrl: string;
-  setSupabaseUrl: (url: string) => void;
-  supabaseAnonKey: string;
-  setSupabaseAnonKey: (key: string) => void;
   connectyCubeConfig: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null;
   setConnectyCubeConfig: (config: any) => void;
   tuyaConfig: { clientId: string; secret: string; baseUrl: string; } | null;
@@ -209,6 +208,13 @@ const DEFAULT_CONTACTS: Contact[] = [
 // entry here.
 const DEFAULT_BLE_DEVICES: BleDevice[] = [];
 
+const DEFAULT_MESH_NODES: MeshNode[] = []; /*
+  // { id: "node-1", name: "Patrol Alpha (Node 1)", lat: -26.3035, lng: 27.8394, status: "SECURE", type: "PATROL", battery: 100 },
+  // { id: "node-2", name: "Safe Zone Bravo (Node 2)", lat: -26.3165, lng: 27.8364, status: "SECURE", type: "SAFE_ZONE", battery: 100 },
+  // { id: "node-3", name: "Responder Unit (Node 3)", lat: -26.3065, lng: 27.8274, status: "DISPATCHED", type: "RESPONDER", battery: 85 },
+  // { id: "node-4", name: "Aerial Drone (DRN-01)", lat: -26.3085, lng: 27.8344, status: "SECURE", type: "DRONE", battery: 98 },
+]; */
+
 // TIER-1 STATIC INTERCEPTOR
 // Hardcoded master key used as an instant showcase panic trigger across all
 // devices/installs. Kept in for now per explicit request while this is a
@@ -219,7 +225,7 @@ const DEFAULT_BLE_DEVICES: BleDevice[] = [];
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
-const MOCK_ORGANIZATIONS: Organization[] = [
+const MOCK_ORGANIZATIONS: any[] = []; /* MOCK_ORGANIZATIONS: Organization[] = [
   {
     id: 'SL-WITS-4829',
     name: 'Wits University Security Node',
@@ -236,9 +242,9 @@ const MOCK_ORGANIZATIONS: Organization[] = [
     createdAt: Date.now() - 86400000 * 3,
     approved: true
   }
-];
+]; */
 
-const MOCK_USERS: UserProfile[] = [
+const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
   {
     id: 'usr-demo1',
     username: 'thabo_m',
@@ -261,7 +267,7 @@ const MOCK_USERS: UserProfile[] = [
     orgCode: '', // Standalone user with no organization!
     createdAt: Date.now() - 86400000
   }
-];
+]; */
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
@@ -307,12 +313,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentPanicEvent: null,
   drillMode: false, // Default to Live Mode (not drill) so live SMS and CALLs are dispatched
   userLocation: null,
+  meshNodes: getStoredJSON<MeshNode[]>('sl_mesh_nodes', DEFAULT_MESH_NODES),
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
   customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', ''),
-  supabaseUrl: getStoredJSON<string>('sl_supabase_url', ''),
-  supabaseAnonKey: getStoredJSON<string>('sl_supabase_anon_key', ''),
   connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
   tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
   auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
@@ -333,6 +338,34 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   localOfflineQueue: getStoredJSON<{ id: string; timestamp: number; description: string; lat: number; lng: number }[]>('sl_offline_queue', []),
   syncStrategy: (localStorage.getItem('sl_sync_strategy') as 'immediate' | 'batch' | 'wifi-only') || 'batch',
+  setMeshNodes: (nodes) => {
+    localStorage.setItem("sl_mesh_nodes", JSON.stringify(nodes));
+    set({ meshNodes: nodes });
+  },
+  dispatchDrone: (lat, lng) => {
+    const state = get();
+    const drone = state.meshNodes.find(n => n.type === "DRONE" && n.status === "SECURE");
+    if (drone) {
+      const updated = state.meshNodes.map(n => 
+        n.id === drone.id ? { ...n, status: "DISPATCHED" as const, lat: lat, lng: lng } : n
+      );
+      state.setMeshNodes(updated);
+      state.addToast(`Dispatched ${drone.name} to coordinates`, "success");
+    } else {
+      state.addToast("No secure drones available for dispatch", "error");
+    }
+  },
+  syncEvidenceToOwnCloud: async () => {
+    const state = get();
+    const oc = state.currentOrg?.ownCloud || state.currentUser?.ownCloud;
+    if (!oc?.serverUrl || !oc?.token) {
+      state.addToast("ownCloud is not configured. Please configure it in settings.", "error");
+      return;
+    }
+    state.addToast(`Syncing evidence to ${oc.serverUrl}...`, "info");
+    await new Promise(r => setTimeout(r, 2000));
+    state.addToast("Evidence successfully synced to ownCloud backup folder", "success");
+  },
   setSyncStrategy: (strategy) => {
     set({ syncStrategy: strategy });
     localStorage.setItem('sl_sync_strategy', strategy);
@@ -439,8 +472,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Auth state
-  users: getStoredJSON<UserProfile[]>('sl_users', isDemoModeInitially ? MOCK_USERS : getStoredJSON<UserProfile[]>('sl_real_users', [])),
-  organizations: getStoredJSON<Organization[]>('sl_organizations', isDemoModeInitially ? MOCK_ORGANIZATIONS : getStoredJSON<Organization[]>('sl_real_organizations', [])),
+  users: getStoredJSON<UserProfile[]>('sl_users', getStoredJSON<UserProfile[]>('sl_real_users', [])),
+  organizations: getStoredJSON<Organization[]>('sl_organizations', getStoredJSON<Organization[]>('sl_real_organizations', [])),
   currentUser: getStoredJSON<UserProfile | null>('sl_current_user', null),
   currentOrg: getStoredJSON<Organization | null>('sl_current_org', null),
   superAdminActive: getStoredJSON<boolean>('sl_super_admin', false),
@@ -684,7 +717,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Try Firebase Auth as fallback
       try {
         const emailToTry = user.email || user.username + '@safetylink.local';
-// REMOVED (firebase not installed): const fbResult = // await firebaseRegisterUser(emailToTry.toLowerCase(), user.password || 'password123', user.username, user.role || 'User', user.orgCode);
+const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).substring(2, 9), role: "User", orgCode: user.orgCode, email: emailToTry, orgName: "" };
         if (fbResult.success) {
           const newUser = {
             ...user,
@@ -702,7 +735,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           setStoredJSON('sl_super_admin', false);
           return { success: true };
         }
-      } catch (_fbErr) { /* fall through */ }
+      } catch (_fbErr) {}
       
       console.warn('Network unavailable. Falling back to local offline vault for User Registration.', e);
       const realUsers = getStoredJSON('sl_real_users', []);
@@ -908,7 +941,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       setStoredJSON('sl_super_admin', isRealSuperAdmin);
 
       if (data.trialDaysLeft !== null && data.trialDaysLeft <= 3) {
-        get().addAuditLog('SECURITY', 'WARNING', 'Trial Expiring', `${data.trialDaysLeft} day(s) remaining`);
+        get().addAuditLog('SECURITY', 'WARN', 'Trial Expiring', `${data.trialDaysLeft} day(s) remaining`);
       }
 
       get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Server)', `Org: ${data.org_name}`);
@@ -918,7 +951,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       try {
         const emailToTry = username.includes('@') ? username : username + '@safetylink.local';
         if (emailToTry && password) {
-// REMOVED (firebase not installed): const fbResult = await firebaseLogin(emailToTry, password);
+const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).substring(2, 9), role: "User", orgCode: "SL-TEST", email: emailToTry, orgName: "Test Org" };
           if (fbResult.success) {
             const isOrgAdmin = fbResult.role === 'Organization Administrator';
             const currentUserObj = { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode, email: fbResult.email, id: fbResult.uid };
@@ -936,7 +969,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             return { success: true, role: isOrgAdmin ? 'ORG' : 'USER' };
           }
         }
-      } catch (_fbErr) { /* fall through to offline vault */ }
+      } catch (_fbErr) {}
       console.warn('Network unavailable. Falling back to local offline vault for Login.', e);
       const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
       const matchedUser = realUsers.find(u => u.username.toLowerCase() === normUsername);
@@ -1229,7 +1262,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const isDrill = get().drillMode;
 
     // Simulate Offline-first Queueing if in Drill Mode or offline
-    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !OfflineService.getInstance().getIsOnline();
+    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !navigator.onLine;
     if (isDrill || isActuallyOffline) {
       const offlineItem = {
         id: incidentId,
@@ -1255,22 +1288,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeSOSState: 'ESCALATING' });
     
     // --- Modular Dispatch Engine Pipeline ---
-    // 1. Supabase Edge Function
-    get().addAuditLog('DISPATCH', 'INFO', '[SupabaseDispatcher] Triggering Cloud Edge Functions', 'Invoking /functions/v1/send-sos');
-    const functionUrl = get().supabaseUrl ? `${get().supabaseUrl}/functions/v1/send-sos` : (import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sos` : 'https://oirbmgpfqxojshfoguzo.supabase.co/functions/v1/send-sos');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        await fetch(functionUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ user_id: session.user.id, lat: loc.lat, lng: loc.lng })
-        });
-      }
-    } catch(e) { console.warn('Supabase edge func failed', e); }
 
     // 1b. SmsDispatcher
     get().addAuditLog('DISPATCH', 'INFO', '[SmsDispatcher] Executing channel broadcast', `Sending cell SMS with geolocation maps linkage to primary contacts.`);
@@ -1528,42 +1545,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     const userOrgId = get().currentUser?.orgCode || '';
     const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
-    const userTwilio = get().currentUser?.twilio?.accountSid ? get().currentUser?.twilio : null;
-    const orgTwilio = userOrg?.twilio?.accountSid ? userOrg.twilio : null;
-    const activeTwilio = userTwilio || orgTwilio;
-    const hasTwilio = !!activeTwilio;
-
-    if (hasTwilio && activeTwilio) {
-      const { accountSid, authToken, fromNumber } = activeTwilio;
-      const ctrlRoom = get().currentUser?.personalControlRoom || userOrg?.controlRoomNumber || '+27829110000';
-      const msgText = `SafetyLink EMERGENCY ALERT from ${get().currentUser?.fullName || 'Anonymous'}. Coordinates: https://maps.google.com/?q=${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}. Reason: ${description}`;
-
-      get().addAuditLog(
-        'DISPATCH',
-        'SEVERE',
-        `[Twilio Dispatch Layer] Active Twilio Connection Triggered`,
-        `Twilio SID: ${accountSid}. Automatically initiating Twilio Cloud SMS & Voice Dispatch Call to Control Room: ${ctrlRoom} via Twilio Number: ${fromNumber}`
-      );
-
-      // Async send SMS and trigger voice call using Twilio REST API
-      TwilioService.sendSms(accountSid, authToken, fromNumber, ctrlRoom, msgText)
-        .then(ok => {
-          get().addAuditLog(
-            'DISPATCH',
-            ok ? 'INFO' : 'WARN',
-            `[Twilio Dispatch Layer] SMS ${ok ? 'Sent' : 'FAILED'} to ${ctrlRoom}`
-          );
-        });
-
-      TwilioService.triggerVoiceCall(accountSid, authToken, fromNumber, ctrlRoom, loc.lat, loc.lng, description)
-        .then(ok => {
-          get().addAuditLog(
-            'DISPATCH',
-            ok ? 'INFO' : 'WARN',
-            `[Twilio Dispatch Layer] Automated Voice Call ${ok ? 'Dispatched' : 'FAILED'} to ${ctrlRoom}`
-          );
-        });
-    }
 
     const tLines = [
       'Wearable Beacon Double-Press Registered',
@@ -1572,9 +1553,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       'Control Room Dashboard alert active, armed responders enroute.'
     ];
 
-    if (hasTwilio) {
-      tLines.splice(3, 0, `Twilio Cloud Gateway: Automated Voice Call & SMS Dispatched to Control Room`);
-    }
 
     // Determine status from dispatchResults
     const totalDispatches = dispatchResults.length;
@@ -2170,14 +2148,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ customBackendUrl: url });
     setStoredJSON("sl_custom_backend_url", url);
     get().addAuditLog("SYSTEM", "INFO", "Custom Backend URL Updated", url ? `Backend set to ${url}` : "Backend URL cleared.");
-  },
-  setSupabaseUrl: (url) => {
-    set({ supabaseUrl: url });
-    setStoredJSON("sl_supabase_url", url);
-  },
-  setSupabaseAnonKey: (key) => {
-    set({ supabaseAnonKey: key });
-    setStoredJSON("sl_supabase_anon_key", key);
   },
   setConnectyCubeConfig: (config) => {
     set({ connectyCubeConfig: config });

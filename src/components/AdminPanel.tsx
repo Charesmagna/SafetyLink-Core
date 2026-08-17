@@ -5,12 +5,12 @@ import { sendTestEvent } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
-import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
-import newBg1 from '../assets/images/background1.jpeg';
+import slide4 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide5 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
 import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
@@ -35,16 +35,6 @@ export const AdminPanel: React.FC = () => {
     customTools,
     addCustomTool,
     deleteCustomTool,
-    supabaseUrl,
-    setSupabaseUrl,
-    supabaseAnonKey,
-    setSupabaseAnonKey,
-    tuyaConfig,
-    setTuyaConfig,
-    auraApiUrl,
-    setAuraApiUrl,
-    connectyCubeConfig,
-    setConnectyCubeConfig
   } = useAppStore();
 
   const userCountsByOrg = useMemo(() => {
@@ -63,20 +53,6 @@ export const AdminPanel: React.FC = () => {
   const adminSlides = [newBg1, newLogo1, slide3, slide4, slide5, slide1, slide2];
   const [currentSlide, setCurrentSlide] = useState(0);
   const [backendUrlInput, setBackendUrlInput] = useState(customBackendUrl);
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(supabaseUrl || '');
-  const [supabaseAnonKeyInput, setSupabaseAnonKeyInput] = useState(supabaseAnonKey || '');
-  
-  const [tuyaClientId, setTuyaClientId] = useState(tuyaConfig?.clientId || '');
-  const [tuyaSecret, setTuyaSecret] = useState(tuyaConfig?.secret || '');
-  const [tuyaBaseUrl, setTuyaBaseUrl] = useState(tuyaConfig?.baseUrl || '');
-  
-  const [auraUrlInput, setAuraUrlInput] = useState(auraApiUrl || '');
-  
-  const [ccAppId, setCcAppId] = useState(connectyCubeConfig?.appId?.toString() || '');
-  const [ccAuthKey, setCcAuthKey] = useState(connectyCubeConfig?.authKey || '');
-  const [ccAuthSecret, setCcAuthSecret] = useState(connectyCubeConfig?.authSecret || '');
-  const [ccApi, setCcApi] = useState(connectyCubeConfig?.apiEndpoint || '');
-  const [ccChat, setCcChat] = useState(connectyCubeConfig?.chatEndpoint || '');
 
   useEffect(() => {
     useAppStore.getState().fetchSuperAdminData();
@@ -96,6 +72,9 @@ export const AdminPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [orgFilter, setOrgFilter] = useState('');
 
+  const activePanicEventsCount = useMemo(() => panicEvents.filter(p => p.status !== 'RESOLVED').length, [panicEvents]);
+  const globalCustomTools = useMemo(() => customTools.filter(t => !t.targetOrgId), [customTools]);
+
   // Custom tool form state
   const [newToolTitle, setNewToolTitle] = useState('');
   const [newToolDesc, setNewToolDesc] = useState('');
@@ -108,6 +87,7 @@ export const AdminPanel: React.FC = () => {
   const [editUserPhone, setEditUserPhone] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
   const [editUserOrgCode, setEditUserOrgCode] = useState('');
+  const [editUserLiveSms, setEditUserLiveSms] = useState(false);
 
   // Editing Org States
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
@@ -122,6 +102,7 @@ export const AdminPanel: React.FC = () => {
     setEditUserPhone(u.phone);
     setEditUserEmail(u.email);
     setEditUserOrgCode(u.orgCode);
+    setEditUserLiveSms(u.liveSmsEnabled ?? false);
   };
 
   const handleSaveUser = (id: string) => {
@@ -129,7 +110,8 @@ export const AdminPanel: React.FC = () => {
       fullName: editUserFullName,
       phone: editUserPhone,
       email: editUserEmail,
-      orgCode: editUserOrgCode
+      orgCode: editUserOrgCode,
+      liveSmsEnabled: editUserLiveSms
     });
     setEditingUserId(null);
     addAuditLog('SECURITY', 'INFO', `Admin updated user record ${id}`);
@@ -249,8 +231,8 @@ export const AdminPanel: React.FC = () => {
 
               <div className="glass-panel p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Active Alerts</span>
-                <span className={`text-2xl font-black font-mono ${panicEvents.filter(p => p.status !== 'RESOLVED').length > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
-                  {panicEvents.filter(p => p.status !== 'RESOLVED').length}
+                <span className={`text-2xl font-black font-mono ${activePanicEventsCount > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
+                  {activePanicEventsCount}
                 </span>
                 <p className="text-[9px] text-slate-400">Real-time GPS tracking</p>
               </div>
@@ -424,6 +406,15 @@ export const AdminPanel: React.FC = () => {
                               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-mono"
                               placeholder="e.g. SL-ORG-8492"
                             />
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              type="checkbox"
+                              checked={editUserLiveSms}
+                              onChange={e => setEditUserLiveSms(e.target.checked)}
+                              className="accent-amber-500"
+                            />
+                            <label className="text-xs text-slate-400 font-bold">ENABLE LIVE SMS FOR THIS USER</label>
                           </div>
 
                           <div className="flex justify-end gap-2 pt-1">
@@ -691,155 +682,7 @@ export const AdminPanel: React.FC = () => {
           <div className="space-y-6 animate-fadeIn text-left">
             {/* Thingsboard Section (Existing top settings block) */}
             
-            {/* Custom Supabase Server */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Custom Supabase Platform Link</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your own remote Supabase project.
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Supabase URL (https://xyz.supabase.co)"
-                  value={supabaseUrlInput}
-                  onChange={e => setSupabaseUrlInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Supabase Anon Key"
-                  value={supabaseAnonKeyInput}
-                  onChange={e => setSupabaseAnonKeyInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setSupabaseUrl(supabaseUrlInput);
-                      setSupabaseAnonKey(supabaseAnonKeyInput);
-                      addAuditLog('SYSTEM', 'INFO', 'Supabase Configuration Updated', `URL set to ${supabaseUrlInput}`);
-                      window.location.reload();
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
-                  >
-                    SAVE & RELOAD
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Tuya IoT Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Tuya Smart IoT Connectivity</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to a specific Tuya Cloud API.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-3">
-                  <input type="text" placeholder="Tuya Client ID" value={tuyaClientId} onChange={e => setTuyaClientId(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Tuya Secret" value={tuyaSecret} onChange={e => setTuyaSecret(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Base URL (https://openapi.tuyaeu.com)" value={tuyaBaseUrl} onChange={e => setTuyaBaseUrl(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                </div>
-                <div className="flex justify-end">
-                  <button onClick={() => { setTuyaConfig({ clientId: tuyaClientId || undefined, secret: tuyaSecret || undefined, baseUrl: tuyaBaseUrl || undefined }); addAuditLog('SYSTEM', 'INFO', 'Tuya Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Aura Platform Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Aura Platform (Emergency Bridge)</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your custom Aura Platform for hardware BLE triggers.
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" placeholder="Aura API URL (e.g. https://api.auraplatform.com/v1/panic)" value={auraUrlInput} onChange={e => setAuraUrlInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                <div className="flex justify-end">
-                  <button onClick={() => { setAuraApiUrl(auraUrlInput); addAuditLog('SYSTEM', 'INFO', 'Aura Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
-                </div>
-              </div>
-            </div>
-
-            {/* ConnectyCube Integrations */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">ConnectyCube Communication Platform</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your own ConnectyCube chat and video APIs. Replaces hardcoded endpoints.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-3">
-                  <input
-                    type="number"
-                    placeholder="App ID (e.g. 10000)"
-                    value={ccAppId}
-                    onChange={e => setCcAppId(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Auth Key"
-                    value={ccAuthKey}
-                    onChange={e => setCcAuthKey(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Auth Secret"
-                    value={ccAuthSecret}
-                    onChange={e => setCcAuthSecret(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="API Endpoint (e.g. https://SafetyLink.connectycube.com)"
-                    value={ccApi}
-                    onChange={e => setCcApi(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Chat Endpoint (e.g. SafetyLink.connectycube.com)"
-                    value={ccChat}
-                    onChange={e => setCcChat(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setConnectyCubeConfig({
-                        appId: ccAppId ? parseInt(ccAppId, 10) : undefined,
-                        authKey: ccAuthKey || undefined,
-                        authSecret: ccAuthSecret || undefined,
-                        apiEndpoint: ccApi || undefined,
-                        chatEndpoint: ccChat || undefined
-                      });
-                      addAuditLog('SYSTEM', 'INFO', 'ConnectyCube Configuration Updated');
-                      window.location.reload();
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
-                  >
-                    SAVE & RELOAD
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Custom Backend URL */}
+            {/* Custom Backend Server */}
             <div className="glass-panel p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Custom Backend Integration (API Route)</h3>
@@ -1014,13 +857,13 @@ export const AdminPanel: React.FC = () => {
                   </p>
                 </div>
 
-                {customTools.filter(t => !t.targetOrgId).length === 0 ? (
+                {globalCustomTools.length === 0 ? (
                   <div className="p-12 border border-dashed border-slate-800 rounded-2xl text-center">
                     <p className="text-xs text-slate-500 font-mono">No custom global tools have been created yet. Use the form on the left to add one.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {customTools.filter(t => !t.targetOrgId).map((t) => (
+                    {globalCustomTools.map((t) => (
                       <div key={t.id} className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex justify-between items-start gap-3 shadow-sm">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">

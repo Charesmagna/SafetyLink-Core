@@ -9,7 +9,7 @@ import { DispatchChain } from './components/DispatchChain';
 const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
 const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
-const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations').then(m => ({ default: m.WorkspaceIntegrations })));
+const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations'));
 const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
 import { StatusIndicator } from './components/StatusIndicator';
 const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
@@ -42,12 +42,12 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from './assets/images/sl_logoset.jpeg';
-import newBg1 from './assets/images/background1.jpeg';
+import slLogoSet from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import newBg1 from './assets/images/regenerated_image_1784546645212.png';
 const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
 const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';

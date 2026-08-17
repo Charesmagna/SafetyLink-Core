@@ -177,6 +177,8 @@ export const OfflineMap: React.FC = () => {
   const userLng = (userLocation?.lng && userLocation.lng !== 0) ? userLocation.lng : 27.8344;
 
   // Render tactical security incident icons relative to the user's active zone
+  const { meshNodes } = useAppStore();
+
   const liveIncidents = React.useMemo(() => {
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const R = 6371e3; // metres
@@ -189,15 +191,16 @@ export const OfflineMap: React.FC = () => {
       return R * c; 
     };
 
-    return [
-      { name: 'Patrol Alpha (Node 1)', lat: userLat + 0.005, lng: userLng + 0.005, status: 'SECURE' },
-      { name: 'Safe Zone Bravo (Node 2)', lat: userLat - 0.008, lng: userLng + 0.002, status: 'SECURE' },
-      { name: 'Responder Unit (Node 3)', lat: userLat + 0.002, lng: userLng - 0.007, status: 'DISPATCHED' },
-    ].map(inc => ({
+    return meshNodes.map(inc => ({
       ...inc,
+
+
+
+
+
       distance: calculateDistance(userLat, userLng, inc.lat, inc.lng)
     })).sort((a, b) => a.distance - b.distance);
-  }, [userLat, userLng]);
+  }, [userLat, userLng, meshNodes]);
 
   // Determine active focus coordinate based on HUD view controls
   const activeFocusCenter: [number, number] = 
@@ -457,7 +460,7 @@ export const OfflineMap: React.FC = () => {
                 <span className="text-slate-200 font-bold text-[10px]">{incident.name}</span>
                 <span className="text-[8px] text-slate-500">GRID: {incident.lat.toFixed(4)}, {incident.lng.toFixed(4)} | DIST: {(incident.distance / 1000).toFixed(2)} km</span>
               </div>
-              <span className={`px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider border ${
+              <button onClick={() => useAppStore.getState().dispatchDrone(incident.lat, incident.lng)} className="mr-2 px-2 py-0.5 text-[8px] bg-slate-900 text-slate-400 hover:text-cyan-400 border border-slate-800 rounded font-bold uppercase transition-colors" title="Dispatch Drone to this node">🚁 DISPATCH</button><span className={`px-2 py-0.5 text-[8px] rounded-full font-black tracking-wider border ${
                 incident.status === 'ACTIVE' ? 'bg-red-950/20 border-red-500/20 text-red-400 animate-pulse' :
                 incident.status === 'DISPATCHED' ? 'bg-orange-950/20 border-orange-500/20 text-orange-400' :
                 'bg-slate-900 border border-slate-800 text-slate-500'

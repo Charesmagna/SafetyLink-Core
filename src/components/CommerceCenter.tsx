@@ -96,115 +96,157 @@ const HARDWARE_CATALOG: HardwareProduct[] = [
 
 const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
-    id: 'pkg-2cam',
-    name: '2-Camera Dual-View Package',
-    description: 'Best for small apartments, single-story entryways, or indoor monitoring.',
-    priceZAR: 99,
+    id: 'sub-free',
+    name: 'SafetyLink Free',
+    description: 'Basic safety features for individuals.',
+    priceZAR: 0,
     period: 'monthly',
-    setupFee: 1450,
     features: [
-      '1× 2-Pack Wireless PTZ WiFi Cameras',
-      'Hardware delivery + basic technician installation',
-      'Cloud loop recording storage',
-      'Real-time human-detection alerts'
+      '1 User included',
+      'Live GPS location',
+      '24-hour location history',
+      'Community alerts',
+      'Basic push notifications'
     ]
   },
   {
-    id: 'pkg-4cam',
-    name: '4-Camera Perimeter Package',
-    description: 'Best for full standalone residential properties or small business premises.',
-    priceZAR: 149,
-    period: 'monthly',
-    setupFee: 2450,
-    features: [
-      '1× 4-Pack Wireless PTZ WiFi Cameras',
-      'Hardware delivery + full multi-angle exterior installation',
-      'Multi-stream cloud vault storage',
-      'Advanced boundary zoning'
-    ]
-  },
-  {
-    id: 'pkg-ecosystem-res',
-    name: 'The Full SafetyLink Ecosystem (Residential)',
-    description: 'Fully monitored tier syncing video surveillance, smart access, and panic triggers.',
-    priceZAR: 299,
-    period: 'monthly',
-    setupFee: 3950,
-    features: [
-      '1× 4-Pack Wireless WiFi Cameras',
-      '1× Smart Fingerprint Door Lock',
-      '2× SafetyLink Pulse BLE Panic Beacons',
-      'Advanced setup & local mapping',
-      'Live sensor cloud monitoring'
-    ]
-  },
-  {
-    id: 'pkg-ecosystem-com',
-    name: 'The Full SafetyLink Ecosystem (Commercial)',
-    description: 'Fully monitored tier syncing video surveillance, smart access, and panic triggers.',
-    priceZAR: 449,
-    period: 'monthly',
-    setupFee: 3950,
-    features: [
-      '1× 4-Pack Wireless WiFi Cameras',
-      '1× Smart Fingerprint Door Lock',
-      '2× SafetyLink Pulse BLE Panic Beacons',
-      'Advanced setup & local mapping',
-      'Live sensor cloud monitoring',
-      'Priority network failover'
-    ]
-  },
-  {
-    id: 'sub-indiv',
-    name: 'Individual Safety Mesh',
-    description: 'For active citizens, scholars, and daily commuters.',
+    id: 'sub-premium-monthly',
+    name: 'SafetyLink Premium (Monthly)',
+    description: 'Advanced protection with hardware support.',
     priceZAR: 49,
     period: 'monthly',
+    setupFee: 149,
     features: [
-      'Offline Cellular Sequential SMS',
-      'Local BLE iTag Wearable Binding',
-      'ThingsBoard Cloud Telemetry Sync',
-      'K\'lev.ai Smart Assistant Access'
+      'Up to 5 Bluetooth iTags',
+      'Unlimited panic activations',
+      'Private company monitoring',
+      'Live tracking & 12-month history',
+      'Safe zone alerts',
+      'Emergency audio recording',
+      'Priority cloud support'
     ]
   },
   {
-    id: 'sub-family',
-    name: 'Family Circle Mesh (5 Users)',
-    description: 'Subsidized safety network for household escalation.',
-    priceZAR: 149,
+    id: 'sub-premium-annual',
+    name: 'SafetyLink Premium (Annual)',
+    description: 'Advanced protection with hardware support.',
+    priceZAR: 499,
+    period: 'annual',
+    setupFee: 149,
+    features: [
+      'Up to 5 Bluetooth iTags',
+      'Unlimited panic activations',
+      'Private company monitoring',
+      'Live tracking & 12-month history',
+      'Safe zone alerts',
+      'Emergency audio recording',
+      'Priority cloud support'
+    ]
+  },
+  {
+    id: 'sub-family-monthly',
+    name: 'SafetyLink Family (Monthly)',
+    description: 'Comprehensive protection for the whole family.',
+    priceZAR: 99,
+    period: 'monthly',
+    setupFee: 249,
+    features: [
+      'Up to 6 family members',
+      'Up to 12 Bluetooth iTags',
+      'Shared family dashboard',
+      'Live family tracking',
+      'Group panic alerts',
+      'Shared safe zones',
+      'Family emergency timeline'
+    ]
+  },
+  {
+    id: 'sub-family-annual',
+    name: 'SafetyLink Family (Annual)',
+    description: 'Comprehensive protection for the whole family.',
+    priceZAR: 999,
+    period: 'annual',
+    setupFee: 249,
+    features: [
+      'Up to 6 family members',
+      'Up to 12 Bluetooth iTags',
+      'Shared family dashboard',
+      'Live family tracking',
+      'Group panic alerts',
+      'Shared safe zones',
+      'Family emergency timeline'
+    ]
+  },
+  {
+    id: 'sub-starter',
+    name: 'Security Company - Starter',
+    description: 'Monitored capacity for up to 50 clients.',
+    priceZAR: 999,
     period: 'monthly',
     features: [
-      'Up to 5 Family Member Accounts',
-      'Shared Panic Signal Escalation Chain',
-      'Geofenced Mutual Safe-Zone Alerts',
-      'Offline SQLite Queue Synchronization'
+      'Up to 50 clients',
+      'Live client map',
+      'Basic reporting',
+      'Client management'
     ]
   },
   {
-    id: 'sub-campus',
-    name: 'School & Campus Security Link',
-    description: 'Enterprise integration for educational rosters.',
-    priceZAR: 1250,
-    period: 'monthly',
-    features: [
-      'Unlimited Student Profile Sync',
-      'Safety Node Commander Deck Access',
-      'Wits/University Control Room Integration',
-      'Auto-generated Org Registration Codes'
-    ]
-  },
-  {
-    id: 'sub-patrol',
-    name: 'Private Security Patrol & Armed Dispatch',
-    description: 'Maximum tactical security coverage with automated calls.',
+    id: 'sub-professional',
+    name: 'Security Company - Professional',
+    description: 'Monitored capacity for up to 250 clients.',
     priceZAR: 2499,
     period: 'monthly',
     features: [
-      'Dedicated Twilio Gateway & Voice calls',
-      'Commander Real-time GIS Patrol Map',
-      'Control Room Call Trigger Automation',
-      'SLA tracking and guard telemetry logs'
+      'Up to 250 clients',
+      'Automatic dispatch',
+      'Incident/staff management',
+      'API access',
+      'Advanced reports',
+      'WhatsApp alerts'
     ]
+  },
+  {
+    id: 'sub-business',
+    name: 'Security Company - Business',
+    description: 'Monitored capacity for up to 1,000 clients.',
+    priceZAR: 5999,
+    period: 'monthly',
+    features: [
+      'Up to 1,000 clients',
+      'White-label dashboard',
+      'Multi-branch management',
+      'Fleet tracking'
+    ]
+  },
+  {
+    id: 'sub-enterprise',
+    name: 'Security Company - Enterprise',
+    description: 'Unlimited scale and custom infrastructure.',
+    priceZAR: 0,
+    period: 'monthly',
+    features: [
+      'Unlimited scale',
+      'Dedicated infrastructure',
+      'White-label mobile app',
+      '24/7 priority support',
+      'Custom Quote'
+    ]
+  },
+  {
+    id: 'addon-whitelabel',
+    name: 'White-Label Mobile App Add-on',
+    description: 'Custom branded mobile app.',
+    priceZAR: 1000,
+    period: 'monthly',
+    features: ['Custom branded app']
+  },
+  {
+    id: 'addon-analytics',
+    name: 'Advanced Analytics Add-on',
+    description: 'Deep insights into dispatch operations.',
+    priceZAR: 299,
+    period: 'monthly',
+    features: ['Advanced Analytics']
   }
 ];
 
