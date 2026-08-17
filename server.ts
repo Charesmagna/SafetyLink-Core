@@ -1,6 +1,3 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import Pusher from "pusher";
-import * as stytch from "stytch";
 import express from "express";
 import path from "path";
 import { createClient } from "@libsql/client";
@@ -424,7 +421,7 @@ async function startServer() {
     }
   };
 
-  app.post("/api/login", async (req, res) => {
+  app.post("/api/login", rateLimit(5), async (req, res) => {
     try {
       const { username, org_code, admin_password, password } = req.body;
       const pass = admin_password || password || '';
@@ -470,7 +467,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/register", async (req, res) => {
+  app.post("/api/register", rateLimit(3), async (req, res) => {
     try {
       const { org_code, name, phone, password } = req.body;
       const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [org_code] });
@@ -567,7 +564,7 @@ async function startServer() {
   });
 
   // Register new org with 14-day trial
-  app.post("/api/register-org", async (req: any, res: any) => {
+  app.post("/api/register-org", rateLimit(3), async (req: any, res: any) => {
     try {
       const { org_name, admin_password } = req.body;
       const org_code = 'SL-' + org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000);
