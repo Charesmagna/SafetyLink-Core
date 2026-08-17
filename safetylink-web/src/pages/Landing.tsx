@@ -322,73 +322,107 @@ export default function Landing({ onLogin, onSignup, onLaunchWeb }: LandingProps
       </section>
 
       {/* PRICING / E-COMMERCE SECTION */}
-      <section id="pricing" className="py-32 bg-slate-50">
+      <section id="pricing" className="py-32 bg-slate-900">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6 tracking-tight">
-              Commercial Licenses
+            <span className="text-emerald-400 text-sm font-bold uppercase tracking-widest">Pricing</span>
+            <h2 className="text-4xl md:text-5xl font-black text-white mt-4 mb-6">
+              Protection for Everyone
             </h2>
-            <p className="text-xl text-slate-600">
-              Secure your organization today. Choose the tier that matches your operational scale.
-            </p>
+            <p className="text-slate-400 text-lg">All prices in South African Rand. No hidden fees.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
-            
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Standard Team</h3>
-              <p className="text-slate-500 mb-6 text-sm">Perfect for small security firms.</p>
-              <div className="mb-8">
-                <span className="text-4xl font-black text-slate-900">$299</span>
-                <span className="text-slate-500 font-medium">/mo</span>
+          {/* Individual & Family Plans */}
+          <div className="mb-16">
+            <h3 className="text-white font-bold text-xl mb-8 text-center">Individual &amp; Family</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Free */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8">
+                <h4 className="text-white font-bold text-lg mb-1">SafetyLink Free</h4>
+                <div className="text-3xl font-black text-white mt-4 mb-2">R0<span className="text-slate-400 text-base font-normal">/mo</span></div>
+                <ul className="text-slate-400 text-sm space-y-2 mt-6 mb-8">
+                  <li>✓ 1 user</li><li>✓ Live GPS location</li><li>✓ 24-hour location history</li>
+                  <li>✓ Community alerts</li><li>✓ Basic push notifications</li>
+                </ul>
+                <button className="w-full py-3 rounded-xl border border-slate-600 text-white font-bold hover:border-emerald-400 transition-colors">Get Started Free</button>
               </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Up to 50 active nodes</li>
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Basic Web Dashboard</li>
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Standard Support</li>
-              </ul>
-              <button onClick={onSignup} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-4 rounded-xl transition-colors">
-                Start 30-Day Trial
-              </button>
+              {/* Premium */}
+              <div className="bg-emerald-600 rounded-2xl p-8 relative">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-xs font-black px-4 py-1 rounded-full">MOST POPULAR</span>
+                <h4 className="text-white font-bold text-lg mb-1">SafetyLink Premium</h4>
+                <div className="text-3xl font-black text-white mt-4 mb-1">R49<span className="text-white/70 text-base font-normal">/mo</span></div>
+                <div className="text-white/70 text-sm mb-2">or R499/yr · R149 once-off</div>
+                <ul className="text-white/90 text-sm space-y-2 mt-6 mb-8">
+                  <li>✓ Up to 5 Bluetooth iTags</li><li>✓ Unlimited panic activations</li>
+                  <li>✓ Private company monitoring</li><li>✓ Live tracking</li>
+                  <li>✓ 12-month history</li><li>✓ Safe zone alerts</li>
+                  <li>✓ Emergency audio recording</li><li>✓ Priority cloud &amp; support</li>
+                </ul>
+                <button className="w-full py-3 rounded-xl bg-white text-emerald-700 font-black hover:bg-emerald-50 transition-colors">Get Premium</button>
+              </div>
+              {/* Family */}
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8">
+                <h4 className="text-white font-bold text-lg mb-1">SafetyLink Family</h4>
+                <div className="text-3xl font-black text-white mt-4 mb-1">R99<span className="text-slate-400 text-base font-normal">/mo</span></div>
+                <div className="text-slate-400 text-sm mb-2">or R999/yr · R249 once-off</div>
+                <ul className="text-slate-400 text-sm space-y-2 mt-6 mb-8">
+                  <li>✓ Up to 6 family members</li><li>✓ Up to 12 Bluetooth iTags</li>
+                  <li>✓ Shared family dashboard</li><li>✓ Live family tracking</li>
+                  <li>✓ Group panic alerts</li><li>✓ Shared safe zones</li>
+                  <li>✓ Family emergency timeline</li>
+                </ul>
+                <button className="w-full py-3 rounded-xl border border-slate-600 text-white font-bold hover:border-emerald-400 transition-colors">Protect My Family</button>
+              </div>
             </div>
+          </div>
 
-            <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative md:-translate-y-4">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-xs font-bold tracking-widest uppercase">
-                Most Popular
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Campus Pro</h3>
-              <p className="text-slate-400 mb-6 text-sm">Full suite for universities & large sites.</p>
-              <div className="mb-8">
-                <span className="text-4xl font-black text-white">$899</span>
-                <span className="text-slate-400 font-medium">/mo</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3 text-slate-200 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-400" /> Up to 5,000 active nodes</li>
-                <li className="flex items-center gap-3 text-slate-200 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-400" /> Windows Commander Deck</li>
-                <li className="flex items-center gap-3 text-slate-200 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-400" /> Offline Map Integration</li>
-                <li className="flex items-center gap-3 text-slate-200 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-400" /> Priority 24/7 Support</li>
-              </ul>
-              <button onClick={onSignup} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                Deploy Now
-              </button>
+          {/* Hardware */}
+          <div className="mb-16 bg-slate-800 border border-slate-700 rounded-2xl p-8">
+            <h3 className="text-white font-bold text-xl mb-6">Hardware — Bluetooth iTags</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[['Single iTag','R100',''],['3-Pack','R179','Save R121'],['5-Pack','R299','Save R201'],['10-Pack','R499','~28% reseller margin']].map(([label,price,note]) => (
+                <div key={label} className="bg-slate-900 rounded-xl p-4 text-center">
+                  <div className="text-white font-bold">{label}</div>
+                  <div className="text-emerald-400 text-2xl font-black mt-2">{price}</div>
+                  {note && <div className="text-slate-500 text-xs mt-1">{note}</div>}
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Global Grid</h3>
-              <p className="text-slate-500 mb-6 text-sm">For municipal and nation-wide networks.</p>
-              <div className="mb-8">
-                <span className="text-4xl font-black text-slate-900">Custom</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Unlimited nodes</li>
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Custom SIEM integration</li>
-                <li className="flex items-center gap-3 text-slate-700 font-medium"><CheckCircle2 className="w-5 h-5 text-emerald-500" /> Dedicated Account Manager</li>
-              </ul>
-              <button onClick={onSignup} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-colors">
-                Contact Sales
-              </button>
+          {/* Security Company Plans */}
+          <div className="mb-16">
+            <h3 className="text-white font-bold text-xl mb-8 text-center">Security Company &amp; Community Patrol</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {name:'Starter',price:'R999',clients:'50 clients',features:['Live client map','Basic reporting','Client management']},
+                {name:'Professional',price:'R2,499',clients:'250 clients',features:['Auto dispatch','Incident/staff management','API access','Advanced reports','WhatsApp alerts']},
+                {name:'Business',price:'R5,999',clients:'1,000 clients',features:['White-label dashboard','Multi-branch management','Fleet tracking']},
+                {name:'Enterprise',price:'Custom',clients:'Unlimited',features:['Dedicated infrastructure','White-label mobile app','24/7 priority support']},
+              ].map((plan) => (
+                <div key={plan.name} className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+                  <h4 className="text-white font-bold">{plan.name}</h4>
+                  <div className="text-2xl font-black text-emerald-400 mt-3">{plan.price}<span className="text-slate-400 text-sm font-normal">{plan.price !== 'Custom' ? '/mo' : ''}</span></div>
+                  <div className="text-slate-500 text-xs mt-1 mb-4">{plan.clients}</div>
+                  <ul className="text-slate-400 text-sm space-y-1">
+                    {plan.features.map(f => <li key={f}>✓ {f}</li>)}
+                  </ul>
+                  <button className="w-full mt-6 py-2.5 rounded-xl border border-slate-600 text-white text-sm font-bold hover:border-emerald-400 transition-colors">
+                    {plan.price === 'Custom' ? 'Get a Quote' : 'Deploy Now'}
+                  </button>
+                </div>
+              ))}
             </div>
+          </div>
 
+          {/* Add-ons */}
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8">
+            <h3 className="text-white font-bold text-xl mb-6">Optional Add-ons</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="text-slate-300"><span className="text-emerald-400 font-bold">R1,000/mo</span> — White-Label Mobile App</div>
+              <div className="text-slate-300"><span className="text-emerald-400 font-bold">R299/mo</span> — Advanced Analytics</div>
+              <div className="text-slate-300"><span className="text-emerald-400 font-bold">Usage-based</span> — SMS, WhatsApp &amp; Voice Dispatch</div>
+            </div>
           </div>
         </div>
       </section>
