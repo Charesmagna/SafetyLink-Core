@@ -1,4 +1,13 @@
-import React from 'react';
+const fs = require('fs');
+
+// 1. Update index.html
+let html = fs.readFileSync('index.html', 'utf8');
+html = html.replace(/\/media\/new_logo\/New_SafetyLink_Official_Logo\.svg/g, '/Polish_20260620_014530309.jpg');
+html = html.replace(/type="image\/svg\+xml"/g, 'type="image/jpeg"');
+fs.writeFileSync('index.html', html);
+
+// 2. Update LogoSetPart.tsx
+const logoTsx = `import React from 'react';
 
 export type LogoPartType = 'main' | 'accent' | 'mascot' | 'badge';
 interface LogoSetPartProps {
@@ -24,9 +33,9 @@ export const LogoSetPart: React.FC<LogoSetPartProps> = ({
 
   return (
     <div 
-      className={`relative overflow-hidden shrink-0 flex items-center justify-center ${roundedClasses[rounded]} ${
+      className={\`relative overflow-hidden shrink-0 flex items-center justify-center \${roundedClasses[rounded]} \${
         showBorder ? 'border border-slate-700/50 shadow-[0_0_20px_rgba(245,158,11,0.15)] bg-slate-900/50 backdrop-blur-sm' : ''
-      } ${className}`} 
+      } \${className}\`} 
       style={{ 
         width: size, 
         height: size,
@@ -46,3 +55,10 @@ export const LogoSetPart: React.FC<LogoSetPartProps> = ({
     </div>
   );
 };
+`;
+fs.writeFileSync('src/components/LogoSetPart.tsx', logoTsx);
+
+// 3. Update vite.config.ts
+let vite = fs.readFileSync('vite.config.ts', 'utf8');
+vite = vite.replace(/official_safetylink_logo\.svg/g, 'Polish_20260620_014530309.jpg');
+fs.writeFileSync('vite.config.ts', vite);

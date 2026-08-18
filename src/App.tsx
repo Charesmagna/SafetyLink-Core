@@ -43,15 +43,15 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
-import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide1 from '/Polish_20260620_014530309.jpg';
+import slide2 from '/Polish_20260620_014530309.jpg';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slLogoSet from '/Polish_20260620_014530309.jpg';
 import newBg1 from './assets/images/regenerated_image_1784546645212.png';
-const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const newLogo1 = '/Polish_20260620_014530309.jpg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const polishLogo = '/Polish_20260620_014530309.jpg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
