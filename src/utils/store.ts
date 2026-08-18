@@ -231,7 +231,7 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
-const MOCK_ORGANIZATIONS: any[] = []; /* MOCK_ORGANIZATIONS: Organization[] = [
+const MOCK_ORGANIZATIONS: Organization[] = [
   {
     id: 'SL-WITS-4829',
     name: 'Wits University Security Node',
@@ -250,9 +250,9 @@ const MOCK_ORGANIZATIONS: any[] = []; /* MOCK_ORGANIZATIONS: Organization[] = [
     subscriptionStatus: "trial",
     approved: true
   }
-]; */
+];
 
-const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
+const MOCK_USERS: UserProfile[] = [
   {
     id: 'usr-demo1',
     username: 'thabo_m',
@@ -277,7 +277,7 @@ const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
     createdAt: Date.now() - 86400000,
     subscriptionStatus: "trial"
   }
-]; */
+];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
