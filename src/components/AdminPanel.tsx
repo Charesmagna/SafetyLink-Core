@@ -68,6 +68,39 @@ export const AdminPanel: React.FC = () => {
 
   const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
+  
+  // OTA Release state
+  const [githubToken, setGithubToken] = useState('');
+  const [releaseStatus, setReleaseStatus] = useState<'idle' | 'triggering' | 'ok' | 'fail'>('idle');
+
+  const triggerRelease = async () => {
+    if (!githubToken) return;
+    setReleaseStatus('triggering');
+    try {
+      const workflows = ['build-apk.yml', 'build-electron.yml', 'deploy-safetylink-web.yml'];
+      let allOk = true;
+      for (const wf of workflows) {
+        const res = await fetch(`https://api.github.com/repos/Charesmagna/SafetyLink-Core/actions/workflows/${wf}/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': `Bearer ${githubToken.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ref: 'main' })
+        });
+        if (!res.ok) {
+          allOk = false;
+        }
+      }
+      setReleaseStatus(allOk ? 'ok' : 'fail');
+      addAuditLog('SYSTEM', allOk ? 'INFO' : 'WARN', allOk ? 'OTA Release Workflows Triggered' : 'OTA Release Workflows Failed', '');
+      setTimeout(() => setReleaseStatus('idle'), 5000);
+    } catch (err) {
+      setReleaseStatus('fail');
+      setTimeout(() => setReleaseStatus('idle'), 5000);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<AdminTab>('OVERVIEW');
   const [searchTerm, setSearchTerm] = useState('');
@@ -295,6 +328,35 @@ export const AdminPanel: React.FC = () => {
               </div>
               {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your ThingsBoard device.</p>}
               {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach ThingsBoard. Check the token and your connection.</p>}
+            </div>
+
+            {/* OTA Release Management */}
+            <div className="glass-panel p-6 space-y-4 text-left">
+              <div>
+                <h3 className="text-sm font-bold text-slate-200">Over-The-Air (OTA) Release Management</h3>
+                <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                  Trigger the GitHub Actions workflows to build and publish a new release of SafetyLink (APK, EXE, and Web).
+                  Requires a GitHub Personal Access Token with repo workflow permissions.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="GitHub Personal Access Token (PAT)"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
+                />
+                <button
+                  disabled={!githubToken || releaseStatus === 'triggering'}
+                  onClick={triggerRelease}
+                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors whitespace-nowrap"
+                >
+                  {releaseStatus === 'triggering' ? 'TRIGGERING...' : 'PUBLISH RELEASE'}
+                </button>
+              </div>
+              {releaseStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Workflows triggered successfully. Check the GitHub Actions tab.</p>}
+              {releaseStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to trigger workflows. Ensure your PAT has the correct permissions.</p>}
             </div>
 
             {/* Recent Activity Logs */}
