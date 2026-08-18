@@ -17,6 +17,7 @@ import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
+import { LandingPage } from './components/LandingPage';
 import { UpdateBanner } from './components/UpdateBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
@@ -124,6 +125,7 @@ const TrialReminderModal = () => {
 };
 
 const App: React.FC = () => {
+  const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web');
   const [trialExpired, setTrialExpired] = useState(false);
 
 
@@ -414,6 +416,9 @@ const App: React.FC = () => {
     }
 
     if (!currentUser) {
+      if (showLanding) {
+        return <LandingPage onLogin={() => setShowLanding(false)} />;
+      }
       return <AuthScreen />;
     }
 
