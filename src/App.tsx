@@ -32,7 +32,6 @@ import { translate, SA_LANGUAGES } from './utils/translations';
 const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
 const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-const CommerceCenter = lazy(() => import('./components/CommerceCenter').then(m => ({ default: m.CommerceCenter })));
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
@@ -1223,7 +1222,6 @@ const App: React.FC = () => {
       <FloatingPanicWidget />
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
-      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Commerce...</div>}><CommerceCenter /></Suspense>
       <FirstLaunchDisclaimer />
 
     </div>
