@@ -17,6 +17,7 @@ import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
+import { UpdateBanner } from './components/UpdateBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
@@ -171,10 +172,14 @@ const App: React.FC = () => {
     setFloatingWidgetDeployed,
     demoMode,
     localOfflineQueue,
-    syncOfflineQueue
+    syncOfflineQueue,
+    checkAppUpdates,
+    updateInfo
   } = useAppStore();
 
   useEffect(() => {
+    checkAppUpdates();
+    
     const checkTrial = () => {
       const target = currentOrg || currentUser;
       if (target && target.subscriptionStatus === 'trial') {
@@ -1145,6 +1150,7 @@ const App: React.FC = () => {
       {/* Persistent System Status Bar & Background Notification Tray */}
 
       {/* High-Priority Emergency Overlay */}
+      <UpdateBanner />
       <ForcedCountdownOverlay />
       <SosCountdownOverlay 
         isActive={isSosActive}

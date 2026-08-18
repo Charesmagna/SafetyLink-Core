@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { X, Check } from 'lucide-react';
 
 export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {

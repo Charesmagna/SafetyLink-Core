@@ -6,9 +6,12 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { TwilioService } from '../services/TwilioService';
 import { OrgSyncService } from '../services/OrgSyncService';
+import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 interface AppState {
+  updateInfo: UpdateInfo | null;
+  checkAppUpdates: () => Promise<void>;
   contacts: Contact[];
   panicEvents: PanicEvent[];
   activeSOSState: 'IDLE' | 'ACQUIRING_GPS' | 'CAPTURING_EVIDENCE' | 'ESCALATING' | 'DISPATCHED' | 'RESOLVED';
@@ -259,7 +262,8 @@ const MOCK_USERS: any[] = []; /* MOCK_USERS: UserProfile[] = [
     avatarUrl: '',
     email: 'thabo@meshnet.co.za',
     orgCode: 'SL-WITS-4829',
-    createdAt: Date.now(), subscriptionStatus: "trial" - 86400000 * 2
+    createdAt: Date.now() - 86400000 * 2,
+    subscriptionStatus: "trial"
   },
   {
     id: 'usr-demo2',
@@ -312,6 +316,11 @@ export const ADMIN_ORG_CODE = 'sl-admin-0000';
 const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 
 export const useAppStore = create<AppState>((set, get) => ({
+  updateInfo: null,
+  checkAppUpdates: async () => {
+    const updateInfo = await checkForUpdate();
+    set({ updateInfo });
+  },
   demoMode: isDemoModeInitially,
   contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
   panicEvents: getStoredJSON<PanicEvent[]>('sl_panic_events', []),
@@ -1842,10 +1851,29 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   setShowTrialReminder: (show) => set({ showTrialReminder: show }),
   adminUpdateSubscription: (id, type, status) => {
     if (type === 'user') {
-      set(state => ({ users: state.users.map(u => u.id === id ? { ...u, subscriptionStatus: status } : u) }));
+      const updatedUsers = get().users.map(u => u.id === id ? { ...u, subscriptionStatus: status } : u);
+      set({ users: updatedUsers });
+      setStoredJSON('sl_users', updatedUsers);
+      
+      const currUser = get().currentUser;
+      if (currUser && currUser.id === id) {
+        const nextUser = { ...currUser, subscriptionStatus: status };
+        set({ currentUser: nextUser });
+        setStoredJSON('sl_current_user', nextUser);
+      }
     } else {
-      set(state => ({ organizations: state.organizations.map(o => o.id === id ? { ...o, subscriptionStatus: status } : o) }));
+      const updatedOrgs = get().organizations.map(o => o.id === id ? { ...o, subscriptionStatus: status } : o);
+      set({ organizations: updatedOrgs });
+      setStoredJSON('sl_organizations', updatedOrgs);
+      
+      const currOrg = get().currentOrg;
+      if (currOrg && currOrg.id === id) {
+        const nextOrg = { ...currOrg, subscriptionStatus: status };
+        set({ currentOrg: nextOrg });
+        setStoredJSON('sl_current_org', nextOrg);
+      }
     }
+    get().addAuditLog('SYSTEM', 'INFO', 'Subscription Updated', `Admin updated subscription for ${type} ${id} to ${status}`);
   },
   updateClientProfile: (id, updated) => {
     const updatedUsers = get().users.map(u => u.id === id ? { ...u, ...updated } : u);
