@@ -777,6 +777,20 @@ async function startServer() {
     }
   });
 
+  // Acknowledge panic — called by Pipedream to check if panic was resolved
+  app.get("/api/panic/acknowledge", async (req: any, res: any) => {
+    try {
+      const { id } = req.query;
+      const result = await db.execute({
+        sql: 'SELECT status FROM panic_alerts WHERE id = ?',
+        args: [id]
+      });
+      if (result.rows.length === 0) return res.json({ acknowledged: false, status: 'not_found' });
+      const status = (result.rows[0] as any).status;
+      res.json({ acknowledged: status === 'resolved', status });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   app.get("/api/events", authMiddleware, async (req: any, res) => {
     try {
       const result = await db.execute({
