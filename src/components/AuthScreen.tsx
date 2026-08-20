@@ -280,6 +280,14 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
 
   return (
     <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
+      {onBackToSite && (
+        <button 
+          onClick={onBackToSite}
+          className="absolute top-4 left-4 z-50 px-4 py-2 bg-slate-900 border border-slate-700 text-slate-300 rounded-full font-mono text-xs font-bold uppercase hover:bg-slate-800 transition-colors"
+        >
+          ← Back to Website
+        </button>
+      )}
       
       {showClosingLogo && <CinematicClosingLogo onComplete={() => CapacitorApp.exitApp()} />}
       {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}

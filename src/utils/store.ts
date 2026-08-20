@@ -324,6 +324,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ updateInfo });
   },
   demoMode: isDemoModeInitially,
+  globalTheme: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
+  setGlobalTheme: (theme: 'dark' | 'light') => {
+    set({ globalTheme: theme });
+    setStoredJSON('sl_global_theme', theme);
+  },
   contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
   panicEvents: getStoredJSON<PanicEvent[]>('sl_panic_events', []),
   activeSOSState: 'IDLE',

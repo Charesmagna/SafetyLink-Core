@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import './styles/index.css'
+// @ts-ignore
 import { registerSW } from 'virtual:pwa-register';
 
 const updateSW = registerSW({

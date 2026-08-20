@@ -179,7 +179,8 @@ const App: React.FC = () => {
     localOfflineQueue,
     syncOfflineQueue,
     checkAppUpdates,
-    updateInfo
+    updateInfo,
+    globalTheme
   } = useAppStore();
 
   useEffect(() => {
@@ -276,9 +277,9 @@ const App: React.FC = () => {
       }
     });
 
-    let backButtonListener: any = null;
+    let backButtonListenerPromise: Promise<{ remove: () => void }> | null = null;
     try {
-      backButtonListener = CapacitorApp.addListener('backButton', () => {
+      backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
       // 4. Block Back Button during SOS
       if (isSosActive) {
         console.warn("Back button blocked: SOS Countdown is active.");
@@ -300,7 +301,9 @@ const App: React.FC = () => {
     }
     return () => {
       urlOpenListener.then(listener => listener.remove());
-      backButtonListener.then(listener => listener.remove());
+      if (backButtonListenerPromise) {
+        backButtonListenerPromise.then(listener => listener.remove());
+      }
     };
   }, [isDrawerOpen, activeTab, isSosActive]);
 

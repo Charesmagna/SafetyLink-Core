@@ -1,21 +1,24 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.tsx', 'utf8');
 
-// Update LandingPage onLogin to trigger splash screen
-code = code.replace(
-  /<LandingPage onLogin=\{\(\) => setShowLanding\(false\)\} \/>/,
-  `<LandingPage onLogin={() => {
-          setShowLanding(false);
-          setShowSplash(true);
-          setTimeout(() => setShowSplash(false), 7000);
-        }} />`
-);
+// Ensure globalTheme is extracted in App
+if (!code.includes('const globalTheme = useAppStore(state => state.globalTheme);')) {
+  code = code.replace(
+    /const \{ language \} = useAppStore\(\);/,
+    'const { language } = useAppStore();\n  const globalTheme = useAppStore(state => state.globalTheme);'
+  );
+  
+  code = code.replace(
+    /const getThemeClass = \(\) => \{[\s\S]*?return 'theme-personal';\n  \};/,
+    `const getThemeClass = () => {
+    let base = 'theme-personal';
+    if (activeTab === 'deck') {
+      base = currentUser?.orgCode ? 'theme-responder' : 'theme-personal';
+    }
+    return globalTheme === 'light' ? \`\${base} theme-light\` : base;
+  };`
+  );
 
-// Update AuthScreen to receive onBackToSite
-code = code.replace(
-  /return <AuthScreen \/>;/,
-  `return <AuthScreen onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;`
-);
-
-fs.writeFileSync('src/App.tsx', code);
-console.log("Patched App.tsx");
+  fs.writeFileSync('src/App.tsx', code);
+  console.log('Patched App.tsx');
+}

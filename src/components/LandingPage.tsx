@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { HARDWARE_CATALOG } from '../config/brand';
+import { Brand } from '../config/brand';
 import { LogoSetPart } from './LogoSetPart';
 
 interface LandingPageProps {
@@ -22,7 +22,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeSection]);
 
-  const navTo = (section) => {
+  const navTo = (section: string) => {
     setActiveSection(section);
     setMenuOpen(false);
   };
@@ -512,7 +512,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
   </div>
 </section></div>;
       case 'contact':
-        return <div className="pt-24 pb-24"><div id="cta-banner" id="contact" style={{marginTop: 0}}>
+        return <div className="pt-24 pb-24"><div id="contact" style={{marginTop: 0}}>
   <h2 className="cta-headline">Ready to Protect Your Community?</h2>
   <p className="cta-sub">SafetyLink-Core is built right here in South Africa — for South African communities.<br />Start free today. No credit card required.</p>
   <div className="cta-actions">

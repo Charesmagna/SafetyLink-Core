@@ -39,7 +39,9 @@ export const Settings: React.FC = () => {
     sosSoundSetup,
     setSosSoundSetup,
     silenceAlerts,
-    setSilenceAlerts
+    setSilenceAlerts,
+    globalTheme,
+    setGlobalTheme
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
