@@ -124,7 +124,11 @@ const TrialReminderModal = () => {
 };
 
 const App: React.FC = () => {
-  const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web');
+  // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
+  // Check if running in a desktop EXE (Electron) environment
+  const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
+  // Only show landing page initially on actual web browsers
+  const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web' && !isDesktopExe && window.location.pathname === '/');
   const [trialExpired, setTrialExpired] = useState(false);
 
 
@@ -421,9 +425,13 @@ const App: React.FC = () => {
 
     if (!currentUser) {
       if (showLanding) {
-        return <LandingPage onLogin={() => setShowLanding(false)} />;
+        return <LandingPage onLogin={() => {
+          setShowLanding(false);
+          setShowSplash(true);
+          setTimeout(() => setShowSplash(false), 7000);
+        }} />;
       }
-      return <AuthScreen />;
+      return <AuthScreen onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
 

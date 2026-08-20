@@ -15,7 +15,7 @@ import slide5 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
 import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
-export const AuthScreen: React.FC = () => {
+export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSite }) => {
   const { 
     login, 
     registerUser, 
