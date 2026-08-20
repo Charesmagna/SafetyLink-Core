@@ -1141,12 +1141,11 @@ const App: React.FC = () => {
   };
 
   const getThemeClass = () => {
-    if (superAdminActive) return 'theme-admin';
-    if (currentOrg) return 'theme-org';
-    if (currentUser) {
-      return currentUser.orgCode ? 'theme-responder' : 'theme-personal';
+    let base = 'theme-personal';
+    if (activeTab === 'deck') {
+      base = currentUser?.orgCode ? 'theme-responder' : 'theme-personal';
     }
-    return 'theme-personal';
+    return globalTheme === 'light' ? `${base} theme-light` : base;
   };
 
   return (

@@ -10,6 +10,8 @@ import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 interface AppState {
+  globalTheme: 'dark' | 'light';
+  setGlobalTheme: (theme: 'dark' | 'light') => void;
   updateInfo: UpdateInfo | null;
   checkAppUpdates: () => Promise<void>;
   contacts: Contact[];
