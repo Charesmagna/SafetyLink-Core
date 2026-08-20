@@ -20,7 +20,8 @@ const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET   || '';
 const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID    || 'e7c4fd21-764f-465d-b98f-c44f4489662e';
 const JWT_SECRET          = process.env.JWT_SECRET          || 'safetylink-secure-jwt-2026-tmmedia';
 const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL || 'https://eomnz1lxw9o2hyq.m.pipedream.net';
-const BLAND_API_KEY       = process.env.BLAND_API_KEY || '';
+const BLAND_API_KEY       = process.env.BLAND_API_KEY       || 'Bv19obRtmmDVJe89H50LgEkFgXij0Wd7Y0aQu548zNE';
+const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY       || 'org_fbb367e9f8405b15fa7f1a7fdae6eb736af03c63922e4d4de7b94242891cda9a2a49c71606fab126f4e669';
 
 // --- Database & Auth Initialization ---
 const dbPath = process.env.NODE_ENV === "production" ? "file:/tmp/safetylink.db" : "file:safetylink.db";
@@ -718,32 +719,59 @@ async function startServer() {
             // SMS
             twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
               .catch(e => console.error('Twilio SMS failed:', e.message));
-            // Voice call via Bland.ai (free tier, calls real phone numbers)
+            
+            // Voice call
+            twilioClient.calls.create({
+              twiml: twimlVoice,
+              from: TWILIO_PHONE_NUMBER,
+              to: contact.phone
+            }).catch(e => console.error('Twilio call failed:', e.message));
+            
+            // --- BLAND AI AUTOMATED DISPATCH ---
             if (BLAND_API_KEY) {
+              const blandData = {
+                "phone_number": contact.phone,
+                "voice": "45bfac80-786f-409e-acd0-6c424603a12e",
+                "wait_for_greeting": false,
+                "record": true,
+                "answered_by_enabled": true,
+                "noise_cancellation": false,
+                "interruption_threshold": 500,
+                "block_interruptions": false,
+                "max_duration": 12,
+                "model": "base",
+                "language": "babel-en",
+                "background_track": "none",
+                "endpoint": "https://api.bland.ai",
+                "voicemail_action": "hangup",
+                "prompt": `Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.`
+              };
+              
               fetch('https://api.bland.ai/v1/calls', {
                 method: 'POST',
                 headers: { 'Authorization': BLAND_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  phone_number: contact.phone,
-                  task: `Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately. This is an automated SafetyLink emergency alert. If you cannot reach ${userName}, please contact emergency services.`,
-                  voice: '45bfac80-786f-409e-acd0-6c424603a12e',
-                  wait_for_greeting: false,
-                  record: true,
-                  answered_by_enabled: true,
-                  max_duration: 12,
-                  model: 'base',
-                  language: 'babel-en',
-                  voicemail_action: 'leave_message',
-                })
-              }).catch(e => console.error('Bland.ai call failed:', e.message));
-            } else if (TWILIO_ACCOUNT_SID) {
-              // Fallback to Twilio voice
-              twilioClient.calls.create({
-                twiml: twimlVoice,
-                from: TWILIO_PHONE_NUMBER,
-                to: contact.phone
-              }).catch(e => console.error('Twilio call failed:', e.message));
+                body: JSON.stringify(blandData)
+              }).catch(e => console.error('Bland AI dispatch failed:', e.message));
             }
+          }
+          
+          // --- PIPEDREAM WEBHOOK DEPLOYMENT/TRIGGER ---
+          if (process.env.PIPEDREAM_API_KEY) {
+             const pipedreamPayload = {
+                "org_id": "o_GOIjor7",
+                "project_id": "proj_p2sPmV3",
+                "steps": [],
+                "triggers": [],
+                "settings": {
+                  "name": "SafetyLink Alert Workflow",
+                  "auto_deploy": true
+                }
+             };
+             fetch('https://api.pipedream.com/v1/workflows?template_id=tch_2EfnyV', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${process.env.PIPEDREAM_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(pipedreamPayload)
+             }).catch(e => console.error('Pipedream trigger failed:', e.message));
           }
         } catch (twilioErr: any) {
           console.error('Twilio dispatch error:', twilioErr.message);
@@ -798,18 +826,82 @@ async function startServer() {
     }
   });
 
-  // Acknowledge panic — called by Pipedream to check if panic was resolved
-  app.get("/api/panic/acknowledge", async (req: any, res: any) => {
+  
+  // --- External Integrations ---
+
+  // 1. Bland AI Call Dispatch
+  app.post("/api/integrations/bland-ai", async (req, res) => {
     try {
-      const { id } = req.query;
-      const result = await db.execute({
-        sql: 'SELECT status FROM panic_alerts WHERE id = ?',
-        args: [id]
+      const { phone_number, prompt } = req.body;
+      
+      const headers = {
+        'Authorization': BLAND_API_KEY, 
+        'Content-Type': 'application/json'
+      };
+
+      const data = {
+        "phone_number": phone_number || "+27680079911",
+        "voice": "45bfac80-786f-409e-acd0-6c424603a12e",
+        "wait_for_greeting": false,
+        "record": true,
+        "answered_by_enabled": true,
+        "noise_cancellation": false,
+        "interruption_threshold": 500,
+        "block_interruptions": false,
+        "max_duration": 12,
+        "model": "base",
+        "language": "babel-en",
+        "background_track": "none",
+        "endpoint": "https://api.bland.ai",
+        "voicemail_action": "hangup",
+        "prompt": prompt || "Emergency alert from SafetyLink. Please respond immediately."
+      };
+
+      const response = await fetch('https://api.bland.ai/v1/calls', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
       });
-      if (result.rows.length === 0) return res.json({ acknowledged: false, status: 'not_found' });
-      const status = (result.rows[0] as any).status;
-      res.json({ acknowledged: status === 'resolved', status });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+      
+      const result = await response.json();
+      res.json({ success: response.ok, data: result });
+    } catch (e: any) {
+      console.error("Bland AI Error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // 2. Pipedream Workflow Deployment
+  app.post("/api/integrations/pipedream-deploy", async (req, res) => {
+    try {
+      const payload = {
+        "org_id": "o_GOIjor7",
+        "project_id": "proj_p2sPmV3",
+        "steps": [],
+        "triggers": [],
+        "settings": {
+          "name": "SafetyLink ",
+          "auto_deploy": true
+        }
+      };
+
+      const headers = {
+        'Authorization': `Bearer ${process.env.PIPEDREAM_API_KEY || ''}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch('https://api.pipedream.com/v1/workflows?template_id=tch_2EfnyV', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      res.json({ success: response.ok, data: result });
+    } catch (e: any) {
+      console.error("Pipedream Error:", e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get("/api/events", authMiddleware, async (req: any, res) => {

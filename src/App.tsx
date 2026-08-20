@@ -43,15 +43,15 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/Polish_20260620_014530309.jpg';
-import slide2 from '/Polish_20260620_014530309.jpg';
+import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from '/Polish_20260620_014530309.jpg';
+import slLogoSet from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import newBg1 from './assets/images/regenerated_image_1784546645212.png';
-const newLogo1 = '/Polish_20260620_014530309.jpg';
+const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/Polish_20260620_014530309.jpg';
+const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
@@ -272,7 +272,9 @@ const App: React.FC = () => {
       }
     });
 
-    const backButtonListener = CapacitorApp.addListener('backButton', () => {
+    let backButtonListener: any = null;
+    try {
+      backButtonListener = CapacitorApp.addListener('backButton', () => {
       // 4. Block Back Button during SOS
       if (isSosActive) {
         console.warn("Back button blocked: SOS Countdown is active.");
@@ -289,6 +291,9 @@ const App: React.FC = () => {
         }
       }
     });
+    } catch (e) {
+      console.warn("backButton not supported", e);
+    }
     return () => {
       urlOpenListener.then(listener => listener.remove());
       backButtonListener.then(listener => listener.remove());
@@ -973,6 +978,19 @@ const App: React.FC = () => {
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Preferences & Ledger</p>
                     </div>
                   </button>
+                  <button
+                    onClick={() => { setShowLanding(true); setIsDrawerOpen(false); }}
+                    className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-colors text-slate-400 hover:bg-slate-900/50 cursor-pointer`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-black text-sm uppercase tracking-wider text-slate-200">Public Website</div>
+                      <div className="text-[10px] text-slate-500">View products & pricing</div>
+                    </div>
+                  </button>
+                  
 
                   {demoMode && (
                   

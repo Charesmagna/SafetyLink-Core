@@ -6,6 +6,20 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import './styles/index.css'
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm("A new version of SafetyLink is available. Reload to update?")) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log("SafetyLink is ready to work offline.");
+  },
+});
+
+
 
 // Global Fetch Interceptor for Trial Lock
 const originalFetch = window.fetch;
