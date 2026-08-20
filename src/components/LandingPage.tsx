@@ -160,7 +160,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
           <li><i className="fa-solid fa-check"></i>Community alerts</li>
           <li><i className="fa-solid fa-check"></i>Basic push notifications</li>
         </ul>
-        <a href="#download" className="plan-cta">Get Started Free</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); navTo("download"); }} className="plan-cta">Get Started Free</a>
       </div>
 
       <div className="plan-card featured-plan">
@@ -180,7 +180,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
           <li><i className="fa-solid fa-check"></i>Emergency audio recording</li>
           <li><i className="fa-solid fa-check"></i>Priority cloud & support</li>
         </ul>
-        <a href="#download" className="plan-cta cta-red">Get Premium</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); navTo("download"); }} className="plan-cta cta-red">Get Premium</a>
       </div>
 
       <div className="plan-card">
@@ -198,7 +198,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
           <li><i className="fa-solid fa-check"></i>Shared safe zones</li>
           <li><i className="fa-solid fa-check"></i>Family emergency timeline</li>
         </ul>
-        <a href="#download" className="plan-cta">Get Family Plan</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); navTo("download"); }} className="plan-cta">Get Family Plan</a>
       </div>
     </div>
 
@@ -546,32 +546,32 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
       <div className="footer-col">
         <h4>Platform</h4>
         <ul>
-          <li><a href="#platform">Panic Trigger</a></li>
-          <li><a href="#platform">Live GPS</a></li>
-          <li><a href="#platform">BLE Keyfob</a></li>
-          <li><a href="#platform">ZK Evidence Vault</a></li>
-          <li><a href="#klev">K'lev.ai</a></li>
-          <li><a href="#platform">Drill Mode</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("platform"); }}>Panic Trigger</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("platform"); }}>Live GPS</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("platform"); }}>BLE Keyfob</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("platform"); }}>ZK Evidence Vault</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("klev"); }}>K'lev.ai</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("platform"); }}>Drill Mode</a></li>
         </ul>
       </div>
       <div className="footer-col">
         <h4>Plans</h4>
         <ul>
-          <li><a href="#pricing">Free</a></li>
-          <li><a href="#pricing">Premium</a></li>
-          <li><a href="#pricing">Family</a></li>
-          <li><a href="#pricing">Security Starter</a></li>
-          <li><a href="#pricing">Professional</a></li>
-          <li><a href="#pricing">Enterprise</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Free</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Premium</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Family</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Security Starter</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Professional</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("pricing"); }}>Enterprise</a></li>
         </ul>
       </div>
       <div className="footer-col">
         <h4>Company</h4>
         <ul>
           <li><a href="mailto:info@safetylink.online">Contact Us</a></li>
-          <li><a href="#download">Download APK</a></li>
-          <li><a href="#download">Web Dashboard</a></li>
-          <li><a href="#hardware">iTAG Hardware</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("download"); }}>Download APK</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("download"); }}>Web Dashboard</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navTo("hardware"); }}>iTAG Hardware</a></li>
           <li><a href="/legal/privacy">Privacy Policy</a></li>
           <li><a href="/legal/terms">Terms of Use</a></li>
         </ul>
