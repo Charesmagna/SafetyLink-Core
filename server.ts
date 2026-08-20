@@ -20,6 +20,7 @@ const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET   || '';
 const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID    || 'e7c4fd21-764f-465d-b98f-c44f4489662e';
 const JWT_SECRET          = process.env.JWT_SECRET          || 'safetylink-secure-jwt-2026-tmmedia';
 const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL || 'https://eomnz1lxw9o2hyq.m.pipedream.net';
+const BLAND_API_KEY       = process.env.BLAND_API_KEY || '';
 
 // --- Database & Auth Initialization ---
 const dbPath = process.env.NODE_ENV === "production" ? "file:/tmp/safetylink.db" : "file:safetylink.db";
@@ -717,12 +718,32 @@ async function startServer() {
             // SMS
             twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
               .catch(e => console.error('Twilio SMS failed:', e.message));
-            // Voice call
-            twilioClient.calls.create({
-              twiml: twimlVoice,
-              from: TWILIO_PHONE_NUMBER,
-              to: contact.phone
-            }).catch(e => console.error('Twilio call failed:', e.message));
+            // Voice call via Bland.ai (free tier, calls real phone numbers)
+            if (BLAND_API_KEY) {
+              fetch('https://api.bland.ai/v1/calls', {
+                method: 'POST',
+                headers: { 'Authorization': BLAND_API_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phone_number: contact.phone,
+                  task: `Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately. This is an automated SafetyLink emergency alert. If you cannot reach ${userName}, please contact emergency services.`,
+                  voice: '45bfac80-786f-409e-acd0-6c424603a12e',
+                  wait_for_greeting: false,
+                  record: true,
+                  answered_by_enabled: true,
+                  max_duration: 12,
+                  model: 'base',
+                  language: 'babel-en',
+                  voicemail_action: 'leave_message',
+                })
+              }).catch(e => console.error('Bland.ai call failed:', e.message));
+            } else if (TWILIO_ACCOUNT_SID) {
+              // Fallback to Twilio voice
+              twilioClient.calls.create({
+                twiml: twimlVoice,
+                from: TWILIO_PHONE_NUMBER,
+                to: contact.phone
+              }).catch(e => console.error('Twilio call failed:', e.message));
+            }
           }
         } catch (twilioErr: any) {
           console.error('Twilio dispatch error:', twilioErr.message);
