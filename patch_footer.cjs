@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+let code = fs.readFileSync('src/components/GlobalFooter.tsx', 'utf8');
+
+const newCode = `import React, { useState } from 'react';
 import { DownloadHub } from './DownloadHub';
 
 export const GlobalFooter: React.FC = () => {
@@ -35,3 +38,7 @@ export const GlobalFooter: React.FC = () => {
     </>
   );
 };
+`;
+
+fs.writeFileSync('src/components/GlobalFooter.tsx', newCode);
+console.log('Patched GlobalFooter');

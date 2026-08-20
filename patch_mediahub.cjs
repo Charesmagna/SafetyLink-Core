@@ -1,82 +1,7 @@
-import React from 'react';
+const fs = require('fs');
+let code = fs.readFileSync('src/components/MediaHub.tsx', 'utf8');
 
-// Using a simplified local token map for this component
-const tokens = {
-  colors: {
-    slate100: '#f1f5f9',
-    slate300: '#cbd5e1',
-    slate400: '#94a3b8',
-    slate800: '#1e293b',
-    charcoal: '#121826',
-    graphiteBlack: '#07090e',
-    white: '#ffffff',
-  },
-  typography: {
-    sizes: {
-      xs: '0.75rem',
-      sm: '0.875rem',
-      md: '1rem',
-      xl: '1.25rem',
-    }
-  },
-  shadows: {
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-  }
-};
-
-interface VideoAsset {
-  title: string;
-  filename: string;
-  path: string;
-  description: string;
-}
-
-const MEDIA_MANIFEST: VideoAsset[] = [
-  {
-    title: "Inside the SafetyLink Emergency Ecosystem",
-    filename: "Inside_the_SafetyLink_Emergency_Ecosystem.mp4",
-    path: "/media/Inside_the_SafetyLink_Emergency_Ecosystem.mp4",
-    description: "Full architectural walk-through showing real-time GPS coordinate logging and responder console updates."
-  },
-  {
-    title: "Emergency Workflow Automation Architecture",
-    filename: "How_SafetyLink_Automates_Emergency_Responses.mp4",
-    path: "/media/How_SafetyLink_Automates_Emergency_Responses.mp4",
-    description: "Technical operational demonstration of native Android PanicService background survival threads."
-  },
-  {
-    title: "Emergency Escalation Pipelines Work",
-    filename: "How_Emergency_Escalation_Pipelines_Work.mp4",
-    path: "/media/How_Emergency_Escalation_Pipelines_Work.mp4",
-    description: "Demonstration of the escalation pipeline workflow."
-  },
-  {
-    title: "SafetyLink Startup Sequence",
-    filename: "safetylink_startup.mp4",
-    path: "/media/safetylink_startup.mp4",
-    description: "Initialization and boot sequence."
-  },
-  {
-    title: "3D Logo Animation",
-    filename: "Now_I_need_the_d_animation_lo.mp4",
-    path: "/media/Now_I_need_the_d_animation_lo.mp4",
-    description: "3D brand identity clip."
-  },
-  {
-    title: "Neon Power Logo Reveal",
-    filename: "Neon Power Logo Reveal_0p.mp4",
-    path: "/media/Neon Power Logo Reveal_0p.mp4",
-    description: "Neon styling logo reveal."
-  },
-  {
-    title: "Scene Setup Vertical",
-    filename: "Scene_Setup_vertical_.mp4",
-    path: "/media/Scene_Setup_vertical_.mp4",
-    description: "Vertical orientation scene setup."
-  }
-];
-
-
+const newComponentCode = `
 export const MediaHub: React.FC = () => {
   const [driveFiles, setDriveFiles] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -200,4 +125,9 @@ export const MediaHub: React.FC = () => {
     </div>
   );
 };
+`;
 
+code = code.replace(/export const MediaHub: React\.FC = \(\) => \{[\s\S]*?^};/m, newComponentCode);
+
+fs.writeFileSync('src/components/MediaHub.tsx', code);
+console.log('Patched MediaHub');
