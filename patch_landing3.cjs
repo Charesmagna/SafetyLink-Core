@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DownloadHub } from './DownloadHub';
 
@@ -287,3 +289,5 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onRegisterOrg
     </div>
   );
 };
+`;
+fs.writeFileSync('src/components/LandingPage.tsx', code);

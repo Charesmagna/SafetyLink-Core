@@ -1,0 +1,10 @@
+To get your Google Drive API Key, follow these steps:
+
+1. Go to the Google Cloud Console (https://console.cloud.google.com/).
+2. Create a new project (or select an existing one).
+3. In the sidebar, navigate to "APIs & Services" > "Library".
+4. Search for "Google Drive API" and click "Enable".
+5. Navigate to "APIs & Services" > "Credentials".
+6. Click "Create Credentials" at the top and select "API key".
+7. Copy the generated API key.
+8. (Optional but recommended) Click on the API key to edit it, and restrict it to only the Google Drive API to improve security.
