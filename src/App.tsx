@@ -72,7 +72,7 @@ const TrialLockOverlay = () => {
         <div className="bg-black/40 p-4 rounded-xl text-sm text-slate-400 font-mono mb-8">
           ERROR CODE: TRIAL_EXPIRED
         </div>
-        <a href="mailto:sales@safetylink.online" className="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-xl transition-colors w-full mb-4">
+        <a href="mailto:info@safetylink.online" className="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-xl transition-colors w-full mb-4">
           Contact Sales to Unlock
         </a>
         <button onClick={logout} className="text-slate-500 text-sm font-bold hover:text-white underline">Sign Out</button>

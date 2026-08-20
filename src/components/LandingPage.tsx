@@ -1216,10 +1216,10 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
 
 <div id="utility-bar">
   <div className="utility-inner">
-    <a href="https://facebook.com" className="utility-link" target="_blank" rel="noopener">
+    <a href="https://facebook.com/SafetyLink" className="utility-link" target="_blank" rel="noopener">
       <i className="fa-brands fa-facebook-f"></i><span className="tub-label">Facebook</span>
     </a>
-    <a href="https://wa.me/27000000000" className="utility-link" target="_blank" rel="noopener">
+    <a href="https://wa.me/27739441222" className="utility-link" target="_blank" rel="noopener">
       <i className="fa-brands fa-whatsapp"></i><span className="tub-label">WhatsApp</span>
     </a>
     <a onClick={(e) => { e.preventDefault(); onLogin(); }} href="#" className="utility-link">
@@ -1228,7 +1228,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
     <a href="#contact" className="utility-link">
       <i className="fa-solid fa-envelope"></i><span className="tub-label">Contact Us</span>
     </a>
-    <a href="tel:+27000000000" className="utility-link">
+    <a href="tel:+27739441222" className="utility-link">
       <i className="fa-solid fa-phone"></i><span className="tub-label">+27 000 000 0000</span>
     </a>
   </div>
@@ -1797,7 +1797,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
     <a href="#" onClick={(e) => { e.preventDefault(); if (onRegisterOrg) onRegisterOrg(); else onLogin(); }} className="btn-hero-secondary">
       <i className="fa-solid fa-building-shield"></i> Register Your Organisation
     </a>
-    <a href="mailto:tshilidzi@tmmediasolutions.co.za" className="btn-hero-secondary">
+    <a href="mailto:info@safetylink.online" className="btn-hero-secondary">
       <i className="fa-solid fa-envelope"></i> Contact Us
     </a>
   </div>
@@ -1814,8 +1814,8 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
         </div>
         <p>South Africa's most advanced community emergency response platform — built by TM Media Solutions in Lenasia South, Gauteng.</p>
         <div style={{'display': 'flex', 'gap': '12px', 'marginTop': '20px'}}>
-          <a href="https://facebook.com" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#fff'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-facebook-f fa-lg"></i></a>
-          <a href="https://wa.me/27000000000" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#25d366'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-whatsapp fa-lg"></i></a>
+          <a href="https://facebook.com/SafetyLink" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#fff'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-facebook-f fa-lg"></i></a>
+          <a href="https://wa.me/27739441222" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#25d366'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-whatsapp fa-lg"></i></a>
         </div>
       </div>
       <div className="footer-col">
@@ -1843,7 +1843,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
       <div className="footer-col">
         <h4>Company</h4>
         <ul>
-          <li><a href="mailto:tshilidzi@tmmediasolutions.co.za">Contact Us</a></li>
+          <li><a href="mailto:info@safetylink.online">Contact Us</a></li>
           <li><a href="#download">Download APK</a></li>
           <li><a href="#download">Web Dashboard</a></li>
           <li><a href="#hardware">iTAG Hardware</a></li>
