@@ -12,35 +12,589 @@ interface LandingPageProps {
   isLoggedIn?: boolean;
 }
 
-export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToApp, isLoggedIn }: LandingPageProps) {
-  React.useEffect(() => {
-    const handleScroll = () => {
-      const nav = document.getElementById('navbar');
-      if (nav) {
-        nav.style.boxShadow = window.scrollY > 20 ? '0 4px 24px rgba(0,0,0,0.5)' : 'none';
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Smooth scroll for anchor links
-    const handleAnchor = (e) => {
-      if (!e.target || typeof e.target.closest !== 'function') return; const target = e.target.closest('a[href^="#"]');
-      if (target) {
-        e.preventDefault();
-        const id = target.getAttribute('href');
-        if (id && id !== '#') {
-          const el = document.querySelector(id);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }
-    };
-    document.addEventListener('click', handleAnchor);
 
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('click', handleAnchor);
-    };
-  }, []);
+
+export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToApp, isLoggedIn }: LandingPageProps) {
+  const [activeSection, setActiveSection] = React.useState('home');
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeSection]);
+
+  const navTo = (section) => {
+    setActiveSection(section);
+    setMenuOpen(false);
+  };
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'home':
+        return (
+          <>
+            <section id="hero">
+  <div className="hero-bg"></div>
+  <div className="hero-grid-overlay"></div>
+  
+  <div className="hero-container">
+        
+        {/* Header */}
+        <header className="hero-header">
+            <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+                SAFETY LINK: GLOBAL PROTECTION NETWORK
+            </motion.h1>
+            <motion.h2 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }}>
+                (Integrated Emergency Dispatch Ecosystem)
+            </motion.h2>
+        </header>
+
+        {/* Main Visual / Integration Area */}
+        <section className="integration-section">
+            <h3 className="integration-title">System Integration</h3>
+            
+            <div className="integration-grid">
+                
+                {/* Left Column */}
+                <div className="grid-column">
+                    <motion.div className="mockup-item" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
+                        <div style={{ fontSize: '4rem' }}>👨‍👩‍👧‍👦</div>
+                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Family Protection</p>
+                    </motion.div>
+                    <motion.div className="mockup-item" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.6 }}>
+                        <div style={{ fontSize: '3rem' }}>🎛️</div>
+                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Tactile Triggers</p>
+                    </motion.div>
+                </div>
+
+                {/* Center Column */}
+                <div className="grid-column">
+                    <motion.div className="phone-mockup" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
+                        <div style={{ color: '#a0aec0', fontSize: '0.7rem', letterSpacing: '1px', marginBottom: 'auto' }}>SAFETYLINK HUB</div>
+                        
+                        <div className="sos-btn">
+                            SOS
+                            <span>HOLD 1.5S</span>
+                        </div>
+                        
+                        <div style={{ width: '100%', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginTop: 'auto' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#a0aec0' }}>Live Security Armed</div>
+                            <div style={{ fontSize: '0.65rem', color: '#718096', marginTop: '4px' }}>Sequential escalation active</div>
+                        </div>
+                    </motion.div>
+
+                    {/* Row of colored fobs */}
+                    <motion.div className="fob-row" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, duration: 0.6 }}>
+                        <div className="fob-mini" style={{ background: '#4fc3f7' }}></div>
+                        <div className="fob-mini" style={{ background: '#ffffff' }}></div>
+                        <div className="fob-mini" style={{ background: '#f06292' }}></div>
+                        <div className="fob-mini" style={{ background: '#aed581' }}></div>
+                        <div className="fob-mini" style={{ background: '#263238' }}></div>
+                    </motion.div>
+                </div>
+
+                {/* Right Column */}
+                <div className="grid-column">
+                    <motion.div className="mockup-item" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
+                        <div style={{ fontSize: '3rem', color: '#ffffff' }}>🗄️ 🔒</div>
+                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Secure Server Network</p>
+                    </motion.div>
+                    <motion.div className="mockup-item" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.6 }}>
+                        <div style={{ fontSize: '3rem' }}>🚁</div>
+                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Automated Response</p>
+                    </motion.div>
+                </div>
+
+            </div>
+        </section>
+
+        {/* Pricing & Info Cards */}
+        <section className="info-cards">
+            
+            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
+                <div className="feature-card-icon">👤</div>
+                <div className="feature-card-content">
+                    <h4>Individual Link</h4>
+                    <p>Starts from R49 p/m.<br/>Individual coverage with 24/7 Monitoring.</p>
+                </div>
+            </motion.div>
+
+            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5 }}>
+                <div className="feature-card-icon">👨‍👩‍👧‍👦</div>
+                <div className="feature-card-content">
+                    <h4>Family Link</h4>
+                    <p>R99 p/m for family of 5.<br/>Link family members, shared alerts.</p>
+                </div>
+            </motion.div>
+
+            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
+                <div className="feature-card-icon">🏢</div>
+                <div className="feature-card-content">
+                    <h4>Enterprise Solution</h4>
+                    <p>Security Companies Get:<br/>Own Control-Room Dashboard & Server Network.</p>
+                </div>
+            </motion.div>
+
+        </section>
+
+  </div>
+</section>
+            <section id="pricing">
+  <div className="section-inner">
+    <div className="section-eyebrow">Pricing</div>
+    <h2 className="section-headline">Transparent Pricing for Every Community</h2>
+    <p className="section-sub">From individual protection to enterprise security infrastructure — choose the plan that fits your situation.</p>
+
+    <h3 style={{'fontFamily': 'Exo 2, sans-serif', 'fontSize': '18px', 'fontWeight': '700', 'margin': '48px 0 0', 'color': 'var(--muted)', 'letterSpacing': '.5px', 'textTransform': 'uppercase'}}>Individual &amp; Family</h3>
+    <div className="plans-grid" style={{'marginTop': '24px'}}>
+
+      <div className="plan-card">
+        <div className="plan-tier">Individual</div>
+        <div className="plan-name">Free</div>
+        <div className="plan-price">R<sup></sup>0<span className="period">/mo</span></div>
+        <div className="plan-desc">Basic protection for individuals. No credit card required.</div>
+        <hr className="plan-divider"/>
+        <ul className="plan-features">
+          <li><i className="fa-solid fa-check"></i>1 user</li>
+          <li><i className="fa-solid fa-check"></i>Live GPS tracking</li>
+          <li><i className="fa-solid fa-check"></i>24-hour incident history</li>
+          <li><i className="fa-solid fa-check"></i>Community alerts</li>
+          <li><i className="fa-solid fa-check"></i>Basic push notifications</li>
+        </ul>
+        <a href="#download" className="plan-cta">Get Started Free</a>
+      </div>
+
+      <div className="plan-card featured-plan">
+        <div className="plan-badge">Most Popular</div>
+        <div className="plan-tier">Individual</div>
+        <div className="plan-name">Premium</div>
+        <div className="plan-price">R<sup></sup>49<span className="period">/mo</span></div>
+        <div className="plan-desc">Full protection. Also available at R499/yr or R149 once-off.</div>
+        <hr className="plan-divider"/>
+        <ul className="plan-features">
+          <li><i className="fa-solid fa-check"></i>Up to 5 iTAG keyfobs</li>
+          <li><i className="fa-solid fa-check"></i>Unlimited panic activations</li>
+          <li><i className="fa-solid fa-check"></i>Private company monitoring</li>
+          <li><i className="fa-solid fa-check"></i>Live real-time tracking</li>
+          <li><i className="fa-solid fa-check"></i>12-month incident history</li>
+          <li><i className="fa-solid fa-check"></i>Safe zone alerts</li>
+          <li><i className="fa-solid fa-check"></i>Emergency audio recording</li>
+          <li><i className="fa-solid fa-check"></i>Priority cloud & support</li>
+        </ul>
+        <a href="#download" className="plan-cta cta-red">Get Premium</a>
+      </div>
+
+      <div className="plan-card">
+        <div className="plan-tier">Family</div>
+        <div className="plan-name">Family</div>
+        <div className="plan-price">R<sup></sup>99<span className="period">/mo</span></div>
+        <div className="plan-desc">Full household coverage. Also R999/yr or R249 once-off.</div>
+        <hr className="plan-divider"/>
+        <ul className="plan-features">
+          <li><i className="fa-solid fa-check"></i>Up to 6 family members</li>
+          <li><i className="fa-solid fa-check"></i>12 iTAG keyfobs</li>
+          <li><i className="fa-solid fa-check"></i>Shared family dashboard</li>
+          <li><i className="fa-solid fa-check"></i>Live family tracking</li>
+          <li><i className="fa-solid fa-check"></i>Group panic activation</li>
+          <li><i className="fa-solid fa-check"></i>Shared safe zones</li>
+          <li><i className="fa-solid fa-check"></i>Family emergency timeline</li>
+        </ul>
+        <a href="#download" className="plan-cta">Get Family Plan</a>
+      </div>
+    </div>
+
+    
+    <h3 style={{'fontFamily': 'Exo 2, sans-serif', 'fontSize': '18px', 'fontWeight': '700', 'margin': '72px 0 0', 'color': 'var(--muted)', 'letterSpacing': '.5px', 'textTransform': 'uppercase'}}>Security Company &amp; Community Patrol</h3>
+    <div className="sec-plans-grid">
+      <div className="sec-card">
+        <div className="sec-tier">Starter</div>
+        <div className="sec-name">Starter</div>
+        <div className="sec-price">R999<span className="per">/mo</span></div>
+        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 50 clients</div>
+        <div className="sec-feat">Live map · Basic reporting · Client management</div>
+      </div>
+      <div className="sec-card" style={{'borderColor': 'rgba(198,40,40,0.3)'}}>
+        <div className="sec-tier">Professional</div>
+        <div className="sec-name">Professional</div>
+        <div className="sec-price">R2,499<span className="per">/mo</span></div>
+        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 250 clients</div>
+        <div className="sec-feat">Auto dispatch · Incident & staff management · API access · Advanced reports · WhatsApp alerts</div>
+      </div>
+      <div className="sec-card">
+        <div className="sec-tier">Business</div>
+        <div className="sec-name">Business</div>
+        <div className="sec-price">R5,999<span className="per">/mo</span></div>
+        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 1,000 clients</div>
+        <div className="sec-feat">White-label dashboard · Multi-branch · Fleet tracking</div>
+      </div>
+      <div className="sec-card" style={{'borderColor': 'rgba(255,143,0,0.3)'}}>
+        <div className="sec-tier">Enterprise</div>
+        <div className="sec-name">Enterprise</div>
+        <div className="sec-price" style={{'color': 'var(--amber)'}}>Custom</div>
+        <div className="sec-clients" style={{'color': 'var(--muted)'}}><i className="fa-solid fa-infinity"></i> Unlimited</div>
+        <div className="sec-feat">Dedicated infrastructure · White-label mobile app · 24/7 priority support</div>
+      </div>
+    </div>
+    <p style={{'fontSize': '13px', 'color': 'var(--muted)', 'marginTop': '20px'}}>Add-ons: White-Label Mobile App R1,000/mo · Advanced Analytics R299/mo · SMS bundles, WhatsApp Business, Voice Dispatch: usage-based</p>
+  </div>
+</section>
+          </>
+        );
+      case 'platform':
+        return <div className="pt-24"><section id="platform">
+  <div className="section-inner">
+    <div className="platform-header">
+      <div>
+        <div className="section-eyebrow">Platform</div>
+        <h2 className="section-headline">Everything You Need to Manage Community Safety</h2>
+      </div>
+      <p className="section-sub" style={{'alignSelf': 'end'}}>From a single panic button to a full organisational command centre — SafetyLink-Core connects every layer of your community's safety infrastructure.</p>
+    </div>
+    <div className="platform-grid">
+      
+      <div className="platform-card featured">
+        <div className="pc-icon"><i className="fa-solid fa-bell"></i></div>
+        <div className="pc-title">Panic Trigger System</div>
+        <p className="pc-desc">2-second hold to arm, 10-second countdown to disarm. Sequential SMS and voice dispatch to up to 5 contacts with live GPS coordinates attached. The core of everything SafetyLink does.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-map"></i></div>
+        <div className="pc-title">Live GIS Map</div>
+        <p className="pc-desc">Leaflet.js-powered live map centred on your community — track members, incidents, and responder positions in real time.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-brands fa-bluetooth-b"></i></div>
+        <div className="pc-title">BLE Keyfob</div>
+        <p className="pc-desc">HST-01 iTAG integration with foreground service persistence — panic works through screen lock, OEM battery killers, and background restrictions.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-brands fa-whatsapp"></i></div>
+        <div className="pc-title">WhatsApp Alerts</div>
+        <p className="pc-desc">Dispatch emergency notifications directly to WhatsApp groups and individual contacts alongside SMS and voice call.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-shield-check"></i></div>
+        <div className="pc-title">Drill Mode</div>
+        <p className="pc-desc">Run live emergency drills without triggering real alerts — train your team, test the system, confirm every contact works.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-vault"></i></div>
+        <div className="pc-title">ZK Evidence Vault</div>
+        <p className="pc-desc">AES-256-GCM encrypted local evidence storage with PBKDF2 key derivation — secure incident media and documents that only you can access.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-users-gear"></i></div>
+        <div className="pc-title">Org Dashboard</div>
+        <p className="pc-desc">Full member management, QR code onboarding, referral tracking, live incident feeds, and role-based access — built for security companies and community leadership.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-chart-line"></i></div>
+        <div className="pc-title">Incident Analytics</div>
+        <p className="pc-desc">Time-of-day heat maps, response time tracking, area risk scoring — data that helps organisations allocate patrols and prevent incidents before they occur.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-microphone"></i></div>
+        <div className="pc-title">Emergency Audio Recording</div>
+        <p className="pc-desc">Automatic audio capture on panic activation, uploaded securely to your vault for evidentiary use or insurance claims.</p>
+      </div>
+
+      <div className="platform-card">
+        <div className="pc-icon"><i className="fa-solid fa-network-wired"></i></div>
+        <div className="pc-title">Open Platform Layer</div>
+        <p className="pc-desc">Ntfy, OwnCloud, and Sensor Stream integrations extend dispatch beyond SMS — connect your existing community infrastructure.</p>
+      </div>
+    </div>
+  </div>
+</section></div>;
+      case 'why':
+        return <div className="pt-24"><section id="why">
+  <div className="section-inner">
+    <div className="section-eyebrow">Why SafetyLink-Core</div>
+    <h2 className="section-headline">Protection That Works When It Matters Most</h2>
+    <p className="section-sub">Built from the ground up for South Africa's unique safety environment — fast, reliable, offline-capable, and community-driven.</p>
+    <div className="why-grid">
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-solid fa-bolt"></i></div>
+        <h3>2-Second Activation</h3>
+        <p>A 2-second hold-to-trigger panic button with a 10-second disarm window eliminates accidental calls while ensuring instant real activation when you need it most.</p>
+      </div>
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-solid fa-map-location-dot"></i></div>
+        <h3>Live GPS Dispatch</h3>
+        <p>Your exact GPS coordinates are pushed to up to 5 emergency contacts via sequential SMS and voice call the moment panic is triggered — no guessing, no delay.</p>
+      </div>
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-brands fa-bluetooth-b"></i></div>
+        <h3>BLE Keyfob Integration</h3>
+        <p>The HST-01 iTAG keyfob connects via Bluetooth Low Energy, activating panic directly from your pocket or keychain — even with the screen locked.</p>
+      </div>
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-solid fa-building-shield"></i></div>
+        <h3>Organisation Management</h3>
+        <p>Security companies, estates, and neighbourhood watches get a full command dashboard — manage members, view live incidents, and run drill exercises from anywhere.</p>
+      </div>
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-solid fa-brain"></i></div>
+        <h3>K'lev.ai Assistant</h3>
+        <p>An embedded AI co-pilot helps members, responders, and administrators — answering safety protocols, drafting incident reports, and guiding emergency response in real time.</p>
+      </div>
+      <div className="why-card">
+        <div className="why-icon"><i className="fa-solid fa-devices"></i></div>
+        <h3>APK, Web & Desktop</h3>
+        <p>One unified login across the Android APK, the web dashboard, and the Windows EXE — your profile, your organisation, your incident history — everywhere you need it.</p>
+      </div>
+    </div>
+  </div>
+</section></div>;
+      case 'klev':
+        return <div className="pt-24"><section id="klev">
+  <div className="section-inner">
+    <div className="klev-inner">
+      <div>
+        <div className="section-eyebrow">K'lev.ai</div>
+        <h2 className="section-headline">Your AI Emergency Response Co-Pilot</h2>
+        <p className="section-sub" style={{'marginBottom': '32px'}}>K'lev.ai is embedded directly in SafetyLink-Core — available to members, responders, and administrators instantly. Ask a question, get a protocol. Draft an incident report in seconds. Guide a bystander through first response.</p>
+        <ul style={{'listStyle': 'none', 'display': 'flex', 'flexDirection': 'column', 'gap': '14px'}}>
+          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
+            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
+            <span style={{'fontSize': '15px'}}>Real-time safety protocol guidance during active incidents</span>
+          </li>
+          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
+            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
+            <span style={{'fontSize': '15px'}}>Automated incident report drafting from event data</span>
+          </li>
+          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
+            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
+            <span style={{'fontSize': '15px'}}>Community communication drafting — alerts, notices, updates</span>
+          </li>
+          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
+            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
+            <span style={{'fontSize': '15px'}}>Available in all three platforms — APK, web, and EXE</span>
+          </li>
+        </ul>
+      </div>
+
+      <div className="ai-chat-mock">
+        <div className="ai-chat-header">
+          <div className="ai-avatar"><i className="fa-solid fa-brain"></i></div>
+          <div>
+            <div className="ai-name">K'lev.ai</div>
+            <div className="ai-status">● Online — SafetyLink-Core</div>
+          </div>
+        </div>
+        <div className="ai-messages">
+          <div className="ai-msg from-user">Panic triggered on Moira Park sector. What should responders do first?</div>
+          <div className="ai-msg from-ai">
+            Immediate response protocol:<br /><br />
+            1. Confirm GPS coordinates received — locate on live map.<br />
+            2. Dispatch nearest patrol unit — ETA estimation required.<br />
+            3. Attempt voice callback to the member within 30 seconds.<br />
+            4. Alert sector group via WhatsApp broadcast.<br />
+            5. If no response in 90s, escalate to SAPS 10111.
+          </div>
+          <div className="ai-msg from-user">Draft an incident report for this event.</div>
+          <div className="ai-msg from-ai">
+            <strong>Incident Report — SafetyLink-Core</strong><br />
+            Date: 2026-08-19 · Sector: Moira Park<br />
+            Type: Panic Activation · Status: Active<br />
+            Member: [Auto-resolved from GPS]<br />
+            Response time: calculating…<br />
+            Actions taken: [Will auto-populate on resolution]
+          </div>
+        </div>
+        <div className="ai-input-row">
+          <i className="fa-solid fa-comment-dots"></i>
+          <span>Ask K'lev.ai anything…</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section></div>;
+      case 'hardware':
+        return <div className="pt-24"><section id="hardware">
+  <div className="section-inner">
+    <div style={{'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '80px', 'alignItems': 'center'}} className="hw-grid">
+      <div>
+        <div className="section-eyebrow">Hardware</div>
+        <h2 className="section-headline">iTAG BLE Keyfob — Your Wearable Panic Button</h2>
+        <p className="section-sub" style={{'marginBottom': '32px'}}>
+          The HST-01 iTAG attaches to your keys, bag, or belt. One press triggers SafetyLink panic from anywhere — no phone unlock required. Included automatically with Premium and Family plans.
+        </p>
+        <p className="hw-note">
+          Available individually or in bulk packs for neighbourhood watch groups and security companies. 
+          ~28% margin on 10-packs for reseller and distributor programmes.
+        </p>
+      </div>
+      <div>
+        <div className="hw-card">
+          <div className="hw-icon-wrap"><i className="fa-solid fa-tag"></i></div>
+          <div className="hw-info">
+            <h4>Single iTAG</h4>
+            <p>1 BLE panic keyfob</p>
+          </div>
+          <div className="hw-price">R100</div>
+        </div>
+        <div className="hw-card">
+          <div className="hw-icon-wrap"><i className="fa-solid fa-tags"></i></div>
+          <div className="hw-info">
+            <h4>3-Pack</h4>
+            <p>Family starter pack</p>
+          </div>
+          <div className="hw-price">R179</div>
+        </div>
+        <div className="hw-card">
+          <div className="hw-icon-wrap"><i className="fa-solid fa-boxes-stacked"></i></div>
+          <div className="hw-info">
+            <h4>5-Pack</h4>
+            <p>Household or small team</p>
+          </div>
+          <div className="hw-price">R299</div>
+        </div>
+        <div className="hw-card" style={{'borderColor': 'rgba(255,143,0,0.3)'}}>
+          <div className="hw-icon-wrap"><i className="fa-solid fa-warehouse"></i></div>
+          <div className="hw-info">
+            <h4>10-Pack</h4>
+            <p>Reseller / estate / NHW</p>
+          </div>
+          <div className="hw-price" style={{'color': 'var(--amber)'}}>R499</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section></div>;
+      case 'download':
+        return <div className="pt-24"><section id="download">
+  <div className="section-inner">
+    <div className="section-eyebrow">Get SafetyLink-Core</div>
+    <h2 className="section-headline">One Login. Three Platforms.</h2>
+    <p className="section-sub">Register once at safetylink.online. Your profile, organisation, and incident history sync instantly across every platform.</p>
+    <div className="download-grid">
+      <div className="dl-card">
+        <div className="dl-icon"><i className="fa-brands fa-android"></i></div>
+        <h3>Android APK</h3>
+        <p>The full SafetyLink-Core experience — panic button, BLE keyfob, live GPS, K'lev.ai — built for Android. Download direct from safetylink.online.</p>
+        <a href="#" onClick={(e) => { e.preventDefault(); }} className="dl-btn">
+          <i className="fa-solid fa-download"></i> Download APK
+        </a>
+      </div>
+      <div className="dl-card">
+        <div className="dl-icon"><i className="fa-solid fa-globe"></i></div>
+        <h3>Web Dashboard</h3>
+        <p>Organisation management, incident command, live map, member administration, and analytics — accessible from any browser, anywhere.</p>
+        <a href="#" onClick={(e) => { e.preventDefault(); onLogin(); }} className="dl-btn outline">
+          <i className="fa-solid fa-arrow-up-right-from-square"></i> Open Dashboard
+        </a>
+      </div>
+      <div className="dl-card">
+        <div className="dl-icon"><i className="fa-brands fa-windows"></i></div>
+        <h3>Windows EXE</h3>
+        <p>The full organisation console as a native Windows desktop application — for security control rooms that need dedicated, always-on monitoring.</p>
+        <a href="#" onClick={(e) => { e.preventDefault(); }} className="dl-btn outline">
+          <i className="fa-solid fa-download"></i> Download EXE
+        </a>
+      </div>
+    </div>
+    <div style={{'background': 'var(--panel)', 'border': '1px solid var(--border)', 'borderRadius': 'var(--r-lg)', 'padding': '32px', 'marginTop': '32px', 'display': 'flex', 'alignItems': 'center', 'gap': '24px', 'flexWrap': 'wrap'}}>
+      <i className="fa-solid fa-qrcode" style={{'fontSize': '40px', 'color': 'var(--red)', 'flexShrink': '0'}}></i>
+      <div>
+        <h4 style={{'fontFamily': 'Exo 2, sans-serif', 'fontWeight': '700', 'marginBottom': '6px'}}>Organisation QR Onboarding</h4>
+        <p style={{'fontSize': '14px', 'color': 'var(--muted)'}}>Organisations generate QR codes from their dashboard — members scan and are instantly placed under the correct organisation. No manual codes required.</p>
+      </div>
+      <a href="#" onClick={(e) => { e.preventDefault(); if (onRegisterOrg) onRegisterOrg(); else onLogin(); }} className="btn-hero-secondary">Register Your Org</a>
+    </div>
+  </div>
+</section></div>;
+      case 'contact':
+        return <div className="pt-24 pb-24"><div id="cta-banner" id="contact" style={{marginTop: 0}}>
+  <h2 className="cta-headline">Ready to Protect Your Community?</h2>
+  <p className="cta-sub">SafetyLink-Core is built right here in South Africa — for South African communities.<br />Start free today. No credit card required.</p>
+  <div className="cta-actions">
+    <a href="#" onClick={(e) => { e.preventDefault(); }} className="btn-hero-primary">
+      <i className="fa-brands fa-android"></i> Download APK — Free
+    </a>
+    <a href="#" onClick={(e) => { e.preventDefault(); if (onRegisterOrg) onRegisterOrg(); else onLogin(); }} className="btn-hero-secondary">
+      <i className="fa-solid fa-building-shield"></i> Register Your Organisation
+    </a>
+    <a href="mailto:info@safetylink.online" className="btn-hero-secondary">
+      <i className="fa-solid fa-envelope"></i> Contact Us
+    </a>
+  </div>
+</div>
+
+
+<footer>
+  <div className="footer-inner">
+    <div className="footer-top">
+      <div className="footer-brand">
+        <div className="nav-logo" style={{'marginBottom': '0'}}>
+          <div className="shield"><i className="fa-solid fa-shield-halved"></i></div>
+          SafetyLink<span className="core">-Core</span>
+        </div>
+        <p>South Africa's most advanced community emergency response platform — built by TM Media Solutions in Lenasia South, Gauteng.</p>
+        <div style={{'display': 'flex', 'gap': '12px', 'marginTop': '20px'}}>
+          <a href="https://facebook.com/SafetyLink" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#fff'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-facebook-f fa-lg"></i></a>
+          <a href="https://wa.me/27739441222" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#25d366'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-whatsapp fa-lg"></i></a>
+        </div>
+      </div>
+      <div className="footer-col">
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="#platform">Panic Trigger</a></li>
+          <li><a href="#platform">Live GPS</a></li>
+          <li><a href="#platform">BLE Keyfob</a></li>
+          <li><a href="#platform">ZK Evidence Vault</a></li>
+          <li><a href="#klev">K'lev.ai</a></li>
+          <li><a href="#platform">Drill Mode</a></li>
+        </ul>
+      </div>
+      <div className="footer-col">
+        <h4>Plans</h4>
+        <ul>
+          <li><a href="#pricing">Free</a></li>
+          <li><a href="#pricing">Premium</a></li>
+          <li><a href="#pricing">Family</a></li>
+          <li><a href="#pricing">Security Starter</a></li>
+          <li><a href="#pricing">Professional</a></li>
+          <li><a href="#pricing">Enterprise</a></li>
+        </ul>
+      </div>
+      <div className="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="mailto:info@safetylink.online">Contact Us</a></li>
+          <li><a href="#download">Download APK</a></li>
+          <li><a href="#download">Web Dashboard</a></li>
+          <li><a href="#hardware">iTAG Hardware</a></li>
+          <li><a href="/legal/privacy">Privacy Policy</a></li>
+          <li><a href="/legal/terms">Terms of Use</a></li>
+        </ul>
+      </div>
+    </div>
+    <div className="footer-bottom">
+      <span>© 2026 SafetyLink-Core by TM Media Solutions. All rights reserved.</span>
+      <div className="footer-legal">
+        <a href="/legal/privacy">Privacy Policy</a>
+        <a href="/legal/terms">Terms of Use</a>
+        <a href="/legal/popia">POPIA Compliance</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+      
+    </div>;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="landing-page-root">
@@ -1210,661 +1764,98 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
           overflow-y: auto;
         }
       `}} />
-      
-      
 
-
-<div id="utility-bar">
-  <div className="utility-inner">
-    <a href="https://facebook.com/SafetyLink" className="utility-link" target="_blank" rel="noopener">
-      <i className="fa-brands fa-facebook-f"></i><span className="tub-label">Facebook</span>
-    </a>
-    <a href="https://wa.me/27739441222" className="utility-link" target="_blank" rel="noopener">
-      <i className="fa-brands fa-whatsapp"></i><span className="tub-label">WhatsApp</span>
-    </a>
-    <a onClick={(e) => { e.preventDefault(); onLogin(); }} href="#" className="utility-link">
-      <i className="fa-solid fa-right-to-bracket"></i><span className="tub-label">Log In</span>
-    </a>
-    <a href="#contact" className="utility-link">
-      <i className="fa-solid fa-envelope"></i><span className="tub-label">Contact Us</span>
-    </a>
-    <a href="tel:+27739441222" className="utility-link">
-      <i className="fa-solid fa-phone"></i><span className="tub-label">+27 000 000 0000</span>
-    </a>
-  </div>
-</div>
-
-
-<nav id="navbar">
-  <div className="nav-inner">
-    <a href="#" className="nav-logo">
-      <LogoSetPart part="main" size={36} showBorder={false} />
-      SafetyLink<span className="core">-Core</span>
-    </a>
-    <div className="nav-links">
-        {isLoggedIn && onBackToApp && (
-          <a onClick={(e) => { e.preventDefault(); onBackToApp(); }} href="#" className="nav-link !text-emerald-400 font-bold">
-            <i className="fa-solid fa-arrow-left"></i> Return to Dashboard
+      {/* Utility Bar */}
+      <div id="utility-bar">
+        <div className="utility-inner flex justify-center gap-6">
+          <a href="https://facebook.com/SafetyLink" className="utility-link" target="_blank" rel="noopener">
+            <i className="fa-brands fa-facebook-f"></i><span className="tub-label">Facebook</span>
           </a>
-        )}
-      <a href="#why"      className="nav-link">Why SafetyLink</a>
-      <a href="#platform" className="nav-link">Platform</a>
-      <a href="#pricing"  className="nav-link">Pricing</a>
-      <a href="#hardware" className="nav-link">Hardware</a>
-      <a href="#klev"     className="nav-link">K'lev.ai</a>
-      <a href="#download" className="nav-link">Download</a>
-    </div>
-    <div className="nav-ctas">
-      <a onClick={(e) => { e.preventDefault(); onLogin(); }} href="#" className="btn-ghost">Log In</a>
-      <a href="#download" className="btn-primary">
-        <i className="fa-solid fa-download"></i> Get the App
-      </a>
-    </div>
-  </div>
-</nav>
+          <a href="https://wa.me/27739441222" className="utility-link" target="_blank" rel="noopener">
+            <i className="fa-brands fa-whatsapp"></i><span className="tub-label">WhatsApp</span>
+          </a>
+          <a onClick={(e) => { e.preventDefault(); onLogin(); }} href="#" className="utility-link">
+            <i className="fa-solid fa-right-to-bracket"></i><span className="tub-label">Log In</span>
+          </a>
+          <a href="mailto:info@safetylink.online" className="utility-link">
+            <i className="fa-solid fa-envelope"></i><span className="tub-label">info@safetylink.online</span>
+          </a>
+          <a href="tel:+27739441222" className="utility-link">
+            <i className="fa-solid fa-phone"></i><span className="tub-label">+27 73 944 1222</span>
+          </a>
+        </div>
+      </div>
 
-
-<section id="hero">
-  <div className="hero-bg"></div>
-  <div className="hero-grid-overlay"></div>
-  
-  <div className="hero-container">
-        
-        {/* Header */}
-        <header className="hero-header">
-            <motion.h1 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-                SAFETY LINK: GLOBAL PROTECTION NETWORK
-            </motion.h1>
-            <motion.h2 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }}>
-                (Integrated Emergency Dispatch Ecosystem)
-            </motion.h2>
-        </header>
-
-        {/* Main Visual / Integration Area */}
-        <section className="integration-section">
-            <h3 className="integration-title">System Integration</h3>
+      {/* Navbar with Hamburger Menu */}
+      <nav id="navbar" style={{ zIndex: 10000 }}>
+        <div className="nav-inner flex items-center justify-between w-full px-4 lg:px-8">
+          <a href="#" onClick={(e) => { e.preventDefault(); navTo('home'); }} className="nav-logo flex items-center gap-2">
+            <LogoSetPart part="main" size={36} showBorder={false} />
+            SafetyLink<span className="core">-Core</span>
+          </a>
+          
+          <div className="flex items-center gap-4">
+            {isLoggedIn && onBackToApp && (
+              <a onClick={(e) => { e.preventDefault(); onBackToApp(); }} href="#" className="hidden md:flex items-center gap-2 text-emerald-400 font-bold bg-emerald-950/30 px-4 py-2 rounded-xl border border-emerald-500/20 hover:bg-emerald-900/50 transition-colors">
+                <i className="fa-solid fa-arrow-left"></i> Dashboard
+              </a>
+            )}
+            {!isLoggedIn && (
+              <a onClick={(e) => { e.preventDefault(); onLogin(); }} href="#" className="hidden md:block btn-ghost">Log In</a>
+            )}
             
-            <div className="integration-grid">
-                
-                {/* Left Column */}
-                <div className="grid-column">
-                    <motion.div className="mockup-item" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
-                        <div style={{ fontSize: '4rem' }}>👨‍👩‍👧‍👦</div>
-                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Family Protection</p>
-                    </motion.div>
-                    <motion.div className="mockup-item" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.6 }}>
-                        <div style={{ fontSize: '3rem' }}>🎛️</div>
-                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Tactile Triggers</p>
-                    </motion.div>
-                </div>
+            <button 
+              onClick={() => setMenuOpen(!menuOpen)} 
+              className="text-white text-2xl p-2 w-12 h-12 flex items-center justify-center rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 transition-colors z-[10001] relative"
+            >
+              <i className={`fa-solid ${menuOpen ? 'fa-xmark text-emerald-400' : 'fa-bars'}`}></i>
+            </button>
+          </div>
+        </div>
+      </nav>
 
-                {/* Center Column */}
-                <div className="grid-column">
-                    <motion.div className="phone-mockup" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }}>
-                        <div style={{ color: '#a0aec0', fontSize: '0.7rem', letterSpacing: '1px', marginBottom: 'auto' }}>SAFETYLINK HUB</div>
-                        
-                        <div className="sos-btn">
-                            SOS
-                            <span>HOLD 1.5S</span>
-                        </div>
-                        
-                        <div style={{ width: '100%', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '8px', marginTop: 'auto' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#a0aec0' }}>Live Security Armed</div>
-                            <div style={{ fontSize: '0.65rem', color: '#718096', marginTop: '4px' }}>Sequential escalation active</div>
-                        </div>
-                    </motion.div>
-
-                    {/* Row of colored fobs */}
-                    <motion.div className="fob-row" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, duration: 0.6 }}>
-                        <div className="fob-mini" style={{ background: '#4fc3f7' }}></div>
-                        <div className="fob-mini" style={{ background: '#ffffff' }}></div>
-                        <div className="fob-mini" style={{ background: '#f06292' }}></div>
-                        <div className="fob-mini" style={{ background: '#aed581' }}></div>
-                        <div className="fob-mini" style={{ background: '#263238' }}></div>
-                    </motion.div>
-                </div>
-
-                {/* Right Column */}
-                <div className="grid-column">
-                    <motion.div className="mockup-item" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2, duration: 0.6 }}>
-                        <div style={{ fontSize: '3rem', color: '#ffffff' }}>🗄️ 🔒</div>
-                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Secure Server Network</p>
-                    </motion.div>
-                    <motion.div className="mockup-item" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3, duration: 0.6 }}>
-                        <div style={{ fontSize: '3rem' }}>🚁</div>
-                        <p style={{ marginTop: '10px', color: '#a0aec0' }}>Automated Response</p>
-                    </motion.div>
-                </div>
-
-            </div>
-        </section>
-
-        {/* Pricing & Info Cards */}
-        <section className="info-cards">
-            
-            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}>
-                <div className="feature-card-icon">👤</div>
-                <div className="feature-card-content">
-                    <h4>Individual Link</h4>
-                    <p>Starts from R49 p/m.<br/>Individual coverage with 24/7 Monitoring.</p>
-                </div>
-            </motion.div>
-
-            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6, duration: 0.5 }}>
-                <div className="feature-card-icon">👨‍👩‍👧‍👦</div>
-                <div className="feature-card-content">
-                    <h4>Family Link</h4>
-                    <p>R99 p/m for family of 5.<br/>Link family members, shared alerts.</p>
-                </div>
-            </motion.div>
-
-            <motion.div className="feature-card-clean" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
-                <div className="feature-card-icon">🏢</div>
-                <div className="feature-card-content">
-                    <h4>Enterprise Solution</h4>
-                    <p>Security Companies Get:<br/>Own Control-Room Dashboard & Server Network.</p>
-                </div>
-            </motion.div>
-
-        </section>
-
-  </div>
-</section>
-
-
-<div id="trust-bar">
-  <div className="trust-inner">
-    <span className="trust-label">Trusted by</span>
-    <div className="trust-items">
-      <div className="trust-item"><i className="fa-solid fa-shield-halved"></i> Neighbourhood Watches</div>
-      <div className="trust-item"><i className="fa-solid fa-building"></i> Residential Estates</div>
-      <div className="trust-item"><i className="fa-solid fa-graduation-cap"></i> Schools</div>
-      <div className="trust-item"><i className="fa-solid fa-car-side"></i> Security Companies</div>
-      <div className="trust-item"><i className="fa-solid fa-briefcase"></i> Businesses</div>
-      <div className="trust-item"><i className="fa-solid fa-users"></i> Families</div>
-    </div>
-  </div>
-</div>
-
-
-<section id="why">
-  <div className="section-inner">
-    <div className="section-eyebrow">Why SafetyLink-Core</div>
-    <h2 className="section-headline">Protection That Works When It Matters Most</h2>
-    <p className="section-sub">Built from the ground up for South Africa's unique safety environment — fast, reliable, offline-capable, and community-driven.</p>
-    <div className="why-grid">
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-solid fa-bolt"></i></div>
-        <h3>2-Second Activation</h3>
-        <p>A 2-second hold-to-trigger panic button with a 10-second disarm window eliminates accidental calls while ensuring instant real activation when you need it most.</p>
+      {/* Full Screen Menu Overlay */}
+      <div 
+        className={`fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col justify-center items-center gap-6 transition-all duration-300 z-[9999] ${
+          menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-6 mt-16 max-h-[80vh] overflow-y-auto w-full px-4 pb-12">
+          <button onClick={() => navTo('home')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'home' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Home</button>
+          <button onClick={() => navTo('platform')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'platform' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Platform Features</button>
+          <button onClick={() => navTo('why')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'why' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Use Cases</button>
+          <button onClick={() => navTo('hardware')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'hardware' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Hardware Config</button>
+          <button onClick={() => navTo('klev')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'klev' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>AI Co-Pilot</button>
+          <button onClick={() => navTo('pricing')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'pricing' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Pricing</button>
+          <button onClick={() => navTo('download')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'download' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Download</button>
+          <button onClick={() => navTo('contact')} className={`text-3xl font-black uppercase tracking-wider ${activeSection === 'contact' ? 'text-emerald-400' : 'text-slate-300 hover:text-white'}`}>Contact Us</button>
+          
+          <div className="w-24 h-1 bg-slate-800 rounded-full my-4"></div>
+          
+          <div className="flex flex-col gap-4 w-full max-w-sm">
+            <button onClick={() => { setMenuOpen(false); onLogin(); }} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-lg tracking-wider uppercase transition-all shadow-lg shadow-emerald-500/20">
+              <i className="fa-solid fa-right-to-bracket mr-2"></i> Access Dashboard
+            </button>
+            {onRegisterOrg && (
+              <button onClick={() => { setMenuOpen(false); onRegisterOrg(); }} className="w-full py-4 bg-slate-900 border border-slate-700 hover:border-emerald-500 text-white font-bold rounded-xl text-sm tracking-wider uppercase transition-all">
+                Register Organization
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-solid fa-map-location-dot"></i></div>
-        <h3>Live GPS Dispatch</h3>
-        <p>Your exact GPS coordinates are pushed to up to 5 emergency contacts via sequential SMS and voice call the moment panic is triggered — no guessing, no delay.</p>
-      </div>
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-brands fa-bluetooth-b"></i></div>
-        <h3>BLE Keyfob Integration</h3>
-        <p>The HST-01 iTAG keyfob connects via Bluetooth Low Energy, activating panic directly from your pocket or keychain — even with the screen locked.</p>
-      </div>
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-solid fa-building-shield"></i></div>
-        <h3>Organisation Management</h3>
-        <p>Security companies, estates, and neighbourhood watches get a full command dashboard — manage members, view live incidents, and run drill exercises from anywhere.</p>
-      </div>
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-solid fa-brain"></i></div>
-        <h3>K'lev.ai Assistant</h3>
-        <p>An embedded AI co-pilot helps members, responders, and administrators — answering safety protocols, drafting incident reports, and guiding emergency response in real time.</p>
-      </div>
-      <div className="why-card">
-        <div className="why-icon"><i className="fa-solid fa-devices"></i></div>
-        <h3>APK, Web & Desktop</h3>
-        <p>One unified login across the Android APK, the web dashboard, and the Windows EXE — your profile, your organisation, your incident history — everywhere you need it.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
-
-<section id="platform">
-  <div className="section-inner">
-    <div className="platform-header">
-      <div>
-        <div className="section-eyebrow">Platform</div>
-        <h2 className="section-headline">Everything You Need to Manage Community Safety</h2>
-      </div>
-      <p className="section-sub" style={{'alignSelf': 'end'}}>From a single panic button to a full organisational command centre — SafetyLink-Core connects every layer of your community's safety infrastructure.</p>
-    </div>
-    <div className="platform-grid">
+      {/* Main Content Area */}
+      <main className="min-h-screen">
+        {renderSection()}
+      </main>
       
-      <div className="platform-card featured">
-        <div className="pc-icon"><i className="fa-solid fa-bell"></i></div>
-        <div className="pc-title">Panic Trigger System</div>
-        <p className="pc-desc">2-second hold to arm, 10-second countdown to disarm. Sequential SMS and voice dispatch to up to 5 contacts with live GPS coordinates attached. The core of everything SafetyLink does.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-map"></i></div>
-        <div className="pc-title">Live GIS Map</div>
-        <p className="pc-desc">Leaflet.js-powered live map centred on your community — track members, incidents, and responder positions in real time.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-brands fa-bluetooth-b"></i></div>
-        <div className="pc-title">BLE Keyfob</div>
-        <p className="pc-desc">HST-01 iTAG integration with foreground service persistence — panic works through screen lock, OEM battery killers, and background restrictions.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-brands fa-whatsapp"></i></div>
-        <div className="pc-title">WhatsApp Alerts</div>
-        <p className="pc-desc">Dispatch emergency notifications directly to WhatsApp groups and individual contacts alongside SMS and voice call.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-shield-check"></i></div>
-        <div className="pc-title">Drill Mode</div>
-        <p className="pc-desc">Run live emergency drills without triggering real alerts — train your team, test the system, confirm every contact works.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-vault"></i></div>
-        <div className="pc-title">ZK Evidence Vault</div>
-        <p className="pc-desc">AES-256-GCM encrypted local evidence storage with PBKDF2 key derivation — secure incident media and documents that only you can access.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-users-gear"></i></div>
-        <div className="pc-title">Org Dashboard</div>
-        <p className="pc-desc">Full member management, QR code onboarding, referral tracking, live incident feeds, and role-based access — built for security companies and community leadership.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-chart-line"></i></div>
-        <div className="pc-title">Incident Analytics</div>
-        <p className="pc-desc">Time-of-day heat maps, response time tracking, area risk scoring — data that helps organisations allocate patrols and prevent incidents before they occur.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-microphone"></i></div>
-        <div className="pc-title">Emergency Audio Recording</div>
-        <p className="pc-desc">Automatic audio capture on panic activation, uploaded securely to your vault for evidentiary use or insurance claims.</p>
-      </div>
-
-      <div className="platform-card">
-        <div className="pc-icon"><i className="fa-solid fa-network-wired"></i></div>
-        <div className="pc-title">Open Platform Layer</div>
-        <p className="pc-desc">Ntfy, OwnCloud, and Sensor Stream integrations extend dispatch beyond SMS — connect your existing community infrastructure.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<div id="stats">
-  <div className="stats-inner">
-    <div>
-      <div className="stat-val">2s</div>
-      <div className="stat-label">Panic Activation Time</div>
-    </div>
-    <div>
-      <div className="stat-val">5</div>
-      <div className="stat-label">Emergency Contacts Dispatched</div>
-    </div>
-    <div>
-      <div className="stat-val">3</div>
-      <div className="stat-label">Platforms — APK, Web, EXE</div>
-    </div>
-    <div>
-      <div className="stat-val">256</div>
-      <div className="stat-label">AES-GCM Vault Encryption</div>
-    </div>
-  </div>
-</div>
-
-
-<section id="klev">
-  <div className="section-inner">
-    <div className="klev-inner">
-      <div>
-        <div className="section-eyebrow">K'lev.ai</div>
-        <h2 className="section-headline">Your AI Emergency Response Co-Pilot</h2>
-        <p className="section-sub" style={{'marginBottom': '32px'}}>K'lev.ai is embedded directly in SafetyLink-Core — available to members, responders, and administrators instantly. Ask a question, get a protocol. Draft an incident report in seconds. Guide a bystander through first response.</p>
-        <ul style={{'listStyle': 'none', 'display': 'flex', 'flexDirection': 'column', 'gap': '14px'}}>
-          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
-            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
-            <span style={{'fontSize': '15px'}}>Real-time safety protocol guidance during active incidents</span>
-          </li>
-          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
-            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
-            <span style={{'fontSize': '15px'}}>Automated incident report drafting from event data</span>
-          </li>
-          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
-            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
-            <span style={{'fontSize': '15px'}}>Community communication drafting — alerts, notices, updates</span>
-          </li>
-          <li style={{'display': 'flex', 'gap': '12px', 'alignItems': 'flex-start'}}>
-            <i className="fa-solid fa-check" style={{'color': '#4ade80', 'marginTop': '2px', 'flexShrink': '0'}}></i>
-            <span style={{'fontSize': '15px'}}>Available in all three platforms — APK, web, and EXE</span>
-          </li>
-        </ul>
-      </div>
-
-      <div className="ai-chat-mock">
-        <div className="ai-chat-header">
-          <div className="ai-avatar"><i className="fa-solid fa-brain"></i></div>
-          <div>
-            <div className="ai-name">K'lev.ai</div>
-            <div className="ai-status">● Online — SafetyLink-Core</div>
-          </div>
+      {/* Footer is part of contactPart natively, or we can just keep it attached to the bottom if we extracted it properly. But contactPart actually contains the footer. Let's make sure the footer is always visible or just leave it inside contactPart. Actually, let's let contactPart have it, or put footer globally. */}
+      {activeSection !== 'contact' && (
+        <div className="text-center py-8 text-slate-500 text-xs font-mono border-t border-slate-900 mt-12">
+          &copy; {new Date().getFullYear()} TM Media Solutions. All rights reserved.
         </div>
-        <div className="ai-messages">
-          <div className="ai-msg from-user">Panic triggered on Moira Park sector. What should responders do first?</div>
-          <div className="ai-msg from-ai">
-            Immediate response protocol:<br /><br />
-            1. Confirm GPS coordinates received — locate on live map.<br />
-            2. Dispatch nearest patrol unit — ETA estimation required.<br />
-            3. Attempt voice callback to the member within 30 seconds.<br />
-            4. Alert sector group via WhatsApp broadcast.<br />
-            5. If no response in 90s, escalate to SAPS 10111.
-          </div>
-          <div className="ai-msg from-user">Draft an incident report for this event.</div>
-          <div className="ai-msg from-ai">
-            <strong>Incident Report — SafetyLink-Core</strong><br />
-            Date: 2026-08-19 · Sector: Moira Park<br />
-            Type: Panic Activation · Status: Active<br />
-            Member: [Auto-resolved from GPS]<br />
-            Response time: calculating…<br />
-            Actions taken: [Will auto-populate on resolution]
-          </div>
-        </div>
-        <div className="ai-input-row">
-          <i className="fa-solid fa-comment-dots"></i>
-          <span>Ask K'lev.ai anything…</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<section id="pricing">
-  <div className="section-inner">
-    <div className="section-eyebrow">Pricing</div>
-    <h2 className="section-headline">Transparent Pricing for Every Community</h2>
-    <p className="section-sub">From individual protection to enterprise security infrastructure — choose the plan that fits your situation.</p>
-
-    <h3 style={{'fontFamily': 'Exo 2, sans-serif', 'fontSize': '18px', 'fontWeight': '700', 'margin': '48px 0 0', 'color': 'var(--muted)', 'letterSpacing': '.5px', 'textTransform': 'uppercase'}}>Individual &amp; Family</h3>
-    <div className="plans-grid" style={{'marginTop': '24px'}}>
-
-      <div className="plan-card">
-        <div className="plan-tier">Individual</div>
-        <div className="plan-name">Free</div>
-        <div className="plan-price">R<sup></sup>0<span className="period">/mo</span></div>
-        <div className="plan-desc">Basic protection for individuals. No credit card required.</div>
-        <hr className="plan-divider"/>
-        <ul className="plan-features">
-          <li><i className="fa-solid fa-check"></i>1 user</li>
-          <li><i className="fa-solid fa-check"></i>Live GPS tracking</li>
-          <li><i className="fa-solid fa-check"></i>24-hour incident history</li>
-          <li><i className="fa-solid fa-check"></i>Community alerts</li>
-          <li><i className="fa-solid fa-check"></i>Basic push notifications</li>
-        </ul>
-        <a href="#download" className="plan-cta">Get Started Free</a>
-      </div>
-
-      <div className="plan-card featured-plan">
-        <div className="plan-badge">Most Popular</div>
-        <div className="plan-tier">Individual</div>
-        <div className="plan-name">Premium</div>
-        <div className="plan-price">R<sup></sup>49<span className="period">/mo</span></div>
-        <div className="plan-desc">Full protection. Also available at R499/yr or R149 once-off.</div>
-        <hr className="plan-divider"/>
-        <ul className="plan-features">
-          <li><i className="fa-solid fa-check"></i>Up to 5 iTAG keyfobs</li>
-          <li><i className="fa-solid fa-check"></i>Unlimited panic activations</li>
-          <li><i className="fa-solid fa-check"></i>Private company monitoring</li>
-          <li><i className="fa-solid fa-check"></i>Live real-time tracking</li>
-          <li><i className="fa-solid fa-check"></i>12-month incident history</li>
-          <li><i className="fa-solid fa-check"></i>Safe zone alerts</li>
-          <li><i className="fa-solid fa-check"></i>Emergency audio recording</li>
-          <li><i className="fa-solid fa-check"></i>Priority cloud & support</li>
-        </ul>
-        <a href="#download" className="plan-cta cta-red">Get Premium</a>
-      </div>
-
-      <div className="plan-card">
-        <div className="plan-tier">Family</div>
-        <div className="plan-name">Family</div>
-        <div className="plan-price">R<sup></sup>99<span className="period">/mo</span></div>
-        <div className="plan-desc">Full household coverage. Also R999/yr or R249 once-off.</div>
-        <hr className="plan-divider"/>
-        <ul className="plan-features">
-          <li><i className="fa-solid fa-check"></i>Up to 6 family members</li>
-          <li><i className="fa-solid fa-check"></i>12 iTAG keyfobs</li>
-          <li><i className="fa-solid fa-check"></i>Shared family dashboard</li>
-          <li><i className="fa-solid fa-check"></i>Live family tracking</li>
-          <li><i className="fa-solid fa-check"></i>Group panic activation</li>
-          <li><i className="fa-solid fa-check"></i>Shared safe zones</li>
-          <li><i className="fa-solid fa-check"></i>Family emergency timeline</li>
-        </ul>
-        <a href="#download" className="plan-cta">Get Family Plan</a>
-      </div>
-    </div>
-
-    
-    <h3 style={{'fontFamily': 'Exo 2, sans-serif', 'fontSize': '18px', 'fontWeight': '700', 'margin': '72px 0 0', 'color': 'var(--muted)', 'letterSpacing': '.5px', 'textTransform': 'uppercase'}}>Security Company &amp; Community Patrol</h3>
-    <div className="sec-plans-grid">
-      <div className="sec-card">
-        <div className="sec-tier">Starter</div>
-        <div className="sec-name">Starter</div>
-        <div className="sec-price">R999<span className="per">/mo</span></div>
-        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 50 clients</div>
-        <div className="sec-feat">Live map · Basic reporting · Client management</div>
-      </div>
-      <div className="sec-card" style={{'borderColor': 'rgba(198,40,40,0.3)'}}>
-        <div className="sec-tier">Professional</div>
-        <div className="sec-name">Professional</div>
-        <div className="sec-price">R2,499<span className="per">/mo</span></div>
-        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 250 clients</div>
-        <div className="sec-feat">Auto dispatch · Incident & staff management · API access · Advanced reports · WhatsApp alerts</div>
-      </div>
-      <div className="sec-card">
-        <div className="sec-tier">Business</div>
-        <div className="sec-name">Business</div>
-        <div className="sec-price">R5,999<span className="per">/mo</span></div>
-        <div className="sec-clients"><i className="fa-solid fa-users"></i> Up to 1,000 clients</div>
-        <div className="sec-feat">White-label dashboard · Multi-branch · Fleet tracking</div>
-      </div>
-      <div className="sec-card" style={{'borderColor': 'rgba(255,143,0,0.3)'}}>
-        <div className="sec-tier">Enterprise</div>
-        <div className="sec-name">Enterprise</div>
-        <div className="sec-price" style={{'color': 'var(--amber)'}}>Custom</div>
-        <div className="sec-clients" style={{'color': 'var(--muted)'}}><i className="fa-solid fa-infinity"></i> Unlimited</div>
-        <div className="sec-feat">Dedicated infrastructure · White-label mobile app · 24/7 priority support</div>
-      </div>
-    </div>
-    <p style={{'fontSize': '13px', 'color': 'var(--muted)', 'marginTop': '20px'}}>Add-ons: White-Label Mobile App R1,000/mo · Advanced Analytics R299/mo · SMS bundles, WhatsApp Business, Voice Dispatch: usage-based</p>
-  </div>
-</section>
-
-
-<section id="hardware">
-  <div className="section-inner">
-    <div style={{'display': 'grid', 'gridTemplateColumns': '1fr 1fr', 'gap': '80px', 'alignItems': 'center'}} className="hw-grid">
-      <div>
-        <div className="section-eyebrow">Hardware</div>
-        <h2 className="section-headline">iTAG BLE Keyfob — Your Wearable Panic Button</h2>
-        <p className="section-sub" style={{'marginBottom': '32px'}}>
-          The HST-01 iTAG attaches to your keys, bag, or belt. One press triggers SafetyLink panic from anywhere — no phone unlock required. Included automatically with Premium and Family plans.
-        </p>
-        <p className="hw-note">
-          Available individually or in bulk packs for neighbourhood watch groups and security companies. 
-          ~28% margin on 10-packs for reseller and distributor programmes.
-        </p>
-      </div>
-      <div>
-        <div className="hw-card">
-          <div className="hw-icon-wrap"><i className="fa-solid fa-tag"></i></div>
-          <div className="hw-info">
-            <h4>Single iTAG</h4>
-            <p>1 BLE panic keyfob</p>
-          </div>
-          <div className="hw-price">R100</div>
-        </div>
-        <div className="hw-card">
-          <div className="hw-icon-wrap"><i className="fa-solid fa-tags"></i></div>
-          <div className="hw-info">
-            <h4>3-Pack</h4>
-            <p>Family starter pack</p>
-          </div>
-          <div className="hw-price">R179</div>
-        </div>
-        <div className="hw-card">
-          <div className="hw-icon-wrap"><i className="fa-solid fa-boxes-stacked"></i></div>
-          <div className="hw-info">
-            <h4>5-Pack</h4>
-            <p>Household or small team</p>
-          </div>
-          <div className="hw-price">R299</div>
-        </div>
-        <div className="hw-card" style={{'borderColor': 'rgba(255,143,0,0.3)'}}>
-          <div className="hw-icon-wrap"><i className="fa-solid fa-warehouse"></i></div>
-          <div className="hw-info">
-            <h4>10-Pack</h4>
-            <p>Reseller / estate / NHW</p>
-          </div>
-          <div className="hw-price" style={{'color': 'var(--amber)'}}>R499</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<section id="download">
-  <div className="section-inner">
-    <div className="section-eyebrow">Get SafetyLink-Core</div>
-    <h2 className="section-headline">One Login. Three Platforms.</h2>
-    <p className="section-sub">Register once at safetylink.online. Your profile, organisation, and incident history sync instantly across every platform.</p>
-    <div className="download-grid">
-      <div className="dl-card">
-        <div className="dl-icon"><i className="fa-brands fa-android"></i></div>
-        <h3>Android APK</h3>
-        <p>The full SafetyLink-Core experience — panic button, BLE keyfob, live GPS, K'lev.ai — built for Android. Download direct from safetylink.online.</p>
-        <a href="#" onClick={(e) => { e.preventDefault(); }} className="dl-btn">
-          <i className="fa-solid fa-download"></i> Download APK
-        </a>
-      </div>
-      <div className="dl-card">
-        <div className="dl-icon"><i className="fa-solid fa-globe"></i></div>
-        <h3>Web Dashboard</h3>
-        <p>Organisation management, incident command, live map, member administration, and analytics — accessible from any browser, anywhere.</p>
-        <a href="#" onClick={(e) => { e.preventDefault(); onLogin(); }} className="dl-btn outline">
-          <i className="fa-solid fa-arrow-up-right-from-square"></i> Open Dashboard
-        </a>
-      </div>
-      <div className="dl-card">
-        <div className="dl-icon"><i className="fa-brands fa-windows"></i></div>
-        <h3>Windows EXE</h3>
-        <p>The full organisation console as a native Windows desktop application — for security control rooms that need dedicated, always-on monitoring.</p>
-        <a href="#" onClick={(e) => { e.preventDefault(); }} className="dl-btn outline">
-          <i className="fa-solid fa-download"></i> Download EXE
-        </a>
-      </div>
-    </div>
-    <div style={{'background': 'var(--panel)', 'border': '1px solid var(--border)', 'borderRadius': 'var(--r-lg)', 'padding': '32px', 'marginTop': '32px', 'display': 'flex', 'alignItems': 'center', 'gap': '24px', 'flexWrap': 'wrap'}}>
-      <i className="fa-solid fa-qrcode" style={{'fontSize': '40px', 'color': 'var(--red)', 'flexShrink': '0'}}></i>
-      <div>
-        <h4 style={{'fontFamily': 'Exo 2, sans-serif', 'fontWeight': '700', 'marginBottom': '6px'}}>Organisation QR Onboarding</h4>
-        <p style={{'fontSize': '14px', 'color': 'var(--muted)'}}>Organisations generate QR codes from their dashboard — members scan and are instantly placed under the correct organisation. No manual codes required.</p>
-      </div>
-      <a href="#" onClick={(e) => { e.preventDefault(); if (onRegisterOrg) onRegisterOrg(); else onLogin(); }} className="btn-hero-secondary">Register Your Org</a>
-    </div>
-  </div>
-</section>
-
-
-<div id="cta-banner" id="contact">
-  <h2 className="cta-headline">Ready to Protect Your Community?</h2>
-  <p className="cta-sub">SafetyLink-Core is built right here in South Africa — for South African communities.<br />Start free today. No credit card required.</p>
-  <div className="cta-actions">
-    <a href="#" onClick={(e) => { e.preventDefault(); }} className="btn-hero-primary">
-      <i className="fa-brands fa-android"></i> Download APK — Free
-    </a>
-    <a href="#" onClick={(e) => { e.preventDefault(); if (onRegisterOrg) onRegisterOrg(); else onLogin(); }} className="btn-hero-secondary">
-      <i className="fa-solid fa-building-shield"></i> Register Your Organisation
-    </a>
-    <a href="mailto:info@safetylink.online" className="btn-hero-secondary">
-      <i className="fa-solid fa-envelope"></i> Contact Us
-    </a>
-  </div>
-</div>
-
-
-<footer>
-  <div className="footer-inner">
-    <div className="footer-top">
-      <div className="footer-brand">
-        <div className="nav-logo" style={{'marginBottom': '0'}}>
-          <div className="shield"><i className="fa-solid fa-shield-halved"></i></div>
-          SafetyLink<span className="core">-Core</span>
-        </div>
-        <p>South Africa's most advanced community emergency response platform — built by TM Media Solutions in Lenasia South, Gauteng.</p>
-        <div style={{'display': 'flex', 'gap': '12px', 'marginTop': '20px'}}>
-          <a href="https://facebook.com/SafetyLink" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#fff'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-facebook-f fa-lg"></i></a>
-          <a href="https://wa.me/27739441222" style={{'color': 'var(--muted)', 'transition': 'color .2s'}} onMouseOver={(e) => e.currentTarget.style.color='#25d366'} onMouseOut={(e) => e.currentTarget.style.color='var(--muted)'}><i className="fa-brands fa-whatsapp fa-lg"></i></a>
-        </div>
-      </div>
-      <div className="footer-col">
-        <h4>Platform</h4>
-        <ul>
-          <li><a href="#platform">Panic Trigger</a></li>
-          <li><a href="#platform">Live GPS</a></li>
-          <li><a href="#platform">BLE Keyfob</a></li>
-          <li><a href="#platform">ZK Evidence Vault</a></li>
-          <li><a href="#klev">K'lev.ai</a></li>
-          <li><a href="#platform">Drill Mode</a></li>
-        </ul>
-      </div>
-      <div className="footer-col">
-        <h4>Plans</h4>
-        <ul>
-          <li><a href="#pricing">Free</a></li>
-          <li><a href="#pricing">Premium</a></li>
-          <li><a href="#pricing">Family</a></li>
-          <li><a href="#pricing">Security Starter</a></li>
-          <li><a href="#pricing">Professional</a></li>
-          <li><a href="#pricing">Enterprise</a></li>
-        </ul>
-      </div>
-      <div className="footer-col">
-        <h4>Company</h4>
-        <ul>
-          <li><a href="mailto:info@safetylink.online">Contact Us</a></li>
-          <li><a href="#download">Download APK</a></li>
-          <li><a href="#download">Web Dashboard</a></li>
-          <li><a href="#hardware">iTAG Hardware</a></li>
-          <li><a href="/legal/privacy">Privacy Policy</a></li>
-          <li><a href="/legal/terms">Terms of Use</a></li>
-        </ul>
-      </div>
-    </div>
-    <div className="footer-bottom">
-      <span>© 2026 SafetyLink-Core by TM Media Solutions. All rights reserved.</span>
-      <div className="footer-legal">
-        <a href="/legal/privacy">Privacy Policy</a>
-        <a href="/legal/terms">Terms of Use</a>
-        <a href="/legal/popia">POPIA Compliance</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-
-      
+      )}
     </div>
   );
 }
