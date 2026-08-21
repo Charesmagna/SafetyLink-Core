@@ -583,13 +583,15 @@ async function startServer() {
   // Register new org with 14-day trial
   app.post("/api/register-org", async (req: any, res: any) => {
     try {
-      const { org_name, admin_password } = req.body;
-      const org_code = 'SL-' + org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000);
-      const hash = crypto.createHash('sha256').update(admin_password).digest('hex');
+      const { org_name, admin_password, name, password, id } = req.body;
+      const final_org_name = org_name || name;
+      const final_admin_password = admin_password || password;
+      const org_code = id || ('SL-' + final_org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000));
+      const hash = crypto.createHash('sha256').update(final_admin_password).digest('hex');
       const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
       await db.execute({
         sql: "INSERT INTO organizations (org_code, org_name, admin_password_hash, trial_active, trial_expires_at) VALUES (?, ?, ?, 1, ?)",
-        args: [org_code, org_name, hash, trial_expires]
+        args: [org_code, final_org_name, hash, trial_expires]
       });
       res.json({ success: true, org_code, trial_expires, trial_days: 14 });
     } catch (e: any) { res.status(500).json({ error: e.message }); }

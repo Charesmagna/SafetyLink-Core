@@ -15,7 +15,7 @@ import slide5 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
 import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
 
-export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSite }) => {
+export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LOGIN' | 'REGISTER_ORG' }> = ({ onBackToSite, initialView }) => {
   const { 
     login, 
     registerUser, 
@@ -25,7 +25,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
     demoMode,
     toggleDemoMode
   } = useAppStore();
-  const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG' | 'POST_REGISTER_DECISION'>('LOGIN');
+  const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG' | 'POST_REGISTER_DECISION'>(initialView as any || 'LOGIN');
   const [registeredUsername, setRegisteredUsername] = useState('');
   const [registeredPassword, setRegisteredPassword] = useState('');
 
@@ -280,6 +280,22 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
 
   return (
     <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
+      {/* Background Branding & Media */}
+      <video 
+        autoPlay 
+        loop 
+        muted 
+        playsInline 
+        className="fixed inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none" 
+        src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4"
+      />
+      <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
+      <img 
+        src="/media/new_logo/New_SafetyLink_Official_Logo.svg" 
+        className="fixed inset-0 w-full h-full object-contain opacity-[0.03] z-0 pointer-events-none" 
+        alt="" 
+      />
+
       {onBackToSite && (
         <button 
           onClick={onBackToSite}
@@ -293,7 +309,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
       {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}
       <PricingModal isOpen={showPricing} onClose={() => setShowPricing(false)} />
       {showExitConfirm && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
               <span className="text-2xl">🚪</span>
@@ -875,7 +891,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
                   onClick={() => {
                     login(registeredUsername, registeredPassword);
                   }}
-                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-blue-500/50 rounded-2xl transition-all cursor-pointer group"
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/60 border border-slate-900 hover:border-blue-500/50 rounded-2xl transition-all cursor-pointer group"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors mt-0.5">
@@ -898,7 +914,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void }> = ({ onBackToSi
                   onClick={() => {
                     setView('REGISTER_ORG');
                   }}
-                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/80 border border-slate-900 hover:border-emerald-500/50 rounded-2xl transition-all cursor-pointer group"
+                  className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/60 border border-slate-900 hover:border-emerald-500/50 rounded-2xl transition-all cursor-pointer group"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors mt-0.5">

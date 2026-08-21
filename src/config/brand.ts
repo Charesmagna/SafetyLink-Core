@@ -16,7 +16,7 @@ export const Brand = {
   umbrellaLogo: `/media/new_logo/New_SafetyLink_Official_Logo.svg`,
 
   // 3D animation — use in: web hero background, APK splash screen  
-  animation3d: `/media/SafetyLink_3D_Animation_Logo.mp4`,
+  animation3d: `/media/videos/SafetyLink 3D Animation Logo.mp4`,
 
   // App launcher icon — APK home screen icon
   launcherIcon: `/media/new_logo/New_SafetyLink_Official_Logo.svg`,
@@ -28,8 +28,8 @@ export const Brand = {
   adminLogo: `/media/new_logo/New_SafetyLink_Official_Logo.svg`,
 
   // Architecture diagrams — web "How it Works" and "Tech" sections
-  architectureDiagram: `/media/docs/Safety_Response_System_Architecture.png`,
-  anatomyDiagram: `/media/docs/Emergency_System_Architecture_Anatomy.png`,
+  architectureDiagram: `/media/images/Safety_Response_System_Architecture.png`,
+  anatomyDiagram: `/media/images/Emergency_System_Architecture_Anatomy.png`,
 
   // K'lev.ai partner logo — web partners/powered-by section
   klevLogo: `/media/klev_ai_logo.png`,

@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { auth, db } from '../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Capacitor } from '@capacitor/core';
 import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
 import { NativeDispatchService } from '../services/NativeDispatchService';
@@ -14,6 +17,7 @@ interface AppState {
   setGlobalTheme: (theme: 'dark' | 'light') => void;
   updateInfo: UpdateInfo | null;
   checkAppUpdates: () => Promise<void>;
+  initMeshSync: () => void;
   contacts: Contact[];
   panicEvents: PanicEvent[];
   activeSOSState: 'IDLE' | 'ACQUIRING_GPS' | 'CAPTURING_EVIDENCE' | 'ESCALATING' | 'DISPATCHED' | 'RESOLVED';
@@ -319,6 +323,38 @@ const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 
 export const useAppStore = create<AppState>((set, get) => ({
   updateInfo: null,
+  initMeshSync: () => {
+    let unsubscribe: any = null;
+    const state = get();
+    if (state.firestoreSync && state.currentUser) {
+      const q = query(collection(db, 'users'), where('orgCode', '==', state.currentUser.orgCode || ''));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+         const nodes: any[] = [];
+         snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.id !== state.currentUser?.id && data.lat && data.lng) {
+               nodes.push({
+                  id: data.id,
+                  name: data.username || 'Responder',
+                  lat: data.lat,
+                  lng: data.lng,
+                  status: data.activeSOS ? 'ACTIVE' : 'SECURE',
+                  type: 'RESPONDER',
+                  battery: data.battery || 100
+               });
+            }
+         });
+         // Merge with local nodes (drones, cameras, etc.)
+         const currentState = get();
+         const localNodes = currentState.meshNodes.filter(n => n.type !== 'RESPONDER');
+         set({ meshNodes: [...localNodes, ...nodes] });
+      }, (error) => {
+         console.warn('Mesh sync listener error:', error);
+      });
+    }
+    return () => { if (unsubscribe) unsubscribe(); };
+  },
+  
   checkAppUpdates: async () => {
     const updateInfo = await checkForUpdate();
     set({ updateInfo });
@@ -687,55 +723,52 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (exists) {
         return { success: false, error: 'Username is already taken.' };
       }
-      const newUser: UserProfile = {
+      const newUser = {
         ...user,
         id: `usr-${Math.random().toString(36).substring(2, 9)}`,
         createdAt: Date.now(), subscriptionStatus: "trial"
       };
       const updatedUsers = [...users, newUser];
-      set({ users: updatedUsers });
+      set({ users: updatedUsers as any });
       setStoredJSON('sl_users', updatedUsers);
       const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
       setStoredJSON('sl_real_users', [...realUsers, newUser]);
       get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Demo)', `Username: ${newUser.username}`);
       return { success: true };
     }
+    // End commented out section */
 
     // 2. Otherwise, make a real network request to our backend
     try {
-      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.username,
-          password: user.password, // Standard demo password for register-user form since it's a showcase flow
-          fullName: user.fullName,
-          phone: user.phone,
-          email: user.email,
-          orgCode: user.orgCode,
-          role: user.role,
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-
-      const newUser = data.user;
+      const userCred = await createUserWithEmailAndPassword(auth, user.email, user.password || 'demo123');
+      const newUser = {
+        id: userCred.user.uid,
+        username: user.username,
+        email: user.email,
+        phone: user.phone || '',
+        fullName: user.fullName || '',
+        orgCode: user.orgCode || '',
+        role: user.role || 'Responder',
+        createdAt: Date.now()
+      };
+      await setDoc(doc(db, 'users', userCred.user.uid), newUser);
+      
       set({
-        currentUser: newUser,
-        token: data.token,
+        currentUser: newUser as any,
+        token: await userCred.user.getIdToken(),
         superAdminActive: false,
-        users: [...get().users, newUser]
+        users: [...get().users, newUser as any]
       });
-      setStoredJSON('sl_jwt_token', data.token);
+      setStoredJSON('sl_jwt_token', await userCred.user.getIdToken());
       setStoredJSON('sl_current_user', newUser);
       setStoredJSON('sl_super_admin', false);
-
+      
       get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live)', `Username: ${newUser.username}, Token Provisioned`);
       return { success: true };
-    } catch (e) {
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+    /*
       // Try Firebase Auth as fallback
       try {
         const emailToTry = user.email || user.username + '@safetylink.local';
@@ -783,6 +816,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Offline Vault)', `Username: ${newUser.username}`);
       return { success: true };
     }
+    */
   },
 
   registerOrganization: async (org) => {
@@ -932,43 +966,24 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     // 3. Real network request to unified /api/login endpoint
     try {
-      const API_BASE = 'https://safetylink.online';
-      const res = await fetch(`${API_BASE}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, org_code: orgCode })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.trialExpired) return { success: false, error: 'Trial expired. Contact SafetyLink to activate.', role: 'USER' };
-        return { success: false, error: data.error || 'Login failed', role: 'USER' };
-      }
-
-      const isRealSuperAdmin = data.superAdmin === true;
-      const roleType = isRealSuperAdmin ? 'ADMIN' as const : 'USER' as const;
-
-      // Build minimal user profile from server response — all data lives on server
-      const serverUser = { username, orgCode: data.org_code, role: isRealSuperAdmin ? 'Super Admin' : 'Organization Administrator' };
+      const userCred = await signInWithEmailAndPassword(auth, username + '@safetylink.app', password || ''); 
+      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+      const userData = userDoc.exists() ? userDoc.data() : { username, orgCode };
+      
       set({
-        currentUser: serverUser as any,
-        token: data.token,
-        superAdminActive: isRealSuperAdmin,
-        currentOrg: isRealSuperAdmin ? null : { id: data.org_code, name: data.org_name, orgCode: data.org_code } as any
+        currentUser: userData as any,
+        token: await userCred.user.getIdToken(),
+        superAdminActive: false,
+        currentOrg: { id: userData.orgCode } as any
       });
-
-      // Store only the token — user data always fetched from server on next login
-      setStoredJSON('sl_jwt_token', data.token);
-      setStoredJSON('sl_org_code', data.org_code);
-      setStoredJSON('sl_super_admin', isRealSuperAdmin);
-
-      if (data.trialDaysLeft !== null && data.trialDaysLeft <= 3) {
-        get().addAuditLog('SECURITY', 'WARN', 'Trial Expiring', `${data.trialDaysLeft} day(s) remaining`);
-      }
-
-      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Server)', `Org: ${data.org_name}`);
-      return { success: true, role: roleType };
-    } catch (e) {
+      setStoredJSON('sl_jwt_token', await userCred.user.getIdToken());
+      setStoredJSON('sl_current_user', userData);
+      setStoredJSON('sl_super_admin', false);
+      return { success: true, role: 'USER' };
+    } catch (e: any) {
+      return { success: false, error: e.message, role: 'USER' };
+    }
+    /*
       // Try Firebase Auth as fallback
       try {
         const emailToTry = username.includes('@') ? username : username + '@safetylink.local';
@@ -1041,6 +1056,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
       return { success: false, error: 'Connection failure to auth server, and no local offline account found.', role: 'USER' };
     }
+    // End commented out section */
   },
 
   fetchSuperAdminData: async () => {
@@ -1238,6 +1254,21 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     set({ userLocation: { lat, lng }, gpsAccuracy: accuracy });
     if (get().activeSOSState !== 'IDLE') {
       get().addAuditLog('GPS', 'INFO', `GPS location updated to: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, accuracy);
+    }
+    
+    // Push geo-location to Firestore if authenticated and sync is on
+    const state = get();
+    if (state.currentUser && state.currentUser.id && state.firestoreSync) {
+      try {
+        updateDoc(doc(db, 'users', state.currentUser.id), {
+          lat: lat,
+          lng: lng,
+          lastLocationUpdate: Date.now(),
+          gpsAccuracy: accuracy
+        }).catch(err => {
+           console.log('Non-critical: Firebase location sync skipped/failed offline', err.message);
+        });
+      } catch (err) {}
     }
   },
 

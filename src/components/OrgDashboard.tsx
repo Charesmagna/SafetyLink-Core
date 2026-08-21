@@ -170,14 +170,14 @@ export const OrgDashboard: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
+          <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
         </video>
       )}
       {/* Background with Glowing Heart and Heartbeat Pulse */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
         <GlowingHeartBackground />
         {/* Transparent dark overlay to keep foreground text highly readable */}
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px]" />
       </div>
       {/* Active Org Alerts Banner */}
       {activeOrgPanics.length > 0 && (
@@ -513,7 +513,7 @@ export const OrgDashboard: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {pendingUsers.map(user => (
-                      <div key={user.id} className="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
+                      <div key={user.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
                         <div className="space-y-1 text-xs">
                           <p className="font-extrabold text-slate-200">{user.fullName} <span className="text-[9px] font-mono text-slate-500">(@{user.username})</span></p>
                           <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Requested Role:</span> <span className="font-bold text-amber-400 uppercase">{user.pendingRole || 'Community Member'}</span></p>
