@@ -123,7 +123,7 @@ export const Settings: React.FC = () => {
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-purple-500 via-pink-400 to-purple-500 neon-glow-blue" />
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
       <div className="flex justify-center mb-6 mt-2 relative z-10">
-        <img src="/media/new_logo/New_SafetyLink_Official_Logo.svg" alt="SafetyLink Official Logo" className="h-10 object-contain drop-shadow-xl bg-white p-1.5 rounded-xl" />
+        <img src="/safetylink-metallic.svg" alt="SafetyLink Official Logo" className="h-10 object-contain drop-shadow-xl bg-white p-1.5 rounded-xl" />
       </div>
 
       <div className="border-b border-slate-900 pb-3.5 text-left relative z-10 flex items-center gap-2">

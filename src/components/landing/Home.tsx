@@ -117,7 +117,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <div className="hero-right">
             <div className="hero-phone-wrap">
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4" alt="SafetyLink SOS Screen" />
+              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink SOS Screen" />
               <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command Login" />
             </div>
             <div className="hero-flow">
@@ -271,7 +271,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="panels">
             <div className={"panel pt" + (activePanel === 1 ? " visible" : "")} id="p1">
               <div className="pi">
-                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4" alt="SOS App"/></div>
+                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SOS App"/></div>
                 <div className="pbody">
                   <button className="pclose" onClick={closePanel}>×</button>
                   <div className="pbadge">Offline Operation</div>
@@ -324,7 +324,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <p style={{fontSize:'15px', color:'var(--muted)', maxWidth:'520px', lineHeight:'1.7', marginBottom:'48px'}}>Three layers of intelligent emergency response — Mobile, Command, and Admin — built for South African conditions.</p>
           <div className="feat-grid">
             <div className="feat-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4" alt="SafetyLink Mobile App" />
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink Mobile App" />
               <div className="feat-body">
                 <span className="feat-tag mobile">SafetyLink Mobile</span>
                 <div className="feat-title">Citizen Safety Hub</div>
@@ -509,7 +509,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <p className="section-sub">Available on Android, Windows, and as a Progressive Web App. Contact us on WhatsApp to receive your download link.</p>
           <div className="dl-grid">
             <div className="dl-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4" alt="Android App Preview"/>
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="Android App Preview"/>
               <div className="dl-title">Android APK</div>
               <div className="dl-sub">Minimum Android 8.0. Bluetooth LE required for iTAG functionality.</div>
               <a href="https://wa.me/27739441222?text=I+want+the+SafetyLink+APK" target="_blank" rel="noreferrer" className="dl-btn-link apk">Request on WhatsApp</a>
