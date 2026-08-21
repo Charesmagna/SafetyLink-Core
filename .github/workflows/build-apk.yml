@@ -4,7 +4,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,35 +16,29 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-      
       - name: Install dependencies
         run: npm ci
-
       - name: Build Web
         run: npm run build
-        
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        
       - name: Sync Capacitor
         run: npx cap sync android
-        
       - name: Build APK
         working-directory: ./android
-        run: ./gradlew assembleDebug
-        
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: safetylink-core.apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+        run: ./gradlew assembleRelease
+      - name: Generate Keystore & Sign APK
+        run: |
+          keytool -genkey -v -keystore release.keystore -alias safetylink -keyalg RSA -keysize 2048 -validity 10000 -storepass "Safety link 2024" -keypass "Safety link 2024" -dname "CN=SafetyLink, OU=SafetyLink Core, O=SafetyLink, L=Unknown, S=Unknown, C=US"
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          $BUILD_TOOLS_DIR/apksigner sign --ks release.keystore --ks-pass pass:"Safety link 2024" --ks-key-alias safetylink --key-pass pass:"Safety link 2024" android/app/build/outputs/apk/release/app-release-unsigned.apk
+          mv android/app/build/outputs/apk/release/app-release-unsigned.apk android/app/build/outputs/apk/release/SafetyLink-Core-Signed.apk
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          tag_name: "v1.0.${{ github.run_number }}"
-          name: "SafetyLink Core - Release ${{ github.run_number }}"
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: "v1.1.${{ github.run_number }}"
+          name: "SafetyLink Core - Signed Release v1.1.${{ github.run_number }}"
+          files: android/app/build/outputs/apk/release/SafetyLink-Core-Signed.apk
           draft: false
           prerelease: false

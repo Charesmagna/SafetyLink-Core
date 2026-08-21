@@ -5,13 +5,13 @@ import { sendTestEvent } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/safetylink-metallic.svg';
-import slide2 from '/safetylink-metallic.svg';
+import slide1 from '/sl-shield.svg';
+import slide2 from '/sl-shield.svg';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '/safetylink-metallic.svg';
-import slide5 from '/safetylink-metallic.svg';
+import slide4 from '/sl-shield.svg';
+import slide5 from '/sl-shield.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
-import newLogo1 from '/safetylink-metallic.svg';
+import newLogo1 from '/sl-shield.svg';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
 

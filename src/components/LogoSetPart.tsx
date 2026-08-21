@@ -32,7 +32,7 @@ export const LogoSetPart: React.FC<LogoSetPartProps> = ({
       style={{ width: size, height: size }}
     >
       <img
-        src="/safetylink-metallic.svg"
+        src="/sl-shield.svg"
         alt="SafetyLink Logo"
         className="w-full h-full object-contain pointer-events-none p-1"
       />
