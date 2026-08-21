@@ -6,10 +6,25 @@ cloudinary.config({
 });
 async function run() {
     try {
-        const result = await cloudinary.api.resources({ max_results: 100, resource_type: 'image' });
-        console.log("Images:", result.resources.map(r => r.secure_url));
-        const vids = await cloudinary.api.resources({ max_results: 100, resource_type: 'video' });
-        console.log("Videos:", vids.resources.map(r => r.secure_url));
+        let all = [];
+        let next = null;
+        do {
+            const res = await cloudinary.api.resources({ max_results: 500, resource_type: 'image', next_cursor: next });
+            all = all.concat(res.resources.map(r => r.secure_url));
+            next = res.next_cursor;
+        } while(next);
+        
+        let allvids = [];
+        next = null;
+        do {
+            const res = await cloudinary.api.resources({ max_results: 500, resource_type: 'video', next_cursor: next });
+            allvids = allvids.concat(res.resources.map(r => r.secure_url));
+            next = res.next_cursor;
+        } while(next);
+
+        const fs = await import('fs');
+        fs.writeFileSync('cloudinary_dump.json', JSON.stringify({images: all, videos: allvids}, null, 2));
+        console.log("Dumped to cloudinary_dump.json");
     } catch(e) {
         console.error(e);
     }
