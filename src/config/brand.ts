@@ -10,22 +10,22 @@ const FOLDER_ID = '1l78cZjsK9RFFsr4DNqYwhK4swg8SIbmW';
 
 export const Brand = {
   // Primary logo — use in: web nav, EXE header, APK settings screen
-  primaryLogo: `/safetylink-metallic.svg`,
+  primaryLogo: `/sl-shield.svg`,
 
   // Umbrella logo (TM Media Solutions) — use in: web footer, legal pages
-  umbrellaLogo: `/safetylink-metallic.svg`,
+  umbrellaLogo: `/sl-shield.svg`,
 
   // 3D animation — use in: web hero background, APK splash screen  
   animation3d: `/media/videos/SafetyLink 3D Animation Logo.mp4`,
 
   // App launcher icon — APK home screen icon
-  launcherIcon: `/safetylink-metallic.svg`,
+  launcherIcon: `/sl-shield.svg`,
 
   // Notification icon — Android status bar icon during panic
   notificationIcon: `/media/app_icon/notification_icon.png`,
 
   // Admin panel logo — EXE header, web dashboard header
-  adminLogo: `/safetylink-metallic.svg`,
+  adminLogo: `/sl-shield.svg`,
 
   // Architecture diagrams — web "How it Works" and "Tech" sections
   architectureDiagram: `/media/images/Safety_Response_System_Architecture.png`,

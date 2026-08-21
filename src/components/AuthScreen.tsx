@@ -7,13 +7,13 @@ import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/safetylink-metallic.svg';
-import slide2 from '/safetylink-metallic.svg';
+import slide1 from '/sl-shield.svg';
+import slide2 from '/sl-shield.svg';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '/safetylink-metallic.svg';
-import slide5 from '/safetylink-metallic.svg';
+import slide4 from '/sl-shield.svg';
+import slide5 from '/sl-shield.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
-import newLogo1 from '/safetylink-metallic.svg';
+import newLogo1 from '/sl-shield.svg';
 
 export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LOGIN' | 'REGISTER_ORG' }> = ({ onBackToSite, initialView }) => {
   const { 
@@ -279,7 +279,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   };
 
   return (
-    <div className="w-full h-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
+    <div className="flex-1 w-full bg-slate-950 flex flex-col gap-4 items-center justify-start pt-10 pb-32 px-4 sm:px-6 relative overflow-y-auto select-auto scanlines">
       {/* Background Branding & Media */}
       <video 
         autoPlay 
@@ -291,7 +291,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       />
       <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
       <img 
-        src="/safetylink-metallic.svg" 
+        src="/sl-shield.svg" 
         className="fixed inset-0 w-full h-full object-contain opacity-[0.03] z-0 pointer-events-none" 
         alt="" 
       />

@@ -43,15 +43,15 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/safetylink-metallic.svg';
-import slide2 from '/safetylink-metallic.svg';
+import slide1 from '/sl-shield.svg';
+import slide2 from '/sl-shield.svg';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
-import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from '/safetylink-metallic.svg';
+import slLogoMain from './assets/sl-shield.svg';
+import slLogoSet from '/sl-shield.svg';
 import newBg1 from './assets/images/regenerated_image_1784546645212.png';
-const newLogo1 = '/safetylink-metallic.svg';
+const newLogo1 = '/sl-shield.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/safetylink-metallic.svg';
+const polishLogo = '/sl-shield.svg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
@@ -1184,7 +1184,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`absolute inset-0 w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+    <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       {trialExpired && <TrialLockOverlay />}
       <TrialReminderModal />
 
@@ -1225,7 +1225,7 @@ const App: React.FC = () => {
       <LizzyPopup />
 
       {/* Primary Dynamic App Screen Container */}
-      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden z-10">
+      <div className="flex-1 relative flex flex-col z-10">
         {renderMainBody()}
       </div>
 

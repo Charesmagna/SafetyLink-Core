@@ -1,53 +1,78 @@
-import React from 'react';
-import { useAppStore } from '../utils/store';
-import { openDownloadUrl } from '../services/UpdateService';
-import { DownloadCloud, X } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const UpdateBanner: React.FC = () => {
-  const { updateInfo } = useAppStore();
-  const [dismissed, setDismissed] = React.useState(false);
+  const [latestRelease, setLatestRelease] = useState<any>(null);
+  const [showBanner, setShowBanner] = useState(false);
+  const CURRENT_VERSION = 'v1.1.0';
 
-  if (!updateInfo || !updateInfo.available || dismissed) {
-    return null;
-  }
+  useEffect(() => {
+    // Only show in standalone modes (PWA, APK, EXE)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window as any).Capacitor?.isNativePlatform() || navigator.userAgent.toLowerCase().includes('electron');
+    if (!isStandalone) return;
 
-  const isAndroid = Capacitor.getPlatform() === 'android';
-  const isWeb = Capacitor.getPlatform() === 'web';
-  const isWindows = typeof window !== 'undefined' && window.navigator.userAgent.includes('Windows');
-
-  let downloadUrl = updateInfo.apkUrl;
-  let platformName = 'Android APK';
-  
-  if (isWeb && isWindows && updateInfo.exeUrl) {
-    downloadUrl = updateInfo.exeUrl;
-    platformName = 'Windows EXE';
-  } else if (isWeb && !isWindows) {
-    downloadUrl = updateInfo.apkUrl; // default to APK for non-Windows web users
-  }
+    const checkUpdates = async () => {
+      try {
+        const response = await fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest');
+        const data = await response.json();
+        
+        if (data.tag_name && data.tag_name !== CURRENT_VERSION) {
+          // Compare versions loosely
+          if (data.tag_name.localeCompare(CURRENT_VERSION) > 0) {
+            setLatestRelease(data);
+            setShowBanner(true);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check for updates", e);
+      }
+    };
+    
+    // Delay check so it doesn't block startup
+    setTimeout(checkUpdates, 3000);
+  }, []);
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-emerald-900 border-b border-emerald-500 text-emerald-100 px-4 py-2 flex flex-col sm:flex-row items-center justify-between shadow-lg shadow-emerald-900/50">
-      <div className="flex items-center gap-3 mb-2 sm:mb-0 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider">
-        <DownloadCloud size={16} className="text-emerald-400 animate-pulse" />
-        <span>Update Available: v{updateInfo.version}</span>
-      </div>
-      <div className="flex items-center gap-4">
-        {downloadUrl && (
-          <button
-            onClick={() => openDownloadUrl(downloadUrl!)}
-            className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold font-mono text-[9px] sm:text-[10px] uppercase tracking-wider rounded transition-colors flex items-center gap-2"
-          >
-            <span>Download {platformName}</span>
-          </button>
-        )}
-        <button
-          onClick={() => setDismissed(true)}
-          className="text-emerald-400 hover:text-white transition-colors p-1"
+    <AnimatePresence>
+      {showBanner && latestRelease && (
+        <motion.div 
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -100, opacity: 0 }}
+          className="fixed top-0 left-0 right-0 z-[9999999] bg-gradient-to-r from-emerald-600 to-emerald-800 text-white shadow-2xl border-b border-emerald-500/50 backdrop-blur-md px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-4"
         >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-full">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-bold font-mono text-sm">Update Available: {latestRelease.tag_name}</h4>
+              <p className="text-xs text-emerald-100 opacity-90">{latestRelease.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <a 
+              href={latestRelease.html_url} 
+              target="_blank" 
+              rel="noreferrer"
+              className="flex-1 sm:flex-none text-center bg-white text-emerald-900 px-4 py-1.5 rounded-full text-xs font-bold font-mono uppercase tracking-wider hover:bg-emerald-50 transition-colors shadow-lg"
+              onClick={() => setShowBanner(false)}
+            >
+              Update Now
+            </a>
+            <button 
+              onClick={() => setShowBanner(false)}
+              className="p-1.5 hover:bg-black/20 rounded-full transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

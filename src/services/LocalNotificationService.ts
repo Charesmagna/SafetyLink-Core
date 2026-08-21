@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-const logoPolish = '/safetylink-metallic.svg';
+const logoPolish = '/sl-shield.svg';
 
 export class LocalNotificationService {
   private static isNative = Capacitor.isNativePlatform();

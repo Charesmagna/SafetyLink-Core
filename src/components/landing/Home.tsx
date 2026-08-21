@@ -65,7 +65,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
   };
 
   return (
-    <div className="landing-page-root h-full flex-1 min-h-0 overflow-y-auto w-full text-[#1e293b] bg-white overflow-x-hidden font-['Inter',system-ui,sans-serif]">
+    <div className="landing-page-root w-full text-[#1e293b] bg-white overflow-x-hidden font-['Inter',system-ui,sans-serif]">
       {/* ══ NAV ══ */}
       <nav id="nav" className={isScrolled ? 'scrolled' : ''}>
         <div className="nav-inner">
