@@ -7,13 +7,13 @@ import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
-import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide1 from '/safetylink-metallic.svg';
+import slide2 from '/safetylink-metallic.svg';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
-import slide5 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide4 from '/safetylink-metallic.svg';
+import slide5 from '/safetylink-metallic.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
-import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import newLogo1 from '/safetylink-metallic.svg';
 
 export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LOGIN' | 'REGISTER_ORG' }> = ({ onBackToSite, initialView }) => {
   const { 
@@ -291,7 +291,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       />
       <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
       <img 
-        src="/media/new_logo/New_SafetyLink_Official_Logo.svg" 
+        src="/safetylink-metallic.svg" 
         className="fixed inset-0 w-full h-full object-contain opacity-[0.03] z-0 pointer-events-none" 
         alt="" 
       />

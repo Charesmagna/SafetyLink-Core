@@ -43,15 +43,15 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
-import slide2 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slide1 from '/safetylink-metallic.svg';
+import slide2 from '/safetylink-metallic.svg';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
 import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+import slLogoSet from '/safetylink-metallic.svg';
 import newBg1 from './assets/images/regenerated_image_1784546645212.png';
-const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const newLogo1 = '/safetylink-metallic.svg';
 const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const polishLogo = '/safetylink-metallic.svg';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
@@ -1184,13 +1184,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
-      {/* Background Watermark */}
-      <img 
-        src="/media/new_logo/New_SafetyLink_Official_Logo.svg" 
-        className="fixed inset-0 w-full h-full object-contain opacity-5 z-0 pointer-events-none" 
-        alt="" 
-      />
+    <div className={`absolute inset-0 w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       {trialExpired && <TrialLockOverlay />}
       <TrialReminderModal />
 

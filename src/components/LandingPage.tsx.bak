@@ -609,7 +609,7 @@ export function LandingPage({ onLogin, onRegisterOrg, onRegisterUser, onBackToAp
       />
       <div className="fixed inset-0 bg-black/60 z-0 pointer-events-none"></div>
       <img 
-        src="/media/new_logo/New_SafetyLink_Official_Logo.svg" 
+        src="/safetylink-metallic.svg" 
         className="fixed inset-0 w-[100vw] h-[100vh] object-cover opacity-10 z-0 pointer-events-none blur-sm" 
         alt="" 
       />

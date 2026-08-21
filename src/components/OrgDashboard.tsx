@@ -59,7 +59,7 @@ export const OrgDashboard: React.FC = () => {
   const [editContactsList, setEditContactsList] = useState('');
 
   // Branding Form State (pre-populated from currentOrg values)
-  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '/media/new_logo/New_SafetyLink_Official_Logo.svg');
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '/safetylink-metallic.svg');
   const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
   const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
