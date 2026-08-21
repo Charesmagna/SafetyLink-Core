@@ -94,7 +94,7 @@ const TrialReminderModal = () => {
   const daysLeft = Math.max(0, 14 - daysPassed);
 
   return (
-    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm p-6">
+    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-sm p-6">
       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300" />
         <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -129,6 +129,7 @@ const App: React.FC = () => {
   const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
   // Only show landing page initially on actual web browsers
   const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web' && !isDesktopExe && window.location.pathname === '/');
+  const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG'>('LOGIN');
   const [trialExpired, setTrialExpired] = useState(false);
 
 
@@ -186,6 +187,24 @@ const App: React.FC = () => {
   useEffect(() => {
     checkAppUpdates();
     
+    // Initialize real-time mesh node sync if firestore sync is active
+    let cleanupSync: any = null;
+    const { firestoreSync, currentUser } = useAppStore.getState();
+    if (firestoreSync && currentUser) {
+      cleanupSync = useAppStore.getState().initMeshSync();
+    }
+    
+    // Watch for toggle changes
+    const unsub = useAppStore.subscribe((state, prevState) => {
+       if ((state.firestoreSync !== prevState.firestoreSync || state.currentUser?.id !== prevState.currentUser?.id) && state.firestoreSync && state.currentUser) {
+          if (cleanupSync) cleanupSync();
+          cleanupSync = state.initMeshSync();
+       } else if (!state.firestoreSync && cleanupSync) {
+          cleanupSync();
+          cleanupSync = null;
+       }
+    });
+    
     const checkTrial = () => {
       const target = currentOrg || currentUser;
       if (target && target.subscriptionStatus === 'trial') {
@@ -206,7 +225,11 @@ const App: React.FC = () => {
     // Fallback original event listener
     const handleTrialExpired = () => setTrialExpired(true);
     window.addEventListener('trial_expired', handleTrialExpired);
-    return () => window.removeEventListener('trial_expired', handleTrialExpired);
+    return () => { 
+      window.removeEventListener('trial_expired', handleTrialExpired);
+      if (cleanupSync) cleanupSync(); 
+      unsub(); 
+    };
   }, [currentUser, currentOrg]);
   
   const t = (key: string) => {
@@ -428,13 +451,22 @@ const App: React.FC = () => {
 
     if (!currentUser) {
       if (showLanding) {
-        return <LandingPage onLogin={() => {
-          setShowLanding(false);
-          setShowSplash(true);
-          setTimeout(() => setShowSplash(false), 7000);
-        }} />;
+        return <LandingPage 
+          onLogin={() => {
+            setAuthInitialView('LOGIN');
+            setShowLanding(false);
+            setShowSplash(true);
+            setTimeout(() => setShowSplash(false), 7000);
+          }} 
+          onRegisterOrg={() => {
+            setAuthInitialView('REGISTER_ORG');
+            setShowLanding(false);
+            setShowSplash(true);
+            setTimeout(() => setShowSplash(false), 7000);
+          }} 
+        />;
       }
-      return <AuthScreen onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
+      return <AuthScreen initialView={authInitialView} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
 
@@ -444,7 +476,7 @@ const App: React.FC = () => {
 
       
       {showExitConfirm && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
               <span className="text-2xl">🚪</span>
@@ -530,7 +562,7 @@ const App: React.FC = () => {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="appearance-none bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+              className="appearance-none bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
             >
               <option value="en">English</option>
               <option value="ve">Tshivenda</option>
@@ -817,7 +849,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/80 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
+              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
@@ -1153,28 +1185,31 @@ const App: React.FC = () => {
 
   return (
     <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      {/* Background Watermark */}
+      <img 
+        src="/media/new_logo/New_SafetyLink_Official_Logo.svg" 
+        className="fixed inset-0 w-full h-full object-contain opacity-5 z-0 pointer-events-none" 
+        alt="" 
+      />
       {trialExpired && <TrialLockOverlay />}
       <TrialReminderModal />
 
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
         <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video src="/media/SafetyLink_3D_Animation_Logo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
+          <video src="/media/videos/SafetyLink 3D Animation Logo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
         </div>
       )}
       
-      <div className="flare-line-container pointer-events-none">
-        <div className="flare-line flare-line-1" />
-        <div className="flare-line flare-line-2" />
-      </div>
+      
 
       {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
       {/* Background Video */}
       {(activeTab === 'home' && !currentOrg) && (
         <>
-          <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50" />
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-3 py-1 rounded-full text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10">
-            <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
+          
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-4 py-2 rounded-2xl text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10 text-center flex flex-col leading-relaxed">
+            <span>EXPERIMENTAL LIVE MODE • SIMULATED</span><span>BROADCAST LINKS</span>
           </div>
         </>
       )}

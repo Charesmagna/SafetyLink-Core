@@ -37,6 +37,66 @@ const mediaAssets = [
     src: '/media/images/Gemini_Generated_Image_cj8x5rcj8x5rcj8x.png',
     title: 'Hardware Node Integration',
     description: 'Concept art for IoT safety beacons.'
+  },
+  {
+    type: 'video',
+    src: '/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4',
+    title: 'Inside the SafetyLink Emergency Ecosystem',
+    description: 'A deep dive into how nodes communicate across the mesh network.'
+  },
+  {
+    type: 'video',
+    src: '/media/videos/SafetyLink 3D Animation Logo.mp4',
+    title: 'SafetyLink 3D Logo Animation',
+    description: 'Official 3D animated branding asset.'
+  },
+  {
+    type: 'video',
+    src: '/media/videos/video (1).mp4',
+    title: 'System Demonstration',
+    description: 'Demonstration of the SafetyLink user interface.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/Emergency_System_Architecture_Anatomy.png',
+    title: 'Emergency System Anatomy',
+    description: 'Detailed structural anatomy of the emergency pipelines.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/Safety_Response_System_Architecture.png',
+    title: 'Safety Response System Architecture',
+    description: 'Technical breakdown of the response capabilities.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/Gemini_Generated_Image_ghu57oghu57oghu5.png',
+    title: 'Field Node Map',
+    description: 'Conceptualization of a deployment field node.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/Gemini_Generated_Image_umhnuvumhnuvumhn.png',
+    title: 'Data Flow Topology',
+    description: 'Visualizing emergency data routing patterns.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/image_1783702731867.jpeg',
+    title: 'SafetyLink Field Operations',
+    description: 'Visual of on-site field operations.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/eka67lqzxa.png',
+    title: 'Dashboard Telemetry UI',
+    description: 'Reference UI for telemetry panels.'
+  },
+  {
+    type: 'image',
+    src: '/media/images/iumb4dkepg.png',
+    title: 'Action Interface Diagram',
+    description: 'Actionable response patterns.'
   }
 ];
 

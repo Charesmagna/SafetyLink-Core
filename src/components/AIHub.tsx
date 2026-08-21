@@ -4,8 +4,46 @@ import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AIHub: React.FC = () => {
-  const { addAuditLog } = useAppStore();
+  const { addAuditLog, triggerPanic } = useAppStore();
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'voice' | 'image' | 'surveillance' | 'lyria' | 'research'>('chat');
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: any) => {
+      const latestResult = event.results[event.results.length - 1];
+      if (latestResult.isFinal) {
+        const transcript = latestResult[0].transcript.trim().toLowerCase();
+        if (transcript.includes('execute emergency protocol') || transcript.includes('help me now')) {
+           triggerPanic('Triggered via Voice Command');
+           addAuditLog('SYSTEM', 'SEVERE', 'Emergency protocol initiated via covert voice command');
+        }
+      }
+    };
+
+    recognition.onend = () => {
+      try {
+        recognition.start(); // Auto-restart
+      } catch(e) {}
+    };
+
+    try {
+      recognition.start();
+    } catch(e) {}
+
+    return () => {
+      recognition.onend = null;
+      try {
+        recognition.stop();
+      } catch(e) {}
+    };
+  }, [triggerPanic, addAuditLog]);
 
   // Chat states
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; timestamp: number }>>([
