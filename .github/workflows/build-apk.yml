@@ -20,10 +20,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Compute version
+        id: version
+        run: |
+          VERSION="1.1.${{ github.run_number }}"
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Bump package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build Web (minified + obfuscated)
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
         run: npm run build
 
       - name: Setup Android SDK
@@ -31,6 +44,11 @@ jobs:
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      - name: Bump Android versionCode + versionName
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" android/app/build.gradle
 
       - name: Build Release APK
         working-directory: ./android
@@ -40,7 +58,7 @@ jobs:
         run: |
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
           UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          SIGNED=android/app/build/outputs/apk/release/SafetyLink-Core-Signed.apk
+          SIGNED=android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
 
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
@@ -51,7 +69,6 @@ jobs:
               --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
               --out $SIGNED \
               $UNSIGNED
-            rm -f release.keystore
           else
             keytool -genkey -v -keystore release.keystore \
               -alias safetylink -keyalg RSA -keysize 4096 -validity 10000 \
@@ -64,21 +81,29 @@ jobs:
               --key-pass pass:"Safety link 2024" \
               --out $SIGNED \
               $UNSIGNED
-            rm -f release.keystore
           fi
+          rm -f release.keystore
 
       - name: Verify APK signature
         run: |
           BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
           $BUILD_TOOLS_DIR/apksigner verify --verbose \
-            android/app/build/outputs/apk/release/SafetyLink-Core-Signed.apk 2>&1 | head -5
+            android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk 2>&1 | head -5
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         with:
-          tag_name: "v1.1.${{ github.run_number }}"
-          name: "SafetyLink Core v1.1.${{ github.run_number }}"
-          files: android/app/build/outputs/apk/release/SafetyLink-Core-Signed.apk
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "SafetyLink Core ${{ steps.version.outputs.tag }}"
+          body: |
+            ## SafetyLink Core ${{ steps.version.outputs.tag }}
+            **Released by TM Media Solutions**
+
+            ### Install
+            Download `SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk` below and install directly on your Android device.
+
+            > Existing data, contacts and organisation membership are preserved on update.
+          files: android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
           draft: false
           prerelease: false
