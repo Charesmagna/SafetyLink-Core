@@ -222,6 +222,21 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Elderly Alone at Home</p><span>Watch-Me Timer and proactive monitoring</span></div>
             </div>
+            <div className="vid-card" onClick={toggleVideo}>
+              <video preload="none" playsInline onEnded={handleVideoEnded}>
+                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310192/Pitch_deck.mp4" type="video/mp4"/>
+              </video>
+              <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+              <div className="vid-label"><p>SafetyLink Pitch Deck</p><span>Overview of our three pillars</span></div>
+            </div>
+            <div className="vid-card" onClick={toggleVideo}>
+              <video preload="none" playsInline onEnded={handleVideoEnded}>
+                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310191/Why.mp4" type="video/mp4"/>
+              </video>
+              <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
+              <div className="vid-label"><p>Why SafetyLink?</p><span>The core mission and vision</span></div>
+            </div>
+
 
           </div>
         </div>
