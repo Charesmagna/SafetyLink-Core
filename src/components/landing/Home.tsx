@@ -6,6 +6,10 @@ import './Home.css';
 
 export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegisterOrg: () => void }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [currentView, setCurrentView] = useState('home');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoSrc, setVideoSrc] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [releases, setReleases] = useState<any[]>([]);
   const [latestApkUrl, setLatestApkUrl] = useState<string>("");
@@ -95,39 +99,54 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
     <div className="landing-page-root w-full text-[#1e293b] bg-white overflow-x-hidden font-['Inter',system-ui,sans-serif]">
       {/* ══ NAV ══ */}
       <nav id="nav" className={isScrolled ? 'scrolled' : ''}>
-        <div className="nav-inner">
-          <a href="#home" className="nav-logo">
-            
-            <span>SafetyLink</span>
-          </a>
-          <div className="nav-links">
-            <a href="#home" className="active">Home</a>
-            <a href="#features">Platform Features</a>
-            <a href="#usecases">Use Cases</a>
-            <a href="#hardware">Hardware</a>
-            <a href="#ai">AI Co-Pilot</a>
-            <a href="#pricing">Pricing</a>
-            <a href="#download">Download</a>
-            <a href="https://wa.me/27739441222" target="_blank" rel="noreferrer" className="nav-cta">Contact Us</a>
+        <div className="nav-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button onClick={() => setIsMenuOpen(true)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ width: '24px', height: '3px', background: 'white', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '3px', background: 'white', borderRadius: '2px' }} />
+              <div style={{ width: '24px', height: '3px', background: 'white', borderRadius: '2px' }} />
+            </button>
+            <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView('home'); }} className="nav-logo" style={{ marginLeft: 0 }}>
+              <span>SafetyLink</span>
+            </a>
           </div>
-          <button id="ham" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Menu">
-            <svg width="24" height="24" fill="none" stroke="#0f172a" strokeWidth="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          </button>
-        </div>
-        <div id="mob-menu" className={mobileMenuOpen ? 'open' : ''}>
-          <a href="#home" onClick={() => setMobileMenuOpen(false)}>Home</a>
-          <a href="#features" onClick={() => setMobileMenuOpen(false)}>Platform Features</a>
-          <a href="#usecases" onClick={() => setMobileMenuOpen(false)}>Use Cases</a>
-          <a href="#hardware" onClick={() => setMobileMenuOpen(false)}>Hardware Config</a>
-          <a href="#ai" onClick={() => setMobileMenuOpen(false)}>AI Co-Pilot</a>
-          <a href="#pricing" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-          <a href="#download" onClick={() => setMobileMenuOpen(false)}>Download</a>
-          <a href="https://wa.me/27739441222" target="_blank" rel="noreferrer">Contact Us</a>
-          <button onClick={onLogin} style={{background: 'var(--green)', color: '#fff', padding: '12px', borderRadius: '8px', textAlign: 'center', fontWeight: '700'}}>ACCESS Dashboard</button>
+          <div className="nav-actions">
+            <button className="btn outline" onClick={onLogin}>Log In</button>
+            <button className="btn solid" onClick={onRegisterOrg}>Create Network</button>
+          </div>
         </div>
       </nav>
 
-      {/* ══ HERO ══ */}
+      {/* Hamburger Menu Overlay */}
+      {isMenuOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={() => setIsMenuOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>✕</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', marginTop: '40px' }}>
+            {['home', 'features', 'usecases', 'hardware', 'gallery', 'ai', 'pricing', 'download'].map(view => (
+              <button 
+                key={view}
+                onClick={() => { setCurrentView(view); setIsMenuOpen(false); }}
+                style={{ background: 'transparent', border: 'none', color: currentView === view ? '#10b981' : 'white', fontSize: '24px', fontWeight: 'bold', cursor: 'pointer', textTransform: 'capitalize' }}
+              >
+                {view === 'ai' ? "K'lev.ai" : view === 'usecases' ? "Use Cases" : view === 'home' ? 'Home & Dispatch' : view}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal */}
+      {showVideoModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => { setShowVideoModal(false); setVideoSrc(''); }} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>✕</button>
+          <video src={videoSrc} controls autoPlay style={{ width: '90%', maxWidth: '1000px', borderRadius: '12px' }} />
+        </div>
+      )}
+
+      {currentView === "home" && (<>
+{/* ══ HERO ══ */}
       <section className="hero" id="home">
         <div className="hero-inner">
           <div className="hero-left">
@@ -167,7 +186,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ VIDEO USE CASES ══ */}
+      </>)}
+{currentView === "features" && (<>
+{/* ══ VIDEO USE CASES ══ */}
       <section className="video-band" id="usecases">
         <div className="video-inner">
           <div className="section-eye">Use Cases</div>
@@ -242,7 +263,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ USE CASE CARDS ══ */}
+      </>)}
+{currentView === "usecases" && (<>
+{/* ══ USE CASE CARDS ══ */}
       <section style={{background:'#fff', padding:'80px 0'}}>
         <div className="uc-inner" style={{maxWidth:'1200px', margin:'0 auto', padding:'0 24px'}}>
           <div className="section-eye" style={{color:'var(--green)'}}>Who It's For</div>
@@ -276,12 +299,14 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ DISPATCH SECTION ══ */}
+      {currentView === "home" && (<>
+</>)}
+{/* ══ DISPATCH SECTION ══ */}
       <section className="dispatch" id="technology">
         <div className="dispatch-inner">
           <div className="dispatch-header">
             <div className="live-badge"><div className="ldot"></div><span>Live System</span></div>
-            <h2 className="dtitle">SAFETYLINK — OFFLINE-FIRST INTELLIGENT DISPATCH</h2>
+            <h2 className="dtitle" style={{ cursor: "pointer" }} onClick={() => { setVideoSrc("https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310192/Pitch_deck.mp4"); setShowVideoModal(true); }}>SAFETYLINK — OFFLINE-FIRST INTELLIGENT DISPATCH <span style={{ fontSize: "12px", verticalAlign: "middle", opacity: 0.8 }}>▶ PLAY VIDEO</span></h2>
             <p className="dsub">Intelligent Local Coordination · Local Processing · Local Control · Offline, On Purpose.</p>
           </div>
           <button className="tour-btn" onClick={startTour}>▶ &nbsp;TAKE A TOUR</button>
@@ -358,7 +383,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ PLATFORM FEATURES ══ */}
+      </>)}
+{currentView === "features" && (<>
+{/* ══ PLATFORM FEATURES ══ */}
       <section className="features" id="features">
         <div className="feat-inner">
           <div className="section-eye" style={{color:'var(--green)'}}>Platform Features</div>
@@ -414,7 +441,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ HARDWARE ══ */}
+      </>)}
+{currentView === "hardware" && (<>
+{/* ══ HARDWARE ══ */}
       <section className="hardware" id="hardware">
         <div className="hw-inner">
           <div className="section-eye" style={{color:'var(--green)'}}>Hardware Config</div>
@@ -464,7 +493,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ PROMO GALLERY ══ */}
+      </>)}
+{currentView === "gallery" && (<>
+{/* ══ PROMO GALLERY ══ */}
       <section className="gallery">
         <div className="gal-inner">
           <div className="section-eye">Visual Library</div>
@@ -480,7 +511,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ KLEV.AI ══ */}
+      </>)}
+{currentView === "ai" && (<>
+{/* ══ KLEV.AI ══ */}
       <section className="klev" id="ai">
         <div className="klev-inner">
           <div className="klev-left">
@@ -500,7 +533,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ PRICING ══ */}
+      </>)}
+{currentView === "pricing" && (<>
+{/* ══ PRICING ══ */}
       <section className="pricing" id="pricing">
         <div className="price-inner">
           <div className="section-eye" style={{color:'var(--green)'}}>Pricing</div>
@@ -543,7 +578,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ DOWNLOAD ══ */}
+      </>)}
+{currentView === "download" && (<>
+{/* ══ DOWNLOAD ══ */}
       <section className="download" id="download">
         <div className="dl-inner">
           <div className="section-eye">Download</div>
@@ -602,7 +639,8 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
-      {/* ══ CTA BAND ══ */}
+      </>)}
+{/* ══ CTA BAND ══ */}
       <div className="cta-band">
         <h2>Ready to protect your community?</h2>
         <p>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>
