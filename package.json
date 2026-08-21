@@ -36,6 +36,7 @@
     "@types/pg": "^8.20.3",
     "bullmq": "^6.0.5",
     "capacitor-voice-recorder": "^1.1.1",
+    "cloudinary": "^2.10.1",
     "connectycube": "^6.3.0",
     "d3": "^7.9.0",
     "express": "^5.2.1",
