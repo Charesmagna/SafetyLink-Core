@@ -96,7 +96,7 @@
       "output": "electron-dist"
     },
     "win": {
-      "icon": "public/sl-shield.svg",
+      "icon": "public/app-icon.ico",
       "target": [
         "nsis"
       ]
