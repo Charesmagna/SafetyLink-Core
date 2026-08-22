@@ -27,12 +27,14 @@ jobs:
         run: npm ci
 
       - name: Build Web
+        shell: bash
         env:
           VITE_APP_VERSION: ${{ steps.version.outputs.version }}
         run: npm run build
 
       - name: Build EXE
-        run: npx electron-builder --win -c.extraMetadata.main=electron-main.cjs -c.extraMetadata.version=${{ steps.version.outputs.version }}
+        shell: bash
+        run: npx electron-builder --win --x64 -c.extraMetadata.main=electron-main.cjs -c.extraMetadata.version=${{ steps.version.outputs.version }}
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
