@@ -299,9 +299,9 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         </div>
       </section>
 
+      </>)}
       {currentView === "home" && (<>
-</>)}
-{/* ══ DISPATCH SECTION ══ */}
+      {/* ══ DISPATCH SECTION ══ */}
       <section className="dispatch" id="technology">
         <div className="dispatch-inner">
           <div className="dispatch-header">
