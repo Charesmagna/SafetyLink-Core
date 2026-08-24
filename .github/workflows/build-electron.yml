@@ -23,8 +23,11 @@ jobs:
           echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies (Windows — regenerate lockfile for native bindings)
+        shell: bash
+        run: |
+          rm -f package-lock.json
+          npm install --prefer-offline
 
       - name: Build Web
         shell: bash
