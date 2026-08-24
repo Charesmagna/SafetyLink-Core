@@ -287,7 +287,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         muted 
         playsInline 
         className="fixed inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none" 
-        src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4"
+        src="/media/videos/SafetyLink 3D Animation Logo.mp4"
       />
       <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
       <img 

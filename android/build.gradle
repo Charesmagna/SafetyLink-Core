@@ -27,3 +27,13 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+subprojects {
+    plugins.withId('com.android.library') {
+        if (project.name == 'capacitor-voice-recorder') {
+            project.android {
+                namespace = 'com.tchvu3.capacitorvoicerecorder'
+            }
+        }
+    }
+}

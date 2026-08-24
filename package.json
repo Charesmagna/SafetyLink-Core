@@ -12,7 +12,7 @@
     "lint": "tsc --noEmit",
     "verify": "npm run lint && npm run build",
     "test": "tsx src/tests/run-tests.ts",
-    "build:electron": "npm run build && electron-builder --win -c.extraMetadata.main=electron-main.cjs",
+    "build:electron": "npm run build && electron-builder --win --publish never -c.extraMetadata.main=electron-main.cjs",
     "start": "node dist/server.cjs"
   },
   "dependencies": {
@@ -96,7 +96,7 @@
       "output": "electron-dist"
     },
     "win": {
-      "icon": "public/app-icon.ico",
+      "icon": "public/sl-shield.svg",
       "target": [
         "nsis"
       ]
