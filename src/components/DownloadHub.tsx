@@ -7,11 +7,11 @@ export const DownloadHub: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   useEffect(() => {
     // Fetch latest releases from GitHub API
-    fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases')
+    fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', { headers: { Accept: 'application/vnd.github.v3+json' } })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setReleases(data);
+        if (data?.tag_name) {
+          setReleases([data]);
         }
         setLoading(false);
       })
@@ -25,9 +25,12 @@ export const DownloadHub: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const previousReleases = releases.length > 1 ? releases.slice(1, 6) : [];
 
   const getApkUrl = (release: any) => {
-    if (!release) return '#';
-    const asset = release.assets.find((a: any) => a.name.endsWith('.apk') || a.name.endsWith('.exe'));
-    return asset ? asset.browser_download_url : '#';
+    if (!release?.assets?.length) return '#';
+    const signed = release.assets.find((a: any) =>
+      a.name.toLowerCase().endsWith('.apk') && a.name.toLowerCase().includes('signed')
+    );
+    const any = release.assets.find((a: any) => a.name.toLowerCase().endsWith('.apk'));
+    return (signed || any)?.browser_download_url || '#';
   };
 
   return (

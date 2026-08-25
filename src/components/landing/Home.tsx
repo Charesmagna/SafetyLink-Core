@@ -87,20 +87,23 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
   useEffect(() => {
     const fetchReleases = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases');
+        const res = await fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', {
+          headers: { Accept: 'application/vnd.github.v3+json' }
+        });
         if (res.ok) {
-          const data = await res.json();
-          setReleases(data);
-          if (data.length > 0) {
-            const latest = data[0];
-            const apkAsset = latest.assets?.find((a: any) => a.name.endsWith('.apk'));
-            const exeAsset = latest.assets?.find((a: any) => a.name.endsWith('.exe'));
+          const latest = await res.json();
+          if (latest?.tag_name) {
+            setReleases([latest]);
+            const apkAsset = latest.assets?.find((a: any) =>
+              a.name.toLowerCase().endsWith('.apk') && a.name.toLowerCase().includes('signed')
+            ) || latest.assets?.find((a: any) => a.name.toLowerCase().endsWith('.apk'));
+            const exeAsset = latest.assets?.find((a: any) => a.name.toLowerCase().endsWith('.exe'));
             if (apkAsset) setLatestApkUrl(apkAsset.browser_download_url);
             if (exeAsset) setLatestExeUrl(exeAsset.browser_download_url);
           }
         }
-      } catch (e) {
-        console.error('Failed to fetch releases', e);
+      } catch (_) {
+        // silent
       }
     };
     fetchReleases();
