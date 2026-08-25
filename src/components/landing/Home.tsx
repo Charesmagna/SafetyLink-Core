@@ -226,8 +226,8 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <div className="hero-right">
             <div className="hero-phone-wrap">
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink SOS Screen" />
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command Login" />
+              <img className="hero-phone" src="/media/images/Platform_Screenshot.jpeg" alt="SafetyLink SOS Screen" />
+              <img className="hero-phone" src="/media/images/Emergency_Response_Platform_Architecture_Overview.png" alt="SafetyLink Command Login" />
             </div>
             <div className="hero-flow">
               <div className="flow-step">
@@ -258,8 +258,8 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="video-grid">
 
             <div className="vid-card" onClick={toggleVideo}>
-              <video preload="none" playsInline  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310050/Polish_20260809_035827088.png" onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310214/Okay_now_for_the_next_scene_.mp4" type="video/mp4"/>
+              <video preload="none" playsInline  poster="/media/images/Polish_20260727_010938698.jpg" onEnded={handleVideoEnded}>
+                <source src="/media/videos/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Family Protection Scenario</p><span>How SafetyLink protects your household</span></div>
@@ -267,7 +267,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
 
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4" type="video/mp4"/>
+                <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Government &amp; Municipal Use Case</p><span>Public safety infrastructure deployment</span></div>
@@ -275,7 +275,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
 
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310200/Neighbourhood_watch_security_c.mp4" type="video/mp4"/>
+                <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Neighbourhood Watch</p><span>Community security network in action</span></div>
@@ -283,7 +283,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
 
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310194/drone_dispatch_tracking_crimin.mp4" type="video/mp4"/>
+                <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Drone Dispatch &amp; Tracking</p><span>Aerial response to active incidents</span></div>
@@ -291,7 +291,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
 
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310205/Show_the_uses_in_school_and_wo.mp4" type="video/mp4"/>
+                <source src="/media/videos/video%20(1).mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Schools &amp; Workplaces</p><span>Protecting children and employees</span></div>
@@ -299,21 +299,21 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
 
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310200/Old_people_scenario_alone_at_h.mp4" type="video/mp4"/>
+                <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Elderly Alone at Home</p><span>Watch-Me Timer and proactive monitoring</span></div>
             </div>
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310192/Pitch_deck.mp4" type="video/mp4"/>
+                <source src="/media/videos/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>SafetyLink Pitch Deck</p><span>Overview of our three pillars</span></div>
             </div>
             <div className="vid-card" onClick={toggleVideo}>
               <video preload="none" playsInline onEnded={handleVideoEnded}>
-                <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310191/Why.mp4" type="video/mp4"/>
+                <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Why SafetyLink?</p><span>The core mission and vision</span></div>
@@ -331,7 +331,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <h2 style={{fontSize:'clamp(22px,3.5vw,38px)', fontWeight:'900', color:'var(--navy)', letterSpacing:'-.02em', marginBottom:'12px'}}>Three Audiences. One Platform.</h2>
           <div className="uc-grid">
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310051/copilot_image_1786916665016.png" alt="Security Command Room" />
+              <img src="/media/images/Gemini_Generated_Image_bes7lhbes7lhbes7.png" alt="Security Command Room" />
               <div className="uc-body">
                 <span className="uc-tag">Security Companies</span>
                 <div className="uc-title">Command Deck for Armed Response</div>
@@ -339,7 +339,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310215/Gemini_Generated_Image_viirg9viirg9viir.png" alt="Family Safety" />
+              <img src="/media/images/Gemini_Generated_Image_cj8x5rcj8x5rcj8x.png" alt="Family Safety" />
               <div className="uc-body">
                 <span className="uc-tag">Families &amp; Residents</span>
                 <div className="uc-title">Personal Safety Hub</div>
@@ -347,7 +347,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310052/copilot_image_1786916979200.png" alt="Estate Security" />
+              <img src="/media/images/Gemini_Generated_Image_ghu57oghu57oghu5.png" alt="Estate Security" />
               <div className="uc-body">
                 <span className="uc-tag">Estates &amp; Complexes</span>
                 <div className="uc-title">Full Estate Deployment</div>
@@ -363,12 +363,12 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
         <div className="dispatch-inner">
           <div className="dispatch-header">
             <div className="live-badge"><div className="ldot"></div><span>Live System</span></div>
-            <h2 className="dtitle" style={{ cursor: "pointer" }} onClick={() => { setVideoSrc("https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310192/Pitch_deck.mp4"); setShowVideoModal(true); }}>SAFETYLINK — OFFLINE-FIRST INTELLIGENT DISPATCH <span style={{ fontSize: "12px", verticalAlign: "middle", opacity: 0.8 }}>▶ PLAY VIDEO</span></h2>
+            <h2 className="dtitle" style={{ cursor: "pointer" }} onClick={() => { setVideoSrc("/media/videos/SafetyLink%203D%20Animation%20Logo.mp4"); setShowVideoModal(true); }}>SAFETYLINK — OFFLINE-FIRST INTELLIGENT DISPATCH <span style={{ fontSize: "12px", verticalAlign: "middle", opacity: 0.8 }}>▶ PLAY VIDEO</span></h2>
             <p className="dsub">Intelligent Local Coordination · Local Processing · Local Control · Offline, On Purpose.</p>
           </div>
           <button className="tour-btn" onClick={startTour}>▶ &nbsp;TAKE A TOUR</button>
           <div className="img-wrap">
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313191/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg" alt="SafetyLink Offline-First Intelligent Dispatch System" />
+            <img src="/media/images/Emergency_System_Architecture_Anatomy.png" alt="SafetyLink Offline-First Intelligent Dispatch System" />
             <div className="hgrid">
               <div className={"hz" + (activePanel === 1 ? " active" : "")} id="z1" onClick={() => openPanel(1)} style={{boxShadow: activePanel === 1 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
                 <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
@@ -395,7 +395,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="panels">
             <div className={"panel pt" + (activePanel === 1 ? " visible" : "")} id="p1">
               <div className="pi">
-                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SOS App"/></div>
+                <div className="pthumb"><img src="/media/images/Platform_Screenshot.jpeg" alt="SOS App"/></div>
                 <div className="pbody">
                   <button className="pclose" onClick={closePanel}>×</button>
                   <div className="pbadge">Offline Operation</div>
@@ -426,7 +426,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
             </div>
             <div className={"panel pt" + (activePanel === 4 ? " visible" : "")} id="p4">
               <div className="pi">
-                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="Command Login"/></div>
+                <div className="pthumb"><img src="/media/images/Emergency_Response_Platform_Architecture_Overview.png" alt="Command Login"/></div>
                 <div className="pbody">
                   <button className="pclose" onClick={closePanel}>×</button>
                   <div className="pbadge">Local Operator Control</div>
@@ -448,7 +448,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <p style={{fontSize:'15px', color:'var(--muted)', maxWidth:'520px', lineHeight:'1.7', marginBottom:'48px'}}>Three layers of intelligent emergency response — Mobile, Command, and Admin — built for South African conditions.</p>
           <div className="feat-grid">
             <div className="feat-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink Mobile App" />
+              <img src="/media/images/Platform_Screenshot.jpeg" alt="SafetyLink Mobile App" />
               <div className="feat-body">
                 <span className="feat-tag mobile">SafetyLink Mobile</span>
                 <div className="feat-title">Citizen Safety Hub</div>
@@ -463,7 +463,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="feat-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command" />
+              <img src="/media/images/Emergency_Response_Platform_Architecture_Overview.png" alt="SafetyLink Command" />
               <div className="feat-body">
                 <span className="feat-tag command">SafetyLink Command</span>
                 <div className="feat-title">Responder Control Deck</div>
@@ -478,7 +478,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="feat-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="SafetyLink Admin" />
+              <img src="/media/images/Safety_Response_System_Architecture.png" alt="SafetyLink Admin" />
               <div className="feat-body">
                 <span className="feat-tag admin">SafetyLink Admin</span>
                 <div className="feat-title">Organisation Management</div>
@@ -504,7 +504,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <p style={{fontSize:'15px', color:'var(--muted)', maxWidth:'520px', lineHeight:'1.7'}}>SafetyLink works with the iTAG BLE keyfob. Available in 5 colours. Standard CR2032 battery. No proprietary lock-in.</p>
           <div className="hw-grid">
             <div className="hw-main">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310009/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices — blue white pink green black" />
+              <img src="/media/images/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices — blue white pink green black" />
               <div className="hw-badge b1">
                 <div className="btag">Start From</div>
                 <div className="bamt">R49<span style={{fontSize:'14px', fontWeight:'500'}}>pm</span></div>
@@ -517,10 +517,10 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
             </div>
             <div className="hw-right">
               <div className="hw-detail">
-                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310009/Polish_20260819_020134421.jpg" alt="Pink iTAG close-up" />
+                <img src="/media/images/Polish_20260819_020134421.jpg" alt="Pink iTAG close-up" />
               </div>
               <div className="hw-guide">
-                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310010/Polish_20260819_020007723.jpg" alt="iTAG battery replacement guide" />
+                <img src="/media/images/Polish_20260819_020134421-1.jpg" alt="iTAG battery replacement guide" />
                 <div className="hw-guide-label">
                   <p>Battery Replacement Guide</p>
                   <span>Rotate lid → Remove → Insert CR2032 → Replace</span>
@@ -552,12 +552,12 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="section-eye">Visual Library</div>
           <h2 className="section-h">SafetyLink In Action</h2>
           <div className="gal-grid">
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309980/Gemini_Generated_Image_k9vgu9k9vgu9k9vg.png" alt="SafetyLink tactical poster" /><div className="gal-caption">SafetyLink Tactical Deployment</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309942/Gemini_Generated_Image_swlp4kswlp4kswlp_1.jpg" alt="System diagram" /><div className="gal-caption">Intelligent Dispatch Architecture</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309940/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg" alt="Drone minutes matter" /><div className="gal-caption">Minutes Matter. Drones Act Now.</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309937/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg" alt="SafetyLink business card" /><div className="gal-caption">SafetyLink Brand Identity</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310052/copilot_image_1783703540293.png" alt="SafetyLink 3D logo" /><div className="gal-caption">SafetyLink 3D Brand Mark</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309942/Gemini_Generated_Image_283s3m283s3m283s.jpg" alt="UI screenshot" /><div className="gal-caption">Command Dashboard Interface</div></div>
+            <div className="gal-item"><img src="/media/images/Polish_20260727_010938698.jpg" alt="SafetyLink tactical poster" /><div className="gal-caption">SafetyLink Tactical Deployment</div></div>
+            <div className="gal-item"><img src="/media/images/Safety_Response_System_Architecture.png" alt="System diagram" /><div className="gal-caption">Intelligent Dispatch Architecture</div></div>
+            <div className="gal-item"><img src="/media/images/Polish_20260727_023640262.jpg" alt="Drone minutes matter" /><div className="gal-caption">Minutes Matter. Drones Act Now.</div></div>
+            <div className="gal-item"><img src="/media/images/image_1783702731867.jpeg" alt="SafetyLink business card" /><div className="gal-caption">SafetyLink Brand Identity</div></div>
+            <div className="gal-item"><img src="/media/images/eka67lqzxa.png" alt="SafetyLink 3D logo" /><div className="gal-caption">SafetyLink 3D Brand Mark</div></div>
+            <div className="gal-item"><img src="/media/images/Emergency_Response_Platform_Architecture_Overview.png" alt="UI screenshot" /><div className="gal-caption">Command Dashboard Interface</div></div>
           </div>
         </div>
       </section>
@@ -577,7 +577,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
             </ul>
           </div>
           <div className="klev-right">
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png" alt="K'lev.ai Intelligence Platform" />
+            <img src="/media/images/Gemini_Generated_Image_waguavwaguavwagu.jpeg" alt="K'lev.ai Intelligence Platform" />
           </div>
         </div>
       </section>
@@ -634,19 +634,19 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <p className="section-sub">Available on Android, Windows, and as a Progressive Web App. Contact us on WhatsApp to receive your download link.</p>
           <div className="dl-grid">
             <div className="dl-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="Android App Preview"/>
+              <img src="/media/images/Platform_Screenshot.jpeg" alt="Android App Preview"/>
               <div className="dl-title">Android APK</div>
               <div className="dl-sub">Minimum Android 8.0. Bluetooth LE required for iTAG functionality.</div>
               <a href={latestApkUrl || "https://github.com/Charesmagna/SafetyLink-Core/releases/latest"} target="_blank" rel="noreferrer" className="dl-btn-link apk">{latestApkUrl ? 'Download Latest APK' : 'View Releases'}</a>
             </div>
             <div className="dl-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310062/copilot_image_1783201115036.png" alt="Windows Command Deck"/>
+              <img src="/media/images/Emergency_System_Architecture_Anatomy.png" alt="Windows Command Deck"/>
               <div className="dl-title">Windows EXE</div>
               <div className="dl-sub">SafetyLink Command Deck desktop app. Requires SL-ORG-XXXX access code.</div>
               <a href={latestExeUrl || "https://github.com/Charesmagna/SafetyLink-Core/releases/latest"} target="_blank" rel="noreferrer" className="dl-btn-link exe">{latestExeUrl ? 'Download Latest EXE' : 'View Releases'}</a>
             </div>
             <div className="dl-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310049/Polish_20260620_014530309.jpg" alt="SafetyLink PWA"/>
+              <img src="/media/images/Polish_20260620_014530309.jpg" alt="SafetyLink PWA"/>
               <div className="dl-title">PWA</div>
               <div className="dl-sub">Access directly from your browser. Tap Add to Home Screen. Full offline capability once installed.</div>
               <a href="https://safetylink.online" target="_blank" rel="noreferrer" className="dl-btn-link pwa">Open PWA</a>
@@ -696,7 +696,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
       </div>
 
       {/* ══ NETWORK BANNER ══ */}
-      <img className="network-banner" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/SafetyLink_3D_Render.pdf" alt="SafetyLink Global Protection Network" />
+      <img className="network-banner" src="/media/images/Safety_Response_System_Architecture.png" alt="SafetyLink Global Protection Network" />
 
       {/* ══ FOOTER ══ */}
       <footer id="contact">
