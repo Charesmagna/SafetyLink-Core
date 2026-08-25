@@ -28,6 +28,7 @@
         "cloudinary": "^2.10.1",
         "connectycube": "^6.3.0",
         "d3": "^7.9.0",
+        "date-fns": "^4.4.0",
         "express": "^5.2.1",
         "firebase": "^12.18.0",
         "firebase-admin": "^14.3.0",
@@ -1075,6 +1076,8 @@
     "data-view-byte-length": ["data-view-byte-length@1.0.2", "", { "dependencies": { "call-bound": "^1.0.3", "es-errors": "^1.3.0", "is-data-view": "^1.0.2" } }, ""],
 
     "data-view-byte-offset": ["data-view-byte-offset@1.0.1", "", { "dependencies": { "call-bound": "^1.0.2", "es-errors": "^1.3.0", "is-data-view": "^1.0.1" } }, ""],
+
+    "date-fns": ["date-fns@4.4.0", "", {}, "sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w=="],
 
     "dayjs": ["dayjs@1.11.22", "", {}, ""],
 
