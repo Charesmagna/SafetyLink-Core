@@ -69,7 +69,7 @@ export const EvidenceLedger: React.FC = () => {
             />
           </div>
           
-          {currentUser?.role === 'Super Admin' && (
+          {currentUser?.username === 'SL-admin-0000' && (
             <button 
               onClick={() => {
                 if(confirm('WARNING: Purging the Evidence Ledger will permanently delete local telemetry history. This is restricted to Super Admins. Proceed?')) {
