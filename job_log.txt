@@ -1,0 +1,1344 @@
+﻿2026-08-14T19:54:29.9340609Z Current runner version: '2.336.0'
+2026-08-14T19:54:29.9381513Z ##[group]Runner Image Provisioner
+2026-08-14T19:54:29.9382828Z Hosted Compute Agent
+2026-08-14T19:54:29.9383835Z Version: 20260729.566
+2026-08-14T19:54:29.9384876Z Commit: cf7153fe6e25b664e8693c24944bf2b00355d109
+2026-08-14T19:54:29.9386029Z Build Date: 2026-07-29T19:17:02Z
+2026-08-14T19:54:29.9387244Z Worker ID: {79b9acff-9b40-480a-9413-aa2eb0401f7e}
+2026-08-14T19:54:29.9388388Z Azure Region: eastus2
+2026-08-14T19:54:29.9389375Z ##[endgroup]
+2026-08-14T19:54:29.9392262Z ##[group]Operating System
+2026-08-14T19:54:29.9393300Z Ubuntu
+2026-08-14T19:54:29.9394245Z 24.04.4
+2026-08-14T19:54:29.9395038Z LTS
+2026-08-14T19:54:29.9395812Z ##[endgroup]
+2026-08-14T19:54:29.9396768Z ##[group]Runner Image
+2026-08-14T19:54:29.9397768Z Image: ubuntu-24.04
+2026-08-14T19:54:29.9398796Z Version: 20260810.271.1
+2026-08-14T19:54:29.9400996Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260810.271/images/ubuntu/Ubuntu2404-Readme.md
+2026-08-14T19:54:29.9403663Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260810.271
+2026-08-14T19:54:29.9405238Z ##[endgroup]
+2026-08-14T19:54:29.9410951Z ##[group]GITHUB_TOKEN Permissions
+2026-08-14T19:54:29.9414630Z Actions: write
+2026-08-14T19:54:29.9415620Z ArtifactMetadata: write
+2026-08-14T19:54:29.9416598Z Attestations: write
+2026-08-14T19:54:29.9417644Z Checks: write
+2026-08-14T19:54:29.9418531Z CodeQuality: write
+2026-08-14T19:54:29.9419403Z Contents: write
+2026-08-14T19:54:29.9420737Z CopilotRequests: write
+2026-08-14T19:54:29.9421682Z Deployments: write
+2026-08-14T19:54:29.9422674Z Discussions: write
+2026-08-14T19:54:29.9423594Z Drives: write
+2026-08-14T19:54:29.9424409Z Issues: write
+2026-08-14T19:54:29.9425369Z Metadata: read
+2026-08-14T19:54:29.9426432Z Models: read
+2026-08-14T19:54:29.9427368Z Packages: write
+2026-08-14T19:54:29.9428313Z Pages: write
+2026-08-14T19:54:29.9429162Z PullRequests: write
+2026-08-14T19:54:29.9430452Z RepositoryProjects: write
+2026-08-14T19:54:29.9431481Z SecurityEvents: write
+2026-08-14T19:54:29.9432486Z Statuses: write
+2026-08-14T19:54:29.9433446Z VulnerabilityAlerts: read
+2026-08-14T19:54:29.9434398Z ##[endgroup]
+2026-08-14T19:54:29.9437611Z Secret source: Actions
+2026-08-14T19:54:29.9439741Z Prepare workflow directory
+2026-08-14T19:54:30.1007127Z Prepare all required actions
+2026-08-14T19:54:30.1077546Z Getting action download info
+2026-08-14T19:54:30.2779450Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-08-14T19:54:30.4278932Z Download action repository 'actions/setup-java@v4' (SHA:cf277c60eb25467037889841efdb72551f06f6c3)
+2026-08-14T19:54:30.7316595Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-08-14T19:54:30.8307552Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-08-14T19:54:30.9869667Z Download action repository 'softprops/action-gh-release@v2' (SHA:3bb12739c298aeb8a4eeaf626c5b8d85266b0e65)
+2026-08-14T19:54:31.4989783Z Complete job name: build
+2026-08-14T19:54:31.7467657Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:54:31.7477681Z ##[group]Run actions/checkout@v4
+2026-08-14T19:54:31.7478493Z with:
+2026-08-14T19:54:31.7479041Z   repository: Charesmagna/SafetyLink-Core
+2026-08-14T19:54:31.7483675Z   token: ***
+2026-08-14T19:54:31.7484199Z   ssh-strict: true
+2026-08-14T19:54:31.7484724Z   ssh-user: git
+2026-08-14T19:54:31.7485240Z   persist-credentials: true
+2026-08-14T19:54:31.7485803Z   clean: true
+2026-08-14T19:54:31.7486323Z   sparse-checkout-cone-mode: true
+2026-08-14T19:54:31.7486914Z   fetch-depth: 1
+2026-08-14T19:54:31.7487412Z   fetch-tags: false
+2026-08-14T19:54:31.7487929Z   show-progress: true
+2026-08-14T19:54:31.7488851Z   lfs: false
+2026-08-14T19:54:31.7489419Z   submodules: false
+2026-08-14T19:54:31.7490188Z   set-safe-directory: true
+2026-08-14T19:54:31.7490856Z   allow-unsafe-pr-checkout: false
+2026-08-14T19:54:31.7491791Z ##[endgroup]
+2026-08-14T19:54:31.8831780Z Syncing repository: Charesmagna/SafetyLink-Core
+2026-08-14T19:54:31.8835318Z ##[group]Getting Git version info
+2026-08-14T19:54:31.8837007Z Working directory is '/home/runner/work/SafetyLink-Core/SafetyLink-Core'
+2026-08-14T19:54:31.8842107Z [command]/usr/bin/git version
+2026-08-14T19:54:31.8909340Z git version 2.54.0
+2026-08-14T19:54:31.8915922Z ##[endgroup]
+2026-08-14T19:54:31.8983180Z Temporarily overriding HOME='/home/runner/work/_temp/ff6bcf03-c49c-438d-ac31-ebfd9d79b8f6' before making global git config changes
+2026-08-14T19:54:31.8985978Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-14T19:54:31.8989673Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/SafetyLink-Core/SafetyLink-Core
+2026-08-14T19:54:31.9094089Z Deleting the contents of '/home/runner/work/SafetyLink-Core/SafetyLink-Core'
+2026-08-14T19:54:31.9101488Z ##[group]Initializing the repository
+2026-08-14T19:54:31.9105459Z [command]/usr/bin/git init /home/runner/work/SafetyLink-Core/SafetyLink-Core
+2026-08-14T19:54:31.9212715Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-08-14T19:54:31.9221915Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-08-14T19:54:31.9232245Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-08-14T19:54:31.9263731Z hint: call:
+2026-08-14T19:54:31.9264583Z hint:
+2026-08-14T19:54:31.9265524Z hint: 	git config --global init.defaultBranch <name>
+2026-08-14T19:54:31.9266549Z hint:
+2026-08-14T19:54:31.9267592Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-08-14T19:54:31.9269247Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-08-14T19:54:31.9270979Z hint:
+2026-08-14T19:54:31.9271802Z hint: 	git branch -m <name>
+2026-08-14T19:54:31.9272685Z hint:
+2026-08-14T19:54:31.9273823Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-08-14T19:54:31.9275771Z Initialized empty Git repository in /home/runner/work/SafetyLink-Core/SafetyLink-Core/.git/
+2026-08-14T19:54:31.9281153Z [command]/usr/bin/git remote add origin https://github.com/Charesmagna/SafetyLink-Core
+2026-08-14T19:54:31.9293493Z ##[endgroup]
+2026-08-14T19:54:31.9295216Z ##[group]Disabling automatic garbage collection
+2026-08-14T19:54:31.9297173Z [command]/usr/bin/git config --local gc.auto 0
+2026-08-14T19:54:31.9352197Z ##[endgroup]
+2026-08-14T19:54:31.9353849Z ##[group]Setting up auth
+2026-08-14T19:54:31.9356042Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-08-14T19:54:31.9443953Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-08-14T19:54:32.0170345Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-14T19:54:32.0177066Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-08-14T19:54:32.1383488Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-14T19:54:32.1388474Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-08-14T19:54:32.1393290Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-08-14T19:54:32.1397179Z ##[endgroup]
+2026-08-14T19:54:32.1398811Z ##[group]Fetching the repository
+2026-08-14T19:54:32.1401839Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +f82ef30c6a7a3eda72fd9800469c41d4763d0a39:refs/remotes/origin/main
+2026-08-14T19:54:36.6145246Z From https://github.com/Charesmagna/SafetyLink-Core
+2026-08-14T19:54:36.6151083Z  * [new ref]         f82ef30c6a7a3eda72fd9800469c41d4763d0a39 -> origin/main
+2026-08-14T19:54:36.6186943Z ##[endgroup]
+2026-08-14T19:54:36.6188940Z ##[group]Determining the checkout info
+2026-08-14T19:54:36.6191436Z ##[endgroup]
+2026-08-14T19:54:36.6207940Z [command]/usr/bin/git sparse-checkout disable
+2026-08-14T19:54:36.6255883Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-08-14T19:54:36.6304913Z ##[group]Checking out the ref
+2026-08-14T19:54:36.6307136Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-08-14T19:54:37.3171479Z Switched to a new branch 'main'
+2026-08-14T19:54:37.3184067Z branch 'main' set up to track 'origin/main'.
+2026-08-14T19:54:37.3237883Z ##[endgroup]
+2026-08-14T19:54:37.3284081Z [command]/usr/bin/git log -1 --format=%H
+2026-08-14T19:54:37.3307357Z f82ef30c6a7a3eda72fd9800469c41d4763d0a39
+2026-08-14T19:54:37.5407700Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:54:37.5409559Z ##[group]Run actions/setup-java@v4
+2026-08-14T19:54:37.5409848Z with:
+2026-08-14T19:54:37.5410243Z   java-version: 17
+2026-08-14T19:54:37.5410486Z   distribution: temurin
+2026-08-14T19:54:37.5410749Z   java-package: jdk
+2026-08-14T19:54:37.5410986Z   check-latest: false
+2026-08-14T19:54:37.5411218Z   server-id: github
+2026-08-14T19:54:37.5411448Z   server-username: GITHUB_ACTOR
+2026-08-14T19:54:37.5411721Z   server-password: GITHUB_TOKEN
+2026-08-14T19:54:37.5411996Z   overwrite-settings: true
+2026-08-14T19:54:37.5412292Z   job-status: success
+2026-08-14T19:54:37.5414825Z   token: ***
+2026-08-14T19:54:37.5415060Z ##[endgroup]
+2026-08-14T19:54:37.7445026Z (node:1971) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-14T19:54:37.7446202Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-14T19:54:37.7473033Z ##[warning]setup-java v4 is deprecated and will no longer receive updates. Please migrate to actions/setup-java@v5.
+2026-08-14T19:54:37.7483475Z ##[group]Installed distributions
+2026-08-14T19:54:37.7486402Z Resolved Java 17.0.20+8 from tool-cache
+2026-08-14T19:54:37.7486890Z Setting Java 17.0.20+8 as the default
+2026-08-14T19:54:37.7487431Z Creating toolchains.xml for JDK version 17 from temurin
+2026-08-14T19:54:37.7646119Z Writing to /home/runner/.m2/toolchains.xml
+2026-08-14T19:54:37.7646510Z 
+2026-08-14T19:54:37.7646663Z Java configuration:
+2026-08-14T19:54:37.7647027Z   Distribution: temurin
+2026-08-14T19:54:37.7647422Z   Version: 17.0.20+8
+2026-08-14T19:54:37.7647883Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:37.7648330Z 
+2026-08-14T19:54:37.7648900Z ##[endgroup]
+2026-08-14T19:54:37.7667846Z Creating settings.xml with server-id: github
+2026-08-14T19:54:37.7669282Z Writing to /home/runner/.m2/settings.xml
+2026-08-14T19:54:37.9076840Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:54:37.9078119Z ##[group]Run actions/setup-node@v4
+2026-08-14T19:54:37.9078405Z with:
+2026-08-14T19:54:37.9078632Z   node-version: 22
+2026-08-14T19:54:37.9078861Z   cache: npm
+2026-08-14T19:54:37.9079088Z   always-auth: false
+2026-08-14T19:54:37.9079335Z   check-latest: false
+2026-08-14T19:54:37.9081984Z   token: ***
+2026-08-14T19:54:37.9082455Z env:
+2026-08-14T19:54:37.9082797Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:37.9083319Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:37.9083715Z ##[endgroup]
+2026-08-14T19:54:38.0775136Z (node:1983) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-14T19:54:38.0892251Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-14T19:54:38.1354277Z Found in cache @ /opt/hostedtoolcache/node/22.23.2/x64
+2026-08-14T19:54:38.1574121Z ##[group]Environment details
+2026-08-14T19:54:38.7113632Z node: v22.23.2
+2026-08-14T19:54:38.7200290Z npm: 10.9.8
+2026-08-14T19:54:38.7201121Z yarn: 1.22.22
+2026-08-14T19:54:38.7202566Z ##[endgroup]
+2026-08-14T19:54:38.7203385Z [command]/opt/hostedtoolcache/node/22.23.2/x64/bin/npm config get cache
+2026-08-14T19:54:38.8432548Z /home/runner/.npm
+2026-08-14T19:54:38.9302277Z Cache hit for: node-cache-Linux-x64-npm-fe1fbafad138987fda9401cc28b133eb0a196fb1cfb6a6d973c6aeb6790a487b
+2026-08-14T19:54:38.9407916Z (node:1983) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-08-14T19:54:39.9767113Z Received 155189248 of 184672995 (84.0%), 146.0 MBs/sec
+2026-08-14T19:54:40.0708488Z Received 184672995 of 184672995 (100.0%), 158.8 MBs/sec
+2026-08-14T19:54:40.0711788Z Cache Size: ~176 MB (184672995 B)
+2026-08-14T19:54:40.0811111Z [command]/usr/bin/tar -xf /home/runner/work/_temp/b47cc773-9d1a-4b9e-900a-7e6c73bfe136/cache.tzst -P -C /home/runner/work/SafetyLink-Core/SafetyLink-Core --use-compress-program unzstd
+2026-08-14T19:54:41.0830515Z Cache restored successfully
+2026-08-14T19:54:41.0927679Z Cache restored from key: node-cache-Linux-x64-npm-fe1fbafad138987fda9401cc28b133eb0a196fb1cfb6a6d973c6aeb6790a487b
+2026-08-14T19:54:41.1222079Z ##[group]Run npm install
+2026-08-14T19:54:41.1222499Z [36;1mnpm install[0m
+2026-08-14T19:54:41.1272734Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:54:41.1273025Z env:
+2026-08-14T19:54:41.1273368Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:41.1273886Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:41.1274295Z ##[endgroup]
+2026-08-14T19:54:48.0050325Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2026-08-14T19:54:48.1171496Z npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.hirok.io
+2026-08-14T19:54:48.1677438Z npm warn deprecated git-semver-tags@4.1.1: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
+2026-08-14T19:54:48.1717597Z npm warn deprecated git-raw-commits@2.0.11: Deprecated and no longer maintained. Use @conventional-changelog/git-client instead.
+2026-08-14T19:54:48.4872490Z npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-08-14T19:54:48.5245301Z npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.hirok.io
+2026-08-14T19:54:48.5592504Z npm warn deprecated q@1.5.1: You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+2026-08-14T19:54:48.5603860Z npm warn deprecated
+2026-08-14T19:54:48.5607135Z npm warn deprecated (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
+2026-08-14T19:54:48.6025125Z npm warn deprecated scmp@2.1.0: Just use Node.js's crypto.timingSafeEqual()
+2026-08-14T19:54:48.7162733Z npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+2026-08-14T19:54:48.7504526Z npm warn deprecated conventional-changelog-core@4.2.4: Deprecated and no longer maintained. Please use conventional-changelog instead.
+2026-08-14T19:54:48.7741759Z npm warn deprecated conventional-changelog-jquery@3.0.11: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.7823129Z npm warn deprecated conventional-changelog-express@2.0.6: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.7826377Z npm warn deprecated conventional-changelog-ember@2.0.9: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.7852001Z npm warn deprecated conventional-changelog-eslint@3.0.9: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.7871800Z npm warn deprecated conventional-changelog-codemirror@2.0.8: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.7874703Z npm warn deprecated conventional-changelog-atom@2.0.8: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:48.8822472Z npm warn deprecated conventional-changelog-jshint@2.0.9: This preset is deprecated. Please use conventional-changelog-conventionalcommits or conventional-changelog-angular instead.
+2026-08-14T19:54:49.5242636Z npm warn deprecated boolean@3.2.0: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+2026-08-14T19:54:49.8712325Z npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+2026-08-14T19:54:50.3009755Z npm warn deprecated tar@6.2.1: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-08-14T19:54:50.6702395Z npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+2026-08-14T19:54:51.2963227Z npm warn deprecated cron-parser@5.6.2: Published tarball was built from a stale dist/ and is missing the fixes from #414 and #415 — its contents are effectively v5.6.1. Upgrade to v5.7.0.
+2026-08-14T19:54:51.3492701Z npm warn deprecated uuid@7.0.3: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
+2026-08-14T19:54:52.6423852Z npm warn deprecated glob@9.3.5: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-08-14T19:54:52.6783642Z npm warn deprecated glob@11.1.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-08-14T19:54:59.5981325Z 
+2026-08-14T19:54:59.6061599Z added 1328 packages, and audited 1329 packages in 18s
+2026-08-14T19:54:59.6080337Z 
+2026-08-14T19:54:59.6096759Z 232 packages are looking for funding
+2026-08-14T19:54:59.6120650Z   run `npm fund` for details
+2026-08-14T19:54:59.6489222Z 
+2026-08-14T19:54:59.6491534Z 16 vulnerabilities (8 moderate, 7 high, 1 critical)
+2026-08-14T19:54:59.6500748Z 
+2026-08-14T19:54:59.6510892Z To address issues that do not require attention, run:
+2026-08-14T19:54:59.6530714Z   npm audit fix
+2026-08-14T19:54:59.6549752Z 
+2026-08-14T19:54:59.6551024Z To address all issues possible (including breaking changes), run:
+2026-08-14T19:54:59.6551849Z   npm audit fix --force
+2026-08-14T19:54:59.6552239Z 
+2026-08-14T19:54:59.6552569Z Some issues need review, and may require choosing
+2026-08-14T19:54:59.6553120Z a different dependency.
+2026-08-14T19:54:59.6553369Z 
+2026-08-14T19:54:59.6553582Z Run `npm audit` for details.
+2026-08-14T19:54:59.7796500Z ##[group]Run npm run build
+2026-08-14T19:54:59.7796826Z [36;1mnpm run build[0m
+2026-08-14T19:54:59.7838961Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:54:59.7839246Z env:
+2026-08-14T19:54:59.7839591Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:59.7840384Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:54:59.7840808Z ##[endgroup]
+2026-08-14T19:54:59.8941725Z 
+2026-08-14T19:54:59.8942808Z > safetylink-core@1.0.0 build
+2026-08-14T19:54:59.8944680Z > vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs
+2026-08-14T19:54:59.8945725Z 
+2026-08-14T19:55:00.2142117Z [36mvite v8.2.0 [32mbuilding client environment for production...[36m[39m
+2026-08-14T19:55:00.2270242Z [2K
+2026-08-14T19:55:02.3483187Z transforming...✓ 2452 modules transformed.
+2026-08-14T19:55:02.5426872Z rendering chunks...
+2026-08-14T19:55:02.7551704Z computing gzip size...
+2026-08-14T19:55:02.7783469Z dist/registerSW.js                                                    0.13 kB
+2026-08-14T19:55:02.7784743Z dist/manifest.webmanifest                                             0.37 kB
+2026-08-14T19:55:02.7786909Z dist/index.html                                                       2.27 kB │ gzip:   0.87 kB
+2026-08-14T19:55:02.7788242Z dist/assets/regenerated_image_1784546645212-1uJyD4dV.png            516.83 kB
+2026-08-14T19:55:02.7789719Z dist/assets/safetylink_team_tablet_1783207733837-CZpCjfsa.jpg     1,282.06 kB
+2026-08-14T19:55:02.7791256Z dist/assets/safetylink_officer_phone_1783207722148-DeAL82Xp.jpg   1,287.24 kB
+2026-08-14T19:55:02.7792482Z dist/assets/safetylink_campus_patrol_1783424770332-CACHT-Wk.jpg   1,453.52 kB
+2026-08-14T19:55:02.7793683Z dist/assets/safetylink_control_center_1783424754132-CxyzZrry.jpg  1,518.79 kB
+2026-08-14T19:55:02.7798270Z [33m[plugin builtin:vite-reporter] 
+2026-08-14T19:55:02.7799163Z dist/assets/sl_logoset-DRK02oZb.jpeg                              1,999.57 kB
+2026-08-14T19:55:02.7800759Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-08-14T19:55:02.7802642Z dist/assets/vendor-leaflet-CcXJxNtP.css                              14.80 kB │ gzip:   6.31 kB
+2026-08-14T19:55:02.7808755Z - Using dynamic import() to code-split the application
+2026-08-14T19:55:02.7810727Z dist/assets/index-BYAmbY99.css                                      111.15 kB │ gzip:  18.93 kB
+2026-08-14T19:55:02.7812277Z - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+2026-08-14T19:55:02.7814019Z dist/assets/vendor-zustand-KyrmSkSF.js                                0.76 kB │ gzip:   0.46 kB
+2026-08-14T19:55:02.7815391Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+2026-08-14T19:55:02.7816899Z dist/assets/rolldown-runtime-B0Z9INg1.js                              0.90 kB │ gzip:   0.51 kB
+2026-08-14T19:55:02.7818571Z dist/assets/crypto-Bot6feb7.js                                        1.52 kB │ gzip:   0.60 kB
+2026-08-14T19:55:02.7820374Z dist/assets/GlobalRadarBackground--eHzdeHJ.js                         1.82 kB │ gzip:   0.81 kB
+2026-08-14T19:55:02.7821962Z dist/assets/LocationDisplay-CMam_NlE.js                               2.73 kB │ gzip:   1.02 kB
+2026-08-14T19:55:02.7823936Z dist/assets/MediaHub-z3piinSg.js                                      3.36 kB │ gzip:   1.34 kB
+2026-08-14T19:55:02.7825531Z dist/assets/DecoyCalculator-p0F1uPLW.js                               4.13 kB │ gzip:   1.70 kB
+2026-08-14T19:55:02.7827021Z dist/assets/Profile-D6wzjNvp.js                                       5.14 kB │ gzip:   1.43 kB
+2026-08-14T19:55:02.7828499Z dist/assets/AndroidWidgetSimulator-BnjxM18A.js                        5.37 kB │ gzip:   1.93 kB
+2026-08-14T19:55:02.7830391Z dist/assets/WorkspaceIntegrations-CmAJ4qY1.js                         9.55 kB │ gzip:   2.71 kB
+2026-08-14T19:55:02.7832498Z dist/assets/KlevaBot-CRdrxHYL.js                                      9.55 kB │ gzip:   3.50 kB
+2026-08-14T19:55:02.7834059Z dist/assets/AppTour-CgWJ9R_7.js                                      13.96 kB │ gzip:   4.40 kB
+2026-08-14T19:55:02.7835580Z dist/assets/OfflineMap-BWfz78ti.js                                   14.97 kB │ gzip:   4.35 kB
+2026-08-14T19:55:02.7837093Z dist/assets/AIHub-Ci6BXgFy.js                                        16.08 kB │ gzip:   4.78 kB
+2026-08-14T19:55:02.7838656Z dist/assets/ConfidentialVault-B7LdMGJu.js                            27.20 kB │ gzip:   6.82 kB
+2026-08-14T19:55:02.7840435Z dist/assets/BLEScanner-DgnO4hKR.js                                   29.72 kB │ gzip:   8.21 kB
+2026-08-14T19:55:02.7842007Z dist/assets/CommerceCenter-CNgCBA9D.js                               36.09 kB │ gzip:   8.63 kB
+2026-08-14T19:55:02.7843629Z dist/assets/AdminPanel-D6nks3l4.js                                   38.70 kB │ gzip:   8.12 kB
+2026-08-14T19:55:02.7845185Z dist/assets/vendor-capacitor-JO_6BbPE.js                             40.74 kB │ gzip:  11.79 kB
+2026-08-14T19:55:02.7846775Z dist/assets/AdvancedSubsystems-Bff_TRLQ.js                           54.60 kB │ gzip:  12.64 kB
+2026-08-14T19:55:02.7848322Z dist/assets/Settings-BnNKn8sL.js                                     61.56 kB │ gzip:  10.48 kB
+2026-08-14T19:55:02.7849835Z dist/assets/OrgDashboard-CpDZMIec.js                                 99.14 kB │ gzip:  20.90 kB
+2026-08-14T19:55:02.7851722Z dist/assets/vendor-motion-jFevBsPU.js                               125.46 kB │ gzip:  41.01 kB
+2026-08-14T19:55:02.7853335Z dist/assets/vendor-leaflet-CKcDwgLm.js                              148.80 kB │ gzip:  43.39 kB
+2026-08-14T19:55:02.7854852Z dist/assets/vendor-react-9BUGXJde.js                                153.60 kB │ gzip:  49.29 kB
+2026-08-14T19:55:02.7856341Z dist/assets/index-BzXbno26.js                                       234.61 kB │ gzip:  61.39 kB
+2026-08-14T19:55:02.7857808Z dist/assets/vendor-firebase-DsF4NSb-.js                             392.47 kB │ gzip: 114.65 kB
+2026-08-14T19:55:02.7859295Z dist/assets/vendor-CDnu1ug8.js                                      599.39 kB │ gzip: 165.00 kB
+2026-08-14T19:55:02.7860280Z 
+2026-08-14T19:55:02.7860898Z [32m✓ built in 2.57s[39m
+2026-08-14T19:55:05.5450815Z 
+2026-08-14T19:55:05.5458784Z [36mPWA v1.2.0[39m
+2026-08-14T19:55:05.5490354Z mode      [35mgenerateSW[39m
+2026-08-14T19:55:05.5491662Z precache  [32m84 entries[39m [2m(47149.95 KiB)[22m
+2026-08-14T19:55:05.5492400Z files generated
+2026-08-14T19:55:05.5492997Z   [2mdist/sw.js[22m
+2026-08-14T19:55:05.5493681Z   [2mdist/workbox-835c8c05.js[22m
+2026-08-14T19:55:05.7071813Z 
+2026-08-14T19:55:05.7072736Z   dist/server.cjs      21.7kb
+2026-08-14T19:55:05.7075023Z   dist/server.cjs.map  36.8kb
+2026-08-14T19:55:05.7075314Z 
+2026-08-14T19:55:05.7075845Z ⚡ Done in 4ms
+2026-08-14T19:55:05.7258957Z ##[group]Run npm run cap:sync
+2026-08-14T19:55:05.7259306Z [36;1mnpm run cap:sync[0m
+2026-08-14T19:55:05.7300825Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:05.7301107Z env:
+2026-08-14T19:55:05.7301445Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:05.7301982Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:05.7302381Z ##[endgroup]
+2026-08-14T19:55:05.8373372Z 
+2026-08-14T19:55:05.8374691Z > safetylink-core@1.0.0 cap:sync
+2026-08-14T19:55:05.8376541Z > npx cap sync android
+2026-08-14T19:55:05.8377151Z 
+2026-08-14T19:55:06.6730641Z ✔ Copying web assets from dist to android/app/src/main/assets/public in 38.42ms
+2026-08-14T19:55:06.6732662Z ✔ Creating capacitor.config.json in android/app/src/main/assets in 813.36μs
+2026-08-14T19:55:06.6881007Z ✔ copy android in 77.61ms
+2026-08-14T19:55:06.7227679Z ✔ Updating Android plugins in 7.59ms
+2026-08-14T19:55:06.7251046Z [info] Found 12 Capacitor plugins for android:
+2026-08-14T19:55:06.7251926Z        @capacitor-community/bluetooth-le@6.1.0
+2026-08-14T19:55:06.7252665Z        @capacitor-mlkit/barcode-scanning@6.2.0
+2026-08-14T19:55:06.7253295Z        @capacitor/app@6.0.3
+2026-08-14T19:55:06.7253875Z        @capacitor/filesystem@6.0.4
+2026-08-14T19:55:06.7254492Z        @capacitor/geolocation@6.1.1
+2026-08-14T19:55:06.7255892Z        @capacitor/haptics@6.0.3
+2026-08-14T19:55:06.7256555Z        @capacitor/local-notifications@6.1.3
+2026-08-14T19:55:06.7257622Z        @capacitor/push-notifications@6.0.5
+2026-08-14T19:55:06.7258685Z        @capacitor/share@6.0.4
+2026-08-14T19:55:06.7259776Z        @capacitor/splash-screen@6.0.4
+2026-08-14T19:55:06.7261149Z        @capawesome-team/capacitor-android-foreground-service@6.2.0
+2026-08-14T19:55:06.7261824Z        capacitor-voice-recorder@1.1.1
+2026-08-14T19:55:06.7765292Z ✔ update android in 72.22ms
+2026-08-14T19:55:06.7912388Z [info] Sync finished in 0.209s
+2026-08-14T19:55:06.8652375Z ##[group]Run if [ ! -f "android/app/src/main/assets/public/index.html" ]; then
+2026-08-14T19:55:06.8652990Z [36;1mif [ ! -f "android/app/src/main/assets/public/index.html" ]; then[0m
+2026-08-14T19:55:06.8653544Z [36;1m  echo "ERROR: Web assets not found in android assets. Vite build or cap sync failed."[0m
+2026-08-14T19:55:06.8654052Z [36;1m  ls -la android/app/src/main/assets/ || true[0m
+2026-08-14T19:55:06.8654414Z [36;1m  ls -la dist/ || echo "dist/ also missing"[0m
+2026-08-14T19:55:06.8654718Z [36;1m  exit 1[0m
+2026-08-14T19:55:06.8654940Z [36;1mfi[0m
+2026-08-14T19:55:06.8655192Z [36;1mecho "Assets OK: 0 files synced"[0m
+2026-08-14T19:55:06.8697038Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.8697314Z env:
+2026-08-14T19:55:06.8697651Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.8698164Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.8698557Z ##[endgroup]
+2026-08-14T19:55:06.8764989Z Assets OK: 0 files synced
+2026-08-14T19:55:06.8849869Z ##[group]Run sed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true
+2026-08-14T19:55:06.8851574Z [36;1msed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true[0m
+2026-08-14T19:55:06.8852681Z [36;1msed -i '/android {/a \    namespace "com.tchvu3.capacitorvoicerecorder"' node_modules/capacitor-voice-recorder/android/build.gradle || true[0m
+2026-08-14T19:55:06.8853339Z [36;1mcat << 'INNER_EOF' > init.gradle[0m
+2026-08-14T19:55:06.8853642Z [36;1mallprojects {[0m
+2026-08-14T19:55:06.8853900Z [36;1m    buildscript {[0m
+2026-08-14T19:55:06.8854173Z [36;1m        configurations.all {[0m
+2026-08-14T19:55:06.8854468Z [36;1m            resolutionStrategy {[0m
+2026-08-14T19:55:06.8854868Z [36;1m                force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'[0m
+2026-08-14T19:55:06.8855308Z [36;1m                force 'org.bouncycastle:bcprov-jdk18on:1.78.1'[0m
+2026-08-14T19:55:06.8855669Z [36;1m            }[0m
+2026-08-14T19:55:06.8855912Z [36;1m        }[0m
+2026-08-14T19:55:06.8856132Z [36;1m    }[0m
+2026-08-14T19:55:06.8856371Z [36;1m    configurations.all {[0m
+2026-08-14T19:55:06.8856667Z [36;1m        resolutionStrategy {[0m
+2026-08-14T19:55:06.8857003Z [36;1m            force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'[0m
+2026-08-14T19:55:06.8857413Z [36;1m            force 'org.bouncycastle:bcprov-jdk18on:1.78.1'[0m
+2026-08-14T19:55:06.8857959Z [36;1m        }[0m
+2026-08-14T19:55:06.8858177Z [36;1m    }[0m
+2026-08-14T19:55:06.8858388Z [36;1m}[0m
+2026-08-14T19:55:06.8858600Z [36;1mINNER_EOF[0m
+2026-08-14T19:55:06.8897284Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.8897560Z env:
+2026-08-14T19:55:06.8897896Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.8898415Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.8898806Z ##[endgroup]
+2026-08-14T19:55:06.9161336Z ##[group]Run base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
+2026-08-14T19:55:06.9162104Z [36;1mbase64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore[0m
+2026-08-14T19:55:06.9162637Z [36;1mls -la android/app/safetylink-release.keystore[0m
+2026-08-14T19:55:06.9163000Z [36;1mecho "Keystore decoded successfully"[0m
+2026-08-14T19:55:06.9203436Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.9203716Z env:
+2026-08-14T19:55:06.9204069Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9204826Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9205312Z ##[endgroup]
+2026-08-14T19:55:06.9305997Z -rw-r--r-- 1 runner runner 2816 Aug 14 19:55 android/app/safetylink-release.keystore
+2026-08-14T19:55:06.9307201Z Keystore decoded successfully
+2026-08-14T19:55:06.9387397Z ##[group]Run cat << 'JSON_EOF' > android/app/google-services.json
+2026-08-14T19:55:06.9387908Z [36;1mcat << 'JSON_EOF' > android/app/google-services.json[0m
+2026-08-14T19:55:06.9388264Z [36;1m{[0m
+2026-08-14T19:55:06.9388495Z [36;1m  "project_info": {[0m
+2026-08-14T19:55:06.9388790Z [36;1m    "project_number": "1234567890",[0m
+2026-08-14T19:55:06.9389123Z [36;1m    "project_id": "safetylink-mock",[0m
+2026-08-14T19:55:06.9389482Z [36;1m    "storage_bucket": "safetylink-mock.appspot.com"[0m
+2026-08-14T19:55:06.9389837Z [36;1m  },[0m
+2026-08-14T19:55:06.9390228Z [36;1m  "client": [[0m
+2026-08-14T19:55:06.9390475Z [36;1m    {[0m
+2026-08-14T19:55:06.9390704Z [36;1m      "client_info": {[0m
+2026-08-14T19:55:06.9391037Z [36;1m        "mobilesdk_app_id": "1:1234567890:android:mock",[0m
+2026-08-14T19:55:06.9391388Z [36;1m        "android_client_info": {[0m
+2026-08-14T19:55:06.9391749Z [36;1m          "package_name": "com.aistudio.safetylink.vqnztp"[0m
+2026-08-14T19:55:06.9392135Z [36;1m        }[0m
+2026-08-14T19:55:06.9392362Z [36;1m      },[0m
+2026-08-14T19:55:06.9392597Z [36;1m      "oauth_client": [],[0m
+2026-08-14T19:55:06.9392908Z [36;1m      "api_key": [{"current_key": "MOCK_KEY"}],[0m
+2026-08-14T19:55:06.9393338Z [36;1m      "services": {"appinvite_service": {"other_platform_oauth_client": []}}[0m
+2026-08-14T19:55:06.9393747Z [36;1m    }[0m
+2026-08-14T19:55:06.9393963Z [36;1m  ],[0m
+2026-08-14T19:55:06.9394213Z [36;1m  "configuration_version": "1"[0m
+2026-08-14T19:55:06.9394513Z [36;1m}[0m
+2026-08-14T19:55:06.9394724Z [36;1mJSON_EOF[0m
+2026-08-14T19:55:06.9434891Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.9435169Z env:
+2026-08-14T19:55:06.9435505Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9436018Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9436453Z ##[endgroup]
+2026-08-14T19:55:06.9598126Z ##[group]Run chmod +x android/gradlew
+2026-08-14T19:55:06.9598487Z [36;1mchmod +x android/gradlew[0m
+2026-08-14T19:55:06.9639375Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.9639754Z env:
+2026-08-14T19:55:06.9640325Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9640949Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9641506Z ##[endgroup]
+2026-08-14T19:55:06.9830721Z ##[group]Run cd android && ./gradlew --stop || true
+2026-08-14T19:55:06.9831341Z [36;1mcd android && ./gradlew --stop || true[0m
+2026-08-14T19:55:06.9871912Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:06.9872192Z env:
+2026-08-14T19:55:06.9872526Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9873035Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:06.9873430Z ##[endgroup]
+2026-08-14T19:55:07.0375618Z === GRADLEW DIAGNOSTICS ===
+2026-08-14T19:55:07.0376833Z APP_HOME: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android
+2026-08-14T19:55:07.0378502Z CLASSPATH: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar
+2026-08-14T19:55:07.0393885Z gradle-wrapper.jar exists. Size: 63375 bytes
+2026-08-14T19:55:07.0411161Z a8451eeda314d0568b5340498b36edf147a8f0d692c5ff58082d477abe9146e4  /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar
+2026-08-14T19:55:07.0414195Z JAVACMD: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java
+2026-08-14T19:55:07.0416889Z Executing: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java -Xmx64m -Xms64m -Dorg.gradle.appname=gradlew -classpath /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain --stop
+2026-08-14T19:55:07.0418691Z ===========================
+2026-08-14T19:55:08.7129874Z Downloading https://services.gradle.org/distributions/gradle-8.2.1-all.zip
+2026-08-14T19:55:11.8928930Z ..................10%..................20%...................30%..................40%...................50%..................60%..................70%...................80%..................90%...................100%
+2026-08-14T19:55:15.6740582Z 
+2026-08-14T19:55:15.6771156Z Welcome to Gradle 8.2.1!
+2026-08-14T19:55:15.6780585Z 
+2026-08-14T19:55:15.6811100Z Here are the highlights of this release:
+2026-08-14T19:55:15.6831271Z  - Kotlin DSL: new reference documentation, assignment syntax by default
+2026-08-14T19:55:15.6832155Z  - Kotlin DSL is now the default with Gradle init
+2026-08-14T19:55:15.6861015Z  - Improved suggestions to resolve errors in console output
+2026-08-14T19:55:15.6861750Z  - Reduced sync memory consumption
+2026-08-14T19:55:15.6880660Z 
+2026-08-14T19:55:15.6911479Z For more details see https://docs.gradle.org/8.2.1/release-notes.html
+2026-08-14T19:55:15.6931058Z 
+2026-08-14T19:55:16.2269683Z No Gradle daemons are running.
+2026-08-14T19:55:16.2783410Z ##[group]Run rm -rf ~/.gradle/caches
+2026-08-14T19:55:16.2783977Z [36;1mrm -rf ~/.gradle/caches[0m
+2026-08-14T19:55:16.2842034Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:16.2842462Z env:
+2026-08-14T19:55:16.2842989Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:16.2843835Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:16.2844472Z ##[endgroup]
+2026-08-14T19:55:16.3085812Z ##[group]Run ./gradlew clean assembleDebug --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache
+2026-08-14T19:55:16.3086675Z [36;1m./gradlew clean assembleDebug --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache[0m
+2026-08-14T19:55:16.3128281Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:55:16.3128559Z env:
+2026-08-14T19:55:16.3128892Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:16.3129402Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:55:16.3129801Z ##[endgroup]
+2026-08-14T19:55:16.3643710Z === GRADLEW DIAGNOSTICS ===
+2026-08-14T19:55:16.3645040Z APP_HOME: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android
+2026-08-14T19:55:16.3653608Z CLASSPATH: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar
+2026-08-14T19:55:16.3657062Z gradle-wrapper.jar exists. Size: 63375 bytes
+2026-08-14T19:55:16.3671950Z a8451eeda314d0568b5340498b36edf147a8f0d692c5ff58082d477abe9146e4  /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar
+2026-08-14T19:55:16.3676211Z JAVACMD: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java
+2026-08-14T19:55:16.3680606Z Executing: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64/bin/java -Xmx64m -Xms64m -Dorg.gradle.appname=gradlew -classpath /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain clean assembleDebug --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache
+2026-08-14T19:55:16.3683376Z ===========================
+2026-08-14T19:55:17.1202803Z To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.2.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+2026-08-14T19:55:18.8055169Z Daemon will be stopped at the end of the build 
+2026-08-14T19:56:05.4077427Z 
+2026-08-14T19:56:05.4185764Z > Configure project :app
+2026-08-14T19:56:05.4186783Z WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+2026-08-14T19:56:16.9065274Z 
+2026-08-14T19:56:16.9081135Z > Configure project :capacitor-cordova-android-plugins
+2026-08-14T19:56:16.9098812Z WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+2026-08-14T19:56:34.7080397Z WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+2026-08-14T19:56:34.7100419Z 
+2026-08-14T19:56:34.7106382Z This Android Gradle plugin (8.2.1) was tested up to compileSdk = 34.
+2026-08-14T19:56:34.7120435Z 
+2026-08-14T19:56:34.7140926Z You are strongly encouraged to update your project to use a newer
+2026-08-14T19:56:34.7156663Z Android Gradle plugin that has been tested with compileSdk = 35.
+2026-08-14T19:56:34.7170428Z 
+2026-08-14T19:56:34.7184337Z If you are already using the latest version of the Android Gradle plugin,
+2026-08-14T19:56:34.7200981Z you may need to wait until a newer version with support for compileSdk = 35 is available.
+2026-08-14T19:56:34.7210423Z 
+2026-08-14T19:56:34.7220607Z To suppress this warning, add/update
+2026-08-14T19:56:34.7221277Z     android.suppressUnsupportedCompileSdk=35
+2026-08-14T19:56:34.7240626Z to this project's gradle.properties.
+2026-08-14T19:56:36.3070698Z 
+2026-08-14T19:56:36.3095563Z > Task :clean UP-TO-DATE
+2026-08-14T19:56:36.3120797Z > Task :app:clean UP-TO-DATE
+2026-08-14T19:56:36.3150642Z > Task :capacitor-android:clean UP-TO-DATE
+2026-08-14T19:56:36.3161975Z > Task :capacitor-app:clean UP-TO-DATE
+2026-08-14T19:56:36.3162905Z > Task :capacitor-community-bluetooth-le:clean UP-TO-DATE
+2026-08-14T19:56:36.3163900Z > Task :capacitor-cordova-android-plugins:clean UP-TO-DATE
+2026-08-14T19:56:36.3164815Z > Task :capacitor-filesystem:clean UP-TO-DATE
+2026-08-14T19:56:36.3165610Z > Task :capacitor-geolocation:clean UP-TO-DATE
+2026-08-14T19:56:36.3166794Z > Task :capacitor-haptics:clean UP-TO-DATE
+2026-08-14T19:56:36.3167681Z > Task :capacitor-local-notifications:clean UP-TO-DATE
+2026-08-14T19:56:36.3168666Z > Task :capacitor-mlkit-barcode-scanning:clean UP-TO-DATE
+2026-08-14T19:56:36.3169609Z > Task :capacitor-push-notifications:clean UP-TO-DATE
+2026-08-14T19:56:36.3208297Z > Task :capacitor-share:clean UP-TO-DATE
+2026-08-14T19:56:36.3220875Z > Task :capacitor-splash-screen:clean UP-TO-DATE
+2026-08-14T19:56:36.3250821Z > Task :capacitor-voice-recorder:clean UP-TO-DATE
+2026-08-14T19:56:36.3338875Z > Task :capawesome-team-capacitor-android-foreground-service:clean UP-TO-DATE
+2026-08-14T19:56:36.3339680Z > Task :app:preBuild UP-TO-DATE
+2026-08-14T19:56:36.3340714Z > Task :app:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.4162212Z > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+2026-08-14T19:56:36.4242775Z > Task :app:checkKotlinGradlePluginConfigurationErrors
+2026-08-14T19:56:36.4243520Z > Task :app:generateDebugBuildConfig
+2026-08-14T19:56:36.4244207Z > Task :capacitor-android:preBuild UP-TO-DATE
+2026-08-14T19:56:36.4244901Z > Task :capacitor-android:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5229871Z > Task :capacitor-app:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5231361Z > Task :capacitor-app:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5255662Z > Task :capacitor-android:writeDebugAarMetadata
+2026-08-14T19:56:36.5256846Z > Task :capacitor-community-bluetooth-le:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5258325Z > Task :capacitor-community-bluetooth-le:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5259409Z > Task :capacitor-app:writeDebugAarMetadata
+2026-08-14T19:56:36.5260939Z > Task :capacitor-cordova-android-plugins:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5264155Z > Task :capacitor-cordova-android-plugins:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5265071Z > Task :capacitor-community-bluetooth-le:writeDebugAarMetadata
+2026-08-14T19:56:36.5265832Z > Task :capacitor-filesystem:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5266568Z > Task :capacitor-filesystem:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5267365Z > Task :capacitor-cordova-android-plugins:writeDebugAarMetadata
+2026-08-14T19:56:36.5268152Z > Task :capacitor-geolocation:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5268860Z > Task :capacitor-geolocation:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5269557Z > Task :capacitor-filesystem:writeDebugAarMetadata
+2026-08-14T19:56:36.5270377Z > Task :capacitor-haptics:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5271024Z > Task :capacitor-haptics:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5271711Z > Task :capacitor-geolocation:writeDebugAarMetadata
+2026-08-14T19:56:36.5272488Z > Task :capacitor-local-notifications:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5273298Z > Task :capacitor-local-notifications:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5274037Z > Task :capacitor-haptics:writeDebugAarMetadata
+2026-08-14T19:56:36.5274822Z > Task :capacitor-mlkit-barcode-scanning:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5275694Z > Task :capacitor-mlkit-barcode-scanning:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5276562Z > Task :capacitor-local-notifications:writeDebugAarMetadata
+2026-08-14T19:56:36.5277343Z > Task :capacitor-push-notifications:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5278150Z > Task :capacitor-push-notifications:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5279000Z > Task :capacitor-mlkit-barcode-scanning:writeDebugAarMetadata
+2026-08-14T19:56:36.5279724Z > Task :capacitor-share:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5280519Z > Task :capacitor-share:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5281253Z > Task :capacitor-push-notifications:writeDebugAarMetadata
+2026-08-14T19:56:36.5282000Z > Task :capacitor-splash-screen:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5282727Z > Task :capacitor-splash-screen:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5283404Z > Task :capacitor-share:writeDebugAarMetadata
+2026-08-14T19:56:36.5284069Z > Task :capacitor-voice-recorder:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5284827Z > Task :capacitor-voice-recorder:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5285990Z > Task :capacitor-splash-screen:writeDebugAarMetadata
+2026-08-14T19:56:36.5286997Z > Task :capawesome-team-capacitor-android-foreground-service:preBuild UP-TO-DATE
+2026-08-14T19:56:36.5288244Z > Task :capawesome-team-capacitor-android-foreground-service:preDebugBuild UP-TO-DATE
+2026-08-14T19:56:36.5289236Z > Task :capacitor-voice-recorder:writeDebugAarMetadata
+2026-08-14T19:56:36.5290453Z > Task :capawesome-team-capacitor-android-foreground-service:writeDebugAarMetadata
+2026-08-14T19:56:36.5291362Z > Task :app:generateDebugResValues
+2026-08-14T19:56:51.0067112Z > Task :app:processDebugGoogleServices
+2026-08-14T19:56:51.0080885Z > Task :capacitor-android:generateDebugResValues
+2026-08-14T19:56:51.0120766Z > Task :capacitor-android:generateDebugResources
+2026-08-14T19:56:51.0140643Z > Task :app:checkDebugAarMetadata
+2026-08-14T19:56:51.2058795Z > Task :capacitor-android:packageDebugResources
+2026-08-14T19:56:51.2080882Z > Task :capacitor-app:generateDebugResValues
+2026-08-14T19:56:51.2100830Z > Task :capacitor-app:generateDebugResources
+2026-08-14T19:56:51.2111040Z > Task :capacitor-app:packageDebugResources
+2026-08-14T19:56:51.2130931Z > Task :capacitor-community-bluetooth-le:generateDebugResValues
+2026-08-14T19:56:51.2150777Z > Task :capacitor-community-bluetooth-le:generateDebugResources
+2026-08-14T19:56:51.2167463Z > Task :capacitor-community-bluetooth-le:packageDebugResources
+2026-08-14T19:56:51.3071826Z > Task :capacitor-cordova-android-plugins:generateDebugResValues
+2026-08-14T19:56:51.3073153Z > Task :capacitor-cordova-android-plugins:generateDebugResources
+2026-08-14T19:56:51.3091004Z > Task :capacitor-cordova-android-plugins:packageDebugResources
+2026-08-14T19:56:51.3110714Z > Task :capacitor-filesystem:generateDebugResValues
+2026-08-14T19:56:51.3111515Z > Task :capacitor-filesystem:generateDebugResources
+2026-08-14T19:56:51.3130806Z > Task :capacitor-filesystem:packageDebugResources
+2026-08-14T19:56:51.3150876Z > Task :capacitor-geolocation:generateDebugResValues
+2026-08-14T19:56:51.3158211Z > Task :capacitor-geolocation:generateDebugResources
+2026-08-14T19:56:51.3200709Z > Task :capacitor-geolocation:packageDebugResources
+2026-08-14T19:56:51.3211698Z > Task :capacitor-haptics:generateDebugResValues
+2026-08-14T19:56:51.3250758Z > Task :capacitor-haptics:generateDebugResources
+2026-08-14T19:56:51.3251791Z > Task :capacitor-haptics:packageDebugResources
+2026-08-14T19:56:51.3259100Z > Task :capacitor-local-notifications:generateDebugResValues
+2026-08-14T19:56:51.3280804Z > Task :capacitor-local-notifications:generateDebugResources
+2026-08-14T19:56:51.3297037Z > Task :capacitor-local-notifications:packageDebugResources
+2026-08-14T19:56:51.3311023Z > Task :capacitor-mlkit-barcode-scanning:generateDebugResValues
+2026-08-14T19:56:51.3317872Z > Task :capacitor-mlkit-barcode-scanning:generateDebugResources
+2026-08-14T19:56:51.6053250Z > Task :capacitor-mlkit-barcode-scanning:packageDebugResources
+2026-08-14T19:56:51.6084785Z > Task :capacitor-push-notifications:generateDebugResValues
+2026-08-14T19:56:51.6101026Z > Task :capacitor-push-notifications:generateDebugResources
+2026-08-14T19:56:51.6120847Z > Task :capacitor-push-notifications:packageDebugResources
+2026-08-14T19:56:51.6140729Z > Task :capacitor-share:generateDebugResValues
+2026-08-14T19:56:51.6151414Z > Task :capacitor-share:generateDebugResources
+2026-08-14T19:56:51.6177043Z > Task :capacitor-share:packageDebugResources
+2026-08-14T19:56:51.7060909Z > Task :capacitor-splash-screen:generateDebugResValues
+2026-08-14T19:56:51.7071323Z > Task :capacitor-splash-screen:generateDebugResources
+2026-08-14T19:56:51.7072362Z > Task :capacitor-splash-screen:packageDebugResources
+2026-08-14T19:56:51.7073376Z > Task :capacitor-voice-recorder:generateDebugResValues
+2026-08-14T19:56:51.7074311Z > Task :capacitor-voice-recorder:generateDebugResources
+2026-08-14T19:56:51.7075237Z > Task :capacitor-voice-recorder:packageDebugResources
+2026-08-14T19:56:51.7076404Z > Task :capawesome-team-capacitor-android-foreground-service:generateDebugResValues
+2026-08-14T19:56:51.7080658Z > Task :capawesome-team-capacitor-android-foreground-service:generateDebugResources
+2026-08-14T19:56:51.7087160Z > Task :capawesome-team-capacitor-android-foreground-service:packageDebugResources
+2026-08-14T19:56:52.0066356Z > Task :app:mapDebugSourceSetPaths
+2026-08-14T19:56:52.0067717Z > Task :app:generateDebugResources
+2026-08-14T19:56:53.3107007Z > Task :app:packageDebugResources
+2026-08-14T19:56:54.8071828Z > Task :app:mergeDebugResources
+2026-08-14T19:56:54.8094608Z > Task :app:createDebugCompatibleScreenManifests
+2026-08-14T19:56:54.8120832Z > Task :app:parseDebugLocalResources
+2026-08-14T19:56:54.8140866Z > Task :app:extractDeepLinksDebug
+2026-08-14T19:56:54.8160883Z > Task :capacitor-android:extractDeepLinksDebug
+2026-08-14T19:56:54.8180653Z > Task :capacitor-app:extractDeepLinksDebug
+2026-08-14T19:56:54.9057308Z > Task :capacitor-app:processDebugManifest
+2026-08-14T19:56:54.9086132Z > Task :capacitor-android:processDebugManifest
+2026-08-14T19:56:54.9117803Z > Task :capacitor-community-bluetooth-le:extractDeepLinksDebug
+2026-08-14T19:56:54.9161815Z > Task :capacitor-cordova-android-plugins:extractDeepLinksDebug
+2026-08-14T19:56:54.9163596Z > Task :capacitor-community-bluetooth-le:processDebugManifest
+2026-08-14T19:56:54.9209084Z > Task :capacitor-filesystem:extractDeepLinksDebug
+2026-08-14T19:56:55.0075307Z > Task :capacitor-cordova-android-plugins:processDebugManifest
+2026-08-14T19:56:55.0256026Z > Task :capacitor-filesystem:processDebugManifest
+2026-08-14T19:56:55.0261073Z > Task :capacitor-geolocation:extractDeepLinksDebug
+2026-08-14T19:56:55.0262965Z > Task :capacitor-haptics:extractDeepLinksDebug
+2026-08-14T19:56:55.0263996Z > Task :capacitor-geolocation:processDebugManifest
+2026-08-14T19:56:55.0265282Z > Task :capacitor-haptics:processDebugManifest
+2026-08-14T19:56:55.0266382Z > Task :capacitor-local-notifications:extractDeepLinksDebug
+2026-08-14T19:56:55.0267824Z > Task :capacitor-mlkit-barcode-scanning:extractDeepLinksDebug
+2026-08-14T19:56:55.0269040Z > Task :capacitor-local-notifications:processDebugManifest
+2026-08-14T19:56:55.0271029Z > Task :capacitor-mlkit-barcode-scanning:processDebugManifest
+2026-08-14T19:56:55.0279316Z > Task :capacitor-push-notifications:extractDeepLinksDebug
+2026-08-14T19:56:55.0281010Z > Task :capacitor-share:extractDeepLinksDebug
+2026-08-14T19:56:55.0282014Z > Task :capacitor-push-notifications:processDebugManifest
+2026-08-14T19:56:55.0283323Z > Task :capacitor-share:processDebugManifest
+2026-08-14T19:56:55.0284264Z > Task :capacitor-splash-screen:extractDeepLinksDebug
+2026-08-14T19:56:55.0285588Z > Task :capacitor-voice-recorder:extractDeepLinksDebug
+2026-08-14T19:56:55.0286670Z > Task :capacitor-splash-screen:processDebugManifest
+2026-08-14T19:56:55.0288300Z > Task :capawesome-team-capacitor-android-foreground-service:extractDeepLinksDebug
+2026-08-14T19:56:55.1056664Z 
+2026-08-14T19:56:55.1057988Z > Task :capacitor-voice-recorder:processDebugManifest
+2026-08-14T19:56:55.1066390Z package="com.tchvu3.capacitorvoicerecorder" found in source AndroidManifest.xml: /home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/capacitor-voice-recorder/android/src/main/AndroidManifest.xml.
+2026-08-14T19:56:55.1069127Z Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+2026-08-14T19:56:55.1072508Z Recommendation: remove package="com.tchvu3.capacitorvoicerecorder" from the source AndroidManifest.xml: /home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/capacitor-voice-recorder/android/src/main/AndroidManifest.xml.
+2026-08-14T19:56:55.1074514Z 
+2026-08-14T19:56:55.1092423Z > Task :capawesome-team-capacitor-android-foreground-service:processDebugManifest
+2026-08-14T19:56:55.4086006Z > Task :capacitor-android:compileDebugLibraryResources
+2026-08-14T19:56:56.0072472Z > Task :app:processDebugMainManifest
+2026-08-14T19:56:56.1071477Z > Task :app:processDebugManifest
+2026-08-14T19:56:56.2059692Z > Task :app:processDebugManifestForPackage
+2026-08-14T19:56:56.2111402Z > Task :capacitor-android:parseDebugLocalResources
+2026-08-14T19:56:56.2112659Z > Task :capacitor-app:compileDebugLibraryResources
+2026-08-14T19:56:56.3064132Z > Task :capacitor-app:parseDebugLocalResources
+2026-08-14T19:56:56.3083752Z > Task :capacitor-app:generateDebugRFile
+2026-08-14T19:56:56.3111732Z > Task :capacitor-android:generateDebugRFile
+2026-08-14T19:56:56.3128890Z > Task :capacitor-community-bluetooth-le:compileDebugLibraryResources
+2026-08-14T19:56:56.3151741Z > Task :capacitor-cordova-android-plugins:compileDebugLibraryResources
+2026-08-14T19:56:56.3181477Z > Task :capacitor-community-bluetooth-le:parseDebugLocalResources
+2026-08-14T19:56:56.3196088Z > Task :capacitor-cordova-android-plugins:parseDebugLocalResources
+2026-08-14T19:56:56.3210122Z > Task :capacitor-community-bluetooth-le:generateDebugRFile
+2026-08-14T19:56:56.4089861Z > Task :capacitor-cordova-android-plugins:generateDebugRFile
+2026-08-14T19:56:56.4104218Z > Task :capacitor-filesystem:compileDebugLibraryResources
+2026-08-14T19:56:56.4111309Z > Task :capacitor-geolocation:compileDebugLibraryResources
+2026-08-14T19:56:56.4130763Z > Task :capacitor-filesystem:parseDebugLocalResources
+2026-08-14T19:56:56.4150860Z > Task :capacitor-geolocation:parseDebugLocalResources
+2026-08-14T19:56:56.4170806Z > Task :capacitor-filesystem:generateDebugRFile
+2026-08-14T19:56:56.4171680Z > Task :capacitor-geolocation:generateDebugRFile
+2026-08-14T19:56:56.4190690Z > Task :capacitor-haptics:compileDebugLibraryResources
+2026-08-14T19:56:56.4210855Z > Task :capacitor-local-notifications:compileDebugLibraryResources
+2026-08-14T19:56:56.4230635Z > Task :capacitor-haptics:parseDebugLocalResources
+2026-08-14T19:56:56.5057504Z > Task :capacitor-local-notifications:parseDebugLocalResources
+2026-08-14T19:56:56.5109693Z > Task :capacitor-haptics:generateDebugRFile
+2026-08-14T19:56:56.5131237Z > Task :capacitor-mlkit-barcode-scanning:compileDebugLibraryResources
+2026-08-14T19:56:56.5150769Z > Task :capacitor-local-notifications:generateDebugRFile
+2026-08-14T19:56:56.5170989Z > Task :capacitor-mlkit-barcode-scanning:parseDebugLocalResources
+2026-08-14T19:56:56.5204847Z > Task :capacitor-push-notifications:compileDebugLibraryResources
+2026-08-14T19:56:56.6051932Z > Task :capacitor-mlkit-barcode-scanning:generateDebugRFile
+2026-08-14T19:56:56.6055537Z > Task :capacitor-push-notifications:parseDebugLocalResources
+2026-08-14T19:56:56.6056686Z > Task :capacitor-share:compileDebugLibraryResources
+2026-08-14T19:56:56.6057704Z > Task :capacitor-push-notifications:generateDebugRFile
+2026-08-14T19:56:56.6058659Z > Task :capacitor-share:parseDebugLocalResources
+2026-08-14T19:56:56.6059680Z > Task :capacitor-splash-screen:compileDebugLibraryResources
+2026-08-14T19:56:56.6060784Z > Task :capacitor-share:generateDebugRFile
+2026-08-14T19:56:56.6061717Z > Task :capacitor-splash-screen:parseDebugLocalResources
+2026-08-14T19:56:56.6062772Z > Task :capacitor-voice-recorder:compileDebugLibraryResources
+2026-08-14T19:56:56.7052575Z > Task :capacitor-splash-screen:generateDebugRFile
+2026-08-14T19:56:56.7072083Z > Task :capacitor-voice-recorder:parseDebugLocalResources
+2026-08-14T19:56:56.7095592Z > Task :capawesome-team-capacitor-android-foreground-service:compileDebugLibraryResources
+2026-08-14T19:56:56.7110952Z > Task :capawesome-team-capacitor-android-foreground-service:parseDebugLocalResources
+2026-08-14T19:56:56.7115115Z > Task :capacitor-voice-recorder:generateDebugRFile
+2026-08-14T19:56:56.7130586Z > Task :capacitor-android:javaPreCompileDebug
+2026-08-14T19:56:56.7131560Z > Task :capawesome-team-capacitor-android-foreground-service:generateDebugRFile
+2026-08-14T19:57:05.5063192Z Note: /home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor/android/capacitor/src/main/java/com/getcapacitor/Bridge.java uses or overrides a deprecated API.
+2026-08-14T19:57:05.5064670Z Note: Recompile with -Xlint:deprecation for details.
+2026-08-14T19:57:05.5065255Z Note: Some input files use unchecked or unsafe operations.
+2026-08-14T19:57:05.5065739Z Note: Recompile with -Xlint:unchecked for details.
+2026-08-14T19:57:05.5066351Z 
+2026-08-14T19:57:05.5066601Z > Task :capacitor-android:compileDebugJavaWithJavac
+2026-08-14T19:57:09.5054094Z 
+2026-08-14T19:57:09.5298049Z > Task :capacitor-android:bundleLibCompileToJarDebug
+2026-08-14T19:57:09.5298843Z > Task :capacitor-app:javaPreCompileDebug
+2026-08-14T19:57:10.1189828Z > Task :capacitor-app:compileDebugJavaWithJavac
+2026-08-14T19:57:10.1213400Z > Task :capacitor-app:bundleLibCompileToJarDebug
+2026-08-14T19:57:10.1250306Z > Task :capacitor-community-bluetooth-le:checkKotlinGradlePluginConfigurationErrors
+2026-08-14T19:57:12.1056709Z > Task :app:processDebugResources
+2026-08-14T19:57:14.5069797Z > Task :capacitor-community-bluetooth-le:javaPreCompileDebug
+2026-08-14T19:57:14.5139092Z > Task :capacitor-cordova-android-plugins:javaPreCompileDebug
+2026-08-14T19:57:14.5186405Z > Task :capacitor-cordova-android-plugins:compileDebugJavaWithJavac NO-SOURCE
+2026-08-14T19:57:14.6081710Z > Task :capacitor-cordova-android-plugins:bundleLibCompileToJarDebug
+2026-08-14T19:57:14.6094421Z > Task :capacitor-filesystem:javaPreCompileDebug
+2026-08-14T19:57:15.5052393Z > Task :capacitor-filesystem:compileDebugJavaWithJavac
+2026-08-14T19:57:15.5055612Z > Task :capacitor-filesystem:bundleLibCompileToJarDebug
+2026-08-14T19:57:15.5056657Z > Task :capacitor-geolocation:javaPreCompileDebug
+2026-08-14T19:57:16.7091505Z > Task :capacitor-geolocation:compileDebugJavaWithJavac
+2026-08-14T19:57:16.8109122Z > Task :capacitor-geolocation:bundleLibCompileToJarDebug
+2026-08-14T19:57:16.8110659Z > Task :capacitor-haptics:javaPreCompileDebug
+2026-08-14T19:57:17.1051506Z > Task :capacitor-haptics:compileDebugJavaWithJavac
+2026-08-14T19:57:17.2063770Z > Task :capacitor-haptics:bundleLibCompileToJarDebug
+2026-08-14T19:57:17.2121380Z > Task :capacitor-local-notifications:javaPreCompileDebug
+2026-08-14T19:57:18.2051821Z > Task :capacitor-local-notifications:compileDebugJavaWithJavac
+2026-08-14T19:57:18.2061144Z > Task :capacitor-local-notifications:bundleLibCompileToJarDebug
+2026-08-14T19:57:19.8051706Z > Task :capacitor-mlkit-barcode-scanning:dataBindingMergeDependencyArtifactsDebug
+2026-08-14T19:57:20.4081643Z > Task :capacitor-mlkit-barcode-scanning:dataBindingGenBaseClassesDebug
+2026-08-14T19:57:20.4137601Z > Task :capacitor-mlkit-barcode-scanning:dataBindingTriggerDebug
+2026-08-14T19:57:22.0072686Z > Task :capacitor-mlkit-barcode-scanning:javaPreCompileDebug
+2026-08-14T19:57:31.5052471Z 
+2026-08-14T19:57:31.5083598Z Note: Some input files use or override a deprecated API.
+2026-08-14T19:57:31.5084591Z > Task :capacitor-mlkit-barcode-scanning:compileDebugJavaWithJavac
+2026-08-14T19:57:31.5111135Z Note: Recompile with -Xlint:deprecation for details.
+2026-08-14T19:57:33.4061076Z 
+2026-08-14T19:57:33.4101556Z > Task :capacitor-mlkit-barcode-scanning:bundleLibCompileToJarDebug
+2026-08-14T19:57:33.4102801Z > Task :capacitor-push-notifications:javaPreCompileDebug
+2026-08-14T19:57:36.1068902Z > Task :capacitor-push-notifications:compileDebugJavaWithJavac
+2026-08-14T19:57:36.1092019Z > Task :capacitor-push-notifications:bundleLibCompileToJarDebug
+2026-08-14T19:57:36.2068072Z > Task :capacitor-share:javaPreCompileDebug
+2026-08-14T19:57:36.9065458Z > Task :capacitor-share:compileDebugJavaWithJavac
+2026-08-14T19:57:36.9066771Z > Task :capacitor-share:bundleLibCompileToJarDebug
+2026-08-14T19:57:36.9110949Z > Task :capacitor-splash-screen:javaPreCompileDebug
+2026-08-14T19:57:37.6066872Z > Task :capacitor-splash-screen:compileDebugJavaWithJavac
+2026-08-14T19:57:37.7091462Z > Task :capacitor-splash-screen:bundleLibCompileToJarDebug
+2026-08-14T19:57:37.7102734Z > Task :capacitor-voice-recorder:javaPreCompileDebug
+2026-08-14T19:57:38.0082922Z Note: /home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/capacitor-voice-recorder/android/src/main/java/com/tchvu3/capacitorvoicerecorder/CustomMediaRecorder.java uses or overrides a deprecated API.
+2026-08-14T19:57:38.0084222Z 
+2026-08-14T19:57:38.0141426Z Note: Recompile with -Xlint:deprecation for details.
+2026-08-14T19:57:38.0142395Z > Task :capacitor-voice-recorder:compileDebugJavaWithJavac
+2026-08-14T19:57:38.0170868Z 
+2026-08-14T19:57:38.0190994Z > Task :capacitor-voice-recorder:bundleLibCompileToJarDebug
+2026-08-14T19:57:38.0210998Z > Task :capawesome-team-capacitor-android-foreground-service:javaPreCompileDebug
+2026-08-14T19:57:38.5082353Z Note: /home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capawesome-team/capacitor-android-foreground-service/android/src/main/java/io/capawesome/capacitorjs/plugins/foregroundservice/AndroidForegroundService.java uses or overrides a deprecated API.
+2026-08-14T19:57:38.5084296Z 
+2026-08-14T19:57:38.5133429Z Note: Recompile with -Xlint:deprecation for details.
+2026-08-14T19:57:38.5134525Z > Task :capawesome-team-capacitor-android-foreground-service:compileDebugJavaWithJavac
+2026-08-14T19:57:38.6060964Z 
+2026-08-14T19:57:38.6079086Z > Task :capawesome-team-capacitor-android-foreground-service:bundleLibCompileToJarDebug
+2026-08-14T19:57:40.1082316Z > Task :capacitor-community-bluetooth-le:compileDebugKotlin
+2026-08-14T19:57:41.7061570Z > Task :app:javaPreCompileDebug
+2026-08-14T19:57:41.8101576Z > Task :app:mergeDebugShaders
+2026-08-14T19:57:41.8140964Z > Task :app:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:41.8180925Z > Task :app:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:41.8217535Z > Task :capacitor-android:mergeDebugShaders
+2026-08-14T19:57:41.8260960Z > Task :capacitor-android:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:41.8306916Z > Task :capacitor-android:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:41.9091419Z > Task :capacitor-android:packageDebugAssets
+2026-08-14T19:57:41.9126743Z > Task :capacitor-app:mergeDebugShaders
+2026-08-14T19:57:41.9148165Z > Task :capacitor-app:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:41.9184452Z > Task :capacitor-app:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:41.9241027Z > Task :capacitor-app:packageDebugAssets
+2026-08-14T19:57:41.9259782Z > Task :capacitor-community-bluetooth-le:mergeDebugShaders
+2026-08-14T19:57:41.9307470Z > Task :capacitor-community-bluetooth-le:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:41.9351078Z > Task :capacitor-community-bluetooth-le:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:41.9373604Z > Task :capacitor-community-bluetooth-le:packageDebugAssets
+2026-08-14T19:57:41.9401557Z > Task :capacitor-cordova-android-plugins:mergeDebugShaders
+2026-08-14T19:57:41.9440639Z > Task :capacitor-cordova-android-plugins:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:41.9480707Z > Task :capacitor-cordova-android-plugins:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:41.9519072Z > Task :capacitor-cordova-android-plugins:packageDebugAssets
+2026-08-14T19:57:42.0063931Z > Task :capacitor-filesystem:mergeDebugShaders
+2026-08-14T19:57:42.0112605Z > Task :capacitor-filesystem:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.0135764Z > Task :capacitor-filesystem:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.0171958Z > Task :capacitor-filesystem:packageDebugAssets
+2026-08-14T19:57:42.0215073Z > Task :capacitor-geolocation:mergeDebugShaders
+2026-08-14T19:57:42.0251554Z > Task :capacitor-geolocation:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.0301072Z > Task :capacitor-geolocation:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.0310687Z > Task :capacitor-geolocation:packageDebugAssets
+2026-08-14T19:57:42.0345912Z > Task :capacitor-haptics:mergeDebugShaders
+2026-08-14T19:57:42.0392219Z > Task :capacitor-haptics:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.0411644Z > Task :capacitor-haptics:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.0444553Z > Task :capacitor-haptics:packageDebugAssets
+2026-08-14T19:57:42.0500885Z > Task :capacitor-local-notifications:mergeDebugShaders
+2026-08-14T19:57:42.1101961Z > Task :capacitor-local-notifications:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.1151970Z > Task :capacitor-local-notifications:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.1211276Z > Task :capacitor-local-notifications:packageDebugAssets
+2026-08-14T19:57:42.1281119Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugShaders
+2026-08-14T19:57:42.1290445Z > Task :capacitor-mlkit-barcode-scanning:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.1340142Z > Task :capacitor-mlkit-barcode-scanning:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.1380955Z > Task :capacitor-mlkit-barcode-scanning:packageDebugAssets
+2026-08-14T19:57:42.1397546Z > Task :capacitor-push-notifications:mergeDebugShaders
+2026-08-14T19:57:42.1442405Z > Task :capacitor-push-notifications:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.1481213Z > Task :capacitor-push-notifications:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.1499834Z > Task :capacitor-push-notifications:packageDebugAssets
+2026-08-14T19:57:42.1538223Z > Task :capacitor-share:mergeDebugShaders
+2026-08-14T19:57:42.1584289Z > Task :capacitor-share:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.1620958Z > Task :capacitor-share:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.1661193Z > Task :capacitor-share:packageDebugAssets
+2026-08-14T19:57:42.1716994Z > Task :capacitor-splash-screen:mergeDebugShaders
+2026-08-14T19:57:42.1761204Z > Task :capacitor-splash-screen:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.1780806Z > Task :capacitor-splash-screen:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.2063289Z > Task :capacitor-splash-screen:packageDebugAssets
+2026-08-14T19:57:42.2118994Z > Task :capacitor-voice-recorder:mergeDebugShaders
+2026-08-14T19:57:42.2155877Z > Task :capacitor-voice-recorder:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.2188667Z > Task :capacitor-voice-recorder:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.2709287Z > Task :capacitor-voice-recorder:packageDebugAssets
+2026-08-14T19:57:42.2751441Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugShaders
+2026-08-14T19:57:42.3226138Z > Task :capawesome-team-capacitor-android-foreground-service:compileDebugShaders NO-SOURCE
+2026-08-14T19:57:42.3228195Z > Task :capawesome-team-capacitor-android-foreground-service:generateDebugAssets UP-TO-DATE
+2026-08-14T19:57:42.3872283Z > Task :capawesome-team-capacitor-android-foreground-service:packageDebugAssets
+2026-08-14T19:57:43.7071200Z > Task :app:mergeDebugAssets
+2026-08-14T19:57:44.4050512Z 
+2026-08-14T19:57:44.4085756Z > Task :capacitor-community-bluetooth-le:compileDebugKotlin
+2026-08-14T19:57:44.4106178Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/BluetoothLe.kt:187:40 'enable(): Boolean' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4115597Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/BluetoothLe.kt:198:40 'disable(): Boolean' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4133361Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:153:22 This declaration overrides deprecated member but not marked as deprecated itself. Please add @Deprecated annotation or suppress. See https://youtrack.jetbrains.com/issue/KT-47902 for details
+2026-08-14T19:57:44.4157884Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:161:19 'onCharacteristicRead(BluetoothGatt!, BluetoothGattCharacteristic!, Int): Unit' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4184676Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:164:43 'getter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4200394Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:208:22 This declaration overrides deprecated member but not marked as deprecated itself. Please add @Deprecated annotation or suppress. See https://youtrack.jetbrains.com/issue/KT-47902 for details
+2026-08-14T19:57:44.4232746Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:216:19 'onCharacteristicChanged(BluetoothGatt!, BluetoothGattCharacteristic!): Unit' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4239168Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:218:39 'getter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4263847Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:237:22 This declaration overrides deprecated member but not marked as deprecated itself. Please add @Deprecated annotation or suppress. See https://youtrack.jetbrains.com/issue/KT-47902 for details
+2026-08-14T19:57:44.4292636Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:245:19 'onDescriptorRead(BluetoothGatt!, BluetoothGattDescriptor!, Int): Unit' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4296377Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:249:39 'getter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4336297Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:396:40 'getParcelableExtra(String!): T?' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4362146Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:533:28 'setter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4366199Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:535:41 'writeCharacteristic(BluetoothGattCharacteristic!): Boolean' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4392348Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:595:24 'setter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4412369Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:596:45 'writeDescriptor(BluetoothGattDescriptor!): Boolean' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4432098Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:664:24 'setter for value: ByteArray!' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4435919Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/node_modules/@capacitor-community/bluetooth-le/android/src/main/java/com/capacitorjs/community/plugins/bluetoothle/Device.kt:665:41 'writeDescriptor(BluetoothGattDescriptor!): Boolean' is deprecated. Deprecated in Java
+2026-08-14T19:57:44.4460216Z 
+2026-08-14T19:57:44.4480869Z > Task :capacitor-community-bluetooth-le:compileDebugJavaWithJavac NO-SOURCE
+2026-08-14T19:57:44.5074587Z > Task :capacitor-community-bluetooth-le:bundleLibCompileToJarDebug
+2026-08-14T19:57:44.5090573Z > Task :app:compressDebugAssets
+2026-08-14T19:57:49.6061568Z > Task :capacitor-community-bluetooth-le:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:55.2051571Z > Task :capacitor-mlkit-barcode-scanning:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:56.2055666Z > Task :capacitor-app:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:56.4051294Z > Task :capacitor-filesystem:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:57.0107892Z > Task :capacitor-geolocation:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:57.2081513Z > Task :capacitor-haptics:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:57.4081584Z > Task :capacitor-local-notifications:bundleLibRuntimeToJarDebug
+2026-08-14T19:57:58.3062042Z > Task :app:kaptGenerateStubsDebugKotlin
+2026-08-14T19:58:00.6368317Z > Task :capacitor-push-notifications:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:00.8351860Z > Task :capacitor-share:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:00.9362539Z > Task :capacitor-splash-screen:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:01.2415896Z > Task :capawesome-team-capacitor-android-foreground-service:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:01.4412775Z > Task :capacitor-voice-recorder:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:01.5151557Z > Task :capacitor-android:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:03.6100502Z > Task :capacitor-cordova-android-plugins:bundleLibRuntimeToJarDebug
+2026-08-14T19:58:03.6133676Z > Task :app:desugarDebugFileDependencies
+2026-08-14T19:58:03.6134431Z > Task :capacitor-android:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7196929Z > Task :capacitor-app:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7221087Z > Task :capacitor-community-bluetooth-le:processDebugJavaRes
+2026-08-14T19:58:03.7278545Z > Task :capacitor-cordova-android-plugins:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7279820Z > Task :capacitor-filesystem:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7281364Z > Task :capacitor-geolocation:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7282395Z > Task :capacitor-haptics:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7283684Z > Task :capacitor-local-notifications:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7284891Z > Task :capacitor-mlkit-barcode-scanning:processDebugJavaRes
+2026-08-14T19:58:03.7286350Z > Task :capacitor-push-notifications:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7287704Z > Task :capacitor-share:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7289037Z > Task :capacitor-splash-screen:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7290256Z > Task :capacitor-voice-recorder:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:03.7294363Z > Task :capawesome-team-capacitor-android-foreground-service:processDebugJavaRes NO-SOURCE
+2026-08-14T19:58:04.9056663Z > Task :app:kaptDebugKotlin
+2026-08-14T19:58:05.2072329Z > Task :app:checkDebugDuplicateClasses
+2026-08-14T19:58:14.5080752Z 
+2026-08-14T19:58:14.5109841Z > Task :app:compileDebugKotlin
+2026-08-14T19:58:14.5142361Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/CountdownActivity.kt:12:52 'FLAG_SHOW_WHEN_LOCKED: Int' is deprecated. Deprecated in Java
+2026-08-14T19:58:14.5202012Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/CountdownActivity.kt:13:52 'FLAG_TURN_SCREEN_ON: Int' is deprecated. Deprecated in Java
+2026-08-14T19:58:14.5262280Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/CountdownActivity.kt:15:52 'FLAG_DISMISS_KEYGUARD: Int' is deprecated. Deprecated in Java
+2026-08-14T19:58:14.5322342Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/SafetyLinkTileService.kt:40:13 'startActivityAndCollapse(Intent!): Unit' is deprecated. Deprecated in Java
+2026-08-14T19:58:14.5362986Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/hardware/AudioRecorderHelper.kt:10:24 Parameter 'outputFile' is never used
+2026-08-14T19:58:14.5381771Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/hardware/CameraCaptureHelper.kt:9:22 Parameter 'outputFile' is never used
+2026-08-14T19:58:14.5441864Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/hardware/LocationHelper.kt:10:13 Variable 'manager' is never used
+2026-08-14T19:58:14.5501870Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/messaging/SmsDispatcher.kt:8:26 Parameter 'context' is never used
+2026-08-14T19:58:14.5522093Z w: file:///home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/java/com/aistudio/safetylink/vqnztp/messaging/SmsDispatcher.kt:9:37 'getDefault(): SmsManager!' is deprecated. Deprecated in Java
+2026-08-14T19:58:35.2050543Z 
+2026-08-14T19:58:35.2071354Z > Task :app:mergeExtDexDebug
+2026-08-14T19:59:08.2072458Z Note: Some input files use or override a deprecated API.
+2026-08-14T19:59:08.2096984Z 
+2026-08-14T19:59:08.2097471Z Note: Recompile with -Xlint:deprecation for details.
+2026-08-14T19:59:08.2098133Z > Task :app:compileDebugJavaWithJavac
+2026-08-14T19:59:09.7050523Z 
+2026-08-14T19:59:09.7101577Z > Task :app:dexBuilderDebug
+2026-08-14T19:59:12.3061398Z > Task :app:mergeDebugGlobalSynthetics
+2026-08-14T19:59:12.3090962Z > Task :app:processDebugJavaRes
+2026-08-14T19:59:13.0069365Z > Task :capacitor-community-bluetooth-le:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:13.6071888Z > Task :capacitor-mlkit-barcode-scanning:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:13.8061373Z > Task :capacitor-app:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:13.8086910Z > Task :capacitor-filesystem:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.0085543Z > Task :capacitor-geolocation:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.1051418Z > Task :capacitor-haptics:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.1121418Z > Task :capacitor-local-notifications:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.2061375Z > Task :app:mergeDebugJavaResource
+2026-08-14T19:59:14.2071692Z > Task :capacitor-push-notifications:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.3081710Z > Task :capacitor-share:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.4070213Z > Task :capacitor-splash-screen:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.5061792Z > Task :capawesome-team-capacitor-android-foreground-service:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.6072278Z > Task :capacitor-voice-recorder:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.7071440Z > Task :capacitor-android:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:14.7091669Z > Task :capacitor-cordova-android-plugins:bundleLibRuntimeToDirDebug
+2026-08-14T19:59:15.3085275Z > Task :app:mergeProjectDexDebug
+2026-08-14T19:59:15.4068386Z > Task :app:mergeDebugJniLibFolders
+2026-08-14T19:59:15.4122203Z > Task :capacitor-android:mergeDebugJniLibFolders
+2026-08-14T19:59:15.4135769Z > Task :capacitor-android:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.4171371Z > Task :capacitor-android:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.4191521Z > Task :capacitor-app:mergeDebugJniLibFolders
+2026-08-14T19:59:15.4192548Z > Task :capacitor-app:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.4212810Z > Task :capacitor-app:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.4231192Z > Task :capacitor-community-bluetooth-le:mergeDebugJniLibFolders
+2026-08-14T19:59:15.4251577Z > Task :capacitor-community-bluetooth-le:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.4274015Z > Task :capacitor-community-bluetooth-le:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.5071720Z > Task :capacitor-cordova-android-plugins:mergeDebugJniLibFolders
+2026-08-14T19:59:15.5173736Z > Task :capacitor-cordova-android-plugins:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.5197875Z > Task :capacitor-cordova-android-plugins:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.5222446Z > Task :capacitor-filesystem:mergeDebugJniLibFolders
+2026-08-14T19:59:15.5247070Z > Task :capacitor-filesystem:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.5271435Z > Task :capacitor-filesystem:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.5291038Z > Task :capacitor-geolocation:mergeDebugJniLibFolders
+2026-08-14T19:59:15.5292150Z > Task :capacitor-geolocation:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.5311142Z > Task :capacitor-geolocation:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.5351085Z > Task :capacitor-haptics:mergeDebugJniLibFolders
+2026-08-14T19:59:15.5351905Z > Task :capacitor-haptics:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.5381050Z > Task :capacitor-haptics:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.5416060Z > Task :capacitor-local-notifications:mergeDebugJniLibFolders
+2026-08-14T19:59:15.5421226Z > Task :capacitor-local-notifications:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.5446346Z > Task :capacitor-local-notifications:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.6082412Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugJniLibFolders
+2026-08-14T19:59:15.6201630Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.6231451Z > Task :capacitor-mlkit-barcode-scanning:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.6265120Z > Task :capacitor-push-notifications:mergeDebugJniLibFolders
+2026-08-14T19:59:15.6303016Z > Task :capacitor-push-notifications:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.6331152Z > Task :capacitor-push-notifications:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.6354535Z > Task :capacitor-share:mergeDebugJniLibFolders
+2026-08-14T19:59:15.6371441Z > Task :capacitor-share:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.6387497Z > Task :capacitor-share:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.6404365Z > Task :capacitor-splash-screen:mergeDebugJniLibFolders
+2026-08-14T19:59:15.6428324Z > Task :capacitor-splash-screen:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.6450332Z > Task :capacitor-splash-screen:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.6470919Z > Task :capacitor-voice-recorder:mergeDebugJniLibFolders
+2026-08-14T19:59:15.6471760Z > Task :capacitor-voice-recorder:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.7074410Z > Task :capacitor-voice-recorder:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:15.7094613Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugJniLibFolders
+2026-08-14T19:59:15.7143223Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugNativeLibs NO-SOURCE
+2026-08-14T19:59:15.7174995Z > Task :capawesome-team-capacitor-android-foreground-service:copyDebugJniLibsProjectOnly
+2026-08-14T19:59:16.4050551Z > Task :app:mergeDebugNativeLibs
+2026-08-14T19:59:16.6051314Z > Task :app:mergeLibDexDebug
+2026-08-14T19:59:16.8060766Z 
+2026-08-14T19:59:16.8070123Z > Task :app:stripDebugDebugSymbols
+2026-08-14T19:59:16.8121725Z Unable to strip the following libraries, packaging them as they are: libbarhopper_v3.so, libimage_processing_util_jni.so.
+2026-08-14T19:59:18.1062397Z 
+2026-08-14T19:59:18.1071362Z > Task :app:validateSigningDebug
+2026-08-14T19:59:18.1112409Z > Task :app:writeDebugAppMetadata
+2026-08-14T19:59:18.1161209Z > Task :app:writeDebugSigningConfigVersions
+2026-08-14T19:59:18.1190955Z > Task :capacitor-android:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:18.1192062Z > Task :capacitor-android:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:24.4061485Z > Task :capacitor-android:extractDebugAnnotations
+2026-08-14T19:59:24.4133971Z > Task :capacitor-android:extractDeepLinksForAarDebug
+2026-08-14T19:59:24.7051867Z > Task :app:packageDebug
+2026-08-14T19:59:24.7060509Z > Task :app:createDebugApkListingFileRedirect
+2026-08-14T19:59:24.7070583Z > Task :app:assembleDebug
+2026-08-14T19:59:24.7080929Z > Task :capacitor-android:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:24.7100779Z > Task :capacitor-android:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:24.7120820Z > Task :capacitor-android:prepareDebugArtProfile
+2026-08-14T19:59:24.7138732Z > Task :capacitor-android:prepareLintJarForPublish
+2026-08-14T19:59:24.7139685Z > Task :capacitor-app:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:24.7160801Z > Task :capacitor-android:mergeDebugJavaResource
+2026-08-14T19:59:24.7180993Z > Task :capacitor-app:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:24.7200744Z > Task :capacitor-android:syncDebugLibJars
+2026-08-14T19:59:24.8051318Z > Task :capacitor-android:bundleDebugAar
+2026-08-14T19:59:24.8071315Z > Task :capacitor-android:assembleDebug
+2026-08-14T19:59:24.8090884Z > Task :capacitor-app:extractDebugAnnotations
+2026-08-14T19:59:24.8110851Z > Task :capacitor-app:extractDeepLinksForAarDebug
+2026-08-14T19:59:24.8130787Z > Task :capacitor-app:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:24.8131829Z > Task :capacitor-app:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:24.8152023Z > Task :capacitor-app:prepareDebugArtProfile
+2026-08-14T19:59:24.8170851Z > Task :capacitor-app:prepareLintJarForPublish
+2026-08-14T19:59:24.8191182Z > Task :capacitor-community-bluetooth-le:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:24.8210670Z > Task :capacitor-app:mergeDebugJavaResource
+2026-08-14T19:59:24.8211769Z > Task :capacitor-community-bluetooth-le:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:24.8231495Z > Task :capacitor-app:syncDebugLibJars
+2026-08-14T19:59:24.8245733Z > Task :capacitor-app:bundleDebugAar
+2026-08-14T19:59:24.8271333Z > Task :capacitor-app:assembleDebug
+2026-08-14T19:59:24.9051107Z > Task :capacitor-community-bluetooth-le:extractDebugAnnotations
+2026-08-14T19:59:24.9052221Z > Task :capacitor-community-bluetooth-le:extractDeepLinksForAarDebug
+2026-08-14T19:59:24.9054641Z > Task :capacitor-community-bluetooth-le:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:24.9055843Z > Task :capacitor-community-bluetooth-le:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:24.9056916Z > Task :capacitor-community-bluetooth-le:prepareDebugArtProfile
+2026-08-14T19:59:24.9058041Z > Task :capacitor-community-bluetooth-le:prepareLintJarForPublish
+2026-08-14T19:59:24.9059251Z > Task :capacitor-cordova-android-plugins:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:24.9060667Z > Task :capacitor-cordova-android-plugins:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:24.9061790Z > Task :capacitor-community-bluetooth-le:mergeDebugJavaResource
+2026-08-14T19:59:27.3059188Z > Task :capacitor-cordova-android-plugins:extractDebugAnnotations
+2026-08-14T19:59:27.3064559Z > Task :capacitor-community-bluetooth-le:syncDebugLibJars
+2026-08-14T19:59:27.3065480Z > Task :capacitor-community-bluetooth-le:bundleDebugAar
+2026-08-14T19:59:27.3066337Z > Task :capacitor-community-bluetooth-le:assembleDebug
+2026-08-14T19:59:27.3067289Z > Task :capacitor-cordova-android-plugins:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.3068390Z > Task :capacitor-cordova-android-plugins:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.3069520Z > Task :capacitor-cordova-android-plugins:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.3091118Z > Task :capacitor-cordova-android-plugins:prepareDebugArtProfile
+2026-08-14T19:59:27.3097476Z > Task :capacitor-cordova-android-plugins:prepareLintJarForPublish
+2026-08-14T19:59:27.3121786Z > Task :capacitor-filesystem:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.3140828Z > Task :capacitor-filesystem:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.3142060Z > Task :capacitor-cordova-android-plugins:mergeDebugJavaResource
+2026-08-14T19:59:27.3174779Z > Task :capacitor-cordova-android-plugins:syncDebugLibJars
+2026-08-14T19:59:27.4052884Z > Task :capacitor-cordova-android-plugins:bundleDebugAar
+2026-08-14T19:59:27.4071269Z > Task :capacitor-cordova-android-plugins:assembleDebug
+2026-08-14T19:59:27.4088470Z > Task :capacitor-filesystem:extractDebugAnnotations
+2026-08-14T19:59:27.4090606Z > Task :capacitor-filesystem:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.4091401Z > Task :capacitor-filesystem:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.4092488Z > Task :capacitor-filesystem:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.4093268Z > Task :capacitor-filesystem:prepareDebugArtProfile
+2026-08-14T19:59:27.4093927Z > Task :capacitor-filesystem:prepareLintJarForPublish
+2026-08-14T19:59:27.4094680Z > Task :capacitor-geolocation:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.4095385Z > Task :capacitor-filesystem:mergeDebugJavaResource
+2026-08-14T19:59:27.4096188Z > Task :capacitor-geolocation:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.4096916Z > Task :capacitor-filesystem:syncDebugLibJars
+2026-08-14T19:59:27.4097506Z > Task :capacitor-filesystem:bundleDebugAar
+2026-08-14T19:59:27.4098077Z > Task :capacitor-filesystem:assembleDebug
+2026-08-14T19:59:27.4098709Z > Task :capacitor-geolocation:extractDebugAnnotations
+2026-08-14T19:59:27.4105177Z > Task :capacitor-geolocation:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.4105979Z > Task :capacitor-geolocation:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.4106790Z > Task :capacitor-geolocation:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.4107536Z > Task :capacitor-geolocation:prepareDebugArtProfile
+2026-08-14T19:59:27.4108525Z > Task :capacitor-geolocation:prepareLintJarForPublish
+2026-08-14T19:59:27.4109252Z > Task :capacitor-haptics:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.5061707Z > Task :capacitor-haptics:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.5081224Z > Task :capacitor-geolocation:mergeDebugJavaResource
+2026-08-14T19:59:27.5131741Z > Task :capacitor-haptics:extractDebugAnnotations
+2026-08-14T19:59:27.5142359Z > Task :capacitor-geolocation:syncDebugLibJars
+2026-08-14T19:59:27.5170681Z > Task :capacitor-geolocation:bundleDebugAar
+2026-08-14T19:59:27.5191513Z > Task :capacitor-geolocation:assembleDebug
+2026-08-14T19:59:27.5200744Z > Task :capacitor-haptics:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.5201608Z > Task :capacitor-haptics:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.5202443Z > Task :capacitor-haptics:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.5203278Z > Task :capacitor-haptics:prepareDebugArtProfile
+2026-08-14T19:59:27.5203993Z > Task :capacitor-haptics:prepareLintJarForPublish
+2026-08-14T19:59:27.5204876Z > Task :capacitor-local-notifications:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.5205912Z > Task :capacitor-local-notifications:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.5206764Z > Task :capacitor-haptics:mergeDebugJavaResource
+2026-08-14T19:59:27.5207536Z > Task :capacitor-local-notifications:extractDebugAnnotations
+2026-08-14T19:59:27.5208243Z > Task :capacitor-haptics:syncDebugLibJars
+2026-08-14T19:59:27.5208831Z > Task :capacitor-haptics:bundleDebugAar
+2026-08-14T19:59:27.5209403Z > Task :capacitor-haptics:assembleDebug
+2026-08-14T19:59:27.5210326Z > Task :capacitor-local-notifications:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.5211264Z > Task :capacitor-local-notifications:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.5212224Z > Task :capacitor-local-notifications:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.5213112Z > Task :capacitor-local-notifications:prepareDebugArtProfile
+2026-08-14T19:59:27.5213961Z > Task :capacitor-local-notifications:prepareLintJarForPublish
+2026-08-14T19:59:27.5214924Z > Task :capacitor-mlkit-barcode-scanning:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.5215827Z > Task :capacitor-local-notifications:mergeDebugJavaResource
+2026-08-14T19:59:27.5216847Z > Task :capacitor-mlkit-barcode-scanning:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.5238121Z > Task :capacitor-local-notifications:syncDebugLibJars
+2026-08-14T19:59:27.6059847Z > Task :capacitor-local-notifications:bundleDebugAar
+2026-08-14T19:59:27.6074847Z > Task :capacitor-local-notifications:assembleDebug
+2026-08-14T19:59:27.6111119Z > Task :capacitor-mlkit-barcode-scanning:extractDebugAnnotations
+2026-08-14T19:59:27.6127223Z > Task :capacitor-mlkit-barcode-scanning:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.6145987Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.6162185Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.6181065Z > Task :capacitor-mlkit-barcode-scanning:prepareDebugArtProfile
+2026-08-14T19:59:27.6200799Z > Task :capacitor-mlkit-barcode-scanning:prepareLintJarForPublish
+2026-08-14T19:59:27.6221207Z > Task :capacitor-push-notifications:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.6222296Z > Task :capacitor-push-notifications:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.6223267Z > Task :capacitor-mlkit-barcode-scanning:mergeDebugJavaResource
+2026-08-14T19:59:27.6224156Z > Task :capacitor-push-notifications:extractDebugAnnotations
+2026-08-14T19:59:27.6224974Z > Task :capacitor-mlkit-barcode-scanning:syncDebugLibJars
+2026-08-14T19:59:27.6225763Z > Task :capacitor-mlkit-barcode-scanning:bundleDebugAar
+2026-08-14T19:59:27.6226523Z > Task :capacitor-mlkit-barcode-scanning:assembleDebug
+2026-08-14T19:59:27.6227356Z > Task :capacitor-push-notifications:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.6228351Z > Task :capacitor-push-notifications:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.6229557Z > Task :capacitor-push-notifications:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.6231053Z > Task :capacitor-push-notifications:prepareDebugArtProfile
+2026-08-14T19:59:27.7064012Z > Task :capacitor-push-notifications:prepareLintJarForPublish
+2026-08-14T19:59:27.7095890Z > Task :capacitor-share:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.7102919Z > Task :capacitor-push-notifications:mergeDebugJavaResource
+2026-08-14T19:59:27.7120910Z > Task :capacitor-share:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.7121744Z > Task :capacitor-push-notifications:syncDebugLibJars
+2026-08-14T19:59:27.7122538Z > Task :capacitor-push-notifications:bundleDebugAar
+2026-08-14T19:59:27.7154560Z > Task :capacitor-push-notifications:assembleDebug
+2026-08-14T19:59:27.7160755Z > Task :capacitor-share:extractDebugAnnotations
+2026-08-14T19:59:27.7174932Z > Task :capacitor-share:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.7190930Z > Task :capacitor-share:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.7200520Z > Task :capacitor-share:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.7212153Z > Task :capacitor-share:prepareDebugArtProfile
+2026-08-14T19:59:27.7216778Z > Task :capacitor-share:prepareLintJarForPublish
+2026-08-14T19:59:27.7219874Z > Task :capacitor-splash-screen:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.7246806Z > Task :capacitor-share:mergeDebugJavaResource
+2026-08-14T19:59:27.7267139Z > Task :capacitor-splash-screen:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.7288397Z > Task :capacitor-share:syncDebugLibJars
+2026-08-14T19:59:27.7300719Z > Task :capacitor-share:bundleDebugAar
+2026-08-14T19:59:27.7304844Z > Task :capacitor-share:assembleDebug
+2026-08-14T19:59:27.7321395Z > Task :capacitor-splash-screen:extractDebugAnnotations
+2026-08-14T19:59:27.7341120Z > Task :capacitor-splash-screen:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.7342073Z > Task :capacitor-splash-screen:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.7342962Z > Task :capacitor-splash-screen:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.7343805Z > Task :capacitor-splash-screen:prepareDebugArtProfile
+2026-08-14T19:59:27.7344581Z > Task :capacitor-splash-screen:prepareLintJarForPublish
+2026-08-14T19:59:27.7345337Z > Task :capacitor-splash-screen:mergeDebugJavaResource
+2026-08-14T19:59:27.7346018Z > Task :capacitor-splash-screen:syncDebugLibJars
+2026-08-14T19:59:27.8050807Z > Task :capacitor-splash-screen:bundleDebugAar
+2026-08-14T19:59:27.8080191Z > Task :capacitor-splash-screen:assembleDebug
+2026-08-14T19:59:27.8090921Z > Task :capacitor-voice-recorder:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.8135781Z > Task :capacitor-voice-recorder:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.8160742Z > Task :capacitor-voice-recorder:extractDebugAnnotations
+2026-08-14T19:59:27.8200820Z > Task :capacitor-voice-recorder:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.8241519Z > Task :capacitor-voice-recorder:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.8281010Z > Task :capacitor-voice-recorder:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.8306102Z > Task :capacitor-voice-recorder:prepareDebugArtProfile
+2026-08-14T19:59:27.8330734Z > Task :capacitor-voice-recorder:prepareLintJarForPublish
+2026-08-14T19:59:27.8331853Z > Task :capawesome-team-capacitor-android-foreground-service:stripDebugDebugSymbols NO-SOURCE
+2026-08-14T19:59:27.8361073Z > Task :capacitor-voice-recorder:mergeDebugJavaResource
+2026-08-14T19:59:27.8362492Z > Task :capawesome-team-capacitor-android-foreground-service:copyDebugJniLibsProjectAndLocalJars
+2026-08-14T19:59:27.8363775Z > Task :capacitor-voice-recorder:syncDebugLibJars
+2026-08-14T19:59:27.8364631Z > Task :capacitor-voice-recorder:bundleDebugAar
+2026-08-14T19:59:27.8365455Z > Task :capacitor-voice-recorder:assembleDebug
+2026-08-14T19:59:27.8366614Z > Task :capawesome-team-capacitor-android-foreground-service:extractDebugAnnotations
+2026-08-14T19:59:27.8368085Z > Task :capawesome-team-capacitor-android-foreground-service:extractDeepLinksForAarDebug
+2026-08-14T19:59:27.8370102Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugGeneratedProguardFiles
+2026-08-14T19:59:27.8371554Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugConsumerProguardFiles
+2026-08-14T19:59:27.8372921Z > Task :capawesome-team-capacitor-android-foreground-service:prepareDebugArtProfile
+2026-08-14T19:59:27.8374336Z > Task :capawesome-team-capacitor-android-foreground-service:prepareLintJarForPublish
+2026-08-14T19:59:27.8375771Z > Task :capawesome-team-capacitor-android-foreground-service:mergeDebugJavaResource
+2026-08-14T19:59:27.8377108Z > Task :capawesome-team-capacitor-android-foreground-service:syncDebugLibJars
+2026-08-14T19:59:27.8378388Z > Task :capawesome-team-capacitor-android-foreground-service:bundleDebugAar
+2026-08-14T19:59:27.8379645Z > Task :capawesome-team-capacitor-android-foreground-service:assembleDebug
+2026-08-14T19:59:27.9083772Z 
+2026-08-14T19:59:27.9102103Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+2026-08-14T19:59:27.9120604Z 
+2026-08-14T19:59:27.9151091Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-08-14T19:59:27.9153605Z 
+2026-08-14T19:59:27.9173741Z For more on this, please refer to https://docs.gradle.org/8.2.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-08-14T19:59:27.9192328Z 
+2026-08-14T19:59:27.9210930Z BUILD SUCCESSFUL in 4m 11s
+2026-08-14T19:59:27.9227721Z 439 actionable tasks: 423 executed, 16 up-to-date
+2026-08-14T19:59:28.3622306Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:59:28.3624351Z ##[group]Run actions/upload-artifact@v4
+2026-08-14T19:59:28.3624823Z with:
+2026-08-14T19:59:28.3625148Z   name: app-debug
+2026-08-14T19:59:28.3625551Z   path: android/app/build/outputs/apk/debug/*.apk
+2026-08-14T19:59:28.3626051Z   if-no-files-found: warn
+2026-08-14T19:59:28.3626444Z   compression-level: 6
+2026-08-14T19:59:28.3626807Z   overwrite: false
+2026-08-14T19:59:28.3627166Z   include-hidden-files: false
+2026-08-14T19:59:28.3627515Z env:
+2026-08-14T19:59:28.3627963Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:28.3628824Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:28.3629541Z ##[endgroup]
+2026-08-14T19:59:28.6351280Z (node:2648) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-14T19:59:28.6365814Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-14T19:59:28.6501970Z With the provided path, there will be 1 file uploaded
+2026-08-14T19:59:28.6540816Z Artifact name is valid!
+2026-08-14T19:59:28.6560639Z Root directory input is valid!
+2026-08-14T19:59:28.8256771Z Beginning upload of artifact content to blob storage
+2026-08-14T19:59:29.2191884Z (node:2648) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-08-14T19:59:29.4600649Z Uploaded bytes 8388608
+2026-08-14T19:59:30.1142381Z Uploaded bytes 16777216
+2026-08-14T19:59:31.2228172Z Uploaded bytes 25165824
+2026-08-14T19:59:32.5103287Z Uploaded bytes 33554432
+2026-08-14T19:59:33.8681157Z Uploaded bytes 41943040
+2026-08-14T19:59:34.8381595Z Uploaded bytes 48018324
+2026-08-14T19:59:34.8631559Z Finished uploading artifact content to blob storage!
+2026-08-14T19:59:34.8651609Z SHA256 digest of uploaded artifact zip is 902d4653ba21276eaba9621c1785204730ab4a591fd9b8e3926213ae674d47ac
+2026-08-14T19:59:34.8668633Z Finalizing artifact upload
+2026-08-14T19:59:35.0951225Z Artifact app-debug.zip successfully finalized. Artifact ID 9232416124
+2026-08-14T19:59:35.0971265Z Artifact app-debug has been successfully uploaded! Final size is 48018324 bytes. Artifact ID is 9232416124
+2026-08-14T19:59:35.0991255Z Artifact download URL: https://github.com/Charesmagna/SafetyLink-Core/actions/runs/31835392403/artifacts/9232416124
+2026-08-14T19:59:35.1324296Z ##[group]Run ./gradlew assembleRelease --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -100
+2026-08-14T19:59:35.1325935Z [36;1m./gradlew assembleRelease --init-script ../init.gradle --no-daemon --no-parallel --no-build-cache --stacktrace 2>&1 | tail -100[0m
+2026-08-14T19:59:35.1426054Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:59:35.1426498Z env:
+2026-08-14T19:59:35.1427020Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:35.1427887Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:35.1428961Z   KEYSTORE_PATH: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/safetylink-release.keystore
+2026-08-14T19:59:35.1429880Z   KEYSTORE_PASSWORD: SafetyLink2024!
+2026-08-14T19:59:35.1430481Z   KEY_ALIAS: safetylink
+2026-08-14T19:59:35.1430878Z   KEY_PASSWORD: SafetyLink2024!
+2026-08-14T19:59:35.1431294Z ##[endgroup]
+2026-08-14T19:59:59.5300975Z 	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+2026-08-14T19:59:59.5304374Z 	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+2026-08-14T19:59:59.5306006Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+2026-08-14T19:59:59.5308424Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+2026-08-14T19:59:59.5309640Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+2026-08-14T19:59:59.5312065Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-08-14T19:59:59.5313968Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-08-14T19:59:59.5315641Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-08-14T19:59:59.5316805Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5317712Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-08-14T19:59:59.5318600Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5319482Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-08-14T19:59:59.5321217Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-08-14T19:59:59.5322118Z 	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+2026-08-14T19:59:59.5322936Z 	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+2026-08-14T19:59:59.5323854Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:337)
+2026-08-14T19:59:59.5324893Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:324)
+2026-08-14T19:59:59.5325972Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:317)
+2026-08-14T19:59:59.5327092Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+2026-08-14T19:59:59.5328382Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:463)
+2026-08-14T19:59:59.5329431Z 	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:380)
+2026-08-14T19:59:59.5330828Z 	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:116)
+2026-08-14T19:59:59.5331703Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
+2026-08-14T19:59:59.5332629Z 	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
+2026-08-14T19:59:59.5333458Z 	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+2026-08-14T19:59:59.5334287Z 	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
+2026-08-14T19:59:59.5335221Z 	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+2026-08-14T19:59:59.5336328Z 	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+2026-08-14T19:59:59.5337428Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-08-14T19:59:59.5350636Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-08-14T19:59:59.5352206Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-08-14T19:59:59.5353543Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5355100Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-08-14T19:59:59.5356547Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5358009Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-08-14T19:59:59.5359506Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-08-14T19:59:59.5361525Z 	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+2026-08-14T19:59:59.5363252Z 	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:264)
+2026-08-14T19:59:59.5364817Z 	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+2026-08-14T19:59:59.5366288Z 	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+2026-08-14T19:59:59.5367608Z 	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:44)
+2026-08-14T19:59:59.5368955Z 	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+2026-08-14T19:59:59.5370707Z 	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:255)
+2026-08-14T19:59:59.5372491Z 	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+2026-08-14T19:59:59.5374092Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:249)
+2026-08-14T19:59:59.5375482Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:109)
+2026-08-14T19:59:59.5376830Z 	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+2026-08-14T19:59:59.5378062Z 	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+2026-08-14T19:59:59.5379557Z 	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:200)
+2026-08-14T19:59:59.5380687Z 	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+2026-08-14T19:59:59.5381698Z 	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+2026-08-14T19:59:59.5382589Z Caused by: com.android.builder.internal.aapt.v2.Aapt2Exception: Android resource compilation failed
+2026-08-14T19:59:59.5383667Z ERROR: /home/runner/work/SafetyLink-Core/SafetyLink-Core/android/app/src/main/res/drawable-land-ldpi/splash.png: AAPT: error: file failed to compile.
+2026-08-14T19:59:59.5384345Z     
+2026-08-14T19:59:59.5384833Z 	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create(Aapt2Exception.kt:45)
+2026-08-14T19:59:59.5385601Z 	at com.android.builder.internal.aapt.v2.Aapt2Exception$Companion.create$default(Aapt2Exception.kt:33)
+2026-08-14T19:59:59.5386389Z 	at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteException(Aapt2ErrorUtils.kt:262)
+2026-08-14T19:59:59.5387217Z 	at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteException$default(Aapt2ErrorUtils.kt:205)
+2026-08-14T19:59:59.5388081Z 	at com.android.build.gradle.internal.res.Aapt2ErrorUtils.rewriteCompileException(Aapt2ErrorUtils.kt:89)
+2026-08-14T19:59:59.5388954Z 	at com.android.build.gradle.internal.res.Aapt2CompileRunnableKt.runAapt2Compile(Aapt2CompileRunnable.kt:59)
+2026-08-14T19:59:59.5389762Z 	at com.android.build.gradle.internal.res.Aapt2CompileRunnable.run(Aapt2CompileRunnable.kt:32)
+2026-08-14T19:59:59.5390885Z 	at com.android.build.gradle.internal.profile.ProfileAwareWorkAction.execute(ProfileAwareWorkAction.kt:74)
+2026-08-14T19:59:59.5391662Z 	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:63)
+2026-08-14T19:59:59.5392424Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:66)
+2026-08-14T19:59:59.5393212Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:62)
+2026-08-14T19:59:59.5393999Z 	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:100)
+2026-08-14T19:59:59.5394827Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:62)
+2026-08-14T19:59:59.5395562Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+2026-08-14T19:59:59.5396177Z 	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+2026-08-14T19:59:59.5397049Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:204)
+2026-08-14T19:59:59.5398159Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:199)
+2026-08-14T19:59:59.5399123Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:66)
+2026-08-14T19:59:59.5400179Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5401078Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:157)
+2026-08-14T19:59:59.5401964Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:59)
+2026-08-14T19:59:59.5402822Z 	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:53)
+2026-08-14T19:59:59.5403678Z 	at org.gradle.internal.operations.DefaultBuildOperationExecutor.call(DefaultBuildOperationExecutor.java:73)
+2026-08-14T19:59:59.5404531Z 	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+2026-08-14T19:59:59.5405325Z 	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:59)
+2026-08-14T19:59:59.5406315Z 	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:170)
+2026-08-14T19:59:59.5407250Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQueue.java:187)
+2026-08-14T19:59:59.5408428Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$700(DefaultConditionalExecutionQueue.java:120)
+2026-08-14T19:59:59.5409460Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.java:162)
+2026-08-14T19:59:59.5410444Z 	at org.gradle.internal.Factories$1.create(Factories.java:31)
+2026-08-14T19:59:59.5411096Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:249)
+2026-08-14T19:59:59.5411939Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:109)
+2026-08-14T19:59:59.5412808Z 	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:114)
+2026-08-14T19:59:59.5413768Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue.java:157)
+2026-08-14T19:59:59.5414793Z 	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java:126)
+2026-08-14T19:59:59.5415399Z 	... 2 more
+2026-08-14T19:59:59.5415528Z 
+2026-08-14T19:59:59.5415535Z 
+2026-08-14T19:59:59.5415907Z Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+2026-08-14T19:59:59.5416256Z 
+2026-08-14T19:59:59.5416810Z You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+2026-08-14T19:59:59.5417297Z 
+2026-08-14T19:59:59.5417936Z For more on this, please refer to https://docs.gradle.org/8.2.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+2026-08-14T19:59:59.5418480Z 
+2026-08-14T19:59:59.5418600Z BUILD FAILED in 23s
+2026-08-14T19:59:59.5418889Z 56 actionable tasks: 56 executed
+2026-08-14T19:59:59.5535223Z ##[group]Run cp android/app/build/outputs/apk/debug/app-debug.apk SafetyLink-debug.apk
+2026-08-14T19:59:59.5536236Z [36;1mcp android/app/build/outputs/apk/debug/app-debug.apk SafetyLink-debug.apk[0m
+2026-08-14T19:59:59.5536956Z [36;1mecho "=== Release APK output directory ==="[0m
+2026-08-14T19:59:59.5537648Z [36;1mls -la android/app/build/outputs/apk/release/ || echo "release/ dir missing"[0m
+2026-08-14T19:59:59.5538359Z [36;1mecho "=== Signing properties ==="[0m
+2026-08-14T19:59:59.5539013Z [36;1mcat android/signing.properties || echo "signing.properties missing"[0m
+2026-08-14T19:59:59.5539685Z [36;1mecho "=== Keystore file ==="[0m
+2026-08-14T19:59:59.5560830Z [36;1mls -la android/app/safetylink-release.keystore || echo "keystore missing"[0m
+2026-08-14T19:59:59.5561699Z [36;1mif [ -f android/app/build/outputs/apk/release/app-release.apk ]; then[0m
+2026-08-14T19:59:59.5562524Z [36;1m  cp android/app/build/outputs/apk/release/app-release.apk SafetyLink.apk[0m
+2026-08-14T19:59:59.5563397Z [36;1melif [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then[0m
+2026-08-14T19:59:59.5564392Z [36;1m  cp android/app/build/outputs/apk/release/app-release-unsigned.apk SafetyLink.apk[0m
+2026-08-14T19:59:59.5565153Z [36;1m  echo "WARNING: Only unsigned APK produced"[0m
+2026-08-14T19:59:59.5565632Z [36;1melse[0m
+2026-08-14T19:59:59.5565982Z [36;1m  echo "ERROR: No release APK found"[0m
+2026-08-14T19:59:59.5566681Z [36;1m  find android/app/build/outputs/ -name "*.apk" 2>/dev/null || echo "No APKs anywhere"[0m
+2026-08-14T19:59:59.5567363Z [36;1m  exit 1[0m
+2026-08-14T19:59:59.5567682Z [36;1mfi[0m
+2026-08-14T19:59:59.5625621Z shell: /usr/bin/bash -e {0}
+2026-08-14T19:59:59.5626036Z env:
+2026-08-14T19:59:59.5626539Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:59.5627342Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.20-8/x64
+2026-08-14T19:59:59.5628261Z ##[endgroup]
+2026-08-14T19:59:59.6156408Z === Release APK output directory ===
+2026-08-14T19:59:59.6174827Z ls: cannot access 'android/app/build/outputs/apk/release/': No such file or directory
+2026-08-14T19:59:59.6176000Z release/ dir missing
+2026-08-14T19:59:59.6176445Z === Signing properties ===
+2026-08-14T19:59:59.6188162Z cat: android/signing.properties: No such file or directory
+2026-08-14T19:59:59.6201068Z signing.properties missing
+2026-08-14T19:59:59.6201751Z === Keystore file ===
+2026-08-14T19:59:59.6204853Z -rw-r--r-- 1 runner runner 2816 Aug 14 19:55 android/app/safetylink-release.keystore
+2026-08-14T19:59:59.6207515Z ERROR: No release APK found
+2026-08-14T19:59:59.6229224Z android/app/build/outputs/apk/debug/app-debug.apk
+2026-08-14T19:59:59.6237296Z ##[error]Process completed with exit code 1.
+2026-08-14T19:59:59.6722930Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:59:59.6724274Z Post job cleanup.
+2026-08-14T19:59:59.8330161Z (node:2784) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-08-14T19:59:59.8374450Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-08-14T19:59:59.9732553Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-14T19:59:59.9734544Z Post job cleanup.
+2026-08-14T20:00:00.1157517Z [command]/usr/bin/git version
+2026-08-14T20:00:00.1271227Z git version 2.54.0
+2026-08-14T20:00:00.1403266Z Temporarily overriding HOME='/home/runner/work/_temp/547f93bf-2363-4559-8f97-fa833783a6c7' before making global git config changes
+2026-08-14T20:00:00.1451464Z Adding repository directory to the temporary git global config as a safe directory
+2026-08-14T20:00:00.1485894Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/SafetyLink-Core/SafetyLink-Core
+2026-08-14T20:00:00.1581610Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-08-14T20:00:00.1682194Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-08-14T20:00:00.2611700Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-08-14T20:00:00.2683787Z http.https://github.com/.extraheader
+2026-08-14T20:00:00.2794213Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-08-14T20:00:00.2866675Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-08-14T20:00:00.3421261Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-08-14T20:00:00.3451604Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-08-14T20:00:00.3902113Z Cleaning up orphan processes
+2026-08-14T20:00:00.4214312Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-java@v4, actions/setup-node@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

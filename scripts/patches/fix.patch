@@ -1,0 +1,20 @@
+--- src/components/PanicButton.tsx
++++ src/components/PanicButton.tsx
+@@ -578,10 +578,6 @@
+       </div>
+ 
+-      {/* Watch-Me Setup Modal */}
+-      <AnimatePresence>
+-
+       <div className="mt-3 relative z-10">
+         <motion.button 
+           whileHover={{ scale: 1.02 }}
+@@ -601,6 +597,9 @@
+         </motion.button>
+       </div>
++
++      {/* Watch-Me Setup Modal */}
++      <AnimatePresence>
+         {showWatchMe && (
+           <motion.div
+             initial={{ opacity: 0 }}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SafetyLink Admin Portal</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+    .container { max-width: 900px; margin: auto; background: #1e293b; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius: 4px; border: 1px solid #475569; background: #334155; color: white; }
+    button { background: #2563eb; cursor: pointer; font-weight: bold; border: none; }
+    button:hover { background: #1d4ed8; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px; border-bottom: 1px solid #475569; text-align: left; }
+    th { background: #0f172a; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>SafetyLink Security Admin</h2>
+  
+  <!-- Login Section -->
+  <div id="login-section">
+    <p>Enter your Organization credentials generated via the mobile app.</p>
+    <input type="text" id="org-id" placeholder="Organization ID (UUID or Code)" />
+    <input type="password" id="org-password" placeholder="Admin Password" />
+    <button onclick="loginAdmin()">Login to Dashboard</button>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="hidden">
+    <h3 id="org-title"></h3>
+    <button onclick="logout()" style="width: auto; background: #dc2626;">Logout</button>
+    <h4>Registered Members Under Your Organization</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Phone Number</th>
+          <th>Status</th>
+          <th>Registered Date</th>
+        </tr>
+      </thead>
+      <tbody id="member-table-body">
+        <!-- Dynamic rows injected here -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Initialize Supabase Client (Replace with your actual keys)
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function loginAdmin() {
+    const orgId = document.getElementById('org-id').value.trim();
+    const password = document.getElementById('org-password').value.trim();
+
+    if (!orgId || !password) {
+      alert('Please fill in both fields.');
+      return;
+    }
+
+    // 1. Fetch Organization Profile
+    const { data: org, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .single();
+
+    if (error || !org) {
+      alert('Organization ID not recognized.');
+      return;
+    }
+
+    // Note: In production, verify hashed password securely via backend function.
+    if (org.admin_password_hash !== password) {
+      alert('Invalid password.');
+      return;
+    }
+
+    // 2. Fetch Members tied to this Organization ID
+    const { data: members, error: memberError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('org_id', orgId);
+
+    if (memberError) {
+      alert('Failed to fetch organization members.');
+      return;
+    }
+
+    // 3. Render Dashboard UI
+    document.getElementById('org-title').innerText = `Organization: ${org.org_name}`;
+    let rows = '';
+    members.forEach(m => {
+      rows += `<tr>
+        <td>${m.name || 'N/A'}</td>
+        <td>${m.phone_number || 'N/A'}</td>
+        <td>${m.status || 'Active'}</td>
+        <td>${new Date(m.created_at).toLocaleDateString()}</td>
+      </tr>`;
+    });
+    document.getElementById('member-table-body').innerHTML = rows;
+
+    document.getElementById('login-section').classList.add('hidden');
+    document.getElementById('dashboard-section').classList.remove('hidden');
+  }
+
+  function logout() {
+    document.getElementById('dashboard-section').classList.add('hidden');
+    document.getElementById('login-section').classList.remove('hidden');
+    document.getElementById('org-id').value = '';
+    document.getElementById('org-password').value = '';
+  }
+</script>
+
+</body>
+</html>

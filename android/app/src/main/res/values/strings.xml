@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SafetyLink</string>
+    <string name="login">Login</string>
+    <!-- Translations for EN, ZU, AF, ST, XH would be here -->
+</resources>

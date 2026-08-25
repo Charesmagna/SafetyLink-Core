@@ -1,0 +1,109 @@
+name: Build Android APK
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Compute version
+        id: version
+        run: |
+          VERSION="1.1.${{ github.run_number }}"
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Bump package.json version
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Web (minified + obfuscated)
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+        run: npm run build
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Bump Android versionCode + versionName
+        run: |
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" android/app/build.gradle
+
+      - name: Build Release APK
+        working-directory: ./android
+        run: ./gradlew assembleRelease
+
+      - name: Sign APK
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
+          SIGNED=android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
+
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+            $BUILD_TOOLS_DIR/apksigner sign \
+              --ks release.keystore \
+              --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+              --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+              --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+              --out $SIGNED \
+              $UNSIGNED
+          else
+            keytool -genkey -v -keystore release.keystore \
+              -alias safetylink -keyalg RSA -keysize 4096 -validity 10000 \
+              -storepass "Safety link 2024" -keypass "Safety link 2024" \
+              -dname "CN=TM Media Solutions, OU=SafetyLink Core, O=TM Media Solutions, L=Johannesburg, S=Gauteng, C=ZA"
+            $BUILD_TOOLS_DIR/apksigner sign \
+              --ks release.keystore \
+              --ks-pass pass:"Safety link 2024" \
+              --ks-key-alias safetylink \
+              --key-pass pass:"Safety link 2024" \
+              --out $SIGNED \
+              $UNSIGNED
+          fi
+          rm -f release.keystore
+
+      - name: Verify APK signature
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          $BUILD_TOOLS_DIR/apksigner verify --verbose \
+            android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk 2>&1 | head -5
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "SafetyLink Core ${{ steps.version.outputs.tag }}"
+          body: |
+            ## SafetyLink Core ${{ steps.version.outputs.tag }}
+            **Released by TM Media Solutions**
+
+            ### Install
+            Download `SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk` below and install directly on your Android device.
+
+            > Existing data, contacts and organisation membership are preserved on update.
+          files: android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
+          draft: false
+          prerelease: false

@@ -1,0 +1,53 @@
+{
+  "collections": {
+    "users": {
+      "documentId": "User UID",
+      "fields": {
+        "fullName": "string",
+        "username": "string",
+        "phone": "string",
+        "email": "string",
+        "role": "string",
+        "orgCode": "string",
+        "isPro": "boolean",
+        "accountNumber": "string",
+        "medicalInfo": "string",
+        "riskNotes": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "organizations": {
+      "documentId": "Organization Code (e.g. SL-ORG-1234)",
+      "fields": {
+        "name": "string",
+        "plan": "string",
+        "activeSubscribers": "number",
+        "referralCode": "string",
+        "primaryColor": "string",
+        "secondaryColor": "string",
+        "logoUrl": "string"
+      }
+    },
+    "panicEvents": {
+      "documentId": "Auto-generated UUID",
+      "fields": {
+        "timestamp": "string",
+        "status": "string (ACTIVE | RESOLVED | DISPATCHED)",
+        "location": "map { lat: number, lng: number }",
+        "description": "string",
+        "responderAssigned": "string",
+        "mediaUrl": "string"
+      }
+    },
+    "auditLogs": {
+      "documentId": "Auto-generated UUID",
+      "fields": {
+        "timestamp": "string",
+        "category": "string",
+        "level": "string",
+        "title": "string",
+        "message": "string"
+      }
+    }
+  }
+}
