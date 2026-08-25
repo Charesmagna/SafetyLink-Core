@@ -5,6 +5,35 @@ import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap,
 import { Link, useLocation } from 'react-router-dom';
 
 export function Pricing() {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handlePayfastCheckout = async (planName: string, amount: string) => {
+    try {
+      setLoadingPlan(planName);
+      const response = await fetch('/api/payfast/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_name: planName,
+          amount: amount,
+          item_description: `SafetyLink ${planName} Subscription`,
+          email: 'user@example.com'
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Checkout failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error during checkout.');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <>
       {/* ══ PRICING ═══════════════════════════════════════════════════════ */}
@@ -30,6 +59,12 @@ export function Pricing() {
                   <li key={i} className="flex gap-2 text-xs text-slate-600"><CheckCircle2 size={14} className="text-[#15803d] shrink-0" /> {ft}</li>
                 ))}
               </ul>
+              <button 
+                onClick={() => handlePayfastCheckout('Individual', '49.00')}
+                disabled={loadingPlan === 'Individual'}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-center text-xs font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                {loadingPlan === 'Individual' ? 'Processing...' : 'Subscribe with Payfast'}
+              </button>
             </div>
 
             {/* Family */}
@@ -45,6 +80,12 @@ export function Pricing() {
                   <li key={i} className="flex gap-2 text-xs text-slate-600"><CheckCircle2 size={14} className="text-[#15803d] shrink-0" /> {ft}</li>
                 ))}
               </ul>
+              <button 
+                onClick={() => handlePayfastCheckout('Family', '99.00')}
+                disabled={loadingPlan === 'Family'}
+                className="w-full bg-[#15803d] hover:bg-green-700 text-white text-center text-xs font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                {loadingPlan === 'Family' ? 'Processing...' : 'Subscribe with Payfast'}
+              </button>
             </div>
 
             {/* Organisation */}
@@ -59,6 +100,12 @@ export function Pricing() {
                   <li key={i} className="flex gap-2 text-xs text-slate-600"><CheckCircle2 size={14} className="text-[#15803d] shrink-0" /> {ft}</li>
                 ))}
               </ul>
+              <button 
+                onClick={() => handlePayfastCheckout('Organisation', '49.00')}
+                disabled={loadingPlan === 'Organisation'}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-center text-xs font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                {loadingPlan === 'Organisation' ? 'Processing...' : 'Subscribe with Payfast'}
+              </button>
             </div>
 
             {/* Enterprise */}
