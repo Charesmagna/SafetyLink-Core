@@ -10,17 +10,17 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
     const hardwareProducts = {
       lite: {
         name: "SafetyLink Lite",
-        price: 100,
+        price: 149,
         description: "Compact, budget-friendly emergency panic trigger."
       },
       active: {
         name: "SafetyLink Active",
-        price: 150,
+        price: 199,
         description: "Sleek, ruggedized corporate keychain alert tag."
       },
       premium: {
         name: "SafetyLink Premium (Waterproof)",
-        price: 299,
+        price: 348,
         description: "IP67 waterproof device with global location assistance."
       }
     };
@@ -120,10 +120,9 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 <div className="mt-2 text-3xl font-black text-white">R0 <span className="text-sm text-slate-500 font-normal">/mo</span></div>
               </div>
               <ul className="space-y-3 mb-6 flex-1 text-sm text-slate-300">
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Includes 1 User</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Live GPS location & emergency contacts</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>24-hour location history</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Community alerts & basic push notifications</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Digital-Only SOS (On-Screen & Widget)</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Live GPS & 2 Emergency Contacts</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" /> <span className="text-slate-400">No physical button (iTag) pairing</span></li>
               </ul>
               <button className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold transition-colors">Select Free</button>
             </div>
@@ -138,12 +137,12 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 <p className="text-xs text-emerald-400 mt-1">& R149 once-off OR R499/year</p>
               </div>
               <ul className="space-y-3 mb-6 flex-1 text-sm text-slate-300">
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Supports up to 5 Bluetooth iTags</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Unlimited panic activations</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Private company monitoring</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Live tracking & 12-month history</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Safe zone alerts & emergency audio</span></li>
-                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Priority cloud & premium support</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Physical iTag Support (Hands-Free)</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Up to 5 physical iTags per profile</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Professional control room monitoring</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Geofenced Safe Zones</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Emergency audio recording</span></li>
+                <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Priority cloud routing</span></li>
               </ul>
               <button onClick={() => handlePayfastCheckout('Individual', '49.00')} disabled={loadingPlan === 'Individual'} className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-colors">{loadingPlan === 'Individual' ? 'Processing...' : 'Subscribe with Payfast'}</button>
             </div>
@@ -213,22 +212,22 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Single</div>
-                    <div className="text-lg font-bold text-white">R100</div>
+                    <div className="text-lg font-bold text-white">R149</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
                     <button onClick={() => handlePaystackHardwareCheckout('lite', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Lite</button>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Active</div>
-                    <div className="text-lg font-bold text-white">R150</div>
+                    <div className="text-lg font-bold text-white">R199</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
                     <button onClick={() => handlePaystackHardwareCheckout('active', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Active</button>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Premium</div>
-                    <div className="text-lg font-bold text-white">R299</div>
+                    <div className="text-lg font-bold text-white">R348</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
                     <button onClick={() => handlePaystackHardwareCheckout('premium', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Premium</button>
                   </div>
                   <div className="bg-emerald-900/30 p-3 rounded-xl border border-emerald-500/50 text-center">
                     <div className="text-[10px] text-emerald-400 uppercase tracking-wider mb-1">Lite (5-Pack)</div>
-                    <div className="text-lg font-bold text-white">R450</div>
+                    <div className="text-lg font-bold text-white">R499</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
                     <button onClick={() => handlePaystackHardwareCheckout('lite', 5)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy 5-Pack</button>
                   </div>
                 </div>
