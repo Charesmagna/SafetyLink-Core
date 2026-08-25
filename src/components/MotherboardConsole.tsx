@@ -1,8 +1,8 @@
 
 import { useAppStore } from '../utils/store';
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+
 
 export const MotherboardConsole: React.FC = () => {
   const { currentOrg: storeOrg, currentUser, organizations, users, panicEvents, resolvePanic } = useAppStore();

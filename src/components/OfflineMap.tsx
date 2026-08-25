@@ -1,85 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion } from 'motion/react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, LayersControl } from 'react-leaflet';
-import L from 'leaflet';
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
-// Re-usable Helper Component to center/pan Leaflet maps reactively on prop changes
-interface RecenterMapProps {
-  center: [number, number];
-}
 
-const RecenterMap: React.FC<RecenterMapProps> = ({ center }) => {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, map.getZoom() || 13);
-  }, [center, map]);
-  return null;
-};
-
-// Custom Leaflet Icons styled with high-contrast, glowing backing circles
-const userIcon = L.divIcon({
-  className: 'custom-user-marker',
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40 animate-pulse"></div>
-      <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 border border-slate-950 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-    </div>
-  `,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
-
-const activeUserIcon = L.divIcon({
-  className: 'custom-user-marker-active',
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-10 h-10 rounded-full bg-red-500/30 border border-red-500/50 animate-pulse"></div>
-      <div class="w-4 h-4 rounded-full bg-red-500 border border-slate-950 shadow-[0_0_12px_rgba(239,68,68,0.9)]"></div>
-    </div>
-  `,
-  iconSize: [40, 40],
-  iconAnchor: [20, 20],
-});
-
-const satelliteIcon = L.divIcon({
-  className: 'custom-sat-marker',
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/40 animate-pulse"></div>
-      <div class="w-8 h-8 rounded-full bg-slate-950 border border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.6)] flex items-center justify-center text-xs">
-        🛰️
-      </div>
-    </div>
-  `,
-  iconSize: [48, 48],
-  iconAnchor: [24, 24],
-});
-
-const incidentIcon = (status: string) => L.divIcon({
-  className: 'custom-incident-marker',
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-6 h-6 rounded-full bg-orange-500/15 border border-orange-500/25 animate-pulse"></div>
-      <div class="w-3.5 h-3.5 rounded-full ${
-        status === 'ACTIVE' ? 'bg-red-500' :
-        status === 'DISPATCHED' ? 'bg-orange-500' : 'bg-slate-400'
-      } border border-slate-950"></div>
-    </div>
-  `,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
-});
-
-interface SatTelemetry {
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  velocity: number;
-  visibility: string;
-  timestamp: number;
-}
 
 export const OfflineMap: React.FC = () => {
   const { userLocation, updateLocation, gpsAccuracy, activeSOSState } = useAppStore();
@@ -237,77 +162,21 @@ export const OfflineMap: React.FC = () => {
 
       {/* Leaflet Interactive Map View */}
       <div className="relative w-full h-72 bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden mt-4 z-10">
-        <MapContainer 
-          center={[userLat, userLng]} 
-          zoom={13} 
-          zoomControl={false}
-          className="w-full h-full"
-        >
-          {/* Dynamic Map Recenter Action */}
-          <RecenterMap center={activeFocusCenter} />
-
-          <LayersControl position="topleft">
-            <LayersControl.BaseLayer name="Street">
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Satellite">
-              <TileLayer
-                attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer checked name="Tactical Terrain">
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              />
-            </LayersControl.BaseLayer>
-          </LayersControl>
-
-          {/* User target indicator */}
-          <Marker position={[userLat, userLng]} icon={activeSOSState !== 'IDLE' ? activeUserIcon : userIcon}>
-            <Popup>
-              <div className="p-1 font-mono text-[9px] text-slate-200 leading-relaxed">
-                <p className="font-bold text-emerald-400">📍 SL-NODE-GP01 (USER)</p>
-                <p>Lat: {userLat.toFixed(5)}</p>
-                <p>Lng: {userLng.toFixed(5)}</p>
-                <p className="text-slate-500 mt-0.5">{gpsAccuracy}</p>
-              </div>
-            </Popup>
-          </Marker>
-
-          {/* Real-time Satellite Telemetry tracking */}
-          {satelliteData && (
-            <Marker position={[satelliteData.latitude, satelliteData.longitude]} icon={satelliteIcon}>
-              <Popup>
-                <div className="p-1 font-mono text-[9px] text-slate-200 leading-relaxed min-w-[150px]">
-                  <p className="font-bold text-amber-400">🛰️ SPACE SEGMENT: ISS</p>
-                  <p>Lat: {satelliteData.latitude.toFixed(4)}</p>
-                  <p>Lng: {satelliteData.longitude.toFixed(4)}</p>
-                  <p>Alt: {satelliteData.altitude.toFixed(1)} km</p>
-                  <p>Velocity: {Math.round(satelliteData.velocity).toLocaleString()} km/h</p>
-                  <p className="text-slate-500 mt-0.5 uppercase">VIS: {satelliteData.visibility}</p>
-                </div>
-              </Popup>
-            </Marker>
-          )}
-
-          {/* Nearby Incident nodes */}
-          {liveIncidents.map((inc, i) => (
-            <Marker key={i} position={[inc.lat, inc.lng]} icon={incidentIcon(inc.status)}>
-              <Popup>
-                <div className="p-1 font-mono text-[9px] text-slate-200 leading-relaxed">
-                  <p className="font-bold text-orange-400">🚨 {inc.name}</p>
-                  <p>Grid: {inc.lat.toFixed(5)}, {inc.lng.toFixed(5)}</p>
-                  <p className="text-slate-400 uppercase mt-0.5">STATUS: {inc.status}</p>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+        <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}>
+          <Map 
+            mapId="DEMO_MAP_ID" 
+            defaultZoom={13} 
+            center={{ lat: activeFocusCenter[0], lng: activeFocusCenter[1] }} 
+            disableDefaultUI={true} 
+            gestureHandling={'greedy'} 
+            mapTypeId={mapCenterMode === 'satellite' ? 'satellite' : 'roadmap'}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <AdvancedMarker position={{ lat: userLat, lng: userLng }}>
+              <Pin background={activeSOSState !== 'IDLE' ? '#ef4444' : '#10b981'} borderColor={'#fff'} glyphColor={'#fff'} />
+            </AdvancedMarker>
+          </Map>
+        </APIProvider>
 
         {/* Dynamic Focus Controls Overlay on the top-right of the map pane */}
         <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">

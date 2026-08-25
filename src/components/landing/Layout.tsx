@@ -29,7 +29,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
             <Link to="/pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Pricing</Link>
             
             <button onClick={onLogin} className="text-sm font-bold text-white hover:text-[#15803d] transition-colors ml-2">Login</button>
-            <a href="https://wa.me/27739441222?text=Hi+I+want+to+request+a+SafetyLink+demo" target="_blank" rel="noreferrer" className="bg-[#15803d] hover:bg-green-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-colors shadow-sm">Request Demo</a>
+            <button onClick={onRegisterOrg} className="bg-[#15803d] hover:bg-green-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-colors shadow-sm">Start your 14-day trial</button>
           </div>
           
           <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
@@ -47,7 +47,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
             <Link to="/hardware" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Hardware</Link>
             <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Pricing</Link>
             <button onClick={() => { setMobileMenuOpen(false); if(onLogin) onLogin(); }} className="text-slate-300 font-medium text-[15px] text-left">Login</button>
-            <a href="https://wa.me/27739441222" target="_blank" rel="noreferrer" className="bg-[#15803d] text-white p-3 rounded-full font-bold text-center text-[15px] block">Request Demo</a>
+            <button onClick={onRegisterOrg} className="bg-[#15803d] text-white p-3 rounded-full font-bold text-center text-[15px] block w-full">Start your 14-day trial</button>
           </div>
         )}
       </nav>

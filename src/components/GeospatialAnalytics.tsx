@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, 
   AreaChart, Area, CartesianGrid, LineChart, Line 

@@ -120,7 +120,7 @@ export function Pricing() {
                   <li key={i} className="flex gap-2 text-xs text-slate-300"><CheckCircle2 size={14} className="text-[#15803d] shrink-0" /> {ft}</li>
                 ))}
               </ul>
-              <a href="https://wa.me/27739441222?text=Hi+I+want+an+enterprise+quote" target="_blank" rel="noreferrer" className="w-full bg-[#15803d] hover:bg-green-700 text-white text-center text-xs font-bold py-3 rounded-xl transition-colors">Contact via WhatsApp</a>
+              <button onClick={onRegisterOrg} className="w-full bg-[#15803d] hover:bg-green-700 text-white text-center text-xs font-bold py-3 rounded-xl transition-colors">Start your 14-day trial</button>
             </div>
           </div>
 
