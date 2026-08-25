@@ -1,7 +1,36 @@
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Check } from 'lucide-react';
 
 export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handlePayfastCheckout = async (planName: string, amount: string) => {
+    try {
+      setLoadingPlan(planName);
+      const response = await fetch('/api/payfast/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan_name: planName,
+          amount: amount,
+          item_description: `SafetyLink ${planName} Subscription`,
+          email: 'user@example.com'
+        })
+      });
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Checkout failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error during checkout.');
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
   if (!isOpen) return null;
 
   return (
@@ -58,7 +87,7 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Safe zone alerts & emergency audio</span></li>
                 <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> <span>Priority cloud & premium support</span></li>
               </ul>
-              <button className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-colors">Go Premium</button>
+              <button onClick={() => handlePayfastCheckout('Individual', '49.00')} disabled={loadingPlan === 'Individual'} className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-colors">{loadingPlan === 'Individual' ? 'Processing...' : 'Subscribe with Payfast'}</button>
             </div>
 
             {/* Family */}
@@ -76,7 +105,7 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                 <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Live family tracking & group panic</span></li>
                 <li className="flex items-start gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" /> <span>Shared safe zones & timeline</span></li>
               </ul>
-              <button className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold transition-colors">Get Family Plan</button>
+              <button onClick={() => handlePayfastCheckout('Family', '99.00')} disabled={loadingPlan === 'Family'} className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-bold transition-colors text-white">{loadingPlan === 'Family' ? 'Processing...' : 'Subscribe with Payfast'}</button>
             </div>
           </div>
 
