@@ -163,8 +163,8 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <div className="hero-right">
             <div className="hero-phone-wrap">
-              <img className="hero-phone" src="https://picsum.photos/seed/sl_sos/400/800?blur=2" alt="SafetyLink SOS Screen" />
-              <img className="hero-phone" src="https://picsum.photos/seed/sl_login/400/800?blur=2" alt="SafetyLink Command Login" />
+              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink SOS Screen" />
+              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command Login" />
             </div>
             <div className="hero-flow">
               <div className="flow-step">
@@ -197,7 +197,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="video-grid">
 
             <div className="vid-card" onClick={toggleVideo}>
-              <video preload="none" playsInline  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" onEnded={handleVideoEnded}>
+              <video preload="none" playsInline  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310050/Polish_20260809_035827088.png" onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310214/Okay_now_for_the_next_scene_.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
@@ -280,7 +280,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="Family Safety" />
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310215/Gemini_Generated_Image_viirg9viirg9viir.png" alt="Family Safety" />
               <div className="uc-body">
                 <span className="uc-tag">Families &amp; Residents</span>
                 <div className="uc-title">Personal Safety Hub</div>
@@ -288,7 +288,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="Estate Security" />
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310052/copilot_image_1786916979200.png" alt="Estate Security" />
               <div className="uc-body">
                 <span className="uc-tag">Estates &amp; Complexes</span>
                 <div className="uc-title">Full Estate Deployment</div>
@@ -311,7 +311,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <button className="tour-btn" onClick={startTour}>▶ &nbsp;TAKE A TOUR</button>
           <div className="img-wrap">
-            <img src="https://picsum.photos/seed/sl_dispatch/1200/800?blur=2" alt="SafetyLink Offline-First Intelligent Dispatch System" />
+            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313191/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg" alt="SafetyLink Offline-First Intelligent Dispatch System" />
             <div className="hgrid">
               <div className={"hz" + (activePanel === 1 ? " active" : "")} id="z1" onClick={() => openPanel(1)} style={{boxShadow: activePanel === 1 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
                 <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
@@ -423,7 +423,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               </div>
             </div>
             <div className="feat-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="SafetyLink Admin" />
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="SafetyLink Admin" />
               <div className="feat-body">
                 <span className="feat-tag admin">SafetyLink Admin</span>
                 <div className="feat-title">Organisation Management</div>
@@ -501,12 +501,12 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           <div className="section-eye">Visual Library</div>
           <h2 className="section-h">SafetyLink In Action</h2>
           <div className="gal-grid">
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="SafetyLink tactical poster" /><div className="gal-caption">SafetyLink Tactical Deployment</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="System diagram" /><div className="gal-caption">Intelligent Dispatch Architecture</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="Drone minutes matter" /><div className="gal-caption">Minutes Matter. Drones Act Now.</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="SafetyLink business card" /><div className="gal-caption">SafetyLink Brand Identity</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309980/Gemini_Generated_Image_k9vgu9k9vgu9k9vg.png" alt="SafetyLink tactical poster" /><div className="gal-caption">SafetyLink Tactical Deployment</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309942/Gemini_Generated_Image_swlp4kswlp4kswlp_1.jpg" alt="System diagram" /><div className="gal-caption">Intelligent Dispatch Architecture</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309940/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg" alt="Drone minutes matter" /><div className="gal-caption">Minutes Matter. Drones Act Now.</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309937/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg" alt="SafetyLink business card" /><div className="gal-caption">SafetyLink Brand Identity</div></div>
             <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310052/copilot_image_1783703540293.png" alt="SafetyLink 3D logo" /><div className="gal-caption">SafetyLink 3D Brand Mark</div></div>
-            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="UI screenshot" /><div className="gal-caption">Command Dashboard Interface</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309942/Gemini_Generated_Image_283s3m283s3m283s.jpg" alt="UI screenshot" /><div className="gal-caption">Command Dashboard Interface</div></div>
           </div>
         </div>
       </section>
@@ -594,7 +594,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
               <a href={latestApkUrl || "https://github.com/Charesmagna/SafetyLink-Core/releases/latest"} target="_blank" rel="noreferrer" className="dl-btn-link apk">{latestApkUrl ? 'Download Latest APK' : 'View Releases'}</a>
             </div>
             <div className="dl-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="Windows Command Deck"/>
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310062/copilot_image_1783201115036.png" alt="Windows Command Deck"/>
               <div className="dl-title">Windows EXE</div>
               <div className="dl-sub">SafetyLink Command Deck desktop app. Requires SL-ORG-XXXX access code.</div>
               <a href={latestExeUrl || "https://github.com/Charesmagna/SafetyLink-Core/releases/latest"} target="_blank" rel="noreferrer" className="dl-btn-link exe">{latestExeUrl ? 'Download Latest EXE' : 'View Releases'}</a>
