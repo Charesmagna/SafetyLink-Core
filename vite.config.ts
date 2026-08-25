@@ -8,7 +8,7 @@ const appVersion = process.env.VITE_APP_VERSION || pkg.version || '1.1.0';
 
 
 
-export default defineConfig({
+export default defineConfig({  css: { postcss: "./postcss.config.cjs" },
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
   },
