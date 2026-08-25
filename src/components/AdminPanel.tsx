@@ -13,7 +13,9 @@ import slide5 from '/sl-shield.svg';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
 import newLogo1 from '/sl-shield.svg';
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
+type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE';
+
+import { EvidenceLedger } from './EvidenceLedger';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -718,6 +720,12 @@ export const AdminPanel: React.FC = () => {
         })()}
 
         {/* TAB 4: ACTIVE PANICS / DISTRESS FEED */}
+        {activeTab === 'EVIDENCE' && (
+          <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden p-2">
+            <EvidenceLedger />
+          </div>
+        )}
+
         {activeTab === 'PANICS' && (
           <div className="space-y-4 animate-fadeIn text-left">
             <div>

@@ -15,6 +15,8 @@ import { AdvancedOfflineSyncManager } from './AdvancedOfflineSyncManager';
 import { MotherboardConsole } from './MotherboardConsole';
 import { GeospatialAnalytics } from './GeospatialAnalytics';
 
+import { EvidenceLedger } from './EvidenceLedger';
+
 export const OrgDashboard: React.FC = () => {
   const { 
     currentOrg: storeOrg, 
@@ -487,6 +489,12 @@ export const OrgDashboard: React.FC = () => {
         {/* ==================================================== */}
         {/* SUB TAB: CUSTOMER & SUBSCRIBER PROFILES             */}
         {/* ==================================================== */}
+        {activeSubTab === 'evidence' && (
+          <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden p-2">
+            <EvidenceLedger />
+          </div>
+        )}
+
         {activeSubTab === 'roster' && (
           <div className="space-y-4 animate-fadeIn">
             
