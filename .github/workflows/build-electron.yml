@@ -4,24 +4,49 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm ci
-      - name: Build Web & EXE
-        run: npm run build:electron
+          node-version: 22
+
+      - name: Compute version
+        id: version
+        shell: bash
+        run: |
+          VERSION="1.1.${{ github.run_number }}"
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies (Windows — fresh install for native bindings)
+        shell: bash
+        run: |
+          rm -f package-lock.json
+          npm install --prefer-offline
+
+      - name: Build Web
+        shell: bash
+        env:
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
+        run: npm run build
+
+      - name: Build EXE
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --x64 --publish never -c.extraMetadata.main=electron-main.cjs -c.extraMetadata.version=${{ steps.version.outputs.version }}
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         with:
-          tag_name: "v1.1.${{ github.run_number }}"
-          name: "SafetyLink Core - Signed Release v1.1.${{ github.run_number }}"
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "SafetyLink Core ${{ steps.version.outputs.tag }}"
           files: electron-dist/*.exe
           draft: false
           prerelease: false
