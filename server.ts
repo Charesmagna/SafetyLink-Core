@@ -10,13 +10,14 @@ import twilio from "twilio";
 import { Queue, Worker } from "bullmq";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin for Firestore updates
-admin.initializeApp({
+initializeApp({
   projectId: 'ai-studio-safetylinkcore-eba1fe74-5070-40bf-b7fa-4d20c299bf48'
 });
-const firestoreDb = admin.firestore();
+const firestoreDb = getFirestore();
 
 
 // --- Environment Variables (from GitHub Secrets via CI) ---
@@ -1160,7 +1161,7 @@ async function startServer() {
                  subscription_status: 'active',
                  subscription_plan: pfData.item_name || 'Premium',
                  role: (pfData.item_name && pfData.item_name.includes('Organisation')) ? 'org_admin' : 'premium_user',
-                 updated_at: admin.firestore.FieldValue.serverTimestamp()
+                 updated_at: FieldValue.serverTimestamp()
                });
              });
              await batch.commit();
