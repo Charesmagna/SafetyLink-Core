@@ -163,8 +163,8 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <div className="hero-right">
             <div className="hero-phone-wrap">
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="SafetyLink SOS Screen" />
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command Login" />
+              <img className="hero-phone" src="https://picsum.photos/seed/sl_sos/400/800?blur=2" alt="SafetyLink SOS Screen" />
+              <img className="hero-phone" src="https://picsum.photos/seed/sl_login/400/800?blur=2" alt="SafetyLink Command Login" />
             </div>
             <div className="hero-flow">
               <div className="flow-step">
@@ -311,7 +311,7 @@ export function Home({ onLogin, onRegisterOrg }: { onLogin: () => void, onRegist
           </div>
           <button className="tour-btn" onClick={startTour}>▶ &nbsp;TAKE A TOUR</button>
           <div className="img-wrap">
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313199/Gemini_Generated_Image_.png" alt="SafetyLink Offline-First Intelligent Dispatch System" />
+            <img src="https://picsum.photos/seed/sl_dispatch/1200/800?blur=2" alt="SafetyLink Offline-First Intelligent Dispatch System" />
             <div className="hgrid">
               <div className={"hz" + (activePanel === 1 ? " active" : "")} id="z1" onClick={() => openPanel(1)} style={{boxShadow: activePanel === 1 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
                 <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
