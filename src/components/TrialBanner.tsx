@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
-
-// Paystack payment page slugs — update these to your live Paystack payment links
-const PAYSTACK_INDIVIDUAL = 'https://paystack.com/pay/safetylink-premium';
-const PAYSTACK_ORG = 'https://paystack.com/pay/safetylink-organisation';
+import { openPaystackCheckout } from '../utils/paystackService';
+import type { PlanId } from '../utils/paystackService';
 
 export const TrialBanner: React.FC = () => {
   const currentUser = useAppStore(s => s.currentUser);
   const currentOrg = useAppStore(s => s.currentOrg);
   const [dismissed, setDismissed] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   if (dismissed) return null;
 
@@ -19,21 +18,29 @@ export const TrialBanner: React.FC = () => {
   const TRIAL_DAYS = 14;
   const createdAt = (subject as any).createdAt || Date.now();
   const expiresAt = createdAt + TRIAL_DAYS * 24 * 60 * 60 * 1000;
-  const msLeft = expiresAt - Date.now();
-  const daysLeft = Math.max(0, Math.ceil(msLeft / (24 * 60 * 60 * 1000)));
+  const daysLeft = Math.max(0, Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000)));
   const urgent = daysLeft <= 3;
 
   const handleUpgrade = () => {
-    const url = isOrg ? PAYSTACK_ORG : PAYSTACK_INDIVIDUAL;
-    window.open(url, '_blank');
+    const email = currentUser?.email || 'customer@safetylink.online';
+    const planId: PlanId = isOrg ? 'org_starter' : 'individual_premium';
+    setPaying(true);
+    openPaystackCheckout({
+      planId,
+      email,
+      metadata: { org_code: currentOrg?.id || '', user_id: currentUser?.id || '' },
+      onSuccess: (ref) => {
+        setPaying(false);
+        alert(`Payment successful! Ref: ${ref}\nYour subscription is now active.`);
+      },
+      onClose: () => setPaying(false),
+    });
   };
 
   return (
     <div className={`w-full flex items-center justify-between gap-3 px-4 py-2 text-xs font-mono font-bold z-[9999] flex-shrink-0
-      ${urgent
-        ? 'bg-red-950/90 border-b border-red-500/50 text-red-300'
-        : 'bg-amber-950/90 border-b border-amber-500/40 text-amber-300'
-      }`}
+      ${urgent ? 'bg-red-950/90 border-b border-red-500/50 text-red-300'
+               : 'bg-amber-950/90 border-b border-amber-500/40 text-amber-300'}`}
     >
       <div className="flex items-center gap-2 min-w-0">
         <span>{urgent ? '🔴' : '⚡'}</span>
@@ -47,21 +54,14 @@ export const TrialBanner: React.FC = () => {
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={handleUpgrade}
-          className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border transition-colors
-            ${urgent
-              ? 'border-red-400 text-red-200 hover:bg-red-500/20'
-              : 'border-amber-400 text-amber-200 hover:bg-amber-500/20'
-            }`}
+          disabled={paying}
+          className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border transition-colors disabled:opacity-50
+            ${urgent ? 'border-red-400 text-red-200 hover:bg-red-500/20'
+                     : 'border-amber-400 text-amber-200 hover:bg-amber-500/20'}`}
         >
-          Upgrade
+          {paying ? '...' : 'Upgrade'}
         </button>
-        <button
-          onClick={() => setDismissed(true)}
-          className="opacity-50 hover:opacity-100 transition-opacity text-base leading-none"
-          aria-label="Dismiss"
-        >
-          ×
-        </button>
+        <button onClick={() => setDismissed(true)} className="opacity-50 hover:opacity-100 transition-opacity text-base leading-none">×</button>
       </div>
     </div>
   );

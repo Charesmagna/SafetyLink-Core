@@ -8,29 +8,19 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   
   const handlePaystackHardwareCheckout = (productId: 'lite' | 'active' | 'premium', quantity: number) => {
     const hardwareProducts = {
-      lite: {
-        name: "SafetyLink Lite",
-        price: 149,
-        description: "Compact, budget-friendly emergency panic trigger."
-      },
-      active: {
-        name: "SafetyLink Active",
-        price: 199,
-        description: "Sleek, ruggedized corporate keychain alert tag."
-      },
-      premium: {
-        name: "SafetyLink Premium (Waterproof)",
-        price: 348,
-        description: "IP67 waterproof device with global location assistance."
-      }
+      lite: { name: "SafetyLink iTAG Lite", price: 100, description: "Compact BLE panic keyfob." },
+      active: { name: "SafetyLink iTAG Active (3-Pack)", price: 179, description: "3x BLE keyfobs." },
+      premium: { name: "SafetyLink iTAG Premium (5-Pack)", price: 299, description: "5x BLE keyfobs." },
     };
-    
     const selectedProduct = hardwareProducts[productId];
     const totalAmount = selectedProduct.price * quantity;
-    const customerEmail = "user@example.com"; // In a real app, this should be the logged-in user's email
+    // Get logged-in user email from store
+    const { useAppStore } = require('../utils/store');
+    const user = useAppStore.getState().currentUser;
+    const customerEmail = user?.email || 'customer@safetylink.online';
 
     const handler = (window as any).PaystackPop.setup({
-      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_your_paystack_public_key', // Uses env in production
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
       email: customerEmail,
       amount: totalAmount * 100, // Paystack operates in cents
       currency: 'ZAR',
