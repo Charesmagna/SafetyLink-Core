@@ -746,17 +746,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
           </div>
           <div className="foot-bottom">
             <div className="foot-bottom-left">
-              <p>Powered by TM Media Solutions — Reg: 2018/500191/07</p>
+              <p>Powered by TM Media Solutions · Reg: 2018/500191/07</p>
               <a href="https://safetylink.online">safetylink.online</a>
             </div>
             <p className="foot-center">STAY CONNECTED. STAY PROTECTED. STAY IN CONTROL.</p>
             <div className="foot-right">
               <p>Contact: 073 944 1222</p>
-              <p style={{color:'#334155', fontStyle:'italic', marginTop:'2px'}}>K'lev.c</p>
+              <a href="mailto:info@safetylink.online" style={{color:'#64748b', fontSize:'11px'}}>info@safetylink.online</a>
             </div>
           </div>
           <div className="foot-copy">
-            <p>© 2024–2026 SafetyLink®. All rights reserved. Powered by ©TM Media Solutions · Reg : 2018/500191/07</p>
+            <p>© 2024–2026 SafetyLink®. All rights reserved. · Powered by TM Media Solutions · Reg: 2018/500191/07 · <a href='mailto:info@safetylink.online' style={{color:'inherit'}}>info@safetylink.online</a> · <a href='https://wa.me/27739441222' target='_blank' rel='noreferrer' style={{color:'inherit'}}>WhatsApp</a></p>
           </div>
         </div>
       </footer>
