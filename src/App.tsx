@@ -20,6 +20,8 @@ import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
 import { UpdateBanner } from './components/UpdateBanner';
+import { ResponderDashboard } from './components/ResponderDashboard';
+import { TrialBanner } from './components/TrialBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
@@ -447,7 +449,11 @@ const App: React.FC = () => {
       return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
-    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder'].includes(currentUser.role || ''))) {
+    if (currentUser && currentUser.orgCode && currentUser.role === 'Responder') {
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Responder Console...</div>}><ResponderDashboard /></Suspense>;
+    }
+
+    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
     }
 
@@ -1225,6 +1231,7 @@ const App: React.FC = () => {
 
       {/* High-Priority Emergency Overlay */}
       <UpdateBanner />
+      <TrialBanner />
       <ForcedCountdownOverlay />
       <SosCountdownOverlay 
         isActive={isSosActive}

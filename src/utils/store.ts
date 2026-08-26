@@ -2125,24 +2125,22 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
           bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
         }));
         get().addAuditLog('BLE', 'SEVERE', 'BLE Wearable Connection Severed', `Hardware link to ${mac} was terminated (out of range or battery dead).`);
-        // Auto-reconnect with exponential backoff
+        // Auto-reconnect: single non-recursive timer, no stacking
+        const maxAttempts = 10;
         let attempt = 0;
-        const maxAttempts = 20;
-        const reconnect = () => {
+        const scheduleReconnect = () => {
+          attempt++;
+          if (attempt > maxAttempts) return;
           const device = get().bleDevices.find(d => d.macAddress === mac);
           if (!device || device.connectionState === 'CONNECTED') return;
-          attempt++;
-          const delay = Math.min(15000 * Math.pow(1.5, attempt - 1), 120000);
-          get().addAuditLog('BLE', 'INFO', 'BLE Auto-Reconnect Scheduled', `Attempt ${attempt}/${maxAttempts} for ${mac} in ${Math.round(delay/1000)}s.`);
+          const delay = Math.min(30000 * attempt, 120000); // 30s, 60s … 120s max
           setTimeout(() => {
             const d = get().bleDevices.find(d => d.macAddress === mac);
-            if (d && d.connectionState === 'DISCONNECTED' && attempt < maxAttempts) {
-              get().connectBleDevice(mac);
-              reconnect();
-            }
+            if (!d || d.connectionState === 'CONNECTED') return;
+            get().connectBleDevice(mac);
           }, delay);
         };
-        reconnect();
+        scheduleReconnect();
       }
     ).then(() => {
       set(state => ({
