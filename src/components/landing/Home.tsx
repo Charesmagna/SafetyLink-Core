@@ -87,18 +87,22 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
   useEffect(() => {
     const fetchReleases = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', {
+        const res = await fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases?per_page=20', {
           headers: { Accept: 'application/vnd.github.v3+json' }
         });
         if (res.ok) {
-          const latest = await res.json();
-          if (latest?.tag_name) {
-            setReleases([latest]);
-            const apkAsset = latest.assets?.find((a: any) =>
-              a.name.toLowerCase().endsWith('.apk') && a.name.toLowerCase().includes('signed')
-            ) || latest.assets?.find((a: any) => a.name.toLowerCase().endsWith('.apk'));
-            const exeAsset = latest.assets?.find((a: any) => a.name.toLowerCase().endsWith('.exe'));
-            if (apkAsset) setLatestApkUrl(apkAsset.browser_download_url);
+          const releases = await res.json();
+          if (Array.isArray(releases) && releases.length > 0) {
+            setReleases(releases.slice(0, 5));
+            // Scan all releases for latest APK (APK build may lag behind EXE)
+            for (const r of releases) {
+              const apkAsset = r.assets?.find((a: any) =>
+                a.name.toLowerCase().endsWith('.apk') && a.name.toLowerCase().includes('signed')
+              ) || r.assets?.find((a: any) => a.name.toLowerCase().endsWith('.apk'));
+              if (apkAsset) { setLatestApkUrl(apkAsset.browser_download_url); break; }
+            }
+            // EXE from latest release
+            const exeAsset = releases[0].assets?.find((a: any) => a.name.toLowerCase().endsWith('.exe'));
             if (exeAsset) setLatestExeUrl(exeAsset.browser_download_url);
           }
         }
@@ -636,7 +640,11 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
               <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Code_Generated_Image_1.png" alt="Android App Preview"/>
               <div className="dl-title">Android APK</div>
               <div className="dl-sub">Minimum Android 8.0. Bluetooth LE required for iTAG functionality.</div>
-              <a href={latestApkUrl || "https://github.com/Charesmagna/SafetyLink-Core/releases/latest"} target="_blank" rel="noreferrer" className="dl-btn-link apk">{latestApkUrl ? 'Download Latest APK' : 'View Releases'}</a>
+              {latestApkUrl ? (
+                <a href={latestApkUrl} download target="_blank" rel="noreferrer" className="dl-btn-link apk">Download Latest APK</a>
+              ) : (
+                <span className="dl-btn-link apk" style={{opacity:0.5,cursor:'default'}}>APK — Building…</span>
+              )}
             </div>
             <div className="dl-card">
               <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313191/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg" alt="Windows Command Deck"/>
