@@ -42,6 +42,8 @@ export const initFirebaseSync = () => {
        // We can just call set() which updates React, but we also should sync localStorage.
        localStorage.setItem('sl_panics', JSON.stringify(merged));
     }
+  }, (error) => {
+    console.warn('[FirebaseSyncService] PanicEvents sync error:', error.message);
   });
 
   // 2. Listen for Users (For dispatch and team rosters)
@@ -55,6 +57,8 @@ export const initFirebaseSync = () => {
        useAppStore.setState({ users: cloudUsers });
        localStorage.setItem('sl_users', JSON.stringify(cloudUsers));
     }
+  }, (error) => {
+    console.warn('[FirebaseSyncService] Users sync error:', error.message);
   });
 
   // 3. Listen for Organizations
@@ -66,6 +70,8 @@ export const initFirebaseSync = () => {
        useAppStore.setState({ organizations: cloudOrgs });
        localStorage.setItem('sl_organizations', JSON.stringify(cloudOrgs));
     }
+  }, (error) => {
+    console.warn('[FirebaseSyncService] Organizations sync error:', error.message);
   });
 
   // 4. One-way Sync from Local to Cloud (Subscription to Zustand)
