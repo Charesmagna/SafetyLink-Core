@@ -18,18 +18,13 @@ android {
     }
     signingConfigs {
         release {
-            if (System.getenv("KEYSTORE_FILE")) {
-                storeFile file(System.getenv("KEYSTORE_FILE"))
-                storePassword System.getenv("KEYSTORE_PASSWORD")
-                keyAlias System.getenv("KEY_ALIAS")
-                keyPassword System.getenv("KEY_PASSWORD")
-            } else {
-                // Dummy config for local builds if needed
-                storeFile file("debug.keystore")
-                storePassword "android"
-                keyAlias "androiddebugkey"
-                keyPassword "android"
-            }
+            def ksPath = System.getenv("KEYSTORE_PATH") ?: "${projectDir}/safetylink-release.keystore"
+            def ksFile = new File(ksPath)
+            println "Keystore path: ${ksPath} exists: ${ksFile.exists()}"
+            storeFile ksFile.exists() ? ksFile : new File("${projectDir}/safetylink-release.keystore")
+            storePassword 'SafetyLink2024!'
+            keyAlias 'safetylink'
+            keyPassword 'SafetyLink2024!'
         }
     }
 
