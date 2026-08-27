@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const homeVideos = ['/media/safetylink_startup.mp4', '/media/Neon Power Logo Reveal_0p.mp4'];
-const appVideos = ['/media/Now_I_need_the_d_animation_lo.mp4', '/media/Scene_Setup_vertical_.mp4'];
+const homeVideos = ['https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787696129/Make_this_come_to_life.mp4', 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310214/Okay_now_for_the_next_scene_.mp4'];
+const appVideos = ['https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4', 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310110/petal_20260727_180314.mp4'];
 
 interface BackgroundVideoLoopProps {
   isHome?: boolean;

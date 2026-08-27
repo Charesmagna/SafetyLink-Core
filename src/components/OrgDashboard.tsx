@@ -62,7 +62,7 @@ export const OrgDashboard: React.FC = () => {
   const [editContactsList, setEditContactsList] = useState('');
 
   // Branding Form State (pre-populated from currentOrg values)
-  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '/sl-shield.svg');
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png');
   const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
   const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
@@ -124,9 +124,9 @@ export const OrgDashboard: React.FC = () => {
     setEditAccountNumber(student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`);
     setEditMedicalInfo(student.medicalInfo || 'No chronic conditions logged.');
     setEditRiskNotes(student.riskNotes || 'Standard perimeter monitoring.');
-    setEditOfficer(student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha)');
+    setEditOfficer(student.assignedResponseOfficer || 'Unassigned');
     setEditHospital(student.preferredHospital || 'Netcare Milpark Hospital');
-    setEditAddress(student.homeAddress || 'Wits Campus Housing, West Campus');
+    setEditAddress(student.homeAddress || 'Not specified');
     setEditContactsList(student.emergencyContactsList || '+27839110000, +27117171000');
   };
 
@@ -173,7 +173,7 @@ export const OrgDashboard: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310204/Now_let_s_show_how_kids_would.mp4" type="video/mp4" />
         </video>
       )}
       {/* Background with Glowing Heart and Heartbeat Pulse */}
@@ -616,9 +616,9 @@ export const OrgDashboard: React.FC = () => {
                   const accNum = student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`;
                   const medInfo = student.medicalInfo || 'No recorded allergies or severe chronic conditions.';
                   const riskNotes = student.riskNotes || 'Standard estate perimeter; BLE keyfob bound.';
-                  const officer = student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha Patrol)';
+                  const officer = student.assignedResponseOfficer || 'Unassigned';
                   const hospital = student.preferredHospital || 'Netcare Milpark Private Hospital';
-                  const address = student.homeAddress || 'Wits West Campus Residence, JHB';
+                  const address = student.homeAddress || 'Not specified';
                   const contactsList = student.emergencyContactsList || '+27839110000, +27117171000';
 
                   return (

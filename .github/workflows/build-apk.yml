@@ -54,40 +54,15 @@ jobs:
           curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
             -o android/gradle/wrapper/gradle-wrapper.jar
 
-      - name: Build Release APK
+      - name: Build Release APK & AAB
         working-directory: ./android
-        run: ./gradlew assembleRelease
-
-      - name: Sign APK
         run: |
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
-          UNSIGNED=android/app/build/outputs/apk/release/app-release-unsigned.apk
-          SIGNED=android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-            $BUILD_TOOLS_DIR/apksigner sign \
-              --ks release.keystore \
-              --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-              --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
-              --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
-              --out $SIGNED $UNSIGNED
-          else
-            keytool -genkey -v -keystore release.keystore -alias safetylink \
-              -keyalg RSA -keysize 4096 -validity 10000 \
-              -storepass "Safety link 2024" -keypass "Safety link 2024" \
-              -dname "CN=TM Media Solutions,OU=SafetyLink Core,O=TM Media Solutions,L=Johannesburg,S=Gauteng,C=ZA"
-            $BUILD_TOOLS_DIR/apksigner sign \
-              --ks release.keystore --ks-pass pass:"Safety link 2024" \
-              --ks-key-alias safetylink --key-pass pass:"Safety link 2024" \
-              --out $SIGNED $UNSIGNED
-          fi
-          rm -f release.keystore
-
-      - name: Verify APK signature
-        run: |
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
-          $BUILD_TOOLS_DIR/apksigner verify --verbose \
-            android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk 2>&1 | head -5
+          echo "MIIRfAIBAzCCESYGCSqGSIb3DQEHAaCCERcEghETMIIRDzCCCjYGCSqGSIb3DQEHAaCCCicEggojMIIKHzCCChsGCyqGSIb3DQEMCgECoIIJwDCCCbwwZgYJKoZIhvcNAQUNMFkwOAYJKoZIhvcNAQUMMCsEFKQ1A9wlySadymqo76zw/VrWiBRfAgInEAIBIDAMBggqhkiG9w0CCQUAMB0GCWCGSAFlAwQBKgQQIt/7J7EH6W8C94v5XCxSVgSCCVAjZguVU3kbAo5A2nSgq2OC6614uTEI29crM8o+pJ9UKWRsMuVMBOT9Qm7sjgVMtNtwyu/2onEDr6cdwEC0Ca+G7YsSxLWgmOTy/RgreKgbJZV5zpRAwNxv8Gxz0DIRy3vqXjFxNSKybgXZrZxUmWanc0H4daSYC4Pwd2tcEuncC/e1fYSGw1ERv+R3N2bXWKvMQttF3MfC2YJRCnxBBDTTWz0pv39H73eg0hggp9BpBvVwLaGzcAEnm+0y+9LuWPgM47XUe9tZfhuyRq0WLOQRf+0z+bN4CFfjw84MShgmjN6+17m4hGJm47PQganf/NTW3G/BJJgf3C3iPOGVhiGwmPqUcGrL1cFr7jIDSxl+yP0IPwcz2mAH0MkSaPWQnE5feKRTsScSSNIDfs/oZ8i/1SVgoJJdfKUP3f0BgDtEW+/6ThPMUUpkFBhso/ps3dj4K74a+Qkfwr15AJ7+q/cNlH3PDTA4zJkvucAGD6jabe/s7WC/AQclFC0hxh5HWXCtFbFbpQin8V3BSyx79HM8d0/QNodtzg2q1qloFFWe36p+TT7Vj1A5SSt+fx4vp1vT6JD0vS5g/1fkNde7sh/MkFyZUoeZ+wgG+6ibTPZE2v8Fi1WmtNJCOzwXAKOhD3fpMNEA3BVHy2Aj7sObbRuTYD8zYsScebiTut9kA8b4WOUAVNCYOtvGcmFwfRFjRewtyyx+OwuEbGBbtjup2dmQmOdV6cUG44xtwo6kVE7TBjwDZhIsESsj9tn0ZPEKPUtwn6HQDQYebQK6hXwJkB3GXs0Gzgi3aE5O82FENcVGLqx+nJkjqJzPY3M4/uzJ/GGQPIlaIiD/KTMNHzf7DMSzjeVvyTVRk7d8sLIyGX6VsxBwqpZ/wQz2awTJonjShx6OZUIy/JzmBsBLacSmP2yo9xwefhI6fzKmeG3pAytXLsQy/vRelIthGaSokiEkpQaBMb9liAVoT0nPHlhSbGJzkS/joc5zEOnjrpiOB75KtdTeI09w9AgODgLJ/hAkZUHxyk1o3PDN3nI2wCdKDH1vjpOxja6qkqGJfK88SFDD40NASEb5CqA2ASRf+VXvwaPHVup7hv1RBeHuxZaLX3aqRDDrtitE5opm/CKPT13jjUxmalc9l7m9aBdk/nE86BpnWv4ZzZwfDymKBP+vfbLmARIaFt2fiobzCsK19Y2ky3c+rrkthKrFKfoXqRndUnZRGtOV9VNpD6agLce5fkQzy0eszkIpnJIe4ZrGpKydSwLe51sep3f/GZ2CPOYdErsHwFHtaG9s3N5qHjNt+AoEPRKfQk09xfG7y86wIY00XZZShHjb0Vgh89v7Z1g5yfc4P7oMFox8WmvyIoGDGC/VoWxHhy/853t4Riel5GxNG3T8Q+ZeK+s+C09eQnDvOehqaUuH1GapS7AlDtOiV2q29hmoQvMHMVZ6x3tBFHp6uBmofTsn+ltwSPqHVTW0CesNtEubwlm7NQOl99ceaTz+u4OOWv2Nv/IvdOBwzTL6il4cDfI8Px5IQWsXqZF4R2J8eJyYvZ4Yr/5ncZLSohLINjtuTXW6KXRSoOy9CITgdghAPHQmomN5n+NU9zz0iRVh100wAxeDCSM/1Ca/oortaIa2pp08vzlae6JtKJT7av8opI3Pk4CWc0vWszF/utDRncP5C/y/b/OUCF4rTy/ZIesUi/Gz8pFBW2ulUAD+hq3gQAtD3tKIMTIA6GYcBSlkHE9f8lOo0Dma3Nmeo5KZ0R/MrGlEy6O+LzD2EGemscUxEK3GJzvfkYR/j+XvLyPDrLblrEDjs7cDKxPk+d3G49YoqJDOF6yv47qAili7Gr9PY+3BFxLkjFUC/ckdpHc1iBhdd28Bma5cex0uQqlsa8GgyWVhJv+jbG9Vm4YDBxeaCySONEOaUmwc0NvcrontdV0yR8A8XQ4+qcMwtzVZmOuqgm32E3duw8I0aQp0gTd4PMg12tkOEMSLF1ofsC+o6yqTctG5JFOX22q55/NCiDM2yLMNBRAAYYkTG0FCP7lBBcRK0J/JNF1Miv5Qu92xxayFJCOZOwB4uju3UIh2ZqotQppXKhlnaR2qK9v7+isxjC4mLDZwgeL/6/Hra/yHzxf7m6MFkEIVLu76KmjGnVClRXspzcce0tULx3pCKfPD0d/swvcsvFKyG0/w1mFThnyYqG4XMRXUK5yQ7/eDusl9u43oLSrA1OVimVWXATGDyCSAF2rPPofdA6RGR2AJOEzYxDre2U6mE3Kl6P/HlRkARBDa+RjPeruRVZ67GJgw772pPgnl8E0TQm+rnuLFr8zHPSSkCvtXK/Las4eC1cDFJCPgdcsmwbWh01/hVjjFipwbFj6+789g9vp306MHCBZTyi0u9VMGvwDTlaarZwPrsDDInZg00n/hJUt06SAa7L4sweTeOEAvM2++EyMarMvPbJX/2+Jz5ovgqRgtw/nKhwalFE7yB0kZtJkF+uRSWNm8AauZyLQCf0K/ZCgaErAofvCNGzJKgsuEvGczvwvP4zjRbaEk2tCFLLmp/VBI4IBddcdExX3m8KlGAV/qhHVFVf+ZEo2OtKCbdJIS1QcCn86/MLErLXl90/F1OtURrPBeezcZY0no0TWkeXxZ6AnXuZlPXKGT7aca/V/PJJHGrc+6aTx2ZWQitXWqDi7JFkdGmn5iQ74U2KJO0sBcGuDsRwdrZPDJ26GLLumGQGU7RnexkEPTTouYfL4bMRDmG3eYpyfaeh0XAAovKOmCp7G16HGzsJ4YhpLh1D2FTFM5rsJrH/yUPWnidt1m8oLqicJyMz80UWS6sl2Sc2aMnaE5XIUpVIFR65p5T7wCMJjepHzXnwbhOYHeOSXpVsVxxKrSBYSgDOxFoQRTnlBS8Kx54z13KWJkpSCkL/qWSWkaNVgH9aTjtWKMETyutIB4ZBQqL1tW379BwWUXWPxBA5359UgWaAIE+bEoPDXDIYSxAOpfzxN4oAfDyw9hAQun4YtHTWYdOW/+EGR5kAk2En/vg9yXh0uBYAetTgYH1SaQuEsrfPD35lle5IRLO/nllVXB41xTFMDAIjayxFHNq9BpVNnf5Jslx05Tmn45fMtEI9ba8oqhvLTYauDkvZ+4aAiVU+OJepuT7Mge5LibAoJptGgKBoBxbr1LU1A8LAvKcCLlVkXYNb5KwTck3zFIMCMGCSqGSIb3DQEJFDEWHhQAcwBhAGYAZQB0AHkAbABpAG4AazAhBgkqhkiG9w0BCRUxFAQSVGltZSAxNzg3MzUwMDAyODA5MIIG0QYJKoZIhvcNAQcGoIIGwjCCBr4CAQAwgga3BgkqhkiG9w0BBwEwZgYJKoZIhvcNAQUNMFkwOAYJKoZIhvcNAQUMMCsEFP6O/YbzLWU0rjbJL07hZ886GyGpAgInEAIBIDAMBggqhkiG9w0CCQUAMB0GCWCGSAFlAwQBKgQQJjWqUwR/tKc0lBK2hha8l4CCBkBcYeJDxM5fgMVJ2A/zNEm7Or5Ig3iyoG8La/GwUE7ZqvFDI+Y4EuGNKLNNEK4LDvW3S66GNtQCh7E39H3a0z5gG+XH1/IZ75GfcZRmucyx6rXD/2JOnVm35H1nfR96nJdRHVvED3zWIvl1SYTSKq8LFsPUn4mcu/gYG/NmX/lnxLtxZHQ0373ca/7aA78S+Ymga2tBKIhmJElf34ccG3zN6tbc8JQh7WJkWORdbYacZOe2MOO6L7m3Iwgb+siiUuKhSfK36Q4grISpvKRUooPHsLdgrjyMrSNnNQakI3whWStnO7Ji/O9W7qyRgm7rXGhPf/CgjduUbakMGZVpBdhjS/VZ4J/MvDcLmGpsrN9Fq0zRRJqUPM7Yv4J21JgugseQjR29wDNx2NT+0NRRc0moduBrMvGECcU1/S0AMXHJr8tyhfT2i//1aazRtlDE7DcGqSzL7zv22ZJKSdDCMiSwMNd7Q9cv/pNayA+gPz1WvTIsnilxDY+Sm3IqQ6gzkk2ukyf0hRLdIAg9d6hsfS6ophkkiwmUkzHGosoVTizxf3/e3YF0extaPyqDxMU+gfJ7tJvbq4ALZaBobubBbXq0URTL9SAJJxI3EuPrk3shKdWm7ebjmo+bKsnPD1YLXIf8vT/60bmFtTYyGK9GPk8STqyRgP3zDsqSw0EIqObSbZlX0KKMQMtcactRlUVX7gEK+iVS18vsSOPPt0inkQg5HE9FgwaKqBpBX1ez7XOneleTVwIkLTTca7FkOOwu8wsPpBELdNz+HQse0GC55Bt2/0iJtKMZgqjPSTKYMaSbFeCX6WbedUzfTfCgu+dwBc4ZtPnY/C58dWaaIbq2vq2bMYvauLs9GA3x4ES8TTFkd4DY915eOrWUokC3nqCuoM4dWTeWqCgv/Lf+bOTEm4a/tK0GWI7k1v2F/S/e3/6TjvGPCAzdWIz1KsnpN8FJQ+3CothguI/H/IJbuLzCGqiieg+V4HMSCMgGnGOpMClCRNjbTYDZIKj06GNAIrBmjJo20Lu5gfOiaRFegfDROwCZ7etgN9Hk3I1msF0tSFvMuNfmck0OQz+n5ONlNm5aPEuJbdomvr37uIl6joau/uIMraalTpQMFNdaSj06oSIQiUfa5hv9neeNpdnbM6r6pO4b8igCB+8G6SsV1Vg+u4++VY/l5nN1KC03pNbD7Uv/tv2FNcEGHjzZ7xoWctXdpOA9VhI9w6I+9GSzxPAG4BlR2DF6eLb0wv8Lm//1NTpVgPxInWtKq78deKmB9UD8b5TFmV1eZs+ljOZTvNmd5jcrfF00SrcmBxNOg7wWVALCoXb/O4Ye0ykoJEuzTRe+Ezyt3nPsk8kMe8uRgKUJOE5aVupXbXAC/8Xw/0cNG0yfMjvZBVuzewjVLFv5HgnFjuSdXn3dvk9oB71wVY4W49ddjKwCpJCJJLny9DcLJoaOPdwli+k1BLcFTf5372qimJVLmI2lyCAKYS6+4rCglYrk/nVedK0OgwuBm4PdcIsJnyYV/QrLp5bR27YcSBbcR65NEjpet5zFcNvBSRmtC4DVGrK/d+a3AYKEmatdWDFEP7g5xh1d/V1itG+WfMuV3KCLejXvrpvFAJVidfZcb3CGgcbzzudhUE4c8WyJQaw4H8A9z+K3Lz5sWjJ9RfsfHJkfJvtJ86UOWA0cZF0N2YGjy/TVnVUEJVW6TTDbj7hJ56ArxiAGM9JNApch0FUosHm2nTXCZLImGQgd8eFz8zDZFZL+OzCMA924KXr3PHSqX6PDZ5JHCNQGolAVAg4diIDjcqMUFY/JkPJlBN9mVs0gH0EOBeOFbpwmukvOZ3DFvT8NbSAJBMXJMzYt+wJM4qDO5QSIAGduRFzbNoi3rg8n6OduO+FyzAWffRXGhHldPPgZ5vaksrIdJCkdmeryYDfWP2TZfifPlqHsH4y1Gju3yk0mBiC2dDd0ooYJAdFo2TawCWji3ELLKboI/J3ArW8yYDLSWmfS8h35qYjihIFOmDffVDWzgl0ENRFdEsW7Yylg/zc7rj9YASm1Mu9M3mq557wLaAUiGzlcInWKu3X2rxMmAGQz8c/cBcsUV0vCDqzW/60+f9joy3PcM3QODL/5zxcYQDr6QN1ZgHYt7cAaME0wMTANBglghkgBZQMEAgEFAAQg24BnqhNxqBPeuhCdFGKH2ZASmvsX4e9CQJ+VsXS5Gf8EFNwq0oR4vT5qeUWg/zJuKfwfa9xFAgInEA==" | base64 -d > app/release.keystore
+          export KEYSTORE_FILE=release.keystore
+          export KEYSTORE_PASSWORD="SL@TMMed!a2024#Core"
+          export KEY_ALIAS="safetylink"
+          export KEY_PASSWORD="SL@TMMed!a2024#Core"
+          ./gradlew assembleRelease bundleRelease
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -100,6 +75,8 @@ jobs:
             **Released by TM Media Solutions**
             Download the APK below and install directly on Android.
             > Your data, contacts and organisation are preserved on update.
-          files: android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
           draft: false
           prerelease: false

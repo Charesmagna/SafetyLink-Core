@@ -1,3 +1,9 @@
+import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Polyline } from 'react-leaflet';
 import React, { useState, useEffect } from 'react';
 import { Network, Cpu, Map as MapIcon, Activity } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
@@ -37,9 +43,9 @@ export const NodeMeshOrchestration: React.FC = () => {
     setIsScanning(true);
     setTimeout(() => {
       setConnectedNodes([
-        { id: 'node-alpha', name: 'Alpha Sector Relay (Base)', status: 'active', strength: 100, type: 'BaseStation', lat: baseLat, lng: baseLng },
-        { id: 'node-bravo', name: 'Bravo Vehicle Node', status: 'active', strength: 75, type: 'VehicleRelay', lat: baseLat - 0.002, lng: baseLng + 0.003 },
-        { id: 'node-charlie', name: 'Charlie Personnel', status: 'intermittent', strength: 45, type: 'Wearable', lat: baseLat + 0.0015, lng: baseLng - 0.002 },
+        { id: 'node-primary', name: 'Primary Sector Relay (Base)', status: 'active', strength: 100, type: 'BaseStation', lat: baseLat, lng: baseLng },
+        { id: 'node-02', name: 'Vehicle Node 2', status: 'active', strength: 75, type: 'VehicleRelay', lat: baseLat - 0.002, lng: baseLng + 0.003 },
+        { id: 'node-03', name: 'Sector 3 Personnel', status: 'intermittent', strength: 45, type: 'Wearable', lat: baseLat + 0.0015, lng: baseLng - 0.002 },
         { id: 'node-delta', name: 'Delta Forward Beacon', status: 'active', strength: 82, type: 'Repeater', lat: baseLat - 0.0005, lng: baseLng + 0.005 },
         { id: 'node-echo', name: 'Echo Response Unit', status: 'offline', strength: 0, type: 'VehicleRelay', lat: baseLat + 0.003, lng: baseLng + 0.001 },
       ]);
@@ -160,8 +166,8 @@ export const NodeMeshOrchestration: React.FC = () => {
               
               {/* Draw Mesh Links (Lines from Base to other nodes, or mesh topology) */}
               {connectedNodes.map((node) => {
-                if (node.id === 'node-alpha') return null; // Skip self
-                const baseNode = connectedNodes.find(n => n.id === 'node-alpha');
+                if (node.id === 'node-primary') return null; // Skip self
+                const baseNode = connectedNodes.find(n => n.id === 'node-primary');
                 if (!baseNode) return null;
                 
                 // If offline, don't draw link, or draw red dashed link

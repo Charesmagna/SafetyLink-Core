@@ -25,9 +25,11 @@ export const ResponderDashboard: React.FC = () => {
   );
 
   const getUserStatus = (u: typeof users[0]): 'panic' | 'safe' | 'offline' => {
-    if (activeSOSState?.initiatorId === u.id && activeSOSState.isActive) return 'panic';
-    if (!u.lastLocation) return 'offline';
-    const age = Date.now() - ((u.lastLocation as any).timestamp || 0);
+    // Check if there is an active panic event for this user
+    const isPanic = useAppStore.getState().panicEvents.some(e => e.profileUsed === u.id && e.status !== 'RESOLVED');
+    if (isPanic) return 'panic';
+    if (!(u as any).lastLocation) return 'offline';
+    const age = Date.now() - (((u as any).lastLocation as any).timestamp || 0);
     return age < 5 * 60 * 1000 ? 'safe' : 'offline';
   };
 
@@ -73,7 +75,7 @@ export const ResponderDashboard: React.FC = () => {
             disableDefaultUI={false}
           >
             {guardedUsers.map(u => {
-              const loc = u.lastLocation as any;
+              const loc = (u as any).lastLocation as any;
               if (!loc?.lat || !loc?.lng) return null;
               const status = getUserStatus(u);
               const color = STATUS_COLORS[status];
@@ -108,7 +110,7 @@ export const ResponderDashboard: React.FC = () => {
           guardedUsers.map(u => {
             const status = getUserStatus(u);
             const color = STATUS_COLORS[status];
-            const loc = u.lastLocation as any;
+            const loc = (u as any).lastLocation as any;
             return (
               <div
                 key={u.id}

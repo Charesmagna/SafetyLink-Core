@@ -78,7 +78,7 @@ export const AppTour: React.FC<AppTourProps> = ({ onClose }) => {
       if (queryType === 'STATUS') {
         setBotAnswer("🤖 K'leva: SafetyLink is operating securely in " + (drillMode ? "DRILL SIMULATION" : "LIVE SATELLITE DISPATCH") + " mode. Location is locked.");
       } else if (queryType === 'GPS') {
-        setBotAnswer("🤖 K'leva: Your current coordinates translate to Wits Campus Sector, Johannesburg. Cellular mast signal is optimal.");
+        setBotAnswer("🤖 K'leva: Your current coordinates translate to Central Sector, Johannesburg. Cellular mast signal is optimal.");
       } else if (queryType === 'DISARM') {
         setBotAnswer("🤖 K'leva: To disarm a running SOS panic sequence, double-tap the main red trigger button or click 'CANCEL BROADCAST' in the dashboard.");
       }

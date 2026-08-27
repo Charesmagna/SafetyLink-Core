@@ -78,7 +78,7 @@ export default function WorkspaceIntegrations() {
     const script = document.createElement('script');
     script.src = "https://apis.google.com/js/api.js";
     script.onload = () => {
-       window.gapi.load('picker', {'callback': () => { console.log('Picker loaded'); }});
+       (window as any).gapi.load('picker', {'callback': () => { console.log('Picker loaded'); }});
     };
     document.body.appendChild(script);
 
@@ -124,18 +124,18 @@ export default function WorkspaceIntegrations() {
   };
 
   const openPicker = () => {
-    if (!token || !window.google || !window.google.picker) return;
+    if (!token || !(window as any).google || !(window as any).google.picker) return;
     
-    const view = new window.google.picker.DocsView(window.google.picker.ViewId.DOCS);
+    const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
     
-    const picker = new window.google.picker.PickerBuilder()
+    const picker = new (window as any).google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
       .setDeveloperKey(firebaseConfig.apiKey)
       .setCallback((data: any) => {
-        if (data[window.google.picker.Response.ACTION] === window.google.picker.Action.PICKED) {
-          const doc = data[window.google.picker.Response.DOCUMENTS][0];
-          alert(`Selected: ${doc[window.google.picker.Document.NAME]}`);
+        if (data[(window as any).google.picker.Response.ACTION] === (window as any).google.picker.Action.PICKED) {
+          const doc = data[(window as any).google.picker.Response.DOCUMENTS][0];
+          alert(`Selected: ${doc[(window as any).google.picker.Document.NAME]}`);
         }
       })
       .build();

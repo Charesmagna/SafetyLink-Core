@@ -239,53 +239,9 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
-const MOCK_ORGANIZATIONS: Organization[] = [
-  {
-    id: 'SL-WITS-4829',
-    name: 'Wits University Security Node',
-    contactName: 'commander_wits',
-    contactEmail: 'dispatch@wits.ac.za',
-    createdAt: Date.now() - 86400000 * 5,
-    subscriptionStatus: "trial",
-    approved: true
-  },
-  {
-    id: 'SL-CITY-2810',
-    name: 'City Patrol Agency Node',
-    contactName: 'chief_patrol',
-    contactEmail: 'patrol@citysecurity.co.za',
-    createdAt: Date.now() - 86400000 * 3,
-    subscriptionStatus: "trial",
-    approved: true
-  }
-];
+const MOCK_ORGANIZATIONS: Organization[] = [];
 
-const MOCK_USERS: UserProfile[] = [
-  {
-    id: 'usr-demo1',
-    username: 'thabo_m',
-    fullName: 'Tshilidzi Mukwevho',
-    phone: '+27721234567',
-    whatsapp: '+27721234567',
-    avatarUrl: '',
-    email: 'thabo@meshnet.co.za',
-    orgCode: 'SL-WITS-4829',
-    createdAt: Date.now() - 86400000 * 2,
-    subscriptionStatus: "trial"
-  },
-  {
-    id: 'usr-demo2',
-    username: 'lerato_k',
-    fullName: 'Lerato Khumalo',
-    phone: '+27839110001',
-    whatsapp: '+27839110001',
-    avatarUrl: '',
-    email: 'lerato.k@gmail.com',
-    orgCode: '', // Standalone user with no organization!
-    createdAt: Date.now() - 86400000,
-    subscriptionStatus: "trial"
-  }
-];
+const MOCK_USERS: UserProfile[] = [];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
@@ -732,7 +688,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       const newUser = {
         ...user,
-        id: `usr-${Math.random().toString(36).substring(2, 9)}`,
+        id: `USR-${(users.length + 1).toString().padStart(3, '0')}`,
         createdAt: Date.now(), subscriptionStatus: "trial"
       };
       const updatedUsers = [...users, newUser];
@@ -807,7 +763,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       }
       const newUser = {
         ...user,
-        id: `usr-${Math.random().toString(36).substring(2, 9)}`,
+        id: `USR-${(get().users.length + 1).toString().padStart(3, '0')}`,
         createdAt: Date.now(), subscriptionStatus: "trial"
       };
       set({
@@ -830,9 +786,12 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     // 1. If in demo mode, do the local mock registration
     if (get().demoMode) {
       const orgs = get().organizations;
-      const randomHex = Math.floor(1000 + Math.random() * 9000);
-      const abbrev = getOrgAbbreviation(org.name);
-      const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
+      const isFamily = org.name.toLowerCase().includes('family') || org.name.toLowerCase().includes('home');
+      const prefix = isFamily ? 'SL-FAM' : 'SL-ORG';
+      const existing = orgs.filter(o => o.id.startsWith(prefix));
+      const nextNum = existing.length + 1;
+      const numericId = `${prefix}-${nextNum.toString().padStart(3, '0')}`;
+      const generatedId = org.id || numericId;
 
       const newOrg: Organization = {
         name: org.name,

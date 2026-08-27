@@ -7,13 +7,13 @@ import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/sl-shield.svg';
-import slide2 from '/sl-shield.svg';
+const slide1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide2 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '/sl-shield.svg';
-import slide5 from '/sl-shield.svg';
+const slide4 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide5 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
-import newLogo1 from '/sl-shield.svg';
+const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
 export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LOGIN' | 'REGISTER_ORG' }> = ({ onBackToSite, initialView }) => {
   const { 
@@ -208,9 +208,12 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     setIsGenerating(true);
 
     setTimeout(() => {
-      const randomHex = Math.floor(1000 + Math.random() * 9000);
-      const abbrev = getOrgAbbreviation(orgName);
-      const code = `SL-${abbrev}-${randomHex}`;
+      const { organizations } = useAppStore.getState();
+      const isFamily = orgName.toLowerCase().includes('family') || orgName.toLowerCase().includes('home');
+      const prefix = isFamily ? 'SL-FAM' : 'SL-ORG';
+      const existing = organizations.filter(o => o.id.startsWith(prefix));
+      const nextNum = existing.length + 1;
+      const code = `${prefix}-${nextNum.toString().padStart(3, '0')}`;
       setGeneratedOrgId(code);
       setIsGenerating(false);
     }, 1200);
@@ -287,11 +290,11 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         muted 
         playsInline 
         className="fixed inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none" 
-        src="/media/videos/SafetyLink 3D Animation Logo.mp4"
+        src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4"
       />
       <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
       <img 
-        src="/sl-shield.svg" 
+        src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png" 
         className="fixed inset-0 w-full h-full object-contain opacity-[0.03] z-0 pointer-events-none" 
         alt="" 
       />
@@ -338,7 +341,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen"
           >
-            <source src="/media/Scene_Setup_vertical_.mp4" type="video/mp4" />
+            <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310110/petal_20260727_180314.mp4" type="video/mp4" />
           </video>
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />
@@ -502,7 +505,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   <div className="grid grid-cols-1 gap-2.5 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                     {[
                       {
-                        name: 'Wits Security Commander',
+                        name: 'Security Commander',
                         role: 'Organization Deck (ORG)',
                         username: 'commander_wits',
                         orgCode: 'SL-WITS-4829',
@@ -977,7 +980,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   type="text"
                   value={orgName}
                   onChange={e => setOrgName(e.target.value)}
-                  placeholder="e.g. Wits Security, Apex patrol, TechCorp, CityCenter"
+                  placeholder="e.g. Alpha Security, City Patrol, TechCorp, CityCenter"
                   className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                   required
                 />

@@ -44,7 +44,7 @@ export const EvidenceLedger: React.FC = () => {
   const categories = ['ALL', 'SYSTEM', 'BLE', 'GPS', 'DISPATCH', 'SECURITY'];
 
   return (
-    <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+    <div className="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex flex-col h-full min-h-[600px]">
       <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">

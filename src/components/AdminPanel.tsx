@@ -5,13 +5,13 @@ import { sendTestEvent } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/sl-shield.svg';
-import slide2 from '/sl-shield.svg';
+const slide1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide2 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '/sl-shield.svg';
-import slide5 from '/sl-shield.svg';
+const slide4 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide5 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
-import newLogo1 from '/sl-shield.svg';
+const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
 type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE';
 

@@ -1,3 +1,4 @@
+export interface SatTelemetry { satelliteCount?: number; accuracy?: number; lastFix?: number; provider?: string; latitude: number; longitude: number; altitude: number; velocity: number; timestamp: number; visibility?: string; }
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion } from 'motion/react';
@@ -67,7 +68,7 @@ export const OfflineMap: React.FC = () => {
         longitude: parseFloat(data.longitude),
         altitude: parseFloat(data.altitude),
         velocity: parseFloat(data.velocity),
-        visibility: data.visibility,
+        visibility: data.visibility || 'unknown',
         timestamp: parseInt(data.timestamp) * 1000,
       });
       setSatError(null);

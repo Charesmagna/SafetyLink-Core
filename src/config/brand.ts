@@ -10,29 +10,29 @@ const FOLDER_ID = '1l78cZjsK9RFFsr4DNqYwhK4swg8SIbmW';
 
 export const Brand = {
   // Primary logo — use in: web nav, EXE header, APK settings screen
-  primaryLogo: `/sl-shield.svg`,
+  primaryLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png`,
 
   // Umbrella logo (TM Media Solutions) — use in: web footer, legal pages
-  umbrellaLogo: `/sl-shield.svg`,
+  umbrellaLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png`,
 
   // 3D animation — use in: web hero background, APK splash screen  
-  animation3d: `/media/videos/SafetyLink 3D Animation Logo.mp4`,
+  animation3d: `https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4`,
 
   // App launcher icon — APK home screen icon
-  launcherIcon: `/sl-shield.svg`,
+  launcherIcon: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png`,
 
   // Notification icon — Android status bar icon during panic
-  notificationIcon: `/media/app_icon/notification_icon.png`,
+  notificationIcon: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png`,
 
   // Admin panel logo — EXE header, web dashboard header
-  adminLogo: `/sl-shield.svg`,
+  adminLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png`,
 
   // Architecture diagrams — web "How it Works" and "Tech" sections
-  architectureDiagram: `/media/images/Safety_Response_System_Architecture.png`,
-  anatomyDiagram: `/media/images/Emergency_System_Architecture_Anatomy.png`,
+  architectureDiagram: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg`,
+  anatomyDiagram: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg`,
 
   // K'lev.ai partner logo — web partners/powered-by section
-  klevLogo: `/media/klev_ai_logo.png`,
+  klevLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png`,
 
   // App name and tagline
   appName: 'SafetyLink',

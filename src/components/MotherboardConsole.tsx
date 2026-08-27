@@ -1,3 +1,4 @@
+import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Polyline } from 'react-leaflet';
 
 import { useAppStore } from '../utils/store';
 import { useEffect, useRef } from 'react';
@@ -76,7 +77,7 @@ export const MotherboardConsole: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#020617] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden flex flex-col h-[700px]">
+    <div className="bg-[#020617] border border-slate-800 rounded-3xl p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-y-auto flex flex-col min-h-[calc(100vh-140px)] w-full">
       {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-xl font-black text-slate-200 tracking-widest font-mono">
@@ -104,10 +105,10 @@ export const MotherboardConsole: React.FC = () => {
       </div>
 
       {/* Grid Layout */}
-      <div className="flex-1 grid grid-cols-12 gap-6 min-h-0">
+      <div className="flex-1 flex flex-col lg:grid lg:grid-cols-12 gap-6 min-h-0">
         
         {/* Left Column: GPS Map (5 cols) */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-4 flex flex-col bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden min-h-[350px] lg:min-h-0 shrink-0">
           <div className="p-3 border-b border-slate-800 bg-slate-950/80">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">GPS Map</h3>
           </div>
@@ -155,7 +156,7 @@ export const MotherboardConsole: React.FC = () => {
         </div>
 
         {/* Center Column: Active Threat Queue (3 cols) */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col">
+        <div className="col-span-12 lg:col-span-3 flex flex-col min-h-[350px] lg:min-h-0 shrink-0">
           <div className="bg-slate-950/80 border border-slate-800 rounded-2xl flex-1 flex flex-col overflow-hidden relative">
             <div className="p-3 border-b border-slate-800 bg-slate-950">
               <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">Active Threat Queue</h3>
@@ -227,7 +228,7 @@ export const MotherboardConsole: React.FC = () => {
         </div>
 
         {/* Third Column: Active Field Units (3 cols) */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-3 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden min-h-[300px] lg:min-h-0 shrink-0">
           <div className="p-3 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">Field Units</h3>
             <span className="text-[9px] font-mono font-bold bg-blue-900/50 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">
@@ -237,8 +238,8 @@ export const MotherboardConsole: React.FC = () => {
           
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
             {[
-              { id: 'U-Alpha', name: 'Alpha Squad', status: 'PATROL', color: 'text-blue-400', bg: 'bg-blue-400' },
-              { id: 'U-Bravo', name: 'Bravo Intercept', status: 'RESPONDING', color: 'text-red-400', bg: 'bg-red-400' },
+              { id: 'U-01', name: 'Unit 1', status: 'PATROL', color: 'text-blue-400', bg: 'bg-blue-400' },
+              { id: 'U-02', name: 'Unit 2 Intercept', status: 'RESPONDING', color: 'text-red-400', bg: 'bg-red-400' },
               { id: 'U-Delta', name: 'Delta Overwatch', status: 'STATIONARY', color: 'text-emerald-400', bg: 'bg-emerald-400' }
             ].map(unit => (
               <div key={unit.id} className="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between">
@@ -259,7 +260,7 @@ export const MotherboardConsole: React.FC = () => {
         </div>
 
         {/* Right Column: System Status (2 cols) */}
-        <div className="col-span-12 lg:col-span-2 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden">
+        <div className="col-span-12 lg:col-span-2 flex flex-col bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden min-h-[300px] lg:min-h-0 shrink-0">
           <div className="p-3 border-b border-slate-800 bg-slate-950">
             <h3 className="text-xs font-bold text-slate-300 font-mono tracking-widest uppercase">System Status</h3>
           </div>

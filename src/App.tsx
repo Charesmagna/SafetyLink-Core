@@ -46,15 +46,15 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '/sl-shield.svg';
-import slide2 from '/sl-shield.svg';
+const slide1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide2 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
-import slLogoMain from './assets/sl-shield.svg';
-import slLogoSet from '/sl-shield.svg';
+const slLogoMain = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slLogoSet = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import newBg1 from './assets/images/regenerated_image_1784546645212.png';
-const newLogo1 = '/sl-shield.svg';
-const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/sl-shield.svg';
+const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const klevaLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png';
+const polishLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
@@ -132,7 +132,7 @@ const App: React.FC = () => {
   const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
   // Only show landing page initially on actual web browsers
   const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web' && !isDesktopExe && window.location.pathname === '/');
-  const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG'>('LOGIN');
+  const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG' | 'REGISTER_USER'>('LOGIN');
   const [trialExpired, setTrialExpired] = useState(false);
 
 
@@ -480,7 +480,7 @@ const App: React.FC = () => {
           }}
         />;
       }
-      return <AuthScreen initialView={authInitialView} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
+      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
 
@@ -1210,7 +1210,7 @@ const App: React.FC = () => {
       {/* High fidelity cyber background lighting elements */}
       {showSplash && (
         <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video src="/media/videos/SafetyLink 3D Animation Logo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
+          <video src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
         </div>
       )}
       

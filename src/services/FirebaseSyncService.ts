@@ -28,7 +28,7 @@ export const initFirebaseSync = () => {
         changed = true;
       } else {
         // Simple resolution sync
-        if (merged[idx].status !== cp.status || merged[idx].responderAssigned !== cp.responderAssigned) {
+        if (merged[idx].status !== cp.status || merged[idx].assignedResponder !== cp.assignedResponder) {
           merged[idx] = cp;
           changed = true;
         }

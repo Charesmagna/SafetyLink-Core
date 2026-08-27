@@ -21,10 +21,10 @@ export function Hardware() {
             {/* Images Column */}
             <div className="flex-1 space-y-6">
               <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex justify-center items-center h-auto min-h-[300px]">
-                <img src="/media/images/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices" className="w-full max-w-[400px] object-contain rounded-xl" />
+                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310009/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices" className="w-full max-w-[400px] object-contain rounded-xl" />
               </div>
               <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex justify-center items-center">
-                <img src="/media/images/Polish_20260819_020007723.jpg" alt="iTAG battery instructions" className="w-full max-w-[300px] object-contain rounded-xl" />
+                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310010/Polish_20260819_020007723.jpg" alt="iTAG battery instructions" className="w-full max-w-[300px] object-contain rounded-xl" />
               </div>
             </div>
 

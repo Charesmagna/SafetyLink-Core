@@ -15,5 +15,5 @@ const app = initializeApp({
 });
 
 // Since the DB is on a custom database ID, we initialize it properly
-export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(app, {}, (firebaseConfig as any).firestoreDatabaseId);
 export const auth = getAuth(app);

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppStore } from '../utils/store';
+import Brand from '../config/brand';
 
 
 
@@ -131,7 +132,7 @@ export const SafetyLinkLogo: React.FC<SafetyLinkLogoProps> = ({
           className="relative w-full h-full flex items-center justify-center select-none"
           style={{ transformStyle: 'preserve-3d' }}
         >
-          {/* Slices or displays the high-fidelity branding logo, swapping conditionally during emergency panic states */}
+          <img src={Brand.primaryLogo} alt="SafetyLink Logo" className="w-full h-full object-contain pointer-events-none drop-shadow-2xl" />
 
         </motion.div>
       </div>

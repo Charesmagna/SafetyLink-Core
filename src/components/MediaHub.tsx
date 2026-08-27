@@ -4,97 +4,97 @@ import { motion, AnimatePresence } from 'motion/react';
 const mediaAssets = [
   {
     type: 'video',
-    src: '/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4',
+    src: 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310204/Now_let_s_show_how_kids_would.mp4',
     title: 'How SafetyLink Automates Emergency Responses',
     description: 'A complete overview of the autonomous emergency pipeline.'
   },
   {
     type: 'video',
-    src: '/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4',
+    src: 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4',
     title: 'Emergency Escalation Pipelines',
     description: 'Learn how distress signals are routed securely.'
   },
   {
     type: 'image',
-    src: '/media/images/Emergency_Response_Platform_Architecture_Overview.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg',
     title: 'Platform Architecture Overview',
     description: 'High-level diagram of the SafetyLink infrastructure.'
   },
   {
     type: 'image',
-    src: '/media/images/Platform_Screenshot.jpeg',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_48euet48euet48eu.png',
     title: 'Command Center Interface',
     description: 'Live view of the dispatch tactical screen.'
   },
   {
     type: 'image',
-    src: '/media/images/Gemini_Generated_Image_bes7lhbes7lhbes7.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309977/Gemini_Generated_Image_6iikvx6iikvx6iik.png',
     title: 'Security Operations Concept',
     description: 'Visualizing response network topology.'
   },
   {
     type: 'image',
-    src: '/media/images/Gemini_Generated_Image_cj8x5rcj8x5rcj8x.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309975/Gemini_Generated_Image_td9rg6td9rg6td9r.png',
     title: 'Hardware Node Integration',
     description: 'Concept art for IoT safety beacons.'
   },
   {
     type: 'video',
-    src: '/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4',
+    src: 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310206/Government_use_case_senario.mp4',
     title: 'Inside the SafetyLink Emergency Ecosystem',
     description: 'A deep dive into how nodes communicate across the mesh network.'
   },
   {
     type: 'video',
-    src: '/media/videos/SafetyLink 3D Animation Logo.mp4',
+    src: 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4',
     title: 'SafetyLink 3D Logo Animation',
     description: 'Official 3D animated branding asset.'
   },
   {
     type: 'video',
-    src: '/media/videos/video (1).mp4',
+    src: 'https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310194/drone_dispatch_tracking_crimin.mp4',
     title: 'System Demonstration',
     description: 'Demonstration of the SafetyLink user interface.'
   },
   {
     type: 'image',
-    src: '/media/images/Emergency_System_Architecture_Anatomy.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309940/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg',
     title: 'Emergency System Anatomy',
     description: 'Detailed structural anatomy of the emergency pipelines.'
   },
   {
     type: 'image',
-    src: '/media/images/Safety_Response_System_Architecture.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309942/Gemini_Generated_Image_283s3m283s3m283s.jpg',
     title: 'Safety Response System Architecture',
     description: 'Technical breakdown of the response capabilities.'
   },
   {
     type: 'image',
-    src: '/media/images/Gemini_Generated_Image_ghu57oghu57oghu5.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309937/Gemini_Generated_Image_waguavwaguavwagu.jpg',
     title: 'Field Node Map',
     description: 'Conceptualization of a deployment field node.'
   },
   {
     type: 'image',
-    src: '/media/images/Gemini_Generated_Image_umhnuvumhnuvumhn.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309937/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg',
     title: 'Data Flow Topology',
     description: 'Visualizing emergency data routing patterns.'
   },
   {
     type: 'image',
-    src: '/media/images/image_1783702731867.jpeg',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309971/image_1786374730511.jpg',
     title: 'SafetyLink Field Operations',
     description: 'Visual of on-site field operations.'
   },
   {
     type: 'image',
-    src: '/media/images/eka67lqzxa.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309819/1785107409613.png',
     title: 'Dashboard Telemetry UI',
     description: 'Reference UI for telemetry panels.'
   },
   {
     type: 'image',
-    src: '/media/images/iumb4dkepg.png',
+    src: 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309110/main-sample.png',
     title: 'Action Interface Diagram',
     description: 'Actionable response patterns.'
   }
