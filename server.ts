@@ -1217,7 +1217,98 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+  
+  // ─── PAYSTACK PAYMENT ENDPOINTS ───────────────────────────────
+
+  // Initialize payment — called when user selects a plan
+  app.post("/api/payment/initialize", rateLimit(10), async (req: any, res: any) => {
+    try {
+      const { email, plan, org_code } = req.body;
+      const plans: Record<string, { amount: number; name: string }> = {
+        'premium_monthly':  { amount: 4900,  name: 'SafetyLink Premium Monthly' },
+        'premium_annual':   { amount: 49900, name: 'SafetyLink Premium Annual' },
+        'premium_once_off': { amount: 14900, name: 'SafetyLink Premium Once-Off' },
+        'family_monthly':   { amount: 9900,  name: 'SafetyLink Family Monthly' },
+        'family_annual':    { amount: 99900, name: 'SafetyLink Family Annual' },
+        'family_once_off':  { amount: 24900, name: 'SafetyLink Family Once-Off' },
+        'starter':          { amount: 99900, name: 'Security Starter Monthly' },
+        'professional':     { amount: 249900,name: 'Security Professional Monthly' },
+        'business':         { amount: 599900,name: 'Security Business Monthly' },
+      };
+      const selected = plans[plan];
+      if (!selected) return res.status(400).json({ error: 'Invalid plan' });
+
+      const response = await fetch('https://api.paystack.co/transaction/initialize', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          amount: selected.amount,
+          currency: 'ZAR',
+          metadata: { plan, org_code, plan_name: selected.name },
+          callback_url: 'https://safetylink.online/payment/success',
+        })
+      });
+      const data = await response.json() as any;
+      if (!data.status) return res.status(400).json({ error: data.message });
+      res.json({ authorization_url: data.data.authorization_url, reference: data.data.reference });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Verify payment — called after redirect from Paystack
+  app.get("/api/payment/verify/:reference", async (req: any, res: any) => {
+    try {
+      const { reference } = req.params;
+      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        headers: { 'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}` }
+      });
+      const data = await response.json() as any;
+      if (!data.status || data.data.status !== 'success') {
+        return res.status(400).json({ error: 'Payment not successful' });
+      }
+      const { plan, org_code } = data.data.metadata;
+      // Unlock the org trial / activate plan
+      const expires = new Date(Date.now() + 30 * 86400000).toISOString();
+      await db.execute({
+        sql: 'UPDATE organizations SET trial_active = 0, trial_expires_at = ? WHERE org_code = ?',
+        args: [expires, org_code]
+      });
+      res.json({ success: true, plan, org_code, expires });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Paystack webhook — handles subscription events
+  app.post("/api/payment/webhook", async (req: any, res: any) => {
+    try {
+      const crypto = require('crypto');
+      const hash = crypto.createHmac('sha512', PAYSTACK_SECRET_KEY)
+        .update(JSON.stringify(req.body)).digest('hex');
+      if (hash !== req.headers['x-paystack-signature']) {
+        return res.status(401).json({ error: 'Invalid signature' });
+      }
+      const { event, data } = req.body;
+      if (event === 'charge.success') {
+        const { org_code } = data.metadata || {};
+        if (org_code) {
+          await db.execute({
+            sql: 'UPDATE organizations SET trial_active = 0 WHERE org_code = ?',
+            args: [org_code]
+          });
+        }
+      }
+      res.json({ received: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Get Paystack public key for frontend
+  app.get("/api/payment/config", (_req: any, res: any) => {
+    res.json({ public_key: PAYSTACK_PUBLIC_KEY });
+  });
+
+  app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
