@@ -2,86 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 
 export const DownloadHub: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const [releases, setReleases] = useState<any[]>([]);
+  const [latestRelease, setLatestRelease] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
 
-  const fetchReleases = (pageNumber: number, isLoadMore = false) => {
-    if (isLoadMore) setLoadingMore(true);
-    fetch(`https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases?per_page=6&page=${pageNumber}`, { headers: { Accept: 'application/vnd.github.v3+json' } })
+  const fetchLatestRelease = () => {
+    fetch(`https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest`, { headers: { Accept: 'application/vnd.github.v3+json' } })
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          if (data.length < 6) {
-            setHasMore(false);
-          }
-          if (isLoadMore) {
-            setReleases(prev => [...prev, ...data]);
-          } else {
-            setReleases(data);
-          }
-        } else {
-           setHasMore(false);
+        if (data && data.tag_name) {
+          setLatestRelease(data);
         }
         setLoading(false);
-        setLoadingMore(false);
       })
       .catch(err => {
         console.error("Failed to fetch releases:", err);
         setLoading(false);
-        setLoadingMore(false);
       });
   };
 
   useEffect(() => {
-    fetchReleases(1);
+    fetchLatestRelease();
   }, []);
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchReleases(nextPage, true);
-  };
 
   const getApkUrl = (release: any) => {
     if (!release || !release.assets) return '#';
-    // Filter out debug assets
-    const validAssets = release.assets.filter((a: any) => !a.name.toLowerCase().includes('debug'));
-    
     // Look for signed APK first
-    let asset = validAssets.find((a: any) => a.name.toLowerCase().includes('signed') && (a.name.endsWith('.apk') || a.name.endsWith('.exe')));
-    
+    let asset = release.assets.find((a: any) => a.name.toLowerCase().includes('signed') && (a.name.endsWith('.apk') || a.name.endsWith('.exe')));
     // Fall back to any apk or exe
     if (!asset) {
-      asset = validAssets.find((a: any) => a.name.endsWith('.apk') || a.name.endsWith('.exe'));
+      asset = release.assets.find((a: any) => a.name.endsWith('.apk') || a.name.endsWith('.exe'));
     }
-    
     return asset ? asset.browser_download_url : '#';
   };
-
-  const latestRelease = releases.length > 0 ? releases[0] : null;
-  const previousReleases = releases.length > 1 ? releases.slice(1) : [];
 
   return (
     <div className="fixed inset-0 z-[9999999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 overflow-y-auto pointer-events-auto">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-2xl bg-[#1a1c23] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden my-auto relative pointer-events-auto max-h-[90vh] flex flex-col"
+        className="w-full max-w-lg bg-[#1a1c23] border border-amber-500/30 rounded-2xl shadow-2xl overflow-hidden my-auto relative pointer-events-auto flex flex-col"
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 z-10 bg-black/50 rounded-full">
-          <i className="fa-solid fa-xmark text-xl"></i>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
 
-        <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+        <div className="p-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 mb-4 border border-amber-500/30">
-              <i className="fa-solid fa-cloud-arrow-down text-3xl"></i>
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
             </div>
-            <h2 className="text-3xl font-black text-white tracking-wide uppercase font-mono">Download Hub</h2>
-            <p className="text-gray-400 mt-2 font-mono text-xs uppercase tracking-wider">Access the latest SafetyLink Core applications</p>
+            <h2 className="text-3xl font-black text-white tracking-wide uppercase font-mono">Download App</h2>
+            <p className="text-gray-400 mt-2 font-mono text-xs uppercase tracking-wider">Install SafetyLink on your device</p>
           </div>
 
           {loading ? (
@@ -89,63 +64,31 @@ export const DownloadHub: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* Latest Release */}
-              {latestRelease && (
-                <div className="bg-slate-900/50 border border-emerald-500/40 rounded-xl p-6 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-white mb-1 font-mono uppercase">Latest Release</h3>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="text-emerald-400 font-mono font-bold bg-emerald-950/40 px-2 py-0.5 rounded">{latestRelease?.tag_name || 'v1.0.0'}</span>
-                        <span className="text-gray-500">•</span>
-                        <span className="text-gray-400 font-mono">Stable Build</span>
-                      </div>
-                    </div>
-                    <a 
-                      href={getApkUrl(latestRelease)}
-                      className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-bold font-mono hover:bg-emerald-500 transition-colors flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
-                    >
-                      <i className="fa-solid fa-download"></i>
-                      Download APK / EXE
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Previous Versions */}
-              {previousReleases.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-white/10 pb-2 font-mono">Previous Versions</h4>
-                  <div className="space-y-3">
-                    {previousReleases.map((release: any) => (
-                      <div key={release.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/5 rounded-lg border border-white/5 hover:border-white/20 transition-colors">
-                        <div className="mb-3 md:mb-0">
-                          <div className="text-slate-200 font-bold font-mono text-sm">{release.name}</div>
-                          <div className="text-gray-500 text-[10px] font-mono mt-1 uppercase tracking-wider">Tag: {release.tag_name}</div>
-                        </div>
-                        <a 
-                          href={getApkUrl(release)}
-                          className="text-amber-500 hover:text-white px-4 py-2 border border-amber-500/30 rounded-lg hover:bg-amber-500/20 transition-colors text-xs font-mono uppercase font-bold text-center"
-                        >
-                          Download
-                        </a>
-                      </div>
-                    ))}
-                  </div>
+            <div className="space-y-6">
+              {latestRelease ? (
+                <div className="bg-slate-900/50 border border-emerald-500/40 rounded-xl p-6 relative overflow-hidden text-center">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
                   
-                  {hasMore && (
-                    <div className="mt-6 text-center">
-                      <button 
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="text-slate-300 hover:text-white px-6 py-2 border border-slate-600 hover:border-slate-400 rounded-full text-xs font-mono uppercase tracking-wider transition-all disabled:opacity-50"
-                      >
-                        {loadingMore ? 'Loading...' : 'Load More Releases'}
-                      </button>
-                    </div>
-                  )}
+                  <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">Latest Stable Version</h3>
+                  <div className="flex items-center justify-center gap-3 text-sm mb-6">
+                    <span className="text-emerald-400 font-mono font-bold bg-emerald-950/40 px-2 py-0.5 rounded">v{latestRelease.tag_name?.replace('v', '') || '1.0.0'}</span>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-gray-400 font-mono">Recommended</span>
+                  </div>
+
+                  <a 
+                    href={getApkUrl(latestRelease)}
+                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-4 rounded-xl font-bold font-mono hover:from-emerald-500 hover:to-emerald-600 transition-all flex items-center justify-center gap-2 uppercase tracking-wider text-sm shadow-lg shadow-emerald-900/40"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download APK / EXE
+                  </a>
+                </div>
+              ) : (
+                <div className="text-center p-6 bg-slate-900/50 rounded-xl border border-slate-800">
+                  <p className="text-slate-400 font-mono text-sm">No downloads currently available.</p>
                 </div>
               )}
             </div>

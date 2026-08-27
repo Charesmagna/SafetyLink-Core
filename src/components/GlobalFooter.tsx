@@ -25,7 +25,7 @@ export const GlobalFooter: React.FC = () => {
               onClick={() => setShowDownloads(true)}
               className="text-amber-500 hover:text-amber-400 underline pointer-events-auto font-bold flex items-center gap-1"
             >
-              Releases & APKs
+              Download App
             </button>
           </div>
         </div>

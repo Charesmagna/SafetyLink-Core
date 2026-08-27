@@ -32,8 +32,6 @@ function getApkUrl(release: any): string | null {
 interface Release {
   tag_name: string;
   name: string;
-  html_url: string;
-  body: string;
   apkUrl: string | null;
   published_at: string;
 }
@@ -41,7 +39,6 @@ interface Release {
 export const UpdateBanner: React.FC = () => {
   const [release, setRelease] = useState<Release | null>(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
   const checkUpdates = useCallback(async () => {
     try {
@@ -54,6 +51,7 @@ export const UpdateBanner: React.FC = () => {
       if (!res.ok) return;
       const data = await res.json();
       if (!data?.tag_name) return;
+
       if (!isNewer(data.tag_name, CURRENT_VERSION)) return;
 
       const dismissed = localStorage.getItem(DISMISSED_KEY);
@@ -62,8 +60,6 @@ export const UpdateBanner: React.FC = () => {
       setRelease({
         tag_name: data.tag_name,
         name: data.name,
-        html_url: data.html_url,
-        body: data.body || '',
         apkUrl: getApkUrl(data),
         published_at: data.published_at,
       });
@@ -88,28 +84,25 @@ export const UpdateBanner: React.FC = () => {
   const handleSnooze = () => {
     localStorage.setItem(SNOOZE_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
     setShowBanner(false);
-    setShowModal(false);
   };
 
   const handleDismiss = () => {
     if (release) localStorage.setItem(DISMISSED_KEY, release.tag_name);
     setShowBanner(false);
-    setShowModal(false);
   };
 
   const handleDownload = () => {
     if (release?.apkUrl) {
-      window.open(release.apkUrl, '_blank');
-    } else if (release?.html_url) {
-      window.open(release.html_url, '_blank');
+      window.location.href = release.apkUrl;
     }
   };
 
+  if (!release?.apkUrl) return null; // Don't show if there's no APK download available
+
   return (
     <>
-      {/* Top banner */}
       <AnimatePresence>
-        {showBanner && release && !showModal && (
+        {showBanner && release && (
           <motion.div
             initial={{ y: -80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -123,125 +116,28 @@ export const UpdateBanner: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col">
                 <span className="font-bold font-mono text-xs">
-                  Update {release.tag_name} available
+                  New Update Available
                 </span>
-                <span className="text-emerald-200 text-xs ml-2 hidden sm:inline truncate">
-                  {release.name}
+                <span className="text-emerald-200 text-[10px] hidden sm:block truncate uppercase font-mono">
+                  Version {release.tag_name}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
-                onClick={() => setShowModal(true)}
-                className="bg-white text-emerald-900 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-wider hover:bg-emerald-50 transition-colors"
-              >
-                View
-              </button>
-              <button
                 onClick={handleDownload}
-                className="bg-emerald-900/60 border border-emerald-400/40 text-white px-3 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-wider hover:bg-emerald-900 transition-colors"
+                className="bg-white text-emerald-900 px-3 py-1 rounded-full text-xs font-bold font-mono uppercase tracking-wider hover:bg-emerald-50 transition-colors shadow-lg"
               >
-                Install
+                Download Now
               </button>
               <button onClick={handleSnooze} className="p-1 hover:bg-black/20 rounded-full transition-colors">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg className="w-4 h-4 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Full update modal */}
-      <AnimatePresence>
-        {showModal && release && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[99999999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.92, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.92, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-              className="w-full max-w-md bg-[#131720] border border-emerald-500/30 rounded-2xl shadow-2xl overflow-hidden"
-            >
-              {/* Header */}
-              <div className="bg-gradient-to-r from-emerald-700 to-emerald-900 px-6 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2.5 rounded-xl">
-                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h2 className="text-white font-black font-mono text-lg tracking-wide">NEW UPDATE</h2>
-                    <p className="text-emerald-200 text-xs font-mono">{release.tag_name} · SafetyLink Core</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="px-6 py-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-white font-bold font-mono text-sm">{release.name}</p>
-                    <p className="text-gray-400 text-xs font-mono mt-0.5">
-                      Current: v{CURRENT_VERSION} → New: {release.tag_name}
-                    </p>
-                  </div>
-                  <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-mono px-2.5 py-1 rounded-full font-bold">
-                    STABLE
-                  </span>
-                </div>
-
-                {release.body && (
-                  <div className="bg-black/30 border border-white/5 rounded-xl p-4 mb-5 max-h-40 overflow-y-auto">
-                    <p className="text-gray-300 text-xs font-mono leading-relaxed whitespace-pre-wrap">
-                      {release.body.slice(0, 600)}{release.body.length > 600 ? '...' : ''}
-                    </p>
-                  </div>
-                )}
-
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-5">
-                  <p className="text-amber-300 text-xs font-mono leading-relaxed">
-                    ⚠️ Installing the update will not delete your data. Your contacts, settings and org membership are preserved.
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={handleDownload}
-                    className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black font-mono text-sm py-3 rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    {release.apkUrl ? 'Download & Install APK' : 'Open Release Page'}
-                  </button>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSnooze}
-                      className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-mono text-xs py-2.5 rounded-xl uppercase tracking-wider transition-colors"
-                    >
-                      Remind Tomorrow
-                    </button>
-                    <button
-                      onClick={handleDismiss}
-                      className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 font-mono text-xs py-2.5 rounded-xl uppercase tracking-wider transition-colors"
-                    >
-                      Skip This Version
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

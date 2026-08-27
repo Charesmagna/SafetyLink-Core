@@ -66,10 +66,12 @@
         "@types/ws": "^8.18.1",
         "@vitejs/plugin-react": "^6.0.5",
         "autoprefixer": "^10.5.4",
+        "axios": "^1.20.0",
         "concurrently": "^10.0.5",
         "electron": "^43.4.1",
         "electron-builder": "^26.15.3",
         "esbuild": "^0.28.2",
+        "libsodium-wrappers": "^0.8.4",
         "postcss": "^8.5.19",
         "sharp": "^0.35.3",
         "supertest": "^7.2.2",
@@ -902,7 +904,7 @@
 
     "aws4": ["aws4@1.13.2", "", {}, ""],
 
-    "axios": ["axios@1.19.0", "", { "dependencies": { "follow-redirects": "^1.16.0", "form-data": "^4.0.6", "https-proxy-agent": "^5.0.1", "proxy-from-env": "^2.1.0" } }, ""],
+    "axios": ["axios@1.20.0", "", { "dependencies": { "follow-redirects": "^1.16.0", "form-data": "^4.0.6", "https-proxy-agent": "^5.0.1", "proxy-from-env": "^2.1.0" } }, "sha512-r8aOh8j9cGKpgQAqpzrUHnSIc6a59Y3Xf/cv8sy1DrHCkZHzQGEuoq1tARk6qSyDdtQGSDgpb9kFlruzPvrgwg=="],
 
     "b4a": ["b4a@1.8.1", "", { "peerDependencies": { "react-native-b4a": "*" }, "optionalPeers": ["react-native-b4a"] }, ""],
 
@@ -1599,6 +1601,10 @@
     "leaflet": ["leaflet@1.9.4", "", {}, ""],
 
     "leven": ["leven@3.1.0", "", {}, ""],
+
+    "libsodium": ["libsodium@0.8.4", "", {}, "sha512-lMcYaRi0zcs7tarATsQUYC7rstliIXZuoq0c6zXSgNtSNtdvBgkSegjWhpMJAXzKX3SUSwIp7+zEsob+j3LuRw=="],
+
+    "libsodium-wrappers": ["libsodium-wrappers@0.8.4", "", { "dependencies": { "libsodium": "^0.8.0" } }, "sha512-mu8aAWucZjTB5O/BtGXtW4e1agy7uHxNYG7zPthmmD1jU43LCDmSWZLN4JhflbdPXj3yDO4lxM1O9hLDgIOXDw=="],
 
     "libsql": ["libsql@0.5.29", "", { "dependencies": { "@neon-rs/load": "^0.0.4", "detect-libc": "2.0.2" }, "optionalDependencies": { "@libsql/linux-x64-gnu": "0.5.29", "@libsql/linux-x64-musl": "0.5.29" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "arm", "x64", "arm64", ] }, ""],
 
@@ -2746,11 +2752,15 @@
 
     "tiny-async-pool/semver": ["semver@5.7.2", "", { "bin": "bin/semver" }, ""],
 
+    "twilio/axios": ["axios@1.19.0", "", { "dependencies": { "follow-redirects": "^1.16.0", "form-data": "^4.0.6", "https-proxy-agent": "^5.0.1", "proxy-from-env": "^2.1.0" } }, ""],
+
     "type-is/content-type": ["content-type@2.1.0", "", {}, ""],
 
     "unzipper/fs-extra": ["fs-extra@11.3.1", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, ""],
 
     "vite-plugin-pwa/debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" } }, ""],
+
+    "wait-on/axios": ["axios@1.19.0", "", { "dependencies": { "follow-redirects": "^1.16.0", "form-data": "^4.0.6", "https-proxy-agent": "^5.0.1", "proxy-from-env": "^2.1.0" } }, ""],
 
     "webcrypto-core/tslib": ["tslib@2.8.1", "", {}, ""],
 
