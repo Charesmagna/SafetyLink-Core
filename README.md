@@ -21,4 +21,4 @@ Build Android locally:
 
 
 ## Mobile Application (APK)
-* **Download Android App**: [SafetyLink.apk (120M)](https://drive.google.com/file/d/1MrWZROWqlS00lGSEJ0gNIemjjBknqpMf/view?usp=drivesdk)
+* **Download Android App**: [SafetyLink.apk at www.safetylink.online 
