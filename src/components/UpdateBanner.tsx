@@ -89,7 +89,7 @@ export const UpdateBanner: React.FC = () => {
         }
       } catch (e) {}
 
-      if (!isNative && !isElectron) return;
+      if (!isNative && !isElectron && !isPWA) return;
 
       const timer = setTimeout(checkUpdates, 4000);
       const interval = setInterval(checkUpdates, CHECK_INTERVAL_MS);
