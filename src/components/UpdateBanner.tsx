@@ -38,6 +38,11 @@ interface Release {
 }
 
 export const UpdateBanner: React.FC = () => {
+  const isWeb = typeof Capacitor !== 'undefined' && Capacitor.getPlatform() === 'web';
+  const isElectron = typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron');
+  
+  if (isWeb && !isElectron) return null;
+
   const [release, setRelease] = useState<Release | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
