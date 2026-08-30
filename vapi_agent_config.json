@@ -1,0 +1,32 @@
+{
+  "vapi_inbound_agent": {
+    "name": "SafetyLink Panic Response Agent",
+    "phoneNumberId": "{{VAPI_PHONE_ID}}",
+    "assistant": {
+      "name": "SafetyLink AI",
+      "firstMessage": "SafetyLink emergency line. Stay on the line. Your location is being traced and your emergency contacts are being alerted now.",
+      "model": {
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "systemPrompt": "You are SafetyLink's emergency response AI. A caller has just triggered an inbound panic call. Your job is: 1) Keep them calm and talking. 2) Confirm their name if possible. 3) Ask only ONE question: 'Are you able to speak freely?' — if yes, gather location details. If no, tell them to stay on the line and help is coming. Never ask unnecessary questions. Never hang up unless the caller does. Always speak in short calm sentences. If caller goes silent for more than 10 seconds, say 'I am still here with you. Help is on the way.' Supported languages: English, Zulu, Afrikaans, Xhosa — detect and respond in caller's language automatically.",
+        "temperature": 0.3
+      },
+      "voice": {
+        "provider": "11labs",
+        "voiceId": "21m00Tcm4TlvDq8ikWAM",
+        "stability": 0.6,
+        "similarityBoost": 0.8
+      },
+      "recordingEnabled": true,
+      "endCallFunctionEnabled": false,
+      "silenceTimeoutSeconds": 30,
+      "maxDurationSeconds": 600,
+      "backgroundSound": "off",
+      "backchannelingEnabled": false,
+      "responseDelaySeconds": 0.5,
+      "llmRequestDelaySeconds": 0.1,
+      "serverUrl": "https://api.safetylink.online/vapi/webhook",
+      "serverUrlSecret": "{{VAPI_WEBHOOK_SECRET}}"
+    }
+  }
+}
