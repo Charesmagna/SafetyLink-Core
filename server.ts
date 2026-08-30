@@ -148,14 +148,7 @@ async function startServer() {
   // Security Hardening: Helmet protects from common web vulnerabilities by setting HTTP headers.
   // We disable the contentSecurityPolicy in dev so Vite HMR works.
 
-  app.use((req, res, next) => {
-    // Force www to non-www for canonical SEO and SSL simplicity
-    if (req.headers.host && req.headers.host.match(/^www./i)) {
-      const newHost = req.headers.host.replace(/^www./i, '');
-      return res.redirect(301, req.protocol + '://' + newHost + req.originalUrl);
-    }
-    next();
-  });
+  app.set('trust proxy', 1);
 
   app.use(helmet({
     contentSecurityPolicy: false,

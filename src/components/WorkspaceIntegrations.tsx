@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Loader2, LogOut, Database, Mail, FormInput, FileUp } from 'lucide-react';
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
 // Scopes required for Drive, Gmail, Forms, and Picker
