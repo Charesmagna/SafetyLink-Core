@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
-import { useAppStore, getOrgAbbreviation } from '../utils/store';
+import { useAppStore } from '../utils/store';
 import { LogoSetPart } from './LogoSetPart';
 import { PricingModal } from './PricingModal';
 import { CinematicClosingLogo } from './CinematicClosingLogo';

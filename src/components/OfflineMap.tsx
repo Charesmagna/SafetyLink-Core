@@ -80,10 +80,10 @@ export const OfflineMap: React.FC = () => {
     }
   };
 
-  // Sync space telemetry on mount and pull live coordinates every 5 seconds
+  // Sync space telemetry on mount and pull live coordinates every 60 seconds
   useEffect(() => {
     fetchLiveSatelliteTelemetry();
-    const interval = setInterval(fetchLiveSatelliteTelemetry, 5000);
+    const interval = setInterval(fetchLiveSatelliteTelemetry, 60000);
     return () => clearInterval(interval);
   }, []);
 

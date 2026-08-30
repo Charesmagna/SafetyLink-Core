@@ -11,8 +11,8 @@ if (env.WHATSAPP_PROVIDER === 'twilio' && accountSid && authToken) {
 
 export interface WhatsAppProvider {
   sendPanicAlert(to: string, message: string): Promise<void>;
-  getDeliveryStatus(messageId: string): Promise<string>;
-  verifyWebhook(payload: any, signature: string): boolean;
+  getDeliveryStatus(_messageId: string): Promise<string>;
+  verifyWebhook(_payload: any, _signature: string): boolean;
 }
 
 export class TwilioWhatsAppAdapter implements WhatsAppProvider {
@@ -31,11 +31,11 @@ export class TwilioWhatsAppAdapter implements WhatsAppProvider {
     });
   }
 
-  async getDeliveryStatus(messageId: string): Promise<string> {
+  async getDeliveryStatus(_messageId: string): Promise<string> {
     return 'unknown';
   }
 
-  verifyWebhook(payload: any, signature: string): boolean {
+  verifyWebhook(_payload: any, _signature: string): boolean {
     return true; // Use twilio.validateRequest in prod
   }
 }

@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, initializeFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
 
@@ -15,5 +15,5 @@ const app = initializeApp({
 });
 
 // Since the DB is on a custom database ID, we initialize it properly
-export const db = initializeFirestore(app, {}, (firebaseConfig as any).firestoreDatabaseId);
+export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, (firebaseConfig as any).firestoreDatabaseId);
 export const auth = getAuth(app);

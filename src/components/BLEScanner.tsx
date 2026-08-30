@@ -70,8 +70,15 @@ export const BLEScanner: React.FC = () => {
     return granted;
   };
 
+  
   const handleStartNativeScan = async () => {
+    // If not premium/active, show upgrade gate
+    if (currentUser?.subscriptionStatus !== 'active' && currentUser?.subscriptionStatus !== 'trial') {
+      setShowUpgradeGate(true);
+      return;
+    }
     setLocationWarning(false);
+
     let initialized = nativePluginInitialized;
     if (!initialized) {
       initialized = await handleInitNativePlugin();
@@ -522,13 +529,35 @@ export const BLEScanner: React.FC = () => {
               </div>
 
               <div className="space-y-3">
+                
                 <button
-                  onClick={() => {
-                    // Start checkout flow - simulating for now
-                    window.location.href = "https://paystack.com/pay/safetylink-premium";
+                  onClick={async () => {
+                    // Trigger Payfast checkout dynamically
+                    try {
+                      const response = await fetch('/api/payfast/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          plan_name: 'Premium',
+                          amount: '49.00',
+                          item_description: 'SafetyLink Premium Subscription (BLE Unlock)',
+                          email: 'user@example.com'
+                        })
+                      });
+                      const data = await response.json();
+                      if (data.success && data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        alert('Checkout initialization failed.');
+                      }
+                    } catch(err) {
+                      console.error(err);
+                      alert('Checkout initialization failed.');
+                    }
                   }}
                   className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-900/50"
                 >
+
                   Activate Button for R49/mo
                 </button>
                 <button

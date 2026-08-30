@@ -1,43 +1,23 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../utils/store';
-import { SafetyLinkBridge } from '../hooks/useEmergencyListener';
 import { Capacitor } from '@capacitor/core';
-import { motion, AnimatePresence } from 'motion/react';
-import { translate, SA_LANGUAGES } from '../utils/translations';
+import { motion } from 'motion/react';
+import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { LocalNotificationService } from '../services/LocalNotificationService';
 
 export const Settings: React.FC = () => {
   const { 
     auditLogs, 
     clearAuditLogs, 
     language, 
-    downloadedLanguages, 
-    setLanguage, 
-    downloadLanguage,
-    isBackgroundServiceRunning,
-    toggleBackgroundService,
-    backgroundServiceTick,
-    bleDevices,
-    userLocation,
-    isFloatingWidgetDeployed,
-    setFloatingWidgetDeployed,
-    floatingWidgetSize,
-    setFloatingWidgetSize,
-    customBackendUrl,
-    setCustomBackendUrl,
     currentUser,
     userPin,
     duressPin,
     updateUserProfile,
     requestJoinOrganization,
     organizations,
-    onlySystemSms,
-    setOnlySystemSms,
     sosCountdownDuration,
     setSosCountdownDuration,
-    sosSoundSetup,
-    setSosSoundSetup,
     silenceAlerts,
     setSilenceAlerts,
     globalTheme,
@@ -45,8 +25,6 @@ export const Settings: React.FC = () => {
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
-  const [shortcutTriggerEnabled, setShortcutTriggerEnabled] = useState<boolean>(() => localStorage.getItem('sl_shortcut_enabled') === 'true');
-  const [downloadingCode, setDownloadingCode] = useState<string | null>(null);
 
   // Profile forms state
 
@@ -78,45 +56,17 @@ export const Settings: React.FC = () => {
     }
   };
 
-  const [tbEnabled, setTbEnabled] = useState(currentUser?.sensorStream?.enabled || false);
-  const [tbHost, setTbHost] = useState(currentUser?.sensorStream?.udpHost || '');
-  const [tbPort, setTbPort] = useState(currentUser?.sensorStream?.udpPort || 0);
   
-  const [ocUrl, setOcUrl] = useState(currentUser?.ownCloud?.serverUrl || '');
-  const [ocUser, setOcUser] = useState(currentUser?.ownCloud?.username || '');
-  const [ocToken, setOcToken] = useState(currentUser?.ownCloud?.token || '');
-  const [ocFolder, setOcFolder] = useState(currentUser?.ownCloud?.folder || '');
   
-  const [personalControlRoom, setPersonalControlRoom] = useState(currentUser?.personalControlRoom || '');
-  const [securityCompany, setSecurityCompany] = useState(currentUser?.securityCompany || '');
-
-  const [localBackendUrl, setLocalBackendUrl] = useState(customBackendUrl || '');
-  const [profileName, setProfileName] = useState(currentUser?.fullName || '');
 
 
-  const [profilePhone, setProfilePhone] = useState(currentUser?.phone || '');
-  const [medicalInfo, setMedicalInfo] = useState(currentUser?.medicalInfo || '');
-  const [homeAddress, setHomeAddress] = useState(currentUser?.homeAddress || '');
-  const [workAddress, setWorkAddress] = useState(currentUser?.workAddress || '');
+
   const [orgIdInput, setOrgIdInput] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [selectedJoinRole, setSelectedJoinRole] = useState('Community Member');
-  const [moyaEnabled, setMoyaEnabled] = useState(false);
-  const connectService = (s: string) => console.log('Connect:', s);
-  const [turnApiToken, setTurnApiToken] = useState('');
 
   const t = (key: string) => translate(language, key);
 
-  const handleShortcutToggle = (enabled: boolean) => {
-    setShortcutTriggerEnabled(enabled);
-    localStorage.setItem('sl_shortcut_enabled', String(enabled));
-    useAppStore.getState().addAuditLog(
-      'SYSTEM',
-      'INFO',
-      `Homescreen Quick-Trigger ${enabled ? 'Enabled' : 'Disabled'}`,
-      'Shortcut configured to bypass biometric locks and trigger emergency sequence on instant click.'
-    );
-  };
 
   const filteredLogs = auditLogs.filter(log => {
     if (filter === 'ALL') return true;

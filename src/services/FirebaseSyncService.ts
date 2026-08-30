@@ -1,4 +1,4 @@
-import { onSnapshot, collection, query, where, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { onSnapshot, collection,doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAppStore } from '../utils/store';
 import { PanicEvent, UserProfile, Organization } from '../types';
