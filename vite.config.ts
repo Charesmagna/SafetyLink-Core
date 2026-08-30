@@ -86,7 +86,7 @@ export default defineConfig({  css: { postcss: "./postcss.config.cjs" },
         passes: 2,
       },
       mangle: {
-        toplevel: true,
+        toplevel: false,
       },
       format: {
         comments: false,
