@@ -16,7 +16,8 @@ import { Queue, Worker } from "bullmq";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';\nimport vapiPanicRouter from './vapi-panic.ts';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import vapiPanicRouter from './vapi-panic.js';
 
 // Initialize Firebase Admin for Firestore updates
 initializeApp({
@@ -1269,7 +1270,8 @@ async function startServer() {
     console.error("Failed to initialize database:", err);
   }
 
-  const httpServer = app.use('/', vapiPanicRouter);\n\napp.listen(PORT, "0.0.0.0", () => {
+  app.use('/', vapiPanicRouter);
+  const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
