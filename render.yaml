@@ -1,0 +1,14 @@
+version: "1"
+services:
+- type: web
+  name: safetylink-backend
+  runtime: node
+  repo: https://github.com/Charesmagna/SafetyLink-Core
+  plan: free
+  envVars:
+  - key: PORT
+    sync: false
+  region: oregon
+  buildCommand: bash render-build.sh
+  startCommand: npm run start
+  autoDeployTrigger: commit
