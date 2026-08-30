@@ -161,7 +161,8 @@ async function startServer() {
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: false,
-    crossOriginOpenerPolicy: false
+    crossOriginOpenerPolicy: false,
+    frameguard: false
   }));
 
   // Security Hardening: Rate Limiting to prevent brute-force attacks on our APIs.
