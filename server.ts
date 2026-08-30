@@ -1,3 +1,5 @@
+console.log("STARTING SERVER SCRIPT PID:", process.pid);
+import { createIncident, processPanicAlert } from "./src/services/panic-alert";
 import { ussdRouter } from "./src/routes/ussd";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import Pusher from "pusher";
@@ -7,7 +9,7 @@ import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import path from "path";
-import { createClient } from "@libsql/client";
+import { db } from "./src/db/index";
 import crypto from "crypto";
 import twilio from "twilio";
 import { Queue, Worker } from "bullmq";
@@ -24,21 +26,19 @@ const firestoreDb = getFirestore();
 
 
 // --- Environment Variables (from GitHub Secrets via CI) ---
-const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '+16055695774';
-const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY      || 'a6b0a27f24d054a44ada';
-const PUSHER_APP_ID       = process.env.PUSHER_APP_ID       || '2184826';
-const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET   || '';
-const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID    || 'e7c4fd21-764f-465d-b98f-c44f4489662e';
-const JWT_SECRET          = process.env.JWT_SECRET          || 'safetylink-secure-jwt-2026-tmmedia';
-const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL || 'https://eomnz1lxw9o2hyq.m.pipedream.net';
-const BLAND_API_KEY       = process.env.BLAND_API_KEY       || 'Bv19obRtmmDVJe89H50LgEkFgXij0Wd7Y0aQu548zNE';
-const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY       || 'org_fbb367e9f8405b15fa7f1a7fdae6eb736af03c63922e4d4de7b94242891cda9a2a49c71606fab126f4e669';
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY;
+const PUSHER_APP_ID       = process.env.PUSHER_APP_ID;
+const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET;
+const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID;
+const JWT_SECRET          = process.env.JWT_SECRET;
+const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL;
+const BLAND_API_KEY       = process.env.BLAND_API_KEY;
+const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY;
 
 // --- Database & Auth Initialization ---
-const dbPath = process.env.NODE_ENV === "production" ? "file:/tmp/safetylink.db" : "file:safetylink.db";
-const db = createClient({ url: dbPath });
 
 async function initDb() {
   await db.execute(`
@@ -85,118 +85,60 @@ async function initDb() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS panic_incidents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      idempotency_key TEXT UNIQUE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'QUEUED',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS incident_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      incident_id INTEGER NOT NULL REFERENCES panic_incidents(id),
+      source TEXT NOT NULL,
+      encrypted_lat TEXT,
+      encrypted_lon TEXT,
+      accuracy REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS emergency_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      contact_name TEXT NOT NULL,
+      contact_phone TEXT NOT NULL,
+      verified INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
 }
 
 const stytchClient = new stytch.Client({
-  project_id: process.env.STYTCH_PROJECT_ID || "project-test-10aaf6e8-7a3c-4d79-a069-2cc7b9c8f5d8",
-  secret: process.env.STYTCH_SECRET || "secret-test-r8MU3m1mwseFc9t0WJ39oMICtBvvzoid_Wk=",
+  project_id: process.env.STYTCH_PROJECT_ID,
+  secret: process.env.STYTCH_SECRET,
   env: stytch.envs.test,
 });
 
 const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID || "2184826",
-  key: process.env.PUSHER_KEY || "a6b0a27f24d054a44ada",
-  secret: process.env.PUSHER_SECRET || "YOUR_PUSHER_SECRET", // User did not provide explicit secret, placeholder
+  appId: process.env.PUSHER_APP_ID,
+  key: process.env.PUSHER_KEY,
+  secret: process.env.PUSHER_SECRET, // User did not provide explicit secret, placeholder
   cluster: "ap2",
   useTLS: true
 });
 
 
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://mock.supabase.co";
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "mock-key";
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://mock.supabase.co';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'mock_key';
 const supabase = createSupabaseClient(supabaseUrl, supabaseKey);
 
 const hasRedis = false; // Forced false to prevent ECONNREFUSED on Cloud Run
 const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
-
-const processJob = async (job: any) => {
-    const { userId, latitude, longitude, phone, message, liveSmsEnabled } = job.data;
-    console.log(`[Queue Worker] Initiating dispatch for Job #${job.id} (name=${job.name})`);
-    
-    try {
-        if (job.name === 'sms_dispatch') {
-            const targetApiKey = process.env.TWILIO_ACCOUNT_SID;
-            const targetFromPhone = process.env.TWILIO_PHONE_NUMBER;
-            
-            if (!targetApiKey || !targetFromPhone) {
-                console.warn(`[Mock Fallback] sms_dispatch requires TWILIO_ACCOUNT_SID in env to send to ${phone}`);
-                return;
-            }
-
-            if (!liveSmsEnabled) {
-                console.log(`[Twilio Dry-Run Guard] liveSmsEnabled is false/undefined for this user. Simulating dispatch to ${phone}.`);
-                return;
-            }
-
-            const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
-            await client.messages.create({
-                to: phone, from: targetFromPhone, body: message
-            });
-            return;
-        }
-
-        const { data: userProfile } = await supabase
-            .from('user_profiles')
-            .select(`
-                name, 
-                twilio_account_sid, 
-                twilio_phone_number,
-                linked_organisation_id
-            `)
-            .eq('id', userId)
-            .single();
-
-        let orgData = null;
-        if (userProfile && userProfile.linked_organisation_id) {
-            const { data } = await supabase
-                .from('organisations')
-                .select('twilio_account_sid, twilio_auth_token, twilio_phone_number, control_room_phone')
-                .eq('id', userProfile.linked_organisation_id)
-                .single();
-            orgData = data;
-        }
-
-        if (!userProfile) {
-            console.log(`[Mock Fallback] Profile ${userId} not in DB. Using fallback dispatch.`);
-            return; 
-        }
-
-        let targetApiKey = userProfile.twilio_account_sid || (orgData && orgData.twilio_account_sid) || process.env.TWILIO_ACCOUNT_SID;
-        let targetFromPhone = userProfile.twilio_phone_number || (orgData && orgData.twilio_phone_number) || process.env.TWILIO_PHONE_NUMBER;
-        let controlRoomDestination = orgData && orgData.control_room_phone;
-
-        if (!targetApiKey || !targetFromPhone) throw new Error("No active communication pathways loaded.");
-
-        const client = twilio(targetApiKey, process.env.TWILIO_AUTH_TOKEN || "mock-token");
-        const payload = `SafetyLink Emergency! Panic triggered by ${userProfile.name || 'Resident'}. Coordinates: ${latitude}, ${longitude}.`;
-        
-        await Promise.all([
-            client.calls.create({
-                to: controlRoomDestination, from: targetFromPhone,
-                twiml: `<Response><Say voice="alice">${payload}</Say></Response>`
-            }).catch((e: any) => console.error("Voice delivery fallback channel failed:", e.message)),
-            client.messages.create({
-                to: controlRoomDestination, from: targetFromPhone, body: payload
-            }).catch((e: any) => console.error("SMS channel execution error:", e.message))
-        ]);
-    } catch (e: any) {
-        console.error(`[Worker Error] ${e.message}`);
-    }
-};
-
-const panicQueue = hasRedis ? new Queue('panic_events', { connection }) : {
-    add: async (name: string, data: any, options: any) => {
-        const job = { id: Date.now().toString(), name, data };
-        setImmediate(() => processJob(job));
-        return job;
-    }
-};
-
-if (hasRedis) {
-    const worker = new Worker('panic_events', processJob, { connection });
-    worker.on('error', err => console.error('Worker error:', err.message));
-}
 
 
 async function startServer() {
@@ -205,7 +147,22 @@ async function startServer() {
 
   // Security Hardening: Helmet protects from common web vulnerabilities by setting HTTP headers.
   // We disable the contentSecurityPolicy in dev so Vite HMR works.
-  app.use(helmet({ contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false }));
+
+  app.use((req, res, next) => {
+    // Force www to non-www for canonical SEO and SSL simplicity
+    if (req.headers.host && req.headers.host.match(/^www./i)) {
+      const newHost = req.headers.host.replace(/^www./i, '');
+      return res.redirect(301, req.protocol + '://' + newHost + req.originalUrl);
+    }
+    next();
+  });
+
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: false
+  }));
 
   // Security Hardening: Rate Limiting to prevent brute-force attacks on our APIs.
   const apiLimiter = rateLimit({
@@ -217,7 +174,7 @@ async function startServer() {
   });
   app.use("/api/", apiLimiter);
 
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.json({ limit: "50mb", verify: (req: any, res, buf) => { req.rawBody = buf; } }));
   app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
   // Modular Provider Routes
@@ -471,26 +428,30 @@ async function startServer() {
       }
   });
 
-  app.post('/api/panic/trigger', async (req, res) => {
-      const { userId, latitude, longitude } = req.body;
-      if (!userId || !latitude || !longitude) {
+    app.post('/api/panic/trigger', async (req, res) => {
+      const { userId, latitude, longitude, description, isDrill } = req.body;
+      if (!userId || latitude === undefined || longitude === undefined) {
           return res.status(400).json({ error: "Missing required emergency location parameters." });
       }
       try {
-          const job = await panicQueue.add(`panic_signal_${Date.now()}`, {
-              userId, latitude, longitude, timestamp: new Date().toISOString()
-          }, {
-              attempts: 5,
-              backoff: { type: 'exponential', delay: 2000 }
+          // Import dynamic to avoid top-level circular issues if any
+          
+          
+          const incidentId = await createIncident(userId, 'APP_BUTTON', { lat: latitude, lon: longitude });
+          
+          // Execute the parallel fallback chain asynchronously (fire and forget from Express's perspective to reply instantly)
+          processPanicAlert(incidentId).catch(err => {
+              console.error("[PanicAlert] Background Processing Error:", err);
           });
+          
           return res.status(202).json({ 
                status: "Accepted", 
-               message: "Emergency pipeline established. Dispatches firing.",
-              eventId: job.id
+               message: "Emergency pipeline established. Parallel dispatches firing.",
+               eventId: incidentId
           });
       } catch (error) {
           console.error("Critical entry-queue storage blockage:", error);
-          return res.status(500).json({ error: "Internal crash entering panic queue buffer." });
+          return res.status(500).json({ error: "Internal crash entering panic queue buffer: " + (error instanceof Error ? error.message : String(error)) });
       }
   });
 
@@ -943,7 +904,7 @@ async function startServer() {
       };
 
       const headers = {
-        'Authorization': `Bearer ${process.env.PIPEDREAM_API_KEY || ''}`,
+        'Authorization': `Bearer ${process.env.PIPEDREAM_API_KEY}`,
         'Content-Type': 'application/json'
       };
 
@@ -976,12 +937,12 @@ async function startServer() {
   
   
   // --- PAYSTACK INTEGRATION ---
-  const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || 'sk_live_your_secret_key_here';
+  const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
   const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-          user: process.env.MERCHANT_EMAIL || 'your-business-email@gmail.com',
-          pass: process.env.EMAIL_PASSWORD || 'your-app-password'
+          user: process.env.MERCHANT_EMAIL,
+          pass: process.env.EMAIL_PASSWORD
       }
   });
 
@@ -993,9 +954,14 @@ async function startServer() {
           return res.status(401).send('Unauthorized');
       }
 
+      if (!PAYSTACK_SECRET_KEY) {
+          console.error('Security alert: PAYSTACK_SECRET_KEY not configured!');
+          return res.status(500).send('Configuration Error');
+      }
+
       const hash = crypto
           .createHmac('sha512', PAYSTACK_SECRET_KEY)
-          .update(JSON.stringify(req.body))
+          .update((req as any).rawBody || JSON.stringify(req.body))
           .digest('hex');
 
       if (hash !== signature) {
@@ -1003,8 +969,13 @@ async function startServer() {
           return res.status(401).send('Unauthorized');
       }
 
-      // 2. DETECT SUCCESSFUL CHARGES
-      const eventPayload = req.body;
+      // Fast response to prevent timeout loops from payment gateway
+      res.status(200).send('Webhook Received');
+
+      // Process heavy tasks asynchronously
+      setImmediate(async () => {
+        try {
+          const eventPayload = req.body;
       
       if (eventPayload.event === 'charge.success') {
           const transactionData = eventPayload.data;
@@ -1097,8 +1068,8 @@ async function startServer() {
           `;
 
           const mailOptions = {
-              from: process.env.MERCHANT_EMAIL || 'your-business-email@gmail.com',
-              to: process.env.MERCHANT_FULFILLMENT_EMAIL || 'your-personal-fulfillment@gmail.com',
+              from: process.env.MERCHANT_EMAIL,
+              to: process.env.MERCHANT_FULFILLMENT_EMAIL,
               subject: `[SafetyLink Order] Fulfill ${quantity}x ${productName} (${customerEmail})`,
               text: emailContent
           };
@@ -1111,17 +1082,69 @@ async function startServer() {
           }
       }
 
-      return res.status(200).send('Webhook Received');
+              } catch (e) {
+          console.error('Async Webhook Processing Error:', e);
+        }
+      });
   });
 
   // --- PAYFAST INTEGRATION ---
 
+
+  app.post("/api/external-sia", async (req, res) => {
+    try {
+      const { url, payload } = req.body;
+      
+      if (!url || typeof url !== 'string' || !url.startsWith('http')) {
+        return res.status(400).json({ error: "Invalid URL provided." });
+      }
+
+      // Basic SSRF Protection
+      try {
+        const targetUrl = new URL(url);
+        const blockedHosts = ['localhost', '127.0.0.1', '169.254.169.254', '0.0.0.0'];
+        if (blockedHosts.includes(targetUrl.hostname) || targetUrl.hostname.endsWith('.local') || targetUrl.hostname.endsWith('.internal')) {
+          console.warn(`Blocked SSRF attempt to internal domain: ${targetUrl.hostname}`);
+          return res.status(403).json({ error: "Access to internal domains is forbidden." });
+        }
+      } catch (e) {
+        return res.status(400).json({ error: "Malformed URL structure." });
+      }
+
+      // Timeout Optimization for Proxy
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const SIA_TOKEN = process.env.VITE_SIA_TOKEN || 'placeholder';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SIA_TOKEN,
+          'User-Agent': 'SafetyLink-External-SIA-Proxy/1.0'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal as any
+      });
+      
+      clearTimeout(timeoutId);
+      const textRes = await response.text().catch(() => "");
+      res.json({ success: response.ok, status: response.status, body: textRes.substring(0, 500) });
+    } catch (e: any) {
+      console.error("External SIA Proxy Error:", e);
+      if (e.name === 'AbortError') {
+         return res.status(504).json({ error: "Gateway Timeout: External endpoint took too long to respond." });
+      }
+      res.status(500).json({ error: e.message || "Internal server proxy error" });
+    }
+  });
+
   app.post("/api/payfast/checkout", async (req, res) => {
     try {
       const { plan_name, amount, item_description, email } = req.body;
-      const merchant_id = process.env.PAYFAST_MERCHANT_ID || '26778541';
-      const merchant_key = process.env.PAYFAST_MERCHANT_KEY || 'gqgynogxhcomh';
-      const passphrase = process.env.PAYFAST_PASSPHRASE || '';
+      const merchant_id = process.env.PAYFAST_MERCHANT_ID;
+      const merchant_key = process.env.PAYFAST_MERCHANT_KEY;
+      const passphrase = process.env.PAYFAST_PASSPHRASE;
       const baseUrl = req.headers.origin || 'https://safetylink.online';
 
       const data = {
@@ -1162,12 +1185,34 @@ async function startServer() {
     }
   });
 
-  app.post("/api/payfast/webhook", express.urlencoded({ extended: true }), async (req, res) => {
+  app.post("/api/payfast/webhook", express.urlencoded({ extended: true, verify: (req: any, res, buf) => { req.rawBody = buf; } }), async (req, res) => {
     try {
       const pfData = req.body;
       console.log('Received Payfast ITN:', pfData);
       
-      if (pfData.payment_status === 'COMPLETE') {
+      // Payfast ITN Validation
+      const pfHost = process.env.NODE_ENV === 'production' ? 'www.payfast.co.za' : 'sandbox.payfast.co.za';
+      const validateUrl = `https://${pfHost}/eng/query/validate`;
+      
+      const validateResponse = await fetch(validateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: (req as any).rawBody || new URLSearchParams(req.body).toString()
+      });
+      
+      const validateResult = await validateResponse.text();
+      if (validateResult !== 'VALID') {
+        console.error("Security alert: Payfast ITN validation failed:", validateResult);
+        return res.status(401).send('Unauthorized');
+      }
+
+      // Fast response to prevent timeout loops
+      res.status(200).send('OK');
+
+      // Process heavy database operations asynchronously
+      setImmediate(async () => {
+        try {
+          if (pfData.payment_status === 'COMPLETE') {
          console.log('Payment complete for:', pfData.item_name, 'User:', pfData.email_address);
          
          // Update Firestore Database Role/Status
@@ -1189,14 +1234,15 @@ async function startServer() {
              console.log('Successfully upgraded user roles in Firestore for:', pfData.email_address);
            } else {
              console.log('User not found in Firestore for email:', pfData.email_address);
-             // Optionally create a pending subscription record here
            }
          } catch (firestoreErr) {
            console.error('Firestore update error during webhook processing:', firestoreErr);
          }
-      }
-
-      res.status(200).send('OK');
+                }
+        } catch (e) {
+          console.error('Async Payfast Webhook Processing Error:', e);
+        }
+      });
     } catch (e: any) {
       console.error('Payfast ITN Error:', e);
       res.status(500).send('Error');
@@ -1211,104 +1257,13 @@ async function startServer() {
   if (process.env.NODE_ENV !== "production" && (!process.argv[1] || !process.argv[1].endsWith("server.cjs"))) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: { port: 24678 } },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-  
-  // ─── PAYSTACK PAYMENT ENDPOINTS ───────────────────────────────
-
-  // Initialize payment — called when user selects a plan
-  app.post("/api/payment/initialize", rateLimit(10), async (req: any, res: any) => {
-    try {
-      const { email, plan, org_code } = req.body;
-      const plans: Record<string, { amount: number; name: string }> = {
-        'premium_monthly':  { amount: 4900,  name: 'SafetyLink Premium Monthly' },
-        'premium_annual':   { amount: 49900, name: 'SafetyLink Premium Annual' },
-        'premium_once_off': { amount: 14900, name: 'SafetyLink Premium Once-Off' },
-        'family_monthly':   { amount: 9900,  name: 'SafetyLink Family Monthly' },
-        'family_annual':    { amount: 99900, name: 'SafetyLink Family Annual' },
-        'family_once_off':  { amount: 24900, name: 'SafetyLink Family Once-Off' },
-        'starter':          { amount: 99900, name: 'Security Starter Monthly' },
-        'professional':     { amount: 249900,name: 'Security Professional Monthly' },
-        'business':         { amount: 599900,name: 'Security Business Monthly' },
-      };
-      const selected = plans[plan];
-      if (!selected) return res.status(400).json({ error: 'Invalid plan' });
-
-      const response = await fetch('https://api.paystack.co/transaction/initialize', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          amount: selected.amount,
-          currency: 'ZAR',
-          metadata: { plan, org_code, plan_name: selected.name },
-          callback_url: 'https://safetylink.online/payment/success',
-        })
-      });
-      const data = await response.json() as any;
-      if (!data.status) return res.status(400).json({ error: data.message });
-      res.json({ authorization_url: data.data.authorization_url, reference: data.data.reference });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
-
-  // Verify payment — called after redirect from Paystack
-  app.get("/api/payment/verify/:reference", async (req: any, res: any) => {
-    try {
-      const { reference } = req.params;
-      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-        headers: { 'Authorization': `Bearer ${PAYSTACK_SECRET_KEY}` }
-      });
-      const data = await response.json() as any;
-      if (!data.status || data.data.status !== 'success') {
-        return res.status(400).json({ error: 'Payment not successful' });
-      }
-      const { plan, org_code } = data.data.metadata;
-      // Unlock the org trial / activate plan
-      const expires = new Date(Date.now() + 30 * 86400000).toISOString();
-      await db.execute({
-        sql: 'UPDATE organizations SET trial_active = 0, trial_expires_at = ? WHERE org_code = ?',
-        args: [expires, org_code]
-      });
-      res.json({ success: true, plan, org_code, expires });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
-
-  // Paystack webhook — handles subscription events
-  app.post("/api/payment/webhook", async (req: any, res: any) => {
-    try {
-      const crypto = require('crypto');
-      const hash = crypto.createHmac('sha512', PAYSTACK_SECRET_KEY)
-        .update(JSON.stringify(req.body)).digest('hex');
-      if (hash !== req.headers['x-paystack-signature']) {
-        return res.status(401).json({ error: 'Invalid signature' });
-      }
-      const { event, data } = req.body;
-      if (event === 'charge.success') {
-        const { org_code } = data.metadata || {};
-        if (org_code) {
-          await db.execute({
-            sql: 'UPDATE organizations SET trial_active = 0 WHERE org_code = ?',
-            args: [org_code]
-          });
-        }
-      }
-      res.json({ received: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
-
-  // Get Paystack public key for frontend
-  app.get("/api/payment/config", (_req: any, res: any) => {
-    res.json({ public_key: PAYSTACK_PUBLIC_KEY });
-  });
-
-  app.use(express.static(distPath));
+    app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

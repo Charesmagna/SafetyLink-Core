@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from "react";
 import { motion } from 'motion/react';
 import { X, Check } from 'lucide-react';
 
@@ -6,7 +6,7 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   
-  const handlePaystackHardwareCheckout = (productId: 'lite' | 'active' | 'premium', quantity: number) => {
+  const handleWhatsAppOrder = (productId: 'lite' | 'active' | 'premium', quantity: number) => {
     const hardwareProducts = {
       lite: { name: "SafetyLink iTAG Lite", price: 100, description: "Compact BLE panic keyfob." },
       active: { name: "SafetyLink iTAG Active (3-Pack)", price: 179, description: "3x BLE keyfobs." },
@@ -203,22 +203,22 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Single</div>
                     <div className="text-lg font-bold text-white">R149</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
-                    <button onClick={() => handlePaystackHardwareCheckout('lite', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Lite</button>
+                    <button onClick={() => handleWhatsAppOrder('lite', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Lite</button>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Active</div>
                     <div className="text-lg font-bold text-white">R199</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
-                    <button onClick={() => handlePaystackHardwareCheckout('active', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Active</button>
+                    <button onClick={() => handleWhatsAppOrder('active', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Active</button>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                     <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Premium</div>
                     <div className="text-lg font-bold text-white">R348</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
-                    <button onClick={() => handlePaystackHardwareCheckout('premium', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Premium</button>
+                    <button onClick={() => handleWhatsAppOrder('premium', 1)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy Premium</button>
                   </div>
                   <div className="bg-emerald-900/30 p-3 rounded-xl border border-emerald-500/50 text-center">
                     <div className="text-[10px] text-emerald-400 uppercase tracking-wider mb-1">Lite (5-Pack)</div>
                     <div className="text-lg font-bold text-white">R499</div><div className="text-[8px] text-slate-400 -mt-1 mb-1">+ 1mo Premium</div>
-                    <button onClick={() => handlePaystackHardwareCheckout('lite', 5)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy 5-Pack</button>
+                    <button onClick={() => handleWhatsAppOrder('lite', 5)} className="mt-2 w-full py-1.5 text-[10px] rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Buy 5-Pack</button>
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-800">

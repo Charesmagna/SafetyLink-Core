@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Server, Users, Activity } from 'lucide-react';
 
 export function Enterprise() {

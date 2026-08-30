@@ -1,13 +1,12 @@
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Polyline } from 'react-leaflet';
-import React, { useState, useMemo } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import React, { useState } from 'react';
 
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, 
-  AreaChart, Area, CartesianGrid, LineChart, Line 
+  AreaChart, Area, CartesianGrid,  
 } from 'recharts';
 import { useAppStore } from '../utils/store';
-import { Activity, MapPin, AlertTriangle, Battery, ShieldAlert, WifiOff, Clock } from 'lucide-react';
+import { Activity, MapPin, AlertTriangle, Battery, ShieldAlert, Clock } from 'lucide-react';
 import { motion } from 'motion/react';
 
 // Sample mock data for analytics
@@ -38,7 +37,7 @@ const geoPoints: any[] = []; /* Array.from({ length: 40 }).map((_, i) => ({
 })); */
 
 export const GeospatialAnalytics: React.FC = () => {
-  const { panicEvents, users } = useAppStore();
+  const { panicEvents } = useAppStore();
   const [activeMetric, setActiveMetric] = useState<'incidents' | 'battery' | 'connectivity'>('incidents');
 
   // Compute live metrics

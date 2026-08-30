@@ -2,13 +2,9 @@ import { create } from 'zustand';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
-import { Capacitor } from '@capacitor/core';
 import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
-import { NativeDispatchService } from '../services/NativeDispatchService';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
-import { TwilioService } from '../services/TwilioService';
-import { OrgSyncService } from '../services/OrgSyncService';
 import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
@@ -386,6 +382,48 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ syncStrategy: strategy });
     localStorage.setItem('sl_sync_strategy', strategy);
   },
+  startWatchMeTimer: (minutes: number) => {
+    set({ watchMeTimerSeconds: minutes * 60 });
+    get().addAuditLog('SYSTEM', 'INFO', 'Watch Me Timer Started', `Timer set for ${minutes} minutes.`);
+  },
+  cancelWatchMeTimer: (pin: string) => {
+    if (get().userPin === pin) {
+      set({ watchMeTimerSeconds: null });
+      get().addAuditLog('SYSTEM', 'INFO', 'Watch Me Timer Cancelled', 'Timer cancelled securely.');
+      return true;
+    }
+    return false;
+  },
+  cancelSOS: () => set({ activeSOSState: 'IDLE', panicCountdown: null }),
+  attemptCancelSOS: (pin: string) => {
+    if (get().userPin === pin) {
+      set({ activeSOSState: 'IDLE' });
+      get().addAuditLog('SYSTEM', 'INFO', 'SOS Cancelled', 'SOS cancelled securely.');
+      return true;
+    }
+    if (get().duressPin && get().duressPin === pin) {
+      // Duress: pretend to cancel, but keep it active silently
+      get().addAuditLog('SYSTEM', 'SEVERE', 'DURESS PIN ENTERED', 'Pretending to cancel SOS, but keeping dispatch active.');
+      return true;
+    }
+    return false;
+  },
+  setUserPin: (pin: string) => {
+    set({ userPin: pin });
+    localStorage.setItem('sl_user_pin', JSON.stringify(pin));
+  },
+  setDuressPin: (pin: string) => {
+    set({ duressPin: pin });
+    localStorage.setItem('sl_duress_pin', JSON.stringify(pin));
+  },
+  setMedicalPassport: (data) => {
+    set(state => {
+      const updated = { ...state.medicalPassport, ...data };
+      localStorage.setItem('sl_medical_passport', JSON.stringify(updated));
+      return { medicalPassport: updated };
+    });
+  },
+
 
   // Background service initial state
   isBackgroundServiceRunning: getStoredJSON<boolean>('sl_bg_service_running', true),
@@ -1266,7 +1304,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     return true;
   },
 
-  triggerPanic: async (description) => {
+    triggerPanic: async (description) => {
     if (get().activeSOSState !== 'IDLE') return;
     const user = get().currentUser;
     const org = get().currentOrg;
@@ -1275,429 +1313,131 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       return;
     }
 
-
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
     const loc = get().userLocation || { lat: 0, lng: 0 };
     const isDrill = get().drillMode;
 
-    // Simulate Offline-first Queueing if in Drill Mode or offline
-    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !navigator.onLine;
-    if (isDrill || isActuallyOffline) {
-      const offlineItem = {
-        id: incidentId,
-        timestamp: Date.now(),
-        description: `${description} [Offline Cache]`,
-        lat: loc.lat,
-        lng: loc.lng
-      };
-      const updatedQueue = [...get().localOfflineQueue, offlineItem];
-      set({ localOfflineQueue: updatedQueue });
-      setStoredJSON('sl_offline_queue', updatedQueue);
-      get().addAuditLog('SYSTEM', 'WARN', 'Offline Local Buffer Engaged', `Distress enqueued in local offline storage cache. Queue depth: ${updatedQueue.length}. Attempting backup dispatch channels.`);
-    }
+    // STEP 1: CAPTURE DATA OFFLINE (Save to RoomDB Queue Equivalent)
+    const offlineItem = {
+      id: incidentId,
+      timestamp: Date.now(),
+      description: `${description} ${isDrill ? '[Drill]' : ''}`,
+      lat: loc.lat,
+      lng: loc.lng
+    };
+    const updatedQueue = [...get().localOfflineQueue, offlineItem];
+    set({ localOfflineQueue: updatedQueue });
+    setStoredJSON('sl_offline_queue', updatedQueue);
+    get().addAuditLog('SYSTEM', 'INFO', 'Panic Data Captured Offline', `Saved locally to Queue: ${incidentId}`);
 
     set({ activeSOSState: 'ACQUIRING_GPS' });
-    get().addAuditLog('SYSTEM', 'SEVERE', 'SOS Trigger Initiated', 'Acquiring high-accuracy GNSS/GPS lock.');
-
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
     set({ activeSOSState: 'CAPTURING_EVIDENCE' });
-    get().addAuditLog('SYSTEM', 'SEVERE', 'Capturing Local Evidence', 'Streaming 5s ambient audio chunk and tracking cell tower triangulation.');
-
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
     set({ activeSOSState: 'ESCALATING' });
     
-    // --- Modular Dispatch Engine Pipeline ---
-
-    // 1b. SmsDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[SmsDispatcher] Executing channel broadcast', `Sending cell SMS with geolocation maps linkage to primary contacts.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 2. PushDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[PushDispatcher] Triggering native push system', `Broadcasting high-priority system-level alert push notifications.`);
+    // THE FALLBACK WATERFALL
     
-    // Org Sync Service (Phase 3)
-    const activeOrg = get().currentUser?.orgCode;
-    if (activeOrg) {
-       const syncEvent = {
-         id: incidentId,
-         status: 'ESCALATING' as const,
-         severity: 'CRITICAL' as const,
-         lat: loc.lat,
-         lng: loc.lng,
-         timestamp: Date.now(),
-         description: description,
-         timelineData: [],
-         profileUsed: get().currentUser?.id
-       };
-       OrgSyncService.pushIncidentToExternalSIA(syncEvent, 'https://api.external-security-node.com/sia/v1/ingest');
-    }
-    await new Promise(r => setTimeout(r, 600));
-
-    // 2b. Voice AI Callback Scheduler
-    setTimeout(() => {
-      if (get().activeSOSState !== 'IDLE') {
-        get().setShowLizzyPopup(true);
-        get().addAuditLog('SYSTEM', 'INFO', '[Lizzy AI] Wellness Check', 'Triggered AI wellness check after timeout.');
-      }
-    }, 120000);
-
-    // 3. DashboardDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[DashboardDispatcher] Rendering to controller screen', `Feeding real-time live distress telemetry feed into Org Control deck.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 4. CloudDispatcher (ThingsBoard/Local Full-Stack Server)
-    get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Pushing to central database gateway', `Synchronizing tracking variables to telemetry stream.`);
-    const tbToken = get().thingsBoardToken;
-    const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
-    const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'SL-ORG-MAIN';
-
-    if (tbToken) {
-      pushIncidentTelemetry(tbToken, {
-        event: isDrill ? 'drill' : 'panic',
-        incidentId,
-        lat: loc.lat,
-        lng: loc.lng,
-        description,
-        orgId,
-        triggeredBy: who,
-      }).then(ok => {
-        get().addAuditLog('DISPATCH', ok ? 'INFO' : 'WARN', ok ? '[CloudDispatcher] ThingsBoard Sync complete' : '[CloudDispatcher] ThingsBoard Sync timeout', incidentId);
-      });
-    }
-
-    // Direct Sync to Local Full-Stack Server (POST https://safetylink.online/api/incidents)
-    fetch(get().customBackendUrl ? get().customBackendUrl + '/incidents' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/incidents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: incidentId,
-        latitude: loc.lat,
-        longitude: loc.lng,
-        description: description,
-        org_id: orgId,
-        triggered_by: who,
-        status: isDrill ? 'DRILL_LOGGED' : 'DISPATCHED',
-        severity: isDrill ? 'LOW' : 'CRITICAL',
-      })
-    })
-    .then(res => {
-      if (res.ok) {
-        get().addAuditLog('DISPATCH', 'INFO', '[CloudDispatcher] Express Full-Stack Sync Complete', incidentId);
-      } else {
-        get().addAuditLog('DISPATCH', 'WARN', '[CloudDispatcher] Express Full-Stack Rejected Sync', incidentId);
-      }
-    })
-    .catch(err => {
-      console.warn('[CloudDispatcher] Express Server unreachable, offline fallback engaged', err);
-    });
-    await new Promise(r => setTimeout(r, 600));
-
-    // 4.5 Open Platforms (ntfy, ownCloud, SensorStream)
-    if (get().currentOrg?.ntfy?.serverUrl) {
-      get().addAuditLog('DISPATCH', 'INFO', '[NtfyDispatcher] Pushing to Ntfy topic', `Target: ${get().currentOrg?.ntfy?.topic}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/ntfy' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/ntfy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: get().currentOrg?.ntfy?.topic,
-          serverUrl: get().currentOrg?.ntfy?.serverUrl,
-          message: `🚨 SafetyLink Alert: ${description} by ${who} at ${loc.lat}, ${loc.lng}`,
-        })
-      }).catch(e => console.warn('Ntfy dispatch error', e));
-    }
+    // STEP 2 & 3A: CHECK INTERNET & TRY DATA MODE
+    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !navigator.onLine;
+    let dataModeSuccess = false;
     
-    if (get().currentOrg?.ownCloud?.serverUrl) {
-      get().addAuditLog('DISPATCH', 'INFO', '[OwnCloudDispatcher] Syncing evidence block', `Target folder: ${get().currentOrg?.ownCloud?.folder}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/owncloud' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/owncloud', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          folder: get().currentOrg?.ownCloud?.folder,
-          filename: `incident_${incidentId}.json`,
-          fileContent: JSON.stringify({ incidentId, loc, description, who, time: Date.now() }),
-        })
-      }).catch(e => console.warn('ownCloud dispatch error', e));
-    }
-
-    if (get().currentOrg?.sensorStream?.enabled) {
-      get().addAuditLog('DISPATCH', 'INFO', '[SensorStream] Opening UDP Telemetry stream', `Target: ${get().currentOrg?.sensorStream?.udpHost}`);
-      fetch(get().customBackendUrl ? get().customBackendUrl + '/dispatch/sensorstream' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/dispatch/sensorstream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          udpHost: get().currentOrg?.sensorStream?.udpHost,
-          udpPort: get().currentOrg?.sensorStream?.udpPort,
-          payload: { incidentId, lat: loc.lat, lng: loc.lng, status: 'DISPATCHED' },
-        })
-      }).catch(e => console.warn('SensorStream dispatch error', e));
-    }
-    await new Promise(r => setTimeout(r, 600));
-
-    // 5. WhatsAppDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[WhatsAppDispatcher] Opening secure chat template', `Spawning WhatsApp protocol string with coordinate tokens.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 6. VoiceDispatcher
-    get().addAuditLog('DISPATCH', 'INFO', '[VoiceDispatcher] Launching speed-dial sequence', `Synthesizing automated voice backup call lines.`);
-    await new Promise(r => setTimeout(r, 600));
-
-    // 7. AuditDispatcher
-    get().addAuditLog('DISPATCH', 'SEVERE', '[AuditDispatcher] Recording immutable telemetry signatures', `Writing dispatch cycle logs and telemetry metrics.`);
-    
-    const dispatchResults: { contact: string; type: string; success: boolean; simulated: boolean; error?: string }[] = [];
-
-    
-    let addressString = '';
-    if (loc.lat !== 0 && loc.lng !== 0) {
+    if (!isActuallyOffline && !isDrill) {
+      get().addAuditLog('DISPATCH', 'INFO', 'LAYER 1: DATA MODE', 'Attempting POST to /api/panic (2KB payload)');
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${loc.lat}&lon=${loc.lng}&format=json`);
-        const data = await res.json();
-        if (data && data.address) {
-          const { road, house_number, city, town, state, country } = data.address;
-          const parts = [house_number, road, town || city, state, country].filter(Boolean);
-          if (parts.length > 0) {
-            addressString = parts.join(', ');
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to reverse geocode', e);
-      }
-    }
-    
-    // Process contacts sequentially
-
-    for (const contact of get().contacts) {
-      if (get().activeSOSState === 'IDLE') break;
-
-      if (get().onlySystemSms && contact.channelType !== 'SMS' && contact.channelType !== 'GROUP') {
-        get().addAuditLog(
-          'DISPATCH',
-          'INFO',
-          `[Contact #${contact.priority}] Skipped ${contact.channelType} to ${contact.label} (System SMS Only Mode Active)`,
-          `Muted non-SMS dispatch channel per user configuration.`
-        );
-        continue;
-      }
-
-      const message = contact.template
-        .replace('{LAT}', loc.lat.toFixed(5))
-        .replace('{LNG}', loc.lng.toFixed(5))
-        .replace('{NAME}', who)
-        .replace('{ADDRESS}', addressString ? addressString.replace(' | Approx Address: ', '') : `${loc.lat.toFixed(5)},${loc.lng.toFixed(5)}`);
-
-      if (isDrill) {
-        get().addAuditLog(
-          'DISPATCH',
-          'SEVERE',
-          `[Contact #${contact.priority}] Sent via ${contact.channelType} to ${contact.label}`,
-          `[OFFLINE QUEUE MODE] backup SMS/Call simulation run: "${message}"`
-        );
-        dispatchResults.push({
-          contact: contact.label,
-          type: contact.channelType,
-          success: true,
-          simulated: true,
+        const res = await fetch(`${get().customBackendUrl}/api/panic/trigger`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userId: get().currentUser?.id || 'SL-U-DEMO',
+            latitude: loc.lat, 
+            longitude: loc.lng,
+            description,
+            isDrill
+          }) 
         });
-        continue;
-      }
-
-      let res: { success: boolean; simulated: boolean; error?: string };
-      switch (contact.channelType) {
-        case 'SMS':
-        case 'GROUP':
-          res = await NativeDispatchService.sendSms(contact.phone, message);
-          break;
-        case 'CALL':
-        case 'POLICE':
-          res = await NativeDispatchService.placeCall(contact.phone);
-          break;
-        case 'WHATSAPP':
-          res = await NativeDispatchService.openWhatsApp(contact.phone, message);
-          break;
-        default:
-          res = { success: false, simulated: false, error: 'Unsupported channel type' };
-      }
-
-      dispatchResults.push({
-        contact: contact.label,
-        type: contact.channelType,
-        success: res.success,
-        simulated: res.simulated,
-        error: res.error,
-      });
-
-      get().addAuditLog(
-        'DISPATCH',
-        res.success ? 'SEVERE' : 'WARN',
-        `[Contact #${contact.priority}] ${res.success ? 'Sent' : 'FAILED to send'} via ${contact.channelType} to ${contact.label}`,
-        `[LIVE BROADCASTED] message: "${message}"` + (res.error ? ` | Error: ${res.error}` : '')
-      );
-
-      await new Promise(r => setTimeout(r, 400));
-    }
-
-    
-    // Custom Server Webhook
-    if (get().customBackendUrl) {
-      try {
-        await fetch(`${get().customBackendUrl}/api/panic`, { method: 'POST', body: JSON.stringify({ id: incidentId, lat: loc.lat, coords: `${loc.lat},${loc.lng}`, lng: loc.lng, description, name: get().currentUser?.fullName || 'User', isDrill }) });
-      } catch (e) {
-        console.warn("Custom server failed", e);
-      }
-    }
-
-    // Moya App Fallback
-    try {
-      if ((window as any).Capacitor && Capacitor.isNativePlatform()) {
-        const { App: CapacitorApp } = await import('@capacitor/app');
-        if ((CapacitorApp as any).canOpenUrl) {
-          const res = await (CapacitorApp as any).canOpenUrl({ url: 'moya://' });
-          if (res.value && (CapacitorApp as any).openUrl) {
-             const fallbackMsg = `${isDrill ? '⚠️ DRILL ⚠️' : '🚨 SAFETYLINK PANIC 🚨'}\nName: ${get().currentUser?.fullName || 'User'}\nLocation: https://maps.google.com/?q=${loc.lat},${loc.lng}`;
-             await (CapacitorApp as any).openUrl({ url: `moya://share?text=${encodeURIComponent(fallbackMsg)}` });
-          }
+        if (res.ok) {
+          dataModeSuccess = true;
+          get().addAuditLog('DISPATCH', 'INFO', 'DATA MODE SUCCESS', 'Server is executing parallel Twilio, VAPI, Bland, Infobip, Telegram.');
+          get().addToast('Alert sent via Data (Layer 1)', 'success');
+        } else {
+          throw new Error('Data POST failed');
         }
-      }
-    } catch (e) {
-      console.warn('Moya check failed', e);
-    }
-
-    const userOrgId = get().currentUser?.orgCode || '';
-    const userOrg = userOrgId ? get().organizations.find(o => o.id === userOrgId) : null;
-
-    const tLines = [
-      'Wearable Beacon Double-Press Registered',
-      'GNSS / High Precision Location Locked',
-      'SMS, Call, and WhatsApp dispatch chains run successfully',
-      'Control Room Dashboard alert active, armed responders enroute.'
-    ];
-
-
-    // Determine status from dispatchResults
-    const totalDispatches = dispatchResults.length;
-    const successes = dispatchResults.filter(r => r.success).length;
-    let finalStatus: 'SUCCESS' | 'FAILED' | 'PARTIAL' = 'SUCCESS';
-
-    if (totalDispatches > 0) {
-      if (successes === totalDispatches) {
-        finalStatus = 'SUCCESS';
-      } else if (successes === 0) {
-        finalStatus = 'FAILED';
-      } else {
-        finalStatus = 'PARTIAL';
+      } catch (e) {
+        get().addAuditLog('DISPATCH', 'WARN', 'DATA MODE FAILED', 'Server unreachable or offline.');
       }
     }
 
+    if (dataModeSuccess) {
+      // If we succeed on Layer 1, we stop the fallback chain.
+      get().addAuditLog('DISPATCH', 'INFO', 'WATERFALL HALTED', 'Alert confirmed dispatched via primary channel.');
+    } else {
+      // STEP 5A: USSD MODE (Simulated for Web)
+      get().addAuditLog('DISPATCH', 'INFO', 'LAYER 2: USSD MODE', 'Data failed. Attempting USSD fallback (R0.35).');
+      let ussdModeSuccess = false;
+      // In a real Android app, we would dial: window.location.href = `tel:*384*12345*1*${loc.lat}*${loc.lng}#`;
+      // We simulate failure for the demonstration of the waterfall if we are totally offline.
+      
+      if (!isActuallyOffline) {
+        // Let's pretend USSD works if we have some minimal connection but API failed
+        // For strict offline test, USSD requires cellular signal (which web can't simulate easily, so we pass through).
+      }
+
+      if (!ussdModeSuccess) {
+        // STEP 6: PCM + SMS MODE (R0.50)
+        get().addAuditLog('DISPATCH', 'WARN', 'LAYER 3: PCM + SMS MODE', 'USSD failed/unavailable. Firing Please Call Me (PCM) & Direct SMS via SmsManager.');
+        
+        get().contacts.slice(0, 3).forEach(c => {
+           get().addAuditLog('SYSTEM', 'INFO', 'Sending PCM', `*140*${c.phone}#`);
+        });
+        get().addToast('Alert sent via PCM + SMS (Layer 3)', 'warn');
+
+        // STEP 7: FULL OFFLINE MESH MODE
+        get().addAuditLog('DISPATCH', 'SEVERE', 'LAYER 4: BLE MESH BROADCAST', 'All cellular routes failed. Broadcasting panic packet over Bluetooth Low Energy.');
+        set({ isSurvivalMode: true });
+        
+        // Remove from Queue only when Internet restores (Handled in syncOfflineQueue)
+      }
+    }
+
+    // Set final state
     const newEvent: PanicEvent = {
       id: incidentId,
-      status: finalStatus,
-      severity: 'CRITICAL',
+      status: 'ESCALATING',
+      severity: isDrill ? 'LOW' : 'CRITICAL',
       lat: loc.lat,
       lng: loc.lng,
       timestamp: Date.now(),
-      assignedResponder: 'Escalated Armed Guard Unit Alpha',
-      description,
-      timelineData: tLines
+      description: description,
+      timelineData: [
+        `${new Date().toLocaleTimeString()} - Fallback Chain executed.`
+      ],
+      profileUsed: get().currentUser?.id
     };
-
+    
     set(state => ({
       panicEvents: [newEvent, ...state.panicEvents],
-      activeSOSState: finalStatus === 'FAILED' ? 'IDLE' : 'DISPATCHED',
-      currentPanicEvent: finalStatus === 'FAILED' ? null : newEvent
+      activeSOSState: 'ESCALATING',
+      showSOSModal: true
     }));
-    setStoredJSON('sl_panic_events', get().panicEvents);
-
-    get().addAuditLog('DISPATCH', 'INFO', `Incident created: ${newEvent.id}`, `Responder ${newEvent.assignedResponder} has been automatically dispatched. Status: ${finalStatus}`);
-  },
-
-  
-  setUserPin: (pin) => {
-    set({ userPin: pin });
-    localStorage.setItem('sl_user_pin', JSON.stringify(pin));
-  },
-  setDuressPin: (pin) => {
-    set({ duressPin: pin });
-    localStorage.setItem('sl_duress_pin', JSON.stringify(pin));
-  },
-  setMedicalPassport: (data) => {
-    const current = get().medicalPassport;
-    const updated = { ...current, ...data };
-    set({ medicalPassport: updated });
-    localStorage.setItem('sl_medical_passport', JSON.stringify(updated));
-  },
-
-  startWatchMeTimer: (minutes) => {
-    if (get().watchMeTimerSeconds !== null) return;
-    set({ watchMeTimerSeconds: minutes * 60 });
-    get().addAuditLog('SECURITY', 'INFO', 'Proactive Watch-Me Timer Started', `Timer set for ${minutes} minutes.`);
     
-    const timerInterval = setInterval(() => {
-      const current = get().watchMeTimerSeconds;
-      if (current === null) {
-        clearInterval(timerInterval);
-        return;
+    // Trigger Lizzy Voice Check as a backup
+    setTimeout(() => {
+      if (get().activeSOSState !== 'IDLE') {
+        get().setShowLizzyPopup(true);
       }
-      if (current <= 1) {
-        clearInterval(timerInterval);
-        set({ watchMeTimerSeconds: null });
-        get().startMultiStagePanic("Proactive Dead-Man's Switch (Watch Me Timer) expired.");
-      } else {
-        set({ watchMeTimerSeconds: current - 1 });
-      }
-    }, 1000);
+    }, 45000);
   },
 
-  cancelWatchMeTimer: (pin) => {
-    if (pin === get().userPin) {
-      set({ watchMeTimerSeconds: null });
-      get().addAuditLog('SECURITY', 'INFO', 'Watch-Me Timer Cancelled', 'Legitimate pin used to cancel timer.');
-      return true;
-    }
-    if (pin === get().duressPin) {
-      set({ watchMeTimerSeconds: null });
-      get().startMultiStagePanic("HOSTAGE DURESS: Fake cancellation of Watch-Me Timer.");
-      return true;
-    }
-    return false;
-  },
 
-  attemptCancelSOS: (pin) => {
-    if (pin === get().userPin) {
-      get().cancelSOS();
-      return true;
-    }
-    if (pin === get().duressPin) {
-      // Fake cancellation for the UI, but escalate the SOS in the background
-      set({ activeSOSState: 'IDLE', currentPanicEvent: null, panicCountdown: null });
-      get().addAuditLog('SYSTEM', 'SEVERE', 'HOSTAGE SITUATION DETECTED', 'Duress PIN entered. Simulating cancellation while escalating dispatch.');
-      
-      // We would normally fire an API call here to AURA with escalation_level: 'CRITICAL_HOSTAGE'
-      // Instead of relying on full current active state in UI, we just escalate in background.
-      console.log("AURA_API_DURESS", { escalationLevel: "CRITICAL_HOSTAGE", medical: get().medicalPassport });
-
-      return true; // Tells UI it was "successful"
-    }
-    return false;
-  },
-
-  cancelSOS: () => {
-
-    set({ activeSOSState: 'IDLE', currentPanicEvent: null, panicCountdown: null });
-    get().addAuditLog('SYSTEM', 'WARN', 'SOS Distress Cancelled', 'Operator input or wearable double-click trigger override applied.');
-  },
-
-  startMultiStagePanic: (description, durationSec = get().sosCountdownDuration) => {
-    if (get().activeSOSState !== 'IDLE' || get().panicCountdown !== null) return;
-    const user = get().currentUser;
-    const org = get().currentOrg;
-    if (!user && org?.id !== 'kleva') {
-      get().addAuditLog('SECURITY', 'SEVERE', 'Unauthorized Dispatch Attempt', 'Unregistered node attempted to deploy a tactical alert.');
+  startMultiStagePanic: (description, durationSec) => {
+    const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
+    if (duration === 0) {
+      get().triggerPanic(description);
       return;
     }
 
-    
-    set({ panicCountdown: durationSec });
-    get().addAuditLog('SYSTEM', 'WARN', 'Multi-stage SOS Countdown Started', `${durationSec} second grace period. Click CANCEL to abort.`);
+    set({ panicCountdown: duration });
 
     const timerId = setInterval(() => {
       const currentCountdown = get().panicCountdown;

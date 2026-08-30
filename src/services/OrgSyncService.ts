@@ -30,18 +30,20 @@ export class OrgSyncService {
 
       // 1. Fire webhook
       if (externalWebhookUrl && externalWebhookUrl.startsWith('http')) {
-        console.log("Sending payload:", siaPayload);
+        console.log("Routing payload through backend proxy:", siaPayload);
         try {
-          const response = await fetch(externalWebhookUrl, {
+          const response = await fetch('/api/external-sia', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + import.meta.env.VITE_SIA_TOKEN || 'placeholder'
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(siaPayload)
+            body: JSON.stringify({
+              url: externalWebhookUrl,
+              payload: siaPayload
+            })
           });
           if (!response.ok) {
-            throw new Error('SIA sync failed with status ' + response.status);
+            throw new Error('SIA sync proxy failed with status ' + response.status);
           }
         } catch (fetchErr) {
           console.warn("External SIA sync failed, continuing locally.", fetchErr);

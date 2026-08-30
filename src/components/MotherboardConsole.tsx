@@ -1,8 +1,7 @@
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 
 import { useAppStore } from '../utils/store';
 import { useEffect, useRef } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 
 
 export const MotherboardConsole: React.FC = () => {

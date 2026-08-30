@@ -3,10 +3,9 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-import { MapContainer, TileLayer, CircleMarker, Popup, Marker, Polyline } from 'react-leaflet';
-import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Popup, Marker, Polyline } from 'react-leaflet';
+import React, { useState } from 'react';
 import { Network, Cpu, Map as MapIcon, Activity } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 
 // Fix Leaflet marker icons
 
@@ -53,7 +52,7 @@ export const NodeMeshOrchestration: React.FC = () => {
     }, 1500);
   };
 
-  const getCustomIcon = (status: string, type: string) => {
+  const getCustomIcon = (status: string, _type: string) => {
     let color = status === 'active' ? '#10b981' : status === 'intermittent' ? '#f59e0b' : '#ef4444';
     return L.divIcon({
       className: 'bg-transparent',

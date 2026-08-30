@@ -70,9 +70,26 @@ function PricingCalculator() {
   )
 }
 
+
+const TRANSLATIONS: Record<string, { h1a: string, h1b: string, sub: string }> = {
+  en:  { h1a:'SAFETY FOR YOUR FAMILY AND', h1b:'HOUSEHOLD',    sub:'Peace of mind STARTS AT HOME. Protect what matters most – your family and your home.' },
+  zu:  { h1a:'UKUPHEPHA KOMNDENI WAKHO',   h1b:'IKHAYA',        sub:'Ukuthula kwengqondo kuQALA EKHAYA. Vikela okukubalulekile.' },
+  af:  { h1a:'VEILIGHEID VIR JOU GESIN EN',h1b:'HUISHOUDING',   sub:'Gemoedsrus BEGIN TUIS. Beskerm wat die meeste saakmaak.' },
+  xh:  { h1a:'UKHUSELEKO LOSAPHO LWAKHO',  h1b:'IKHAYA',        sub:'Ukuzola kwengqondo kuQALA EKHAYA. Khusela okubalulekileyo.' },
+  st:  { h1a:'TSHIRELETSO YA LELAPA',      h1b:'LAPENG',        sub:'Kgotso ya kelello e qala habo. Sireletsa se hlokehang.' },
+  tn:  { h1a:'TSHIRELETSO YA LELWAPA',     h1b:'LAPENG',        sub:'Kagiso ya kelelo e simolola gago. Sireletsa se tlhokegang.' },
+  ts:  { h1a:'ANTSWISO YA NDYANGU',        h1b:'KAYA',          sub:'Ku rula ka miehleketo ku sungula kaya. Hlayisa leswi fambisanaka.' },
+  ss:  { h1a:'KUVIKELWA KWEMNDENI',        h1b:'EKHAYA',        sub:'Kuthula kwenhlitiyo kweQALA EKHAYA. Vikela loko kubalulekile.' },
+  ve:  { h1a:'VHUSIRELE HA MUVHUSO',       h1b:'HAYANI',        sub:'Vhutondoli vhu sumbedzela hayani. Vhusirele zwine zwa vha muhulwane.' },
+  nr:  { h1a:'UKUVIKELWA KOMNDENI',        h1b:'EKHAYA',        sub:'Ukuthula kwenhliziyo kuqala ekhaya. Vikela okuyimqoka.' },
+  nso: { h1a:'TSHIRELETSO YA LELOKO',      h1b:'LAPENG',        sub:'Kgotso ya kelelo e thoma lapeng. Sireletsa seo se hlokegago.' },
+};
 export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () => void, onRegisterOrg: () => void, onRegisterUser: () => void }) {
+
+  const [language, setLanguage] = useState("en");
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const [isScrolled, setIsScrolled] = useState(false);
-  const [currentView, setCurrentView] = useState('home');
+  const [_currentView, setCurrentView] = useState("home");
   
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoSrc, setVideoSrc] = useState('');
@@ -184,7 +201,21 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
             <a href="#hardware">Hardware</a>
             <a href="#ai">AI Co-Pilot</a>
             <a href="#pricing">Pricing</a>
+
             <div style={{display:'flex', gap:'12px', alignItems:'center', marginLeft:'12px'}}>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', outline: 'none' }}>
+                <option value="en">🌐 ENGLISH</option>
+                <option value="zu">🌐 ZULU</option>
+                <option value="af">🌐 AFRIKAANS</option>
+                <option value="xh">🌐 XHOSA</option>
+                <option value="st">🌐 SESOTHO</option>
+                <option value="tn">🌐 SETSWANA</option>
+                <option value="ts">🌐 TSONGA</option>
+                <option value="ss">🌐 SWATI</option>
+                <option value="ve">🌐 VENDA</option>
+                <option value="nr">🌐 NDEBELE</option>
+                <option value="nso">🌐 SEPEDI</option>
+              </select>
               <button onClick={onLogin} style={{background: 'transparent', color: '#1e293b', border: '1px solid #cbd5e1', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}>Log In</button>
               <button onClick={onRegisterUser} style={{background: 'var(--green)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}>Create New Account</button>
             </div>
@@ -215,37 +246,44 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
       )}
 
       {/* ══ HERO ══ */}
-      <section className="hero" id="home">
+      <section className="hero" id="home" style={{
+        backgroundImage: 'linear-gradient(to right, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0) 100%), url("https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        padding: '120px 0 80px',
+        position: 'relative'
+      }}>
         <div className="hero-inner">
-          <div className="hero-left">
+          <div className="hero-left" style={{ maxWidth: '600px', backgroundColor: 'rgba(255, 255, 255, 0.65)', padding: '40px', borderRadius: '24px', backdropFilter: 'blur(10px)' }}>
+
             <div className="hero-eyebrow"><div className="hero-dot"></div>Live in South Africa</div>
-            <h1>SAFETY FOR YOUR FAMILY AND <span className="g">HOUSE HOLD</span></h1>
-            <p className="hero-sub">Peace of mind STARTS AT HOME. Protect what matters most – your family and your home. Seamless end-to-end protection, from key fob to app.</p>
-            <div className="hero-btns" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <h1>{t.h1a} <span className="g">{t.h1b}</span></h1>
+            <p className="hero-sub" style={{ color: '#334155', fontWeight: 500 }}>{t.sub}</p>
+            <div className="hero-btns" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <button onClick={onRegisterUser} className="btn-wa" style={{background: '#1e293b', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Register Individual</button>
               <button onClick={onRegisterOrg} className="btn-wa" style={{background: 'var(--green)', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Start your 14-day trial</button>
             </div>
           </div>
           <div className="hero-right">
             <div className="hero-phone-wrap">
-                            <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310050/Polish_20260809_035827088.png" alt="SafetyLink App UI" />
+              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310050/Polish_20260809_035827088.png" alt="SafetyLink App UI" />
               <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310009/Polish_20260819_020134421.jpg" alt="SafetyLink Button" style={{ padding: '20px', objectFit: 'contain' }} />
               <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310049/Polish_20260620_014530309.jpg" alt="Organizations Panel" />
             </div>
             <div className="hero-flow">
               <div className="flow-step">
                 <div className="flow-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="#15803d"/></svg></div>
-                <span className="flow-label">Wearable &amp; App Alerts</span>
+                <span className="flow-label" style={{ fontWeight: 600 }}>Wearable &amp; App Alerts</span>
               </div>
               <span className="flow-arrow">→</span>
               <div className="flow-step">
                 <div className="flow-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20v-1a6 6 0 0112 0v1"/></svg></div>
-                <span className="flow-label">Automated Response</span>
+                <span className="flow-label" style={{ fontWeight: 600 }}>Automated Response</span>
               </div>
               <span className="flow-arrow">→</span>
               <div className="flow-step">
                 <div className="flow-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg></div>
-                <span className="flow-label">Command &amp; Control</span>
+                <span className="flow-label" style={{ fontWeight: 600 }}>Command &amp; Control</span>
               </div>
             </div>
           </div>
@@ -331,28 +369,52 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser }: { onLogin: () =
       <section style={{background:'#fff', padding:'80px 0'}}>
         <div className="uc-inner" style={{maxWidth:'1200px', margin:'0 auto', padding:'0 24px'}}>
           <div className="section-eye" style={{color:'var(--green)'}}>Who It's For</div>
-          <h2 style={{fontSize:'clamp(22px,3.5vw,38px)', fontWeight:'900', color:'var(--navy)', letterSpacing:'-.02em', marginBottom:'12px'}}>Three Audiences. One Platform.</h2>
+          <h2 style={{fontSize:'clamp(22px,3.5vw,38px)', fontWeight:'900', color:'var(--navy)', letterSpacing:'-.02em', marginBottom:'12px'}}>Every Community. One Platform.</h2>
           <div className="uc-grid">
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="Security Command Room" style={{ borderRadius: '12px' }} />
+              <img src="https://images.unsplash.com/photo-1541888049108-8eb6cb6699ed?q=80&w=2070&auto=format&fit=crop" alt="Security Command Room" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
               <div className="uc-body">
-                <span className="uc-tag">Security Companies</span>
-                <div className="uc-title">Command Deck for Armed Response</div>
+                <span className="uc-tag">Security Personnel</span>
+                <div className="uc-title">Command Deck & Response</div>
                 <p className="uc-text">Give your operators a live feed of every alert, responder location, and BLE beacon in your network. SafetyLink charges only its flat platform fee.</p>
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310215/Gemini_Generated_Image_viirg9viirg9viir.png" alt="Family Safety" />
+              <img src="https://images.unsplash.com/photo-1581983050228-5e5d326f86c8?q=80&w=2070&auto=format&fit=crop" alt="Family Safety" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
               <div className="uc-body">
-                <span className="uc-tag">Families &amp; Residents</span>
+                <span className="uc-tag">Families & Residents</span>
                 <div className="uc-title">Personal Safety Hub</div>
                 <p className="uc-text">Panic button, BLE wearable, Watch-Me Timer, and emergency contact dispatch. R49/month. Works offline. No estate required.</p>
               </div>
             </div>
             <div className="uc-card">
-              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310049/Polish_20260620_014530309.jpg" alt="Estate Security" style={{ borderRadius: '12px' }} />
+              <img src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?q=80&w=2070&auto=format&fit=crop" alt="Community Watch" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
               <div className="uc-body">
-                <span className="uc-tag">Estates &amp; Complexes</span>
+                <span className="uc-tag">Community Watch</span>
+                <div className="uc-title">Neighborhood Networks</div>
+                <p className="uc-text">Connect neighbors into a secure digital mesh. Broadcast suspicious activities, trigger mass alerts, and coordinate local volunteer responders instantly.</p>
+              </div>
+            </div>
+            <div className="uc-card">
+              <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2069&auto=format&fit=crop" alt="School Kids" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
+              <div className="uc-body">
+                <span className="uc-tag">Schools & Students</span>
+                <div className="uc-title">Campus Protection</div>
+                <p className="uc-text">Clip an iTag to backpacks. Teachers and parents get live updates on location and immediate SOS signals if a student strays from the geofenced safe zone.</p>
+              </div>
+            </div>
+            <div className="uc-card">
+              <img src="https://images.unsplash.com/photo-1504307651254-35680f356f90?q=80&w=2070&auto=format&fit=crop" alt="Site Workers" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
+              <div className="uc-body">
+                <span className="uc-tag">Site Workers</span>
+                <div className="uc-title">Lone Worker Safety</div>
+                <p className="uc-text">Protect contractors, industrial workers, and lone operators with the Watch-Me Timer and offline voice triggers when operating in hazardous environments.</p>
+              </div>
+            </div>
+            <div className="uc-card">
+              <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop" alt="Estate Security" style={{ borderRadius: '12px', height: '200px', objectFit: 'cover' }} />
+              <div className="uc-body">
+                <span className="uc-tag">Estates & Complexes</span>
                 <div className="uc-title">Full Estate Deployment</div>
                 <p className="uc-text">Deploy across every unit. GIS map, beacon overlay, Evidence Ledger, and multi-responder dispatch — all in one platform.</p>
               </div>

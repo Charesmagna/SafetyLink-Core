@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getUssdAdapter } from '../providers/ussd';
 import { query } from '../db';
 import { createIncident } from '../services/panic-alert';
-import { alertQueue } from '../jobs';
+import { processPanicAlert } from "../services/panic-alert";
 
 export const ussdRouter = Router();
 
@@ -23,17 +23,17 @@ ussdRouter.post('/', async (req, res) => {
   } else if (parts[0] === '1') {
     // Send Panic Alert
     try {
-      const userRes = await query('SELECT id FROM users WHERE phone_number = $1', [phoneNumber]);
+      const userRes = await query('SELECT id FROM users WHERE phone = $1', [phoneNumber]);
       if (userRes.rowCount === 0) {
         responseText = "You are not registered with SafetyLink.";
         isEnd = true;
       } else {
-        const userId = userRes.rows[0].id;
+        const userId = userRes.rows[0].id as string;
         // Create idempotent panic incident immediately
         const incidentId = await createIncident(userId, 'USSD');
         
         // Queue it asynchronously
-        await alertQueue.add('process-incident', { incidentId });
+        processPanicAlert(incidentId).catch(console.error);
         
         responseText = "Panic sent. Help is coming.";
         isEnd = true;

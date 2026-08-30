@@ -11,10 +11,10 @@ const STATUS_COLORS: Record<string, string> = {
 export const ResponderDashboard: React.FC = () => {
   const currentUser = useAppStore(s => s.currentUser);
   const users = useAppStore(s => s.users);
-  const activeSOSState = useAppStore(s => s.activeSOSState);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -26.3085, lng: 27.8344 });
 
+  const panicEvents = useAppStore(s => s.panicEvents);
   const orgCode = currentUser?.orgCode;
   const guardedUsers = users.filter(u =>
     u.orgCode === orgCode &&
@@ -26,7 +26,7 @@ export const ResponderDashboard: React.FC = () => {
 
   const getUserStatus = (u: typeof users[0]): 'panic' | 'safe' | 'offline' => {
     // Check if there is an active panic event for this user
-    const isPanic = useAppStore.getState().panicEvents.some(e => e.profileUsed === u.id && e.status !== 'RESOLVED');
+    const isPanic = panicEvents.some(e => e.profileUsed === u.id && e.status !== 'RESOLVED');
     if (isPanic) return 'panic';
     if (!(u as any).lastLocation) return 'offline';
     const age = Date.now() - (((u as any).lastLocation as any).timestamp || 0);

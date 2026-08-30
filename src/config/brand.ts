@@ -2,8 +2,6 @@
 // Assets served from Google Drive public folder
 // Replace drive URLs with hosted CDN URLs when ready
 
-const DRIVE_BASE = 'https://drive.google.com/uc?export=view&id=';
-const FOLDER_ID = '1l78cZjsK9RFFsr4DNqYwhK4swg8SIbmW';
 
 // To get a file ID: open file in Drive -> share -> copy link -> extract ID from URL
 // Format: https://drive.google.com/file/d/FILE_ID/view

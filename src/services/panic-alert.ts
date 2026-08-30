@@ -2,13 +2,17 @@ import { query } from '../db';
 import { env } from '../config/env';
 import { sendVapiCall } from '../providers/vapi';
 import { sendTwilioSms } from '../providers/sms';
+import { sendBlandCall } from '../providers/bland';
+import { sendInfobipSms } from '../providers/infobip';
+import { sendTelegramAlert } from '../providers/telegram';
 
 export async function createIncident(userId: string, source: string, location?: { lat: number; lon: number; accuracy?: number }): Promise<string> {
-  const idempotencyKey = `${userId}-${new Date().toISOString().substring(0, 13)}`; // hourly unique roughly, or pass from device
+  // 1-minute idempotency window (blocks duplicates within the exact same minute)
+  const idempotencyKey = `${userId}-${new Date().toISOString().substring(0, 16)}`;
   
   const existing = await query('SELECT id FROM panic_incidents WHERE idempotency_key = $1', [idempotencyKey]);
   if (existing.rowCount && existing.rowCount > 0) {
-    return existing.rows[0].id;
+    return existing.rows[0].id as string;
   }
 
   const result = await query(
@@ -16,7 +20,7 @@ export async function createIncident(userId: string, source: string, location?: 
     [userId, idempotencyKey, 'QUEUED']
   );
   
-  const incidentId = result.rows[0].id;
+  const incidentId = result.rows[0].id as string;
 
   if (location) {
     await query(
@@ -36,7 +40,7 @@ export async function processPanicAlert(incidentId: string) {
   }
 
   const incidentRes = await query(`
-    SELECT p.*, u.name, u.phone_number 
+    SELECT p.*, u.name, u.phone 
     FROM panic_incidents p 
     JOIN users u ON p.user_id = u.id 
     WHERE p.id = $1
@@ -51,14 +55,28 @@ export async function processPanicAlert(incidentId: string) {
   const locRes = await query('SELECT * FROM incident_locations WHERE incident_id = $1 ORDER BY created_at DESC LIMIT 1', [incidentId]);
   const location = locRes.rows[0] ? `Lat: ${locRes.rows[0].encrypted_lat}, Lon: ${locRes.rows[0].encrypted_lon} (Source: ${locRes.rows[0].source})` : 'Unknown Location';
 
-  for (const contact of contacts) {
-    const destNumber = env.TEST_DESTINATION_NUMBER || contact.contact_phone;
-    
-    // Voice
-    await sendVapiCall(destNumber, contact.contact_name, incident, location);
+  const alertMessage = `SAFETYLINK PANIC: ${incident.name as string} needs help! Location: ${location}`;
 
-    // SMS
-    await sendTwilioSms(destNumber, `SAFETYLINK PANIC: ${incident.name} needs help! Location: ${location}`);
+  // Fire parallel dispatch to maximize delivery chance
+  console.log(`[PanicAlert] Initiating parallel dispatch for Incident #${incidentId}`);
+  
+  // Telegram to response center
+  sendTelegramAlert(`🚨 INCOMING PANIC ALERT 🚨\nUser: ${incident.name}\n${location}`).catch(e => console.error(e));
+
+  for (const contact of contacts) {
+    const destNumber = env.TEST_DESTINATION_NUMBER || contact.contact_phone as string;
+    
+    // Execute all 4 comms vectors in parallel (Twilio, Infobip fallback, VAPI, Bland fallback)
+    await Promise.allSettled([
+      // Primary Voice: VAPI
+      sendVapiCall(destNumber, contact.contact_name as string, incident, location),
+      // Secondary Voice Fallback: Bland
+      sendBlandCall(destNumber, `This is a SafetyLink emergency for ${incident.name}. They require immediate assistance at ${location}.`),
+      // Primary SMS: Twilio
+      sendTwilioSms(destNumber, alertMessage),
+      // Secondary SMS Fallback: Infobip
+      sendInfobipSms(destNumber, alertMessage)
+    ]);
   }
 
   await query('UPDATE panic_incidents SET status = $1 WHERE id = $2', ['PROCESSED', incidentId]);
