@@ -19,7 +19,6 @@ import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
-import { UpdateBanner } from './components/UpdateBanner';
 import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
@@ -1230,7 +1229,6 @@ const App: React.FC = () => {
       {/* Persistent System Status Bar & Background Notification Tray */}
 
       {/* High-Priority Emergency Overlay */}
-      <UpdateBanner />
       <TrialBanner />
       <ForcedCountdownOverlay />
       <SosCountdownOverlay 
