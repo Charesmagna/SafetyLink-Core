@@ -67,7 +67,7 @@ jobs:
         working-directory: ./android
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/android/app/safetylink-release.keystore
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace 2>&1 | tail -50
 
       - name: Locate and rename APK
         run: |
