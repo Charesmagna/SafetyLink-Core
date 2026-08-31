@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       - name: Compute version
         id: version
@@ -67,7 +67,14 @@ jobs:
         working-directory: ./android
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/android/app/safetylink-release.keystore
-        run: ./gradlew assembleRelease --stacktrace 2>&1 | tail -50
+        run: |
+          ./gradlew assembleRelease 2>&1 | tee /tmp/gradle_output.txt
+          EXIT_CODE=${PIPESTATUS[0]}
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "=== GRADLE ERROR (last 80 lines) ==="
+            tail -80 /tmp/gradle_output.txt
+            exit $EXIT_CODE
+          fi
 
       - name: Locate and rename APK
         run: |
@@ -91,7 +98,6 @@ jobs:
             ## SafetyLink Core ${{ steps.version.outputs.tag }}
             **Released by TM Media Solutions · Reg: 2018/500191/07**
             Download the APK below and install directly on Android.
-            > Your data, contacts and organisation are preserved on update.
           files: android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
           draft: false
           prerelease: false
