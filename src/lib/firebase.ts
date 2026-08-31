@@ -17,6 +17,7 @@ const app = !getApps().length ? initializeApp({
 
 // Since the DB is on a custom database ID, we initialize it properly
 export const db = initializeFirestore(app, { 
+    
     experimentalForceLongPolling: true,
     
     localCache: memoryLocalCache()
