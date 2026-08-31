@@ -6,6 +6,7 @@ import Pusher from "pusher";
 import * as stytch from "stytch";
 import nodemailer from 'nodemailer';
 import express from "express";
+import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import path from "path";
@@ -17,11 +18,10 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import vapiPanicRouter from './vapi-panic.js';
 
 // Initialize Firebase Admin for Firestore updates
 initializeApp({
-  projectId: 'ai-studio-safetylinkcore-eba1fe74-5070-40bf-b7fa-4d20c299bf48'
+  projectId: 'safetylink-99e56'
 });
 const firestoreDb = getFirestore();
 
@@ -144,6 +144,14 @@ const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
 
 async function startServer() {
   const app = express();
+
+// Enable CORS for frontend domain
+app.use(cors({
+  origin: ["https://safetylink.online", "https://www.safetylink.online", "http://localhost:5173", "http://localhost:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true
+}));
+
   const PORT = 3000;
 
   // Security Hardening: Helmet protects from common web vulnerabilities by setting HTTP headers.
@@ -1270,7 +1278,6 @@ async function startServer() {
     console.error("Failed to initialize database:", err);
   }
 
-  app.use('/', vapiPanicRouter);
   const httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
