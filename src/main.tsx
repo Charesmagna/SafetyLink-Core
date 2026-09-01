@@ -11,7 +11,7 @@ import { registerSW } from 'virtual:pwa-register';
 
 const updateSW = registerSW({
   onNeedRefresh() {
-    if (confirm("A new version of SafetyLink is available. Reload to update?")) {
+    if (true) {
       updateSW(true);
     }
   },
