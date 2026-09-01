@@ -1,59 +1,145 @@
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
+
+const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
+const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
+
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
+import { initFirebaseSync } from './services/FirebaseSyncService';
 import { DispatchChain } from './components/DispatchChain';
-import { BLEScanner } from './components/BLEScanner';
+const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
 const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
 const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
-const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations').then(m => ({ default: m.WorkspaceIntegrations })));
-import { Profile } from './components/Profile';
+const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations'));
+const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
 import { StatusIndicator } from './components/StatusIndicator';
-import { LocationDisplay } from './components/LocationDisplay';
+const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
+import { LandingPage } from './components/LandingPage';
+import { ResponderDashboard } from './components/ResponderDashboard';
+import { TrialBanner } from './components/TrialBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
-import { AppTour } from './components/AppTour';
+const AppTour = lazy(() => import('./components/AppTour').then(m => ({ default: m.AppTour })));
 const AIHub = lazy(() => import('./components/AIHub').then(m => ({ default: m.AIHub })));
-import { MediaHub } from './components/MediaHub';
-import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
+const MediaHub = lazy(() => import('./components/MediaHub').then(m => ({ default: m.MediaHub })));
+const AndroidWidgetSimulator = lazy(() => import('./components/AndroidWidgetSimulator').then(m => ({ default: m.AndroidWidgetSimulator })));
 import { translate, SA_LANGUAGES } from './utils/translations';
-import { KlevaBot } from './components/KlevaBot';
-import { GlobalRadarBackground } from './components/GlobalRadarBackground';
+const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
+const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-const CommerceCenter = lazy(() => import('./components/CommerceCenter').then(m => ({ default: m.CommerceCenter })));
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
 import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
-import { DecoyCalculator } from './components/DecoyCalculator';
+const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
+const slide1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide2 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import slide3 from './assets/images/regenerated_image_1784546645212.png';
-import slLogoMain from './assets/safetylink-metallic.svg';
-import slLogoSet from './assets/images/sl_logoset.jpeg';
-import newBg1 from './assets/images/background1.jpeg';
-const newLogo1 = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
-const klevaLogo = '/media/kleva_logo/Kleva.svg';
-const polishLogo = '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const slLogoMain = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slLogoSet = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+import newBg1 from './assets/images/regenerated_image_1784546645212.png';
+const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const klevaLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png';
+const polishLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
 type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
 
+const TrialLockOverlay = () => {
+  const { logout } = useAppStore();
+  return (
+    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6">
+      <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-2xl p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]">
+        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-black mb-4 tracking-tight">System Locked</h1>
+        <p className="text-slate-300 text-lg mb-8 leading-relaxed">
+          Your 14-day SafetyLink trial has concluded. The system has automatically locked your account's access.
+        </p>
+        <div className="bg-black/40 p-4 rounded-xl text-sm text-slate-400 font-mono mb-8">
+          ERROR CODE: TRIAL_EXPIRED
+        </div>
+        <a href="mailto:info@safetylink.online" className="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-xl transition-colors w-full mb-4">
+          Contact Sales to Unlock
+        </a>
+        <button onClick={logout} className="text-slate-500 text-sm font-bold hover:text-white underline">Sign Out</button>
+      </div>
+    </div>
+  );
+};
+
+
+const TrialReminderModal = () => {
+  const { currentUser, currentOrg, showTrialReminder, setShowTrialReminder } = useAppStore();
+  
+  if (!showTrialReminder) return null;
+  
+  const target = currentOrg || currentUser;
+  if (!target || target.subscriptionStatus !== 'trial') return null;
+
+  const daysPassed = Math.floor((Date.now() - (target.createdAt || Date.now())) / (1000 * 60 * 60 * 24));
+  const daysLeft = Math.max(0, 14 - daysPassed);
+
+  return (
+    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-sm p-6">
+      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300" />
+        <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2">Free Trial Active</h2>
+        <p className="text-slate-400 mb-6 text-sm">
+          You are currently using the SafetyLink Free Trial. Upgrade to premium for unlimited access to all features.
+        </p>
+        
+        <div className="bg-slate-950 rounded-2xl p-4 mb-8 border border-slate-800">
+          <div className="text-4xl font-black text-amber-400 mb-1">{daysLeft}</div>
+          <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Days Remaining</div>
+        </div>
+
+        <button 
+          onClick={() => setShowTrialReminder(false)}
+          className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl transition-all"
+        >
+          Continue to Dashboard
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const App: React.FC = () => {
+  // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
+  // Check if running in a desktop EXE (Electron) environment
+  const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
+  // Only show landing page initially on actual web browsers
+  const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web' && !isDesktopExe && window.location.pathname === '/');
+  const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG' | 'REGISTER_USER'>('LOGIN');
+  const [trialExpired, setTrialExpired] = useState(false);
+
+
+
   const [isSosActive, setIsSosActive] = useState(false);
 
   // The custom hook catches the Native Kotlin BLE Broadcast
@@ -98,8 +184,60 @@ const App: React.FC = () => {
     setFloatingWidgetDeployed,
     demoMode,
     localOfflineQueue,
-    syncOfflineQueue
+    syncOfflineQueue,
+    checkAppUpdates,
+    updateInfo,
+    globalTheme
   } = useAppStore();
+
+  useEffect(() => {
+    checkAppUpdates();
+    initFirebaseSync();
+    
+    // Initialize real-time mesh node sync if firestore sync is active
+    let cleanupSync: any = null;
+    const { firestoreSync, currentUser } = useAppStore.getState();
+    if (firestoreSync && currentUser) {
+      cleanupSync = useAppStore.getState().initMeshSync();
+    }
+    
+    // Watch for toggle changes
+    const unsub = useAppStore.subscribe((state, prevState) => {
+       if ((state.firestoreSync !== prevState.firestoreSync || state.currentUser?.id !== prevState.currentUser?.id) && state.firestoreSync && state.currentUser) {
+          if (cleanupSync) cleanupSync();
+          cleanupSync = state.initMeshSync();
+       } else if (!state.firestoreSync && cleanupSync) {
+          cleanupSync();
+          cleanupSync = null;
+       }
+    });
+    
+    const checkTrial = () => {
+      const target = currentOrg || currentUser;
+      if (target && target.subscriptionStatus === 'trial') {
+        const daysPassed = Math.floor((Date.now() - (target.createdAt || Date.now())) / (1000 * 60 * 60 * 24));
+        if (daysPassed >= 14) {
+          setTrialExpired(true);
+        } else {
+          setTrialExpired(false);
+        }
+      } else if (target && target.subscriptionStatus === 'locked') {
+        setTrialExpired(true);
+      } else {
+        setTrialExpired(false);
+      }
+    };
+    checkTrial();
+    
+    // Fallback original event listener
+    const handleTrialExpired = () => setTrialExpired(true);
+    window.addEventListener('trial_expired', handleTrialExpired);
+    return () => { 
+      window.removeEventListener('trial_expired', handleTrialExpired);
+      if (cleanupSync) cleanupSync(); 
+      unsub(); 
+    };
+  }, [currentUser, currentOrg]);
   
   const t = (key: string) => {
     if (key === 'tab.deck') return 'Control Deck';
@@ -109,8 +247,15 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
-  useEffect(() => { const timer = setTimeout(() => setShowSplash(false), 7000); return () => clearTimeout(timer); }, []);
+  const [showSplash, setShowSplash] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 7000);
+    // Hide native splash screen once React has mounted and our custom cinematic splash is ready
+    if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide().catch(console.warn);
+    }
+    return () => clearTimeout(timer);
+  }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
@@ -162,7 +307,9 @@ const App: React.FC = () => {
       }
     });
 
-    const backButtonListener = CapacitorApp.addListener('backButton', () => {
+    let backButtonListenerPromise: Promise<{ remove: () => void }> | null = null;
+    try {
+      backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
       // 4. Block Back Button during SOS
       if (isSosActive) {
         console.warn("Back button blocked: SOS Countdown is active.");
@@ -179,9 +326,14 @@ const App: React.FC = () => {
         }
       }
     });
+    } catch (e) {
+      console.warn("backButton not supported", e);
+    }
     return () => {
       urlOpenListener.then(listener => listener.remove());
-      backButtonListener.then(listener => listener.remove());
+      if (backButtonListenerPromise) {
+        backButtonListenerPromise.then(listener => listener.remove());
+      }
     };
   }, [isDrawerOpen, activeTab, isSosActive]);
 
@@ -293,19 +445,45 @@ const App: React.FC = () => {
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
     if (decoyActive) {
-      return <DecoyCalculator />;
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
     }
 
     if (superAdminActive) {
       return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
     }
 
-    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder'].includes(currentUser.role || ''))) {
+    if (currentUser && currentUser.orgCode && currentUser.role === 'Responder') {
+      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Responder Console...</div>}><ResponderDashboard /></Suspense>;
+    }
+
+    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
     }
 
     if (!currentUser) {
-      return <AuthScreen />;
+      if (showLanding) {
+        return <LandingPage 
+          onLogin={() => {
+            setAuthInitialView('LOGIN');
+            setShowLanding(false);
+            setShowSplash(true);
+            setTimeout(() => setShowSplash(false), 7000);
+          }} 
+          onRegisterOrg={() => {
+            setAuthInitialView('REGISTER_ORG');
+            setShowLanding(false);
+            setShowSplash(true);
+            setTimeout(() => setShowSplash(false), 7000);
+          }} 
+          onRegisterUser={() => {
+            setAuthInitialView('REGISTER_USER');
+            setShowLanding(false);
+            setShowSplash(true);
+            setTimeout(() => setShowSplash(false), 7000);
+          }}
+        />;
+      }
+      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
 
@@ -315,7 +493,7 @@ const App: React.FC = () => {
 
       
       {showExitConfirm && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
               <span className="text-2xl">🚪</span>
@@ -401,7 +579,7 @@ const App: React.FC = () => {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="appearance-none bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+              className="appearance-none bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
             >
               <option value="en">English</option>
               <option value="ve">Tshivenda</option>
@@ -456,12 +634,17 @@ const App: React.FC = () => {
                     <span className="text-lg">📡</span>
                     <div className="text-left">
                       <p className="text-[10px] font-bold text-amber-400">OFFLINE SYNC PENDING</p>
-                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} panic events waiting for network.</p>
+                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} {localOfflineQueue.length === 1 ? 'event' : 'events'} waiting for network.</p>
                     </div>
                   </div>
-                  <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
-                    RETRY
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
+                      RETRY
+                    </button>
+                    <button onClick={() => useAppStore.setState({ localOfflineQueue: [] })} className="text-[8px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+                      CLEAR
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -532,7 +715,7 @@ const App: React.FC = () => {
           {activeTab === 'deck' && (
             <div className="space-y-5 animate-fadeIn">
               {/* Location telemetry display */}
-              <LocationDisplay />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Location...</div>}><LocationDisplay /></Suspense>
 
               {/* Status metrics bar */}
               <StatusIndicator />
@@ -541,10 +724,10 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading AI Hub...</div>}><AIHub /></Suspense>
 
               {/* Informational Media & Resources Hub (TM Media Solutions) */}
-              <MediaHub />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Media...</div>}><MediaHub /></Suspense>
 
               {/* Interactive Home Screen SOS Widget */}
-              {demoMode && <AndroidWidgetSimulator />}
+              {demoMode && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Simulator...</div>}><AndroidWidgetSimulator /></Suspense>}
 
               {/* Dynamic Pushed Tools & Settings */}
               {(() => {
@@ -628,7 +811,7 @@ const App: React.FC = () => {
 
           {activeTab === 'ble' && (
             <div className="animate-fadeIn">
-              <BLEScanner />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Scanner...</div>}><BLEScanner /></Suspense>
             </div>
           )}
 
@@ -641,7 +824,7 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'profile' && (
-            <Profile />
+            <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Profile...</div>}><Profile /></Suspense>
           )}
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
@@ -683,7 +866,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/80 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
+              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
@@ -856,6 +1039,44 @@ const App: React.FC = () => {
                     </div>
                   </button>
 
+                  <button
+                    onClick={() => { setActiveTab('super'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
+                      activeTab === 'super'
+                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🔮</span>
+                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Super Admin</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('warroom'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
+                      activeTab === 'warroom'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">⚔️</span>
+                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Org War Room</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setShowLanding(true); setIsDrawerOpen(false); }}
+                    className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-colors text-slate-400 hover:bg-slate-900/50 cursor-pointer`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div className="text-left flex-1">
+                      <div className="font-black text-sm uppercase tracking-wider text-slate-200">Public Website</div>
+                      <div className="text-[10px] text-slate-500">View products & pricing</div>
+                    </div>
+                  </button>
+                  
+
                   {demoMode && (
                   
                   <>
@@ -997,60 +1218,43 @@ const App: React.FC = () => {
   };
 
   const getThemeClass = () => {
-    if (superAdminActive) return 'theme-admin';
-    if (currentOrg) return 'theme-org';
-    if (currentUser) {
-      return currentUser.orgCode ? 'theme-responder' : 'theme-personal';
+    let base = 'theme-personal';
+    if (activeTab === 'deck') {
+      base = currentUser?.orgCode ? 'theme-responder' : 'theme-personal';
     }
-    return 'theme-personal';
+    return globalTheme === 'light' ? `${base} theme-light` : base;
   };
 
   return (
-    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+    <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      {trialExpired && <TrialLockOverlay />}
+      {updateInfo?.available && (
+        <div className="w-full bg-emerald-600/90 text-white text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 backdrop-blur-md cursor-pointer" onClick={() => window.open(updateInfo.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest', '_blank')}>
+          <span>🚀 Update Available: v{updateInfo.version} - Click to Download</span>
+        </div>
+      )}
+      <TrialReminderModal />
 
       {/* High fidelity cyber background lighting elements */}
-      {showSplash && (
-        <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video
-            autoPlay
-            muted
-            playsInline
-            onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)}
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="/media/safetylink_startup.mp4" type="video/mp4" />
-          </video>
-        </div>
-      )}
-      <div className="police-wash pointer-events-none" />
       
-      <div className="flare-line-container pointer-events-none">
-        <div className="flare-line flare-line-1" />
-        <div className="flare-line flare-line-2" />
-      </div>
+      
+      
 
-      {activeTab === 'deck' && !currentOrg && <GlobalRadarBackground />}
+      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
       {/* Background Video */}
       {(activeTab === 'home' && !currentOrg) && (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
-        >
-          <source src="/media/Scene_Setup_vertical_.mp4" type="video/mp4" />
-        </video>
-      )}
-      {demoMode && (
-        <div className="demo-simulated-overlay select-none pointer-events-none">
-          <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
-        </div>
+        <>
+          
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-4 py-2 rounded-2xl text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10 text-center flex flex-col leading-relaxed">
+            <span>EXPERIMENTAL LIVE MODE • SIMULATED</span><span>BROADCAST LINKS</span>
+          </div>
+        </>
       )}
 
       {/* Persistent System Status Bar & Background Notification Tray */}
 
       {/* High-Priority Emergency Overlay */}
+      <TrialBanner />
       <ForcedCountdownOverlay />
       <SosCountdownOverlay 
         isActive={isSosActive}
@@ -1064,7 +1268,7 @@ const App: React.FC = () => {
       <LizzyPopup />
 
       {/* Primary Dynamic App Screen Container */}
-      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden z-10">
+      <div className="flex-1 relative flex flex-col z-10">
         {renderMainBody()}
       </div>
 
@@ -1112,13 +1316,12 @@ const App: React.FC = () => {
       </div>
 
       {/* Floating Lizzy - K'lev.ai South African Safety Assistant Bot */}
-      <KlevaBot />
+      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Bot...</div>}><KlevaBot /></Suspense>
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
-      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Commerce...</div>}><CommerceCenter /></Suspense>
       <FirstLaunchDisclaimer />
 
     </div>
