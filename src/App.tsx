@@ -3,6 +3,10 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
+
+const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
+const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
+
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
 import { initFirebaseSync } from './services/FirebaseSyncService';
@@ -243,14 +247,12 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 7000);
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
     if (Capacitor.isNativePlatform()) {
       SplashScreen.hide().catch(console.warn);
     }
-    return () => clearTimeout(timer);
   }, []);
   
   const [showTour, setShowTour] = useState<boolean>(false);
@@ -290,51 +292,54 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    const urlOpenListener = CapacitorApp.addListener('appUrlOpen', data => {
-      console.log('App opened with URL:', data);
-      try {
-        const url = new URL(data.url);
-        if (url.searchParams.has('ref')) {
-          const refCode = url.searchParams.get('ref');
-          if (refCode) localStorage.setItem('sl_pending_referral', refCode);
-        }
-      } catch (e) {
-        console.warn('Failed to parse incoming deep link url:', e);
-      }
-    });
-
+    let urlOpenListener: Promise<{ remove: () => void }> | null = null;
     let backButtonListenerPromise: Promise<{ remove: () => void }> | null = null;
-    try {
-      backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
-      // 4. Block Back Button during SOS
-      if (isSosActive) {
-        console.warn("Back button blocked: SOS Countdown is active.");
-        return;
-      }
 
-      if (isDrawerOpen) {
-        setIsDrawerOpen(false);
-      } else if (activeTab !== 'home') {
-        setActiveTab('home');
-      } else {
-        if (true) {
-          setShowExitConfirm(true);
+    if (Capacitor.isNativePlatform()) {
+      urlOpenListener = CapacitorApp.addListener('appUrlOpen', data => {
+        console.log('App opened with URL:', data);
+        try {
+          const url = new URL(data.url);
+          if (url.searchParams.has('ref')) {
+            const refCode = url.searchParams.get('ref');
+            if (refCode) localStorage.setItem('sl_pending_referral', refCode);
+          }
+        } catch (e) {
+          console.warn('Failed to parse incoming deep link url:', e);
         }
+      });
+
+      try {
+        backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
+          // 4. Block Back Button during SOS
+          if (isSosActive) {
+            console.warn("Back button blocked: SOS Countdown is active.");
+            return;
+          }
+          if (isDrawerOpen) {
+            setIsDrawerOpen(false);
+          } else if (activeTab !== 'home') {
+            setActiveTab('home');
+          } else {
+            if (true) {
+              setShowExitConfirm(true);
+            }
+          }
+        });
+      } catch (e) {
+        console.warn("backButton not supported", e);
       }
-    });
-    } catch (e) {
-      console.warn("backButton not supported", e);
     }
+
     return () => {
-      urlOpenListener.then(listener => listener.remove());
+      if (urlOpenListener) urlOpenListener.then(listener => listener.remove());
       if (backButtonListenerPromise) {
         backButtonListenerPromise.then(listener => listener.remove());
       }
     };
   }, [isDrawerOpen, activeTab, isSosActive]);
-
-  useEffect(() => {
-    // Bootstrap tracking and simulated BLE hardware listeners on mount
+ 
+   useEffect(() => {
     const geoService = GeolocationService.getInstance();
     OfflineService.getInstance(); // Initialize offline listeners
     
@@ -462,20 +467,20 @@ const App: React.FC = () => {
           onLogin={() => {
             setAuthInitialView('LOGIN');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }} 
           onRegisterOrg={() => {
             setAuthInitialView('REGISTER_ORG');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }} 
           onRegisterUser={() => {
             setAuthInitialView('REGISTER_USER');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }}
         />;
       }
@@ -512,7 +517,7 @@ const App: React.FC = () => {
 
       {/* App Tour Overlay */}
       {showTour && (
-        <AppTour
+        <Suspense fallback={<div className="hidden"></div>}><AppTour
           onClose={(neverShowAgain) => {
             if (neverShowAgain) {
               localStorage.setItem('sl_skip_tour', 'true');
@@ -520,6 +525,7 @@ const App: React.FC = () => {
             setShowTour(false);
           }}
         />
+        </Suspense>
       )}
 
       {/* Top Banner Alert during SOS Distress Broadcast */}
@@ -1034,6 +1040,31 @@ const App: React.FC = () => {
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Preferences & Ledger</p>
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => { setActiveTab('super'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
+                      activeTab === 'super'
+                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🔮</span>
+                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Super Admin</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('warroom'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
+                      activeTab === 'warroom'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">⚔️</span>
+                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Org War Room</span>
+                  </button>
+
                   <button
                     onClick={() => { setShowLanding(true); setIsDrawerOpen(false); }}
                     className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-colors text-slate-400 hover:bg-slate-900/50 cursor-pointer`}
@@ -1207,11 +1238,7 @@ const App: React.FC = () => {
       <TrialReminderModal />
 
       {/* High fidelity cyber background lighting elements */}
-      {showSplash && (
-        <div className="fixed inset-0 z-[999999] bg-black flex items-center justify-center">
-          <video src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4" autoPlay muted playsInline onEnded={() => setShowSplash(false)} onError={() => setShowSplash(false)} className="absolute inset-0 w-full h-full object-contain" />
-        </div>
-      )}
+      
       
       
 
