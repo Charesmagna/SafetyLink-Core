@@ -249,7 +249,7 @@ const App: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 7000);
+    const timer = 
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
     if (Capacitor.isNativePlatform()) {
       SplashScreen.hide().catch(console.warn);
@@ -466,20 +466,20 @@ const App: React.FC = () => {
           onLogin={() => {
             setAuthInitialView('LOGIN');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }} 
           onRegisterOrg={() => {
             setAuthInitialView('REGISTER_ORG');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }} 
           onRegisterUser={() => {
             setAuthInitialView('REGISTER_USER');
             setShowLanding(false);
-            setShowSplash(true);
-            setTimeout(() => setShowSplash(false), 7000);
+            
+            
           }}
         />;
       }
@@ -516,7 +516,7 @@ const App: React.FC = () => {
 
       {/* App Tour Overlay */}
       {showTour && (
-        <AppTour
+        <Suspense fallback={<div className="hidden"></div>}><AppTour
           onClose={(neverShowAgain) => {
             if (neverShowAgain) {
               localStorage.setItem('sl_skip_tour', 'true');
@@ -524,6 +524,7 @@ const App: React.FC = () => {
             setShowTour(false);
           }}
         />
+        </Suspense>
       )}
 
       {/* Top Banner Alert during SOS Distress Broadcast */}
