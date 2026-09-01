@@ -20,6 +20,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[SafetyLink ErrorBoundary]', error, info);
+    // Integrate commercial crash reporting (e.g., Sentry / Firebase Crashlytics)
+    try {
+      if (window && (window as any).Sentry) {
+        (window as any).Sentry.captureException(error, { extra: info });
+      }
+    } catch (e) {
+      console.warn('Failed to send crash report to analytics hook.', e);
+    }
   }
 
   render() {

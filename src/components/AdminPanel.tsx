@@ -5,15 +5,17 @@ import { sendTestEvent } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 
-import slide1 from '../assets/images/safetylink_officer_phone_1783207722148.jpg';
-import slide2 from '../assets/images/safetylink_team_tablet_1783207733837.jpg';
+const slide1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide2 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 import slide3 from '../assets/images/regenerated_image_1784546645212.png';
-import slide4 from '../assets/images/safetylink_control_center_1783424754132.jpg';
-import slide5 from '../assets/images/safetylink_campus_patrol_1783424770332.jpg';
-import newBg1 from '../assets/images/background1.jpeg';
-import newLogo1 from '/media/new_logo/New_SafetyLink_Official_Logo.svg';
+const slide4 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const slide5 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+import newBg1 from '../assets/images/regenerated_image_1784546645212.png';
+const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES';
+type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE';
+
+import { EvidenceLedger } from './EvidenceLedger';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -35,16 +37,7 @@ export const AdminPanel: React.FC = () => {
     customTools,
     addCustomTool,
     deleteCustomTool,
-    supabaseUrl,
-    setSupabaseUrl,
-    supabaseAnonKey,
-    setSupabaseAnonKey,
-    tuyaConfig,
-    setTuyaConfig,
-    auraApiUrl,
-    setAuraApiUrl,
-    connectyCubeConfig,
-    setConnectyCubeConfig
+    adminUpdateSubscription,
   } = useAppStore();
 
   const userCountsByOrg = useMemo(() => {
@@ -63,21 +56,10 @@ export const AdminPanel: React.FC = () => {
   const adminSlides = [newBg1, newLogo1, slide3, slide4, slide5, slide1, slide2];
   const [currentSlide, setCurrentSlide] = useState(0);
   const [backendUrlInput, setBackendUrlInput] = useState(customBackendUrl);
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(supabaseUrl || '');
-  const [supabaseAnonKeyInput, setSupabaseAnonKeyInput] = useState(supabaseAnonKey || '');
-  
-  const [tuyaClientId, setTuyaClientId] = useState(tuyaConfig?.clientId || '');
-  const [tuyaSecret, setTuyaSecret] = useState(tuyaConfig?.secret || '');
-  const [tuyaBaseUrl, setTuyaBaseUrl] = useState(tuyaConfig?.baseUrl || '');
-  
-  const [auraUrlInput, setAuraUrlInput] = useState(auraApiUrl || '');
-  
-  const [ccAppId, setCcAppId] = useState(connectyCubeConfig?.appId?.toString() || '');
-  const [ccAuthKey, setCcAuthKey] = useState(connectyCubeConfig?.authKey || '');
-  const [ccAuthSecret, setCcAuthSecret] = useState(connectyCubeConfig?.authSecret || '');
-  const [ccApi, setCcApi] = useState(connectyCubeConfig?.apiEndpoint || '');
-  const [ccChat, setCcChat] = useState(connectyCubeConfig?.chatEndpoint || '');
 
+  useEffect(() => {
+    useAppStore.getState().fetchSuperAdminData();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -88,10 +70,46 @@ export const AdminPanel: React.FC = () => {
 
   const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
+  
+  // OTA Release state
+  const [githubToken, setGithubToken] = useState('');
+  const [releaseStatus, setReleaseStatus] = useState<'idle' | 'triggering' | 'ok' | 'fail'>('idle');
+
+  const triggerRelease = async () => {
+    if (!githubToken) return;
+    setReleaseStatus('triggering');
+    try {
+      const workflows = ['build-apk.yml', 'build-electron.yml', 'deploy-safetylink-web.yml'];
+      let allOk = true;
+      for (const wf of workflows) {
+        const res = await fetch(`https://api.github.com/repos/Charesmagna/SafetyLink-Core/actions/workflows/${wf}/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': `Bearer ${githubToken.trim()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ref: 'main' })
+        });
+        if (!res.ok) {
+          allOk = false;
+        }
+      }
+      setReleaseStatus(allOk ? 'ok' : 'fail');
+      addAuditLog('SYSTEM', allOk ? 'INFO' : 'WARN', allOk ? 'OTA Release Workflows Triggered' : 'OTA Release Workflows Failed', '');
+      setTimeout(() => setReleaseStatus('idle'), 5000);
+    } catch (err) {
+      setReleaseStatus('fail');
+      setTimeout(() => setReleaseStatus('idle'), 5000);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<AdminTab>('OVERVIEW');
   const [searchTerm, setSearchTerm] = useState('');
   const [orgFilter, setOrgFilter] = useState('');
+
+  const activePanicEventsCount = useMemo(() => panicEvents.filter(p => p.status !== 'RESOLVED').length, [panicEvents]);
+  const globalCustomTools = useMemo(() => customTools.filter(t => !t.targetOrgId), [customTools]);
 
   // Custom tool form state
   const [newToolTitle, setNewToolTitle] = useState('');
@@ -105,6 +123,7 @@ export const AdminPanel: React.FC = () => {
   const [editUserPhone, setEditUserPhone] = useState('');
   const [editUserEmail, setEditUserEmail] = useState('');
   const [editUserOrgCode, setEditUserOrgCode] = useState('');
+  const [editUserLiveSms, setEditUserLiveSms] = useState(false);
 
   // Editing Org States
   const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
@@ -119,6 +138,7 @@ export const AdminPanel: React.FC = () => {
     setEditUserPhone(u.phone);
     setEditUserEmail(u.email);
     setEditUserOrgCode(u.orgCode);
+    setEditUserLiveSms(u.liveSmsEnabled ?? false);
   };
 
   const handleSaveUser = (id: string) => {
@@ -126,7 +146,8 @@ export const AdminPanel: React.FC = () => {
       fullName: editUserFullName,
       phone: editUserPhone,
       email: editUserEmail,
-      orgCode: editUserOrgCode
+      orgCode: editUserOrgCode,
+      liveSmsEnabled: editUserLiveSms
     });
     setEditingUserId(null);
     addAuditLog('SECURITY', 'INFO', `Admin updated user record ${id}`);
@@ -230,6 +251,28 @@ export const AdminPanel: React.FC = () => {
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'OVERVIEW' && (
           <div className="space-y-6 animate-fadeIn text-left">
+            
+            {/* CI/CD Build Status */}
+            <div className="glass-panel p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-l-emerald-500">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center text-emerald-500 text-xl">
+                  <i className="fa-brands fa-github"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-200">Pipeline Status: SafetyLink Core</h3>
+                  <p className="text-xs text-slate-400 mt-1">Live tracking of GitHub Actions CI/CD deployment pipeline.</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <a href="https://github.com/Charesmagna/SafetyLink-Core/actions" target="_blank" rel="noreferrer">
+                  <img src="https://github.com/Charesmagna/SafetyLink-Core/actions/workflows/build-apk.yml/badge.svg" alt="Build APK Status" className="h-5" />
+                </a>
+                <a href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest" target="_blank" rel="noreferrer" className="text-[10px] font-mono text-amber-500 hover:text-amber-400 hover:underline">
+                  Download Latest Artifact →
+                </a>
+              </div>
+            </div>
+
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="glass-panel p-5 space-y-1">
@@ -246,8 +289,8 @@ export const AdminPanel: React.FC = () => {
 
               <div className="glass-panel p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Active Alerts</span>
-                <span className={`text-2xl font-black font-mono ${panicEvents.filter(p => p.status !== 'RESOLVED').length > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
-                  {panicEvents.filter(p => p.status !== 'RESOLVED').length}
+                <span className={`text-2xl font-black font-mono ${activePanicEventsCount > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
+                  {activePanicEventsCount}
                 </span>
                 <p className="text-[9px] text-slate-400">Real-time GPS tracking</p>
               </div>
@@ -309,6 +352,35 @@ export const AdminPanel: React.FC = () => {
               </div>
               {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your ThingsBoard device.</p>}
               {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach ThingsBoard. Check the token and your connection.</p>}
+            </div>
+
+            {/* OTA Release Management */}
+            <div className="glass-panel p-6 space-y-4 text-left">
+              <div>
+                <h3 className="text-sm font-bold text-slate-200">Over-The-Air (OTA) Release Management</h3>
+                <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                  Trigger the GitHub Actions workflows to build and publish a new release of SafetyLink (APK, EXE, and Web).
+                  Requires a GitHub Personal Access Token with repo workflow permissions.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="password"
+                  value={githubToken}
+                  onChange={(e) => setGithubToken(e.target.value)}
+                  placeholder="GitHub Personal Access Token (PAT)"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
+                />
+                <button
+                  disabled={!githubToken || releaseStatus === 'triggering'}
+                  onClick={triggerRelease}
+                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors whitespace-nowrap"
+                >
+                  {releaseStatus === 'triggering' ? 'TRIGGERING...' : 'PUBLISH RELEASE'}
+                </button>
+              </div>
+              {releaseStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Workflows triggered successfully. Check the GitHub Actions tab.</p>}
+              {releaseStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to trigger workflows. Ensure your PAT has the correct permissions.</p>}
             </div>
 
             {/* Recent Activity Logs */}
@@ -422,6 +494,15 @@ export const AdminPanel: React.FC = () => {
                               placeholder="e.g. SL-ORG-8492"
                             />
                           </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <input
+                              type="checkbox"
+                              checked={editUserLiveSms}
+                              onChange={e => setEditUserLiveSms(e.target.checked)}
+                              className="accent-amber-500"
+                            />
+                            <label className="text-xs text-slate-400 font-bold">ENABLE LIVE SMS FOR THIS USER</label>
+                          </div>
 
                           <div className="flex justify-end gap-2 pt-1">
                             <button onClick={() => setEditingUserId(null)} className="text-[10px] text-slate-400 hover:text-slate-200">Cancel</button>
@@ -437,12 +518,19 @@ export const AdminPanel: React.FC = () => {
                               </div>
                               <div>
                                 <h4 className="text-xs font-black text-slate-100">{u.fullName}</h4>
-                                <p className="text-[10px] font-mono text-slate-400">@{u.username}</p>
+                                
+  <p className="text-[10px] font-mono text-slate-400">@{u.username}</p>
+  <p className="text-[8px] font-bold mt-1 uppercase tracking-wider" style={{ color: u.subscriptionStatus === 'active' ? '#10b981' : u.subscriptionStatus === 'trial' ? '#f59e0b' : '#ef4444' }}>Status: {u.subscriptionStatus || 'active'}</p>
+
                               </div>
                             </div>
 
                             <div className="flex gap-2">
-                              <button onClick={() => handleEditUserClick(u)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
+                              
+  <button onClick={() => adminUpdateSubscription(u.id, 'user', u.subscriptionStatus === 'trial' ? 'active' : 'trial')} className="p-1 text-[9px] font-mono text-amber-400 hover:text-amber-300">{u.subscriptionStatus === 'trial' ? 'ACTIVATE' : 'TRIAL'}</button>
+  <button onClick={() => adminUpdateSubscription(u.id, 'user', u.subscriptionStatus === 'locked' ? 'active' : 'locked')} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">{u.subscriptionStatus === 'locked' ? 'UNLOCK' : 'LOCK'}</button>
+  <button onClick={() => handleEditUserClick(u)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
+
                               <button onClick={() => { if(confirm(`Delete ${u.fullName}?`)) deleteUserProfile(u.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
                             </div>
                           </div>
@@ -585,15 +673,25 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <div>
                                   <h4 className="text-xs font-black text-slate-100">{o.name}</h4>
-                                <span className="text-[8px] font-mono font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-500/10">
-                                  ID: {o.id}
-                                </span>
+                                
+  <span className="text-[8px] font-mono font-bold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-500/10">
+    ID: {o.id}
+  </span>
+  <span className="text-[8px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded-full border" style={{ color: o.subscriptionStatus === 'active' ? '#10b981' : o.subscriptionStatus === 'trial' ? '#f59e0b' : '#ef4444', borderColor: 'currentColor', marginLeft: '4px' }}>
+    STATUS: {o.subscriptionStatus || 'active'}
+  </span>
+
                               </div>
                             </div>
 
                             <div className="flex gap-2">
+                              <button onClick={() => { if(confirm(`Unlock trial for ${o.name}?`)) useAppStore.getState().unlockOrganizationTrial(o.id); }} className="p-1 text-[9px] font-mono text-emerald-400 hover:text-emerald-300">UNLOCK TRIAL</button>
                               <button onClick={() => handleEditOrgClick(o)} className="p-1 text-[9px] font-mono text-slate-400 hover:text-slate-200">EDIT</button>
-                              <button onClick={() => { if(confirm(`Delete ${o.name} and unbind its users?`)) deleteOrganization(o.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
+                              
+  <button onClick={() => adminUpdateSubscription(o.id, 'org', o.subscriptionStatus === 'trial' ? 'active' : 'trial')} className="p-1 text-[9px] font-mono text-amber-400 hover:text-amber-300">{o.subscriptionStatus === 'trial' ? 'ACTIVATE' : 'TRIAL'}</button>
+  <button onClick={() => adminUpdateSubscription(o.id, 'org', o.subscriptionStatus === 'locked' ? 'active' : 'locked')} className="p-1 text-[9px] font-mono text-purple-400 hover:text-purple-300">{o.subscriptionStatus === 'locked' ? 'UNLOCK' : 'LOCK'}</button>
+  <button onClick={() => { if(confirm(`Delete ${o.name} and unbind its users?`)) deleteOrganization(o.id); }} className="p-1 text-[9px] font-mono text-red-400 hover:text-red-300">DELETE</button>
+
                             </div>
                           </div>
 
@@ -622,6 +720,12 @@ export const AdminPanel: React.FC = () => {
         })()}
 
         {/* TAB 4: ACTIVE PANICS / DISTRESS FEED */}
+        {activeTab === 'EVIDENCE' && (
+          <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden p-2">
+            <EvidenceLedger />
+          </div>
+        )}
+
         {activeTab === 'PANICS' && (
           <div className="space-y-4 animate-fadeIn text-left">
             <div>
@@ -687,155 +791,29 @@ export const AdminPanel: React.FC = () => {
           <div className="space-y-6 animate-fadeIn text-left">
             {/* Thingsboard Section (Existing top settings block) */}
             
-            {/* Custom Supabase Server */}
+            
+            {/* Trial Settings */}
             <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Custom Supabase Platform Link</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your own remote Supabase project.
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Supabase URL (https://xyz.supabase.co)"
-                  value={supabaseUrlInput}
-                  onChange={e => setSupabaseUrlInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Supabase Anon Key"
-                  value={supabaseAnonKeyInput}
-                  onChange={e => setSupabaseAnonKeyInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setSupabaseUrl(supabaseUrlInput);
-                      setSupabaseAnonKey(supabaseAnonKeyInput);
-                      addAuditLog('SYSTEM', 'INFO', 'Supabase Configuration Updated', `URL set to ${supabaseUrlInput}`);
-                      window.location.reload();
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
+              <div>
+                <h3 className="text-sm font-bold text-slate-100 uppercase tracking-widest mb-1 flex items-center gap-2">
+                  <span className="text-[10px]">🎟️</span> TRIAL SYSTEM
+                </h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-4">Enable or disable the global 14-day trial banner for organizations</p>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => useAppStore.getState().setTrialEnabled(!useAppStore.getState().isTrialEnabled)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${useAppStore.getState().isTrialEnabled ? 'bg-amber-500' : 'bg-slate-700'}`}
                   >
-                    SAVE & RELOAD
+                    <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${useAppStore.getState().isTrialEnabled ? 'left-7' : 'left-1'}`} />
                   </button>
+                  <span className={`text-xs font-mono font-bold ${useAppStore.getState().isTrialEnabled ? 'text-amber-400' : 'text-slate-500'}`}>
+                    {useAppStore.getState().isTrialEnabled ? 'TRIAL SYSTEM ENABLED' : 'TRIAL SYSTEM DISABLED'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Tuya IoT Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Tuya Smart IoT Connectivity</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to a specific Tuya Cloud API.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-3">
-                  <input type="text" placeholder="Tuya Client ID" value={tuyaClientId} onChange={e => setTuyaClientId(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Tuya Secret" value={tuyaSecret} onChange={e => setTuyaSecret(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                  <input type="text" placeholder="Base URL (https://openapi.tuyaeu.com)" value={tuyaBaseUrl} onChange={e => setTuyaBaseUrl(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                </div>
-                <div className="flex justify-end">
-                  <button onClick={() => { setTuyaConfig({ clientId: tuyaClientId || undefined, secret: tuyaSecret || undefined, baseUrl: tuyaBaseUrl || undefined }); addAuditLog('SYSTEM', 'INFO', 'Tuya Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
-                </div>
-              </div>
-            </div>
-
-            {/* Aura Platform Integration */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">Aura Platform (Emergency Bridge)</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your custom Aura Platform for hardware BLE triggers.
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3">
-                <input type="text" placeholder="Aura API URL (e.g. https://api.auraplatform.com/v1/panic)" value={auraUrlInput} onChange={e => setAuraUrlInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500" />
-                <div className="flex justify-end">
-                  <button onClick={() => { setAuraApiUrl(auraUrlInput); addAuditLog('SYSTEM', 'INFO', 'Aura Configuration Updated'); window.location.reload(); }} className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all">SAVE & RELOAD</button>
-                </div>
-              </div>
-            </div>
-
-            {/* ConnectyCube Integrations */}
-            <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">ConnectyCube Communication Platform</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your own ConnectyCube chat and video APIs. Replaces hardcoded endpoints.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-3">
-                  <input
-                    type="number"
-                    placeholder="App ID (e.g. 10000)"
-                    value={ccAppId}
-                    onChange={e => setCcAppId(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Auth Key"
-                    value={ccAuthKey}
-                    onChange={e => setCcAuthKey(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Auth Secret"
-                    value={ccAuthSecret}
-                    onChange={e => setCcAuthSecret(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="API Endpoint (e.g. https://SafetyLink.connectycube.com)"
-                    value={ccApi}
-                    onChange={e => setCcApi(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Chat Endpoint (e.g. SafetyLink.connectycube.com)"
-                    value={ccChat}
-                    onChange={e => setCcChat(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setConnectyCubeConfig({
-                        appId: ccAppId ? parseInt(ccAppId, 10) : undefined,
-                        authKey: ccAuthKey || undefined,
-                        authSecret: ccAuthSecret || undefined,
-                        apiEndpoint: ccApi || undefined,
-                        chatEndpoint: ccChat || undefined
-                      });
-                      addAuditLog('SYSTEM', 'INFO', 'ConnectyCube Configuration Updated');
-                      window.location.reload();
-                    }}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all"
-                  >
-                    SAVE & RELOAD
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Custom Backend URL */}
+            {/* Custom Backend Server */}
             <div className="glass-panel p-5 md:p-6 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">Custom Backend Integration (API Route)</h3>
@@ -1010,13 +988,13 @@ export const AdminPanel: React.FC = () => {
                   </p>
                 </div>
 
-                {customTools.filter(t => !t.targetOrgId).length === 0 ? (
+                {globalCustomTools.length === 0 ? (
                   <div className="p-12 border border-dashed border-slate-800 rounded-2xl text-center">
                     <p className="text-xs text-slate-500 font-mono">No custom global tools have been created yet. Use the form on the left to add one.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {customTools.filter(t => !t.targetOrgId).map((t) => (
+                    {globalCustomTools.map((t) => (
                       <div key={t.id} className="p-4 bg-slate-950 border border-slate-850 rounded-2xl flex justify-between items-start gap-3 shadow-sm">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">

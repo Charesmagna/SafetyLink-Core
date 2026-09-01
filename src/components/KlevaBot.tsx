@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useAppStore } from "../utils/store";
 import { Send, X, MapPin, Volume2, VolumeX } from "lucide-react";
 import { getLizzyProvider } from '../services/LizzyAIProvider';
-const klevaLogo = '/media/kleva_logo/Kleva.svg';
+const klevaLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png';
 
 export const KlevaBot: React.FC = () => {
   const { addAuditLog } = useAppStore();

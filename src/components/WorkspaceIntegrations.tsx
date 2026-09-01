@@ -1,300 +1,233 @@
-import { useState, useEffect } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User } from 'firebase/auth';
+import { useState, useEffect } from "react";
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import firebaseConfig from '../../firebase-applet-config.json';
-
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
+import { Loader2, LogOut, Database, Mail, FormInput, FileUp } from 'lucide-react';
 
 const provider = new GoogleAuthProvider();
-const scopes = [
-  'https://www.googleapis.com/auth/drive',
-  'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/contacts',
-  'https://mail.google.com/',
-  'https://www.googleapis.com/auth/chat.messages',
-  'https://www.googleapis.com/auth/chat.spaces',
-  'https://www.googleapis.com/auth/calendar',
-  'https://www.googleapis.com/auth/tasks',
-  'https://www.googleapis.com/auth/forms.body.readonly',
-  'https://www.googleapis.com/auth/meetings.space.readonly'
-];
-scopes.forEach(scope => provider.addScope(scope));
 
-let cachedAccessToken: string | null = null;
+// Scopes required for Drive, Gmail, Forms, and Picker
+provider.addScope('https://www.googleapis.com/auth/drive');
+provider.addScope('https://www.googleapis.com/auth/drive.readonly');
+provider.addScope('https://mail.google.com/');
+provider.addScope('https://www.googleapis.com/auth/forms.body');
+provider.addScope('https://www.googleapis.com/auth/forms.responses.readonly');
+
 let isSigningIn = false;
+let cachedAccessToken: string | null = null;
 
-const WorkspacePanel = () => {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [log, setLog] = useState<string[]>([]);
+export const initAuth = (
+  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthFailure?: () => void
+) => {
+  return onAuthStateChanged(auth, async (user: User | null) => {
+    if (user) {
+      if (cachedAccessToken) {
+        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+      } else if (!isSigningIn) {
+        cachedAccessToken = null;
+        if (onAuthFailure) onAuthFailure();
+      }
+    } else {
+      cachedAccessToken = null;
+      if (onAuthFailure) onAuthFailure();
+    }
+  });
+};
+
+export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+  try {
+    isSigningIn = true;
+    const result = await signInWithPopup(auth, provider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential?.accessToken) {
+      throw new Error('Failed to get access token from Firebase Auth');
+    }
+    cachedAccessToken = credential.accessToken;
+    return { user: result.user, accessToken: cachedAccessToken };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+export const logout = async () => {
+  await signOut(auth);
+  cachedAccessToken = null;
+};
+
+export default function WorkspaceIntegrations() {
   const [needsAuth, setNeedsAuth] = useState(true);
-
-  const addLog = (msg: string) => setLog(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        if (cachedAccessToken) {
-          setAccessToken(cachedAccessToken);
-          setUser(u);
-          setNeedsAuth(false);
-          addLog('Authenticated via Firebase Auth.');
-        } else if (!isSigningIn) {
-          setNeedsAuth(true);
-        }
-      } else {
-        cachedAccessToken = null;
-        setNeedsAuth(true);
-      }
-    });
-    return () => unsubscribe();
+    const unsub = initAuth(
+      (u, t) => { setNeedsAuth(false); setUser(u); setToken(t); },
+      () => { setNeedsAuth(true); setUser(null); setToken(null); }
+    );
+    
+    // Load Google Picker API script
+    const script = document.createElement('script');
+    script.src = "https://apis.google.com/js/api.js";
+    script.onload = () => {
+       (window as any).gapi.load('picker', {'callback': () => { console.log('Picker loaded'); }});
+    };
+    document.body.appendChild(script);
+
+    return () => unsub();
   }, []);
 
   const handleLogin = async () => {
-    isSigningIn = true;
+    setIsLoggingIn(true);
     try {
-      addLog('Initiating sign in...');
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        cachedAccessToken = credential.accessToken;
-        setAccessToken(cachedAccessToken);
+      const result = await googleSignIn();
+      if (result) {
+        setToken(result.accessToken);
         setUser(result.user);
         setNeedsAuth(false);
-        addLog('OAuth authentication successful.');
-      } else {
-        addLog('Authentication failed: No access token');
       }
-    } catch (err: any) {
-      addLog('OAuth authentication failed: ' + err.message);
+    } catch (err) {
+      console.error('Login failed:', err);
     } finally {
-      isSigningIn = false;
+      setIsLoggingIn(false);
     }
   };
 
-  const testSheets = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
+  const handleLogout = async () => {
+    await logout();
+    setNeedsAuth(true);
+    setUser(null);
+    setToken(null);
+  };
+
+  const loadDriveFiles = async () => {
+    if (!token) return;
+    setIsLoadingDrive(true);
     try {
-      addLog('Testing Google Sheets API...');
-      const res = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ properties: { title: 'SafetyLink Export' } })
+      const res = await fetch('https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name,mimeType)', {
+        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      if (res.ok) {
-        addLog(`Created spreadsheet: ${data.spreadsheetUrl}`);
-      } else {
-        addLog(`Sheets error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Sheets test failed: ' + e.message);
+      setDriveFiles(data.files || []);
+    } catch (e) {
+      console.error(e);
     }
+    setIsLoadingDrive(false);
   };
 
-  const testContacts = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Contacts API...');
-      const res = await fetch('https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Fetched ${data.connections ? data.connections.length : 0} contacts.`);
-      } else {
-        addLog(`Contacts error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Contacts test failed: ' + e.message);
-    }
+  const openPicker = () => {
+    if (!token || !(window as any).google || !(window as any).google.picker) return;
+    
+    const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+    
+    const picker = new (window as any).google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(token)
+      .setDeveloperKey(firebaseConfig.apiKey)
+      .setCallback((data: any) => {
+        if (data[(window as any).google.picker.Response.ACTION] === (window as any).google.picker.Action.PICKED) {
+          const doc = data[(window as any).google.picker.Response.DOCUMENTS][0];
+          alert(`Selected: ${doc[(window as any).google.picker.Document.NAME]}`);
+        }
+      })
+      .build();
+    picker.setVisible(true);
   };
 
-  const testGmail = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Gmail API...');
-      const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Gmail profile fetched: ${data.emailAddress}`);
-      } else {
-        addLog(`Gmail error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Gmail test failed: ' + e.message);
-    }
-  };
-
-  const testChat = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Chat API...');
-      const res = await fetch('https://chat.googleapis.com/v1/spaces', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Chat spaces fetched: ${data.spaces ? data.spaces.length : 0} spaces.`);
-      } else {
-        addLog(`Chat error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Chat test failed: ' + e.message);
-    }
-  };
-
-  const testCalendar = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Calendar API...');
-      const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Fetched ${data.items ? data.items.length : 0} calendars.`);
-      } else {
-        addLog(`Calendar error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Calendar test failed: ' + e.message);
-    }
-  };
-
-  const testTasks = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Tasks API...');
-      const res = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Fetched ${data.items ? data.items.length : 0} task lists.`);
-      } else {
-        addLog(`Tasks error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Tasks test failed: ' + e.message);
-    }
-  };
-
-  const testForms = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Forms API (Creating form is restricted, so we use Drive to list forms)...');
-      const res = await fetch("https://www.googleapis.com/drive/v3/files?q=mimeType='application/vnd.google-apps.form'", {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Fetched ${data.files ? data.files.length : 0} forms.`);
-      } else {
-        addLog(`Forms error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Forms test failed: ' + e.message);
-    }
-  };
-
-  const testMeet = async () => {
-    if (!accessToken) return addLog('Please authenticate first.');
-    try {
-      addLog('Testing Google Meet API...');
-      const res = await fetch('https://meet.googleapis.com/v2/spaces', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      const data = await res.json();
-      if (res.ok) {
-        addLog(`Created Meet space: ${data.meetingUri}`);
-      } else {
-        addLog(`Meet error: ${data.error.message}`);
-      }
-    } catch (e: any) {
-      addLog('Meet test failed: ' + e.message);
-    }
-  };
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800">
-        <h3 className="text-blue-400 font-mono font-bold uppercase tracking-wider mb-2">🏢 Google Workspace Integration</h3>
-        <p className="text-slate-400 text-xs mb-6 max-w-2xl leading-relaxed">
-          Connect your Google Workspace account to SafetyLink. This allows exporting incident reports to Sheets, syncing responder Contacts, sending automated Gmail alerts, and broadcasting updates to Google Chat spaces.
-        </p>
-        
-        <div className="flex flex-wrap gap-4 mb-8">
-          <button
-            onClick={handleLogin}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs uppercase rounded shadow-lg transition-colors flex items-center gap-2"
-          >
-            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="w-4 h-4 bg-white rounded-full p-0.5">
+  if (needsAuth) {
+    return (
+      <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl">
+        <h3 className="text-sm font-bold text-slate-300 font-mono tracking-widest uppercase mb-4">Workspace Sync</h3>
+        <p className="text-xs text-slate-500 mb-6">Connect your Google Workspace to sync evidence, dispatch logs, and command forms automatically.</p>
+        <button onClick={handleLogin} disabled={isLoggingIn} className="w-full flex justify-center items-center gap-3 bg-white text-slate-900 hover:bg-slate-100 font-bold py-3 rounded-xl transition-all shadow-sm">
+          {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin text-slate-400" /> : (
+            <svg className="w-5 h-5" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
               <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
               <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
               <path fill="none" d="M0 0h48v48H0z"></path>
             </svg>
-            {user ? `Reconnect (${user.email})` : 'Sign in with Google'}
+          )}
+          Connect Workspace
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden font-mono">
+      <div className="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/40">
+            {user?.email?.[0].toUpperCase()}
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-200">{user?.email}</div>
+            <div className="text-[10px] text-emerald-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              ACTIVE SYNC
+            </div>
+          </div>
+        </div>
+        <button onClick={handleLogout} className="text-slate-500 hover:text-slate-300 p-2 rounded-full hover:bg-slate-800 transition-colors">
+          <LogOut size={16} />
+        </button>
+      </div>
+
+      <div className="p-4 grid grid-cols-2 gap-4">
+        {/* Drive Panel */}
+        <div className="col-span-2 sm:col-span-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3 text-slate-300">
+            <Database size={16} className="text-blue-400" />
+            <h4 className="text-xs font-bold uppercase tracking-wider">Drive Evidence</h4>
+          </div>
+          <button onClick={loadDriveFiles} className="w-full mb-3 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg font-bold uppercase transition-colors">
+            {isLoadingDrive ? 'Fetching...' : 'List Recent Files'}
+          </button>
+          <div className="space-y-2">
+            {driveFiles.map(f => (
+              <div key={f.id} className="text-[10px] truncate text-slate-400 bg-slate-900 px-2 py-1.5 rounded border border-slate-800">{f.name}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Picker Panel */}
+        <div className="col-span-2 sm:col-span-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3 text-slate-300">
+            <FileUp size={16} className="text-purple-400" />
+            <h4 className="text-xs font-bold uppercase tracking-wider">File Picker</h4>
+          </div>
+          <p className="text-[10px] text-slate-500 mb-4 leading-relaxed">Select specific incident reports or camera logs securely using Google Picker.</p>
+          <button onClick={openPicker} className="w-full text-[10px] bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 py-2 rounded-lg font-bold uppercase transition-colors">
+            Open File Picker
           </button>
         </div>
 
-        {accessToken && !needsAuth && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
-            <button onClick={testSheets} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-green-500 transition-colors text-center">
-              <div className="text-green-500 text-2xl mb-2">📊</div>
-              <div className="text-xs font-bold text-slate-300">Test Sheets</div>
-            </button>
-            <button onClick={testContacts} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-blue-400 transition-colors text-center">
-              <div className="text-blue-400 text-2xl mb-2">👥</div>
-              <div className="text-xs font-bold text-slate-300">Test Contacts</div>
-            </button>
-            <button onClick={testGmail} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-red-400 transition-colors text-center">
-              <div className="text-red-400 text-2xl mb-2">✉️</div>
-              <div className="text-xs font-bold text-slate-300">Test Gmail</div>
-            </button>
-            <button onClick={testChat} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-emerald-400 transition-colors text-center">
-              <div className="text-emerald-400 text-2xl mb-2">💬</div>
-              <div className="text-xs font-bold text-slate-300">Test Chat</div>
-            </button>
-
-            <button onClick={testCalendar} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-purple-500 transition-colors text-center">
-              <div className="text-purple-500 text-2xl mb-2">📅</div>
-              <div className="text-xs font-bold text-slate-300">Test Calendar</div>
-            </button>
-            <button onClick={testTasks} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-yellow-400 transition-colors text-center">
-              <div className="text-yellow-400 text-2xl mb-2">✅</div>
-              <div className="text-xs font-bold text-slate-300">Test Tasks</div>
-            </button>
-            <button onClick={testForms} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-indigo-400 transition-colors text-center">
-              <div className="text-indigo-400 text-2xl mb-2">📋</div>
-              <div className="text-xs font-bold text-slate-300">Test Forms</div>
-            </button>
-            <button onClick={testMeet} className="bg-slate-950 border border-slate-800 p-4 rounded-lg hover:border-teal-400 transition-colors text-center">
-              <div className="text-teal-400 text-2xl mb-2">📹</div>
-              <div className="text-xs font-bold text-slate-300">Test Meet</div>
-            </button>
+        {/* Gmail Panel */}
+        <div className="col-span-2 sm:col-span-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4 opacity-70">
+          <div className="flex items-center gap-2 mb-3 text-slate-300">
+            <Mail size={16} className="text-red-400" />
+            <h4 className="text-xs font-bold uppercase tracking-wider">Dispatch Mail</h4>
           </div>
-        )}
+          <p className="text-[10px] text-slate-500">Gmail integration active. System will dispatch SOS emails via your account.</p>
+        </div>
 
-        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400 h-48 overflow-y-auto">
-          <div className="text-slate-500 mb-2">// Integration Logs</div>
-          {log.map((l, i) => (
-            <div key={i} className="mb-1">{l}</div>
-          ))}
-          {log.length === 0 && <div>Ready to authenticate.</div>}
+        {/* Forms Panel */}
+        <div className="col-span-2 sm:col-span-1 bg-slate-950/50 border border-slate-800 rounded-xl p-4 opacity-70">
+          <div className="flex items-center gap-2 mb-3 text-slate-300">
+            <FormInput size={16} className="text-emerald-400" />
+            <h4 className="text-xs font-bold uppercase tracking-wider">Forms Sync</h4>
+          </div>
+          <p className="text-[10px] text-slate-500">Connected to Google Forms for emergency response questionnaires.</p>
         </div>
       </div>
     </div>
   );
-};
-
-export const WorkspaceIntegrations = () => {
-  return <WorkspacePanel />;
-};
+}

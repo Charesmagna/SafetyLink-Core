@@ -43,9 +43,3 @@ CREATE TABLE IF NOT EXISTS org_events (
     INDEX idx_org_events_status (status)
 ) WITH (primary_key_experimental_step = 'sharded_slots=8');
 
--- NOTE ON CREDENTIALS:
--- This schema assumes writes arrive via a server-side gateway, not directly
--- from the Android client. EmergencyService.java in this build currently
--- posts straight to the CockroachDB HTTP endpoint from the device — see the
--- TODO comment in that file. Before any production/public rollout, move
--- those calls behind a backend so DB credentials never ship inside the APK.

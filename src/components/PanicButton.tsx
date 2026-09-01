@@ -561,6 +561,8 @@ export const PanicButton: React.FC = () => {
         )}
       </div>
 
+
+
       {/* Watch-Me Setup Modal */}
       <AnimatePresence>
         {showWatchMe && (
@@ -685,6 +687,6 @@ export const PanicButton: React.FC = () => {
           onCallEnd={() => setShowDistressVideo(false)}
         />
       )}
-</motion.div>
+    </motion.div>
   );
 };

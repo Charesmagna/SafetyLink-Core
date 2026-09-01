@@ -15,7 +15,8 @@ export const TwilioService = {
     authToken: string,
     fromNumber: string,
     toNumber: string,
-    message: string
+    message: string,
+    liveSmsEnabled?: boolean
   ): Promise<boolean> => {
     try {
       const token = localStorage.getItem('sl_jwt_token') ? JSON.parse(localStorage.getItem('sl_jwt_token') as string) : null;
@@ -25,7 +26,7 @@ export const TwilioService = {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ phone: toNumber, message, accountSid, authToken, fromNumber }),
+        body: JSON.stringify({ phone: toNumber, message, accountSid, authToken, fromNumber, liveSmsEnabled }),
       });
       return r.ok;
     } catch (e) {

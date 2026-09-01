@@ -3,9 +3,8 @@ import { Database, RefreshCw, } from 'lucide-react';
 import { useAppStore } from '../utils/store';
 
 export const AdvancedOfflineSyncManager: React.FC = () => {
-  const { localOfflineQueue, syncOfflineQueue, addToast } = useAppStore();
+  const { localOfflineQueue, syncOfflineQueue, addToast, syncStrategy, setSyncStrategy } = useAppStore();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStrategy, setSyncStrategy] = useState<'immediate' | 'batch' | 'wifi-only'>('batch');
 
   const handleManualSync = () => {
     setIsSyncing(true);
@@ -54,17 +53,28 @@ export const AdvancedOfflineSyncManager: React.FC = () => {
               )}
             </div>
 
-            <button
-              onClick={handleManualSync}
-              disabled={isSyncing || localOfflineQueue.length === 0}
-              className={`w-full py-2 flex items-center justify-center gap-2 text-xs font-bold font-mono uppercase tracking-wider rounded-lg transition-colors
-                ${isSyncing ? 'bg-blue-900/50 text-blue-500 cursor-wait' : 
-                  localOfflineQueue.length > 0 ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}
-              `}
-            >
-              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Synchronizing...' : 'Force Manual Sync'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleManualSync}
+                disabled={isSyncing || localOfflineQueue.length === 0}
+                className={`flex-1 py-2 flex items-center justify-center gap-2 text-xs font-bold font-mono uppercase tracking-wider rounded-lg transition-colors
+                  ${isSyncing ? 'bg-blue-900/50 text-blue-500 cursor-wait' : 
+                    localOfflineQueue.length > 0 ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}
+                `}
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Synchronizing...' : 'Force Manual Sync'}
+              </button>
+              {localOfflineQueue.length > 0 && (
+                <button
+                  onClick={() => useAppStore.setState({ localOfflineQueue: [] })}
+                  className="px-4 py-2 flex items-center justify-center text-xs font-bold font-mono uppercase tracking-wider rounded-lg bg-red-900/30 text-red-500 hover:bg-red-900/50 hover:text-red-400 transition-colors border border-red-900/50"
+                  title="Clear Offline Queue"
+                >
+                  CLEAR
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-4">

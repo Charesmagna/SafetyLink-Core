@@ -85,7 +85,7 @@ export const AdvancedSubsystems: React.FC = () => {
   const [gpsIndoorsFailure, setGpsIndoorsFailure] = useState(false);
   
   // Cellular details
-  const [cellTower, setCellTower] = useState({ lac: 'LAC-4812', cid: 'CID-28091', signal: -78, towerName: 'Wits Senate House Annex Base' });
+  const [cellTower, setCellTower] = useState({ lac: 'LAC-4812', cid: 'CID-28091', signal: -78, towerName: 'Central Base Station' });
   const [bleWakeLogs, setBleWakeLogs] = useState<string[]>(['[00:00] Device boot. Wake-lock loop running.']);
 
   // Mesh States
@@ -248,7 +248,7 @@ export const AdvancedSubsystems: React.FC = () => {
       const randomToken = 'ZKP-' + Math.random().toString(36).substring(2, 10).toUpperCase() + '-WITS';
       setZkpToken(randomToken);
       setZkpDetailsExposed([
-        'Claim: Subscriber is Wits Student #4829',
+        'Claim: Subscriber is Registered Subscriber #4829',
         'Claim: Exposes High-Risk Cardiac Flag (Minimum necessary medical scope)',
         'Constraint: No raw medical allergies or home addresses leaked to server',
         'Validity Period: 60 minutes exactly (Auto-expires at ' + new Date(Date.now() + 3600000).toLocaleTimeString() + ')'
@@ -424,11 +424,11 @@ export const AdvancedSubsystems: React.FC = () => {
                 const failure = !gpsIndoorsFailure;
                 setGpsIndoorsFailure(failure);
                 if (failure) {
-                  setCellTower({ lac: 'LAC-9014', cid: 'CID-55102', signal: -94, towerName: 'Wits Senate House Basement Block B (50m Fallback)' });
+                  setCellTower({ lac: 'LAC-9014', cid: 'CID-55102', signal: -94, towerName: 'Central Base Station Sector B (50m Fallback)' });
                   addToast('GPS lost inside high-density concrete annex. Switched to Cellular Mast Triangulation!', 'warn');
                   addAuditLog('GPS', 'WARN', 'Satellite GNSS Obstructed', 'Failing over to cell tower trilateration boundary matrix.');
                 } else {
-                  setCellTower({ lac: 'LAC-4812', cid: 'CID-28091', signal: -78, towerName: 'Wits Senate House Annex Base' });
+                  setCellTower({ lac: 'LAC-4812', cid: 'CID-28091', signal: -78, towerName: 'Central Base Station' });
                   addToast('GPS lock re-acquired successfully.', 'success');
                 }
               }}

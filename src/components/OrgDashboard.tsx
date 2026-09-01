@@ -1,4 +1,4 @@
-import { WorkspaceIntegrations } from "./WorkspaceIntegrations";
+import WorkspaceIntegrations from "./WorkspaceIntegrations";
 import React, { useState, useMemo } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -13,6 +13,9 @@ import { NodeMeshOrchestration } from './NodeMeshOrchestration';
 import { IncidentReportingTemplates } from './IncidentReportingTemplates';
 import { AdvancedOfflineSyncManager } from './AdvancedOfflineSyncManager';
 import { MotherboardConsole } from './MotherboardConsole';
+import { GeospatialAnalytics } from './GeospatialAnalytics';
+
+import { EvidenceLedger } from './EvidenceLedger';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -35,14 +38,15 @@ export const OrgDashboard: React.FC = () => {
     approvePendingUser,
     rejectPendingUser,
     generateReferralCode,
+    isTrialEnabled,
   } = useAppStore();
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
   const isResponder = currentUser?.role === 'Responder';
-  const [activeSubTab, setActiveSubTab] = useState<'dispatch' | 'roster' | 'branding' | 'analytics' | 'twilio' | 'open-platforms' | 'mphakati-overwatch' | 'workspace' | 'referrals' | 'mesh-orchestration' | 'incident-reporting' | 'offline-sync'>('dispatch');
   const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSubTab, setActiveSubTab] = useState('dispatch');
   
   // Roster detailed editor state
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -58,7 +62,7 @@ export const OrgDashboard: React.FC = () => {
   const [editContactsList, setEditContactsList] = useState('');
 
   // Branding Form State (pre-populated from currentOrg values)
-  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || '/media/new_logo/New_SafetyLink_Official_Logo.svg');
+  const [brandLogoUrl, setBrandLogoUrl] = useState(currentOrg?.logoUrl || 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png');
   const [brandPrimaryColor, setBrandPrimaryColor] = useState(currentOrg?.primaryColor || '#10b981');
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(currentOrg?.secondaryColor || '#06b6d4');
   const [brandControlRoomNumber, setBrandControlRoomNumber] = useState(currentOrg?.controlRoomNumber || '+27829110000');
@@ -71,11 +75,6 @@ export const OrgDashboard: React.FC = () => {
   const [newToolValue, setNewToolValue] = useState('');
 
   // Twilio Setup State variables
-  const [twilioAccountSid, setTwilioAccountSid] = useState(currentOrg?.twilio?.accountSid || '');
-  const [twilioAuthToken, setTwilioAuthToken] = useState(currentOrg?.twilio?.authToken || '');
-  const [twilioFromNumber, setTwilioFromNumber] = useState(currentOrg?.twilio?.fromNumber || '');
-  const [twilioTestStatus, setTwilioTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [twilioTestMessage, setTwilioTestMessage] = useState('');
 
   // Open Platforms State variables
   const [ntfyTopic, setNtfyTopic] = useState(currentOrg?.ntfy?.topic || '');
@@ -100,6 +99,13 @@ export const OrgDashboard: React.FC = () => {
     u.phone.includes(searchTerm)
   ), [registeredStudents, searchTerm]);
 
+  const activeReferralCode = currentOrg?.referralCode || orgReferralCode;
+  const referredUsers = useMemo(() => {
+    if (!activeReferralCode) return [];
+    const upperCode = activeReferralCode.toUpperCase();
+    return users.filter(u => u.referredByCode?.toUpperCase() === upperCode);
+  }, [users, activeReferralCode]);
+
   // Active panic alerts triggered by people in this organization
   const activeOrgPanics = useMemo(() => {
     const orgUserIds = new Set(registeredStudents.map(s => s.username.toLowerCase()));
@@ -118,9 +124,9 @@ export const OrgDashboard: React.FC = () => {
     setEditAccountNumber(student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`);
     setEditMedicalInfo(student.medicalInfo || 'No chronic conditions logged.');
     setEditRiskNotes(student.riskNotes || 'Standard perimeter monitoring.');
-    setEditOfficer(student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha)');
+    setEditOfficer(student.assignedResponseOfficer || 'Unassigned');
     setEditHospital(student.preferredHospital || 'Netcare Milpark Hospital');
-    setEditAddress(student.homeAddress || 'Wits Campus Housing, West Campus');
+    setEditAddress(student.homeAddress || 'Not specified');
     setEditContactsList(student.emergencyContactsList || '+27839110000, +27117171000');
   };
 
@@ -167,19 +173,28 @@ export const OrgDashboard: React.FC = () => {
           playsInline
           className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
         >
-          <source src="/media/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310204/Now_let_s_show_how_kids_would.mp4" type="video/mp4" />
         </video>
       )}
       {/* Background with Glowing Heart and Heartbeat Pulse */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
         <GlowingHeartBackground />
         {/* Transparent dark overlay to keep foreground text highly readable */}
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px]" />
       </div>
       {/* Active Org Alerts Banner */}
       {activeOrgPanics.length > 0 && (
         <div className="w-full bg-red-600 text-white font-mono text-xs font-bold text-center py-2.5 px-4 tracking-wider uppercase animate-pulse flex items-center justify-center gap-2 relative z-50">
           <span>🚨 ALERT: CRITICAL SOS SIGNAL DETECTED FROM ASSIGNED SUBSCRIBER NODE 🚨</span>
+        </div>
+      )}
+
+      
+      {/* Trial Banner */}
+      {isTrialEnabled && (
+        <div className="w-full bg-amber-600/90 text-white font-mono text-[10px] font-bold text-center py-1.5 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50">
+          <span>⚠️ 14-DAY ORGANIZATION TRIAL ACTIVE — YOU HAVE 14 DAYS LEFT ⚠️</span>
+          <button className="bg-white/20 hover:bg-white/30 px-3 py-0.5 rounded ml-2 transition-colors">UPGRADE TO PRO</button>
         </div>
       )}
 
@@ -240,14 +255,7 @@ export const OrgDashboard: React.FC = () => {
           >
             🎨 branding & SLA
           </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('twilio')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'twilio' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            📞 Twilio Connection
-          </button>}
+          
           
           {!isResponder && <button
             onClick={() => setActiveSubTab('workspace')}
@@ -491,6 +499,12 @@ export const OrgDashboard: React.FC = () => {
         {/* ==================================================== */}
         {/* SUB TAB: CUSTOMER & SUBSCRIBER PROFILES             */}
         {/* ==================================================== */}
+        {activeSubTab === 'evidence' && (
+          <div className="max-w-6xl mx-auto w-full flex flex-col h-full overflow-hidden p-2">
+            <EvidenceLedger />
+          </div>
+        )}
+
         {activeSubTab === 'roster' && (
           <div className="space-y-4 animate-fadeIn">
             
@@ -517,7 +531,7 @@ export const OrgDashboard: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {pendingUsers.map(user => (
-                      <div key={user.id} className="p-3 bg-slate-950/80 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
+                      <div key={user.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
                         <div className="space-y-1 text-xs">
                           <p className="font-extrabold text-slate-200">{user.fullName} <span className="text-[9px] font-mono text-slate-500">(@{user.username})</span></p>
                           <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Requested Role:</span> <span className="font-bold text-amber-400 uppercase">{user.pendingRole || 'Community Member'}</span></p>
@@ -602,9 +616,9 @@ export const OrgDashboard: React.FC = () => {
                   const accNum = student.accountNumber || `SL-ACC-${Math.floor(10000 + Math.random() * 90000)}`;
                   const medInfo = student.medicalInfo || 'No recorded allergies or severe chronic conditions.';
                   const riskNotes = student.riskNotes || 'Standard estate perimeter; BLE keyfob bound.';
-                  const officer = student.assignedResponseOfficer || 'Officer Thabo (Sector Alpha Patrol)';
+                  const officer = student.assignedResponseOfficer || 'Unassigned';
                   const hospital = student.preferredHospital || 'Netcare Milpark Private Hospital';
-                  const address = student.homeAddress || 'Wits West Campus Residence, JHB';
+                  const address = student.homeAddress || 'Not specified';
                   const contactsList = student.emergencyContactsList || '+27839110000, +27117171000';
 
                   return (
@@ -909,158 +923,6 @@ export const OrgDashboard: React.FC = () => {
         )}
 
         {/* ==================================================== */}
-        {/* SUB TAB: TWILIO CONNECTION SETUP                    */}
-        {/* ==================================================== */}
-        {activeSubTab === 'twilio' && (
-          <div className="space-y-5 text-left animate-fadeIn max-w-2xl mx-auto glass-panel rounded-3xl p-6 shadow-md">
-            <div className="border-b border-slate-800 pb-3 flex justify-between items-center flex-wrap gap-2">
-              <div>
-                <h3 className="text-sm font-black text-slate-200 font-mono uppercase tracking-wider flex items-center gap-2">
-                  <span>📞 Connect Your Twilio Account</span>
-                </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
-                  Establish a secure Twilio cloud loopback to automatically trigger instant cellular calls and SMS dispatches directly to your patrol units and control rooms.
-                </p>
-              </div>
-              <span className={`text-[8.5px] px-2.5 py-1 rounded-full font-mono font-black border uppercase ${
-                twilioAccountSid && twilioAuthToken && twilioFromNumber
-                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              }`}>
-                {twilioAccountSid && twilioAuthToken && twilioFromNumber ? 'Connected' : 'Offline / Standby'}
-              </span>
-            </div>
-
-            <div className="bg-slate-950/60 border border-slate-850 p-4 rounded-2xl text-xs space-y-2 text-slate-300">
-              <span className="text-[8px] font-mono font-black text-indigo-400 uppercase tracking-widest block">HOW TO ACTIVATE CLOUD DISPATCH</span>
-              <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-slate-400">
-                <li>Create a free account at <a href="https://console.twilio.com" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">console.twilio.com</a></li>
-                <li>Acquire a dedicated South African or regional cell number for roughly R50.00 once-off.</li>
-                <li>Copy and paste your Twilio <strong className="text-slate-300">Account SID</strong>, <strong className="text-slate-300">Auth Token</strong>, and <strong className="text-slate-300">Twilio Phone Number</strong> below.</li>
-                <li>Click <strong className="text-slate-300">Test Connection</strong> to verify loopback delivery to your dispatch terminal.</li>
-              </ol>
-            </div>
-
-            <div className="space-y-4 font-mono text-xs">
-              <div className="space-y-1.5">
-                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO ACCOUNT SID</label>
-                <input
-                  type="text"
-                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  value={twilioAccountSid}
-                  onChange={e => setTwilioAccountSid(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO AUTH TOKEN</label>
-                <input
-                  type="password"
-                  placeholder="••••••••••••••••••••••••••••••••"
-                  value={twilioAuthToken}
-                  onChange={e => setTwilioAuthToken(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[8.5px] text-slate-500 font-black block">TWILIO SENDER NUMBER (E.164 FORMAT)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. +27821234567"
-                  value={twilioFromNumber}
-                  onChange={e => setTwilioFromNumber(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-850 rounded-lg p-2.5 text-slate-200"
-                />
-              </div>
-
-              {twilioTestStatus !== 'idle' && (
-                <div className={`p-4 rounded-xl border text-[11px] leading-relaxed font-mono ${
-                  twilioTestStatus === 'testing' ? 'bg-amber-950/20 border-amber-500/20 text-amber-400' :
-                  twilioTestStatus === 'success' ? 'bg-cyan-950/20 border-cyan-500/20 text-cyan-400' :
-                  'bg-red-950/20 border-red-500/20 text-red-400'
-                }`}>
-                  <div className="flex items-center gap-2 font-bold mb-1 uppercase text-[9px]">
-                    {twilioTestStatus === 'testing' && <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-ping" />}
-                    {twilioTestStatus === 'success' && <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full" />}
-                    {twilioTestStatus === 'error' && <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />}
-                    <span>Handshake Output Log</span>
-                  </div>
-                  <p>{twilioTestMessage}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-900">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber) {
-                    alert('Please enter your Twilio credentials first.');
-                    return;
-                  }
-                  setTwilioTestStatus('testing');
-                  setTwilioTestMessage('Handshaking with Twilio API Gateway...');
-                  
-                  try {
-                    const response = await fetch('/api/twilio/test', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        accountSid: twilioAccountSid,
-                        authToken: twilioAuthToken,
-                        fromNumber: twilioFromNumber
-                      })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                      setTwilioTestStatus('success');
-                      setTwilioTestMessage(`SUCCESS: Live Loopback confirmed. ${data.message || 'Test emergency call queued and SMS delivered to dispatch operator!'}`);
-                      useAppStore.getState().addAuditLog(
-                        'SECURITY',
-                        'INFO',
-                        'Twilio Connection Test Initiated',
-                        `Handshake verified for Account SID: ${twilioAccountSid}. Live call sequence completed successfully.`
-                      );
-                    } else {
-                      setTwilioTestStatus('error');
-                      setTwilioTestMessage(`Twilio Error: ${data.error || 'Failed to connect'}`);
-                    }
-                  } catch (error: any) {
-                    setTwilioTestStatus('error');
-                    setTwilioTestMessage(`Network Error: ${error.message || 'Failed to reach server'}`);
-                  }
-                }}
-                disabled={twilioTestStatus === 'testing'}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono font-black text-[9px] rounded-lg border border-slate-800 uppercase tracking-wider transition-all"
-              >
-                {twilioTestStatus === 'testing' ? 'Testing Handshake...' : '⚡ Test Twilio Connection'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  updateOrgBranding({
-                    twilio: {
-                      accountSid: twilioAccountSid,
-                      authToken: twilioAuthToken,
-                      fromNumber: twilioFromNumber
-                    }
-                  });
-                  alert('Twilio connected and saved successfully to organization profile.');
-                }}
-                className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono font-black text-[10px] rounded-lg tracking-wider uppercase transition-all shadow"
-              >
-                Save & Activate Cloud Dispatch
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ==================================================== */}
         {/* SUB TAB: OPEN PLATFORMS                              */}
         {/* ==================================================== */}
         
@@ -1191,94 +1053,9 @@ export const OrgDashboard: React.FC = () => {
 
         {/* ==================================================== */}
         {/* SUB TAB: OPERATIONS ANALYTICS & METRICS              */}
-        {/* ==================================================== */}
         {activeSubTab === 'analytics' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* KPI grid panel */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
-              <div className="glass-panel p-4 space-y-1">
-                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Monthly Alert Incidents</span>
-                <span className="text-xl font-mono font-black text-slate-100 block">42</span>
-                <span className="text-[8px] font-mono text-cyan-400 block">▼ 14% vs last month</span>
-              </div>
-
-              <div className="glass-panel p-4 space-y-1">
-                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">False Alarm Incident Ratio</span>
-                <span className="text-xl font-mono font-black text-red-400 block">8.2%</span>
-                <span className="text-[8px] font-mono text-slate-500 block">Target Threshold &lt; 10%</span>
-              </div>
-
-              <div className="glass-panel p-4 space-y-1">
-                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Avg Responder Response SLA</span>
-                <span className="text-xl font-mono font-black text-teal-400 block">4m 22s</span>
-                <span className="text-[8px] font-mono text-cyan-400 block">▲ 18s faster response</span>
-              </div>
-
-              <div className="glass-panel p-4 space-y-1">
-                <span className="text-[7.5px] font-mono font-black text-slate-500 uppercase block">Active Device Connectivity</span>
-                <span className="text-xl font-mono font-black text-indigo-400 block">99.4%</span>
-                <span className="text-[8px] font-mono text-indigo-300 block">78 paired nodes active</span>
-              </div>
-            </div>
-
-            {/* Simulated Heat Map and telemetry metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
-              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-3.5 flex flex-col justify-between">
-                <div>
-                  <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Localized GIS Heat Map Matrix</h4>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    Highest concentration of emergency distress signals logged around estate boundaries.
-                  </p>
-                </div>
-                
-                <div className="bg-slate-950 border border-slate-900 h-44 rounded-xl p-4 flex flex-col items-center justify-center space-y-3 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-slate-900/10 opacity-30 pointer-events-none" />
-                  
-                  {/* Grid mockup representing heat zones */}
-                  <div className="grid grid-cols-4 gap-2 w-full max-w-xs font-mono text-[8px] text-center">
-                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone A</div>
-                    <div className="p-2 bg-red-950/40 border border-red-500/20 text-red-400 font-bold animate-pulse">Zone B (HIGH)</div>
-                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone C</div>
-                    <div className="p-2 bg-orange-950/30 border border-orange-500/20 text-orange-400">Zone D (MED)</div>
-                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone E</div>
-                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone F</div>
-                    <div className="p-2 bg-red-950/40 border border-red-500/20 text-red-400 font-bold animate-pulse">Zone G (HIGH)</div>
-                    <div className="p-2 bg-slate-900 rounded border border-slate-800 text-slate-500">Zone H</div>
-                  </div>
-                  <span className="text-[8px] text-slate-500 uppercase font-mono tracking-widest">Wits Campus boundary mesh layout</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl p-5 space-y-4">
-                <div>
-                  <h4 className="text-xs font-black text-slate-300 font-mono uppercase tracking-wider">Device Online Heartbeat Monitor</h4>
-                  <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                    Continuous monitoring of paired BLE wearables, mobile terminal GPS status, and SQLite synchronization logs.
-                  </p>
-                </div>
-
-                <div className="space-y-2.5 font-mono text-[9px]">
-                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
-                    <span className="text-slate-400">BLE iTAG BEACON STATUS</span>
-                    <span className="text-cyan-400 font-bold">100% ONLINE (78/78)</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
-                    <span className="text-slate-400">SUBSCRIBER MOBILE TELEMETRY LINK</span>
-                    <span className="text-cyan-400 font-bold">98.7% SIGNAL (77/78)</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-slate-950 p-2 rounded-lg border border-slate-900">
-                    <span className="text-slate-400">CENTRAL THINGSBOARD SERVER SYNC</span>
-                    <span className="text-cyan-400 font-bold">STABLE (HTTP 200)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <GeospatialAnalytics />
         )}
-
-        {/* ==================================================== */}
-        {/* SUB TAB: MPHAKATI OVERWATCH                          */}
-        {/* ==================================================== */}
         {activeSubTab === 'mphakati-overwatch' && (
           <div className="animate-fadeIn -mx-4 sm:-mx-8 lg:-mx-8">
             <MphakatiOverwatch />
@@ -1356,17 +1133,17 @@ export const OrgDashboard: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-1.5 items-end">
                   <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 font-mono font-black text-xs text-center w-full">
-                    {users.filter(u => u.referredByCode && u.referredByCode === (currentOrg?.referralCode || orgReferralCode)).length} clients
+                    {referredUsers.length} clients
                   </span>
                   <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 font-mono font-black text-xs text-center w-full">
-                    ${(users.filter(u => u.referredByCode && u.referredByCode === (currentOrg?.referralCode || orgReferralCode)).length * 2).toFixed(2)}/mo
+                    ${(referredUsers.length * 2).toFixed(2)}/mo
                   </span>
                 </div>
               </div>
 
               {(() => {
-                const code = currentOrg?.referralCode || orgReferralCode;
-                const referred = users.filter(u => u.referredByCode && u.referredByCode.toUpperCase() === code?.toUpperCase());
+                const code = activeReferralCode;
+                const referred = referredUsers;
                 if (!code) return (
                   <p className="text-[10px] text-slate-500 font-mono text-center py-6">Generate a referral code above to start tracking clients.</p>
                 );

@@ -20,7 +20,6 @@ export interface UserProfile {
   role?: UserRole;
   pendingRole?: UserRole;
   medicalProfile?: MedicalProfile;
-  twilio?: { accountSid: string; authToken: string; fromNumber: string };
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };
@@ -29,6 +28,8 @@ export interface UserProfile {
   customPresets?: Array<{ id: string; name: string; route: string; icon: string; }>;
   referredByCode?: string;
   fcmToken?: string;
+  liveSmsEnabled?: boolean;
+  subscriptionStatus?: 'active' | 'trial' | 'locked';
 }
 
 export type UserRole =
@@ -139,12 +140,12 @@ export interface Organization {
   monthlyAlerts?: number;
   falseAlarms?: number;
   averageResponseTimeSec?: number;
-  twilio?: { accountSid: string; authToken: string; fromNumber: string };
   ntfy?: { topic: string; serverUrl: string };
   ownCloud?: { serverUrl: string; username: string; token: string; folder: string };
   sensorStream?: { udpHost: string; udpPort: number; enabled: boolean };
   referralCode?: string;
   referralCount?: number;
+  subscriptionStatus?: 'active' | 'trial' | 'locked';
 }
 
 export interface CustomTool {
@@ -178,6 +179,17 @@ export interface PanicEvent {
   description: string;
   timelineData: string[];
   profileUsed?: string;
+}
+
+export interface MeshNode {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  status: 'SECURE' | 'ACTIVE' | 'DISPATCHED' | 'OFFLINE';
+  type: 'PATROL' | 'SAFE_ZONE' | 'RESPONDER' | 'DRONE' | 'CAMERA';
+  distance?: number;
+  battery?: number;
 }
 
 export interface BleDevice {

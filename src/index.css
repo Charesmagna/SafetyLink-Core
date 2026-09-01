@@ -22,3 +22,50 @@ body.barcode-scanner-active #root {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(71, 85, 105, 1); 
 }
+
+/* High-Contrast Light Mode Overrides */
+.theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-light .bg-slate-950,
+.theme-light .bg-slate-900,
+.theme-light .bg-slate-800,
+.theme-light .bg-slate-950\\/40,
+.theme-light .bg-slate-900\\/40,
+.theme-light .bg-slate-950\\/85,
+.theme-light .bg-slate-950\\/80,
+.theme-light .bg-slate-950\\/30,
+.theme-light .bg-slate-900\\/50 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .border-slate-800,
+.theme-light .border-slate-700,
+.theme-light .border-slate-900,
+.theme-light .border-slate-900\\/40 {
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light .text-slate-100,
+.theme-light .text-slate-200,
+.theme-light .text-slate-300,
+.theme-light .text-slate-400 {
+  color: #1e293b !important;
+}
+
+.theme-light .text-slate-500 {
+  color: #64748b !important;
+}
+
+.theme-light .glass-panel {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(203, 213, 225, 0.5) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.theme-light .shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}

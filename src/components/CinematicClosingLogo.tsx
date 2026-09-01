@@ -37,7 +37,7 @@ export const CinematicClosingLogo: React.FC<CinematicClosingLogoProps> = ({
         playsInline
         className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-30 z-0"
       >
-        <source src="/media/Neon Power Logo Reveal_0p.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310214/Okay_now_for_the_next_scene_.mp4" type="video/mp4" />
       </video>
       {/* Video Background */}
       <video
@@ -47,7 +47,7 @@ export const CinematicClosingLogo: React.FC<CinematicClosingLogoProps> = ({
         onEnded={handleComplete}
         className="absolute inset-0 w-full h-full object-cover z-10"
       >
-        <source src="/media/Neon Power Logo Reveal_0p.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310214/Okay_now_for_the_next_scene_.mp4" type="video/mp4" />
       </video>
 
       {/* Grid Pattern */}

@@ -79,50 +79,6 @@ export abstract class BaseService {
   }
 }
 
-// 1. BLEService
-export class BLEService extends BaseService {
-  private static instance: BLEService;
-
-  private constructor() {
-    super('BLEService');
-  }
-
-  public static getInstance(): BLEService {
-    if (!BLEService.instance) {
-      BLEService.instance = new BLEService();
-    }
-    return BLEService.instance;
-  }
-
-  public async requestLEScan() {
-    const permOk = await this.requestSystemPermission('BLUETOOTH_SCAN');
-    if (!permOk) return;
-
-    this.logInfo('Configuring Bluetooth LE scan filters...');
-    useAppStore.getState().startBleScan();
-  }
-
-  // Simulates hold logic on hardware peripheral buttons (HST-01)
-  public handleHardwarePress(mac: string, durationSec: number) {
-    this.logInfo(`Received GATT notification from wearable [${mac}]. Button held for ${durationSec}s`);
-    
-    if (durationSec >= 2) {
-      this.logWarn('Hardware hold-to-panic threshold met! Dispatching event...');
-      
-      // Dispatch custom browser event
-      const panicEvent = new CustomEvent('wearable-panic-trigger', {
-        detail: { mac, heldTime: durationSec }
-      });
-      window.dispatchEvent(panicEvent);
-      
-      // Trigger actual SOS panic state in the app store
-      useAppStore.getState().triggerPanic(`Wearable Trigger SOS: 2-second hold-down on keyfob ${mac}`);
-    } else {
-      this.logInfo('Short hardware press acknowledged. Status: Ready.');
-    }
-  }
-}
-
 // 2. GeolocationService
 export class GeolocationService extends BaseService {
   private static instance: GeolocationService;
@@ -246,55 +202,6 @@ export class GeolocationService extends BaseService {
 
   public getOfflineCache() {
     return this.offlineCache;
-  }
-}
-
-// 3. DispatchService
-export class DispatchService extends BaseService {
-  private static instance: DispatchService;
-
-  private constructor() {
-    super('DispatchService');
-  }
-
-  public static getInstance(): DispatchService {
-    if (!DispatchService.instance) {
-      DispatchService.instance = new DispatchService();
-    }
-    return DispatchService.instance;
-  }
-
-  public async executeDispatchChain(lat: number, lng: number) {
-    const drillMode = useAppStore.getState().drillMode;
-    const contacts = useAppStore.getState().contacts;
-
-    this.logWarn(`Executing sequential multi-contact alert chain for coordinates ${lat.toFixed(4)}, ${lng.toFixed(4)}...`);
-    
-    if (drillMode) {
-      this.logInfo('[DRILL MODE ACTIVE] - Real SMS Gateway triggers bypassed.');
-    } else {
-      this.logWarn('[LIVE ENVIRONMENT ACTION] - Preparing real-time cellular network handshakes!');
-    }
-
-    for (const contact of contacts) {
-      const parsedText = contact.template.replace('{LAT}', lat.toFixed(5)).replace('{LNG}', lng.toFixed(5));
-      
-      this.logInfo(`Dispatching Priority #${contact.priority} to contact "${contact.label}" (${contact.phone})`);
-      
-      await new Promise(r => setTimeout(r, 1000)); // Sequential delay between dispatches
-
-      if (contact.channelType === 'SMS') {
-        this.logInfo(`[SMS Gateway] Outbox status: DELIVERED to ${contact.phone} | Content: "${parsedText}"`);
-      } else if (contact.channelType === 'CALL') {
-        this.logWarn(`[Cellular Audio] Enqueuing fallback direct voice dial call sequence to ${contact.phone}`);
-      } else if (contact.channelType === 'WHATSAPP') {
-        this.logInfo(`[WhatsApp Integration] Dispatching secure packet to WhatsApp API client: ${contact.phone}`);
-      } else {
-        this.logInfo(`[Emergency Channel] Handshaking SAPS SAP-Net node: ${contact.phone}`);
-      }
-    }
-
-    this.logInfo('Emergency contact alerting sequence completed successfully.');
   }
 }
 

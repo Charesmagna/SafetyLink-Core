@@ -1,3 +1,4 @@
+import { setupDeepLinks } from './utils/DeepLinkHandler';
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
@@ -5,6 +6,41 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import './styles/index.css'
+// @ts-ignore
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (true) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log("SafetyLink is ready to work offline.");
+  },
+});
+
+
+
+// Global Fetch Interceptor for Trial Lock
+const originalFetch = window.fetch;
+Object.defineProperty(window, 'fetch', {
+  configurable: true,
+  writable: true,
+  value: async (...args: Parameters<typeof fetch>) => {
+    const response = await originalFetch(...args);
+    try {
+      const clone = response.clone();
+      const data = await clone.json();
+      if (data && data.code === 'TRIAL_EXPIRED') {
+        window.dispatchEvent(new Event('trial_expired'));
+      }
+    } catch (e) {
+      // Ignore JSON parse errors for non-JSON responses
+    }
+    return response;
+  }
+});
 
 const initOneSignal = async () => {
   try {
@@ -42,6 +78,8 @@ const acquireWakeLock = () => {
 document.addEventListener('deviceready', acquireWakeLock, false);
 // Fallback for immediate invocation or web simulation testing
 setTimeout(acquireWakeLock, 1500);
+
+setupDeepLinks();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
