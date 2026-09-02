@@ -125,9 +125,14 @@ jobs:
     - name: Rename APK
       run: |
         mkdir -p release-output
-        cp android/app/build/outputs/apk/release/app-release.apk release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk 2>/dev/null || \
-        cp android/app/build/outputs/apk/release/app-release-unsigned.apk release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk 2>/dev/null || \
-        cp $(find android/app/build/outputs/apk/release -name "*.apk" | head -1) release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
+        echo "=== Searching for APK ==="
+        find android -name "*.apk" 2>/dev/null
+        APK=$(find android -name "*.apk" | grep -v debug | head -1)
+        if [ -z "$APK" ]; then
+          APK=$(find android -name "*.apk" | head -1)
+        fi
+        echo "Using APK: $APK"
+        cp "$APK" release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
