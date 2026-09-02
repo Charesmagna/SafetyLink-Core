@@ -1,103 +1,151 @@
 name: Build Android APK
+
 on:
   push:
-    branches: [main]
+    branches: [ "master", "main" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
 
-      - name: Compute version
-        id: version
-        run: |
-          VERSION="1.1.${{ github.run_number }}"
-          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install dependencies
-        run: npm install
+    - name: Build Web App
+      env:
+        VITE_APP_VERSION: "1.1.${{ github.run_number }}"
+      run: npm run build
 
-      - name: Bump package.json version
-        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+    - name: Sync Capacitor
+      run: npm run cap:sync
 
-      - name: Build Web
-        env:
-          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
-        run: npm run build
+    - name: Patch plugins and create init script
+      run: |
+        sed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true
+        cat << 'INNER_EOF' > init.gradle
+        allprojects {
+            buildscript {
+                configurations.all {
+                    resolutionStrategy {
+                        force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
+                        force 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+                    }
+                }
+            }
+            configurations.all {
+                resolutionStrategy {
+                    force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
+                    force 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+                }
+            }
+        }
+        INNER_EOF
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
+    - name: Decode keystore
+      run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
 
-      - name: Sync Capacitor
-        run: npx cap sync android
+    - name: Write signing properties
+      run: |
+        cat > android/signing.properties << 'PROPS'
+        storeFile=safetylink-release.keystore
+        storePassword=SafetyLink2024!
+        keyAlias=safetylink
+        keyPassword=SafetyLink2024!
+        PROPS
 
-      - name: Bump Android versionCode + versionName
-        run: |
-          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/" android/app/build.gradle
-          sed -i "s/versionName \"[^\"]*\"/versionName \"${{ steps.version.outputs.version }}\"/" android/app/build.gradle
+    - name: Create mock google-services.json
+      run: |
+        cat << 'JSON_EOF' > android/app/google-services.json
+        {
+          "project_info": {
+            "project_number": "1234567890",
+            "project_id": "safetylink-mock",
+            "storage_bucket": "safetylink-mock.appspot.com"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:1234567890:android:mock",
+                "android_client_info": {
+                  "package_name": "com.aistudio.safetylink.vqnztp"
+                }
+              },
+              "oauth_client": [],
+              "api_key": [{"current_key": "MOCK_KEY"}],
+              "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+            }
+          ],
+          "configuration_version": "1"
+        }
+        JSON_EOF
 
-      - name: Fix gradlew permissions + repair wrapper jar
-        run: |
-          chmod +x android/gradlew
-          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
-            -o android/gradle/wrapper/gradle-wrapper.jar
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
 
-      - name: Write keystore
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/safetylink-release.keystore
-          else
-            echo "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" | base64 -d > android/app/safetylink-release.keystore
-          fi
-          python3 -c "f=open('android/app/safetylink-release.keystore','rb');m=f.read(4).hex();print('Keystore:',m,'OK' if m=='504b0304' else 'INVALID')"
+    - name: Fix gradle-wrapper.jar
+      run: |
+        curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
+          -o android/gradle/wrapper/gradle-wrapper.jar
 
-      - name: Build Release APK
-        working-directory: ./android
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/android/app/safetylink-release.keystore
-        run: |
-          ./gradlew assembleRelease 2>&1 | tee /tmp/gradle_output.txt
-          EXIT_CODE=${PIPESTATUS[0]}
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "=== GRADLE ERROR (last 80 lines) ==="
-            tail -80 /tmp/gradle_output.txt
-            exit $EXIT_CODE
-          fi
+    - name: Stop Daemons
+      run: cd android && ./gradlew --stop || true
 
-      - name: Locate and rename APK
-        run: |
-          APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          echo "Found APK: $APK"
-          cp "$APK" android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
+    - name: Clean Gradle Cache
+      run: rm -rf ~/.gradle/caches
 
-      - name: Verify APK
-        run: |
-          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
-          $BUILD_TOOLS_DIR/apksigner verify --verbose \
-            android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk 2>&1 | head -5
+    - name: Build Release APK
+      working-directory: ./android
+      run: |
+        KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
+        echo "Keystore path: $KEYSTORE_ABS"
+        ls -la "$KEYSTORE_ABS"
+        ./gradlew assembleRelease \
+          -PKEYSTORE_PATH="$KEYSTORE_ABS" \
+          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
+          -PKEY_ALIAS="safetylink" \
+          -PKEY_PASSWORD="SafetyLink2024!" \
+          --init-script ../init.gradle \
+          --no-daemon --no-parallel --no-build-cache 2>&1 | tail -60
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: "SafetyLink Core ${{ steps.version.outputs.tag }}"
-          body: |
-            ## SafetyLink Core ${{ steps.version.outputs.tag }}
-            **Released by TM Media Solutions · Reg: 2018/500191/07**
-            Download the APK below and install directly on Android.
-          files: android/app/build/outputs/apk/release/SafetyLink-Core-${{ steps.version.outputs.tag }}-Signed.apk
-          draft: false
-          prerelease: false
+    - name: Rename APK
+      run: |
+        mkdir -p release-output
+        cp android/app/build/outputs/apk/release/app-release.apk release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk 2>/dev/null || \
+        cp android/app/build/outputs/apk/release/app-release-unsigned.apk release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk 2>/dev/null || \
+        cp $(find android/app/build/outputs/apk/release -name "*.apk" | head -1) release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SafetyLink-Release-APK
+        path: release-output/*.apk
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.1.${{ github.run_number }}
+        name: "SafetyLink Core v1.1.${{ github.run_number }}"
+        files: release-output/*.apk
+        body: |
+          ## SafetyLink Core v1.1.${{ github.run_number }}
+          **Released by TM Media Solutions · Reg: 2018/500191/07**
+          Download and install directly on Android 8.0+.
+          Enable "Install from unknown sources" in settings.
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
