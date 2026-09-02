@@ -120,7 +120,13 @@ jobs:
           -PKEY_ALIAS="safetylink" \
           -PKEY_PASSWORD="SafetyLink2024!" \
           --init-script ../init.gradle \
-          --no-daemon --no-parallel --no-build-cache 2>&1 | tail -60
+          --no-daemon --no-parallel --no-build-cache
+        echo "=== Build output files ==="
+        find . -name "*.apk" 2>/dev/null || echo "NO APK FOUND"
+        find . -name "*.aab" 2>/dev/null || echo "NO AAB FOUND"
+        ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
+        ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
+        ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "No release dir" 
 
     - name: Rename APK
       run: |
