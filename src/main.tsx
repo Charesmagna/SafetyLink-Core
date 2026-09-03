@@ -30,13 +30,17 @@ Object.defineProperty(window, 'fetch', {
   value: async (...args: Parameters<typeof fetch>) => {
     const response = await originalFetch(...args);
     try {
-      const clone = response.clone();
-      const data = await clone.json();
-      if (data && data.code === 'TRIAL_EXPIRED') {
-        window.dispatchEvent(new Event('trial_expired'));
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const clone = response.clone();
+        clone.json().then((data: any) => {
+          if (data && data.code === 'TRIAL_EXPIRED') {
+            window.dispatchEvent(new Event('trial_expired'));
+          }
+        }).catch(() => {});
       }
     } catch (e) {
-      // Ignore JSON parse errors for non-JSON responses
+      // Ignore errors — never block the original response
     }
     return response;
   }
