@@ -1,7 +1,8 @@
 // SafetyLink Update Checker
 // Checks GitHub Releases for a newer version and prompts user to download
 
-const CURRENT_VERSION = '1.0.0'; // bump this on each release
+// Injected by CI as "1.1.<run_number>"; falls back to package.json version for local dev
+const CURRENT_VERSION: string = import.meta.env.VITE_APP_VERSION || '1.0.0';
 const GITHUB_RELEASES_API = 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest';
 const APK_DOWNLOAD_BASE = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download';
 
@@ -15,9 +16,11 @@ export interface UpdateInfo {
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
-    const res = await fetch(GITHUB_RELEASES_API, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' }
-    });
+    const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
+    const ghToken = import.meta.env.VITE_GITHUB_TOKEN;
+    if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
+
+    const res = await fetch(GITHUB_RELEASES_API, { headers });
     if (!res.ok) return { available: false };
 
     const release = await res.json();
