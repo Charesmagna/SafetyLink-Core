@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -72,9 +72,9 @@ jobs:
       run: |
         cat > android/signing.properties << 'PROPS'
         storeFile=safetylink-release.keystore
-        storePassword=SafetyLink2024!
+        storePassword=SL@TMMed!a2024#Core
         keyAlias=safetylink
-        keyPassword=SafetyLink2024!
+        keyPassword=SL@TMMed!a2024#Core
         PROPS
 
     - name: Create mock google-services.json
@@ -125,9 +125,9 @@ jobs:
         ls -la "$KEYSTORE_ABS"
         ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
-          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
+          -PKEYSTORE_PASSWORD="SL@TMMed!a2024#Core" \
           -PKEY_ALIAS="safetylink" \
-          -PKEY_PASSWORD="SafetyLink2024!" \
+          -PKEY_PASSWORD="SL@TMMed!a2024#Core" \
           --init-script ../init.gradle \
           --no-daemon --no-parallel --no-build-cache
         echo "=== Build output files ==="
