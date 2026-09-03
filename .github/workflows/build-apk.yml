@@ -34,6 +34,15 @@ jobs:
     - name: Sync Capacitor
       run: npm run cap:sync
 
+    - name: Force Java 17 in all generated gradle files
+      run: |
+        echo "=== Patching capacitor.build.gradle to Java 17 ==="
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} \;
+        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        echo "=== Verification ==="
+        grep -r "JavaVersion" android/ | grep -v ".git" || echo "No JavaVersion found (all good)"
+
     - name: Patch plugins and create init script
       run: |
         sed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true
