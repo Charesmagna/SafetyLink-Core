@@ -22,9 +22,9 @@ android {
             def ksFile = new File(ksPath)
             println "Keystore path: ${ksPath} exists: ${ksFile.exists()}"
             storeFile ksFile.exists() ? ksFile : new File("${projectDir}/safetylink-release.keystore")
-            storePassword 'SL@TMMed!a2024#Core'
+            storePassword 'SafetyLink2024!'
             keyAlias 'safetylink'
-            keyPassword 'SL@TMMed!a2024#Core'
+            keyPassword 'SafetyLink2024!'
         }
     }
 
