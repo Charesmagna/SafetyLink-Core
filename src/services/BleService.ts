@@ -31,6 +31,53 @@ export interface BoundTrigger {
 
 let initialized = false;
 const connectedDeviceIds = new Set<string>();
+const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const keepaliveTimers = new Map<string, ReturnType<typeof setInterval>>();
+
+// Samsung/Android aggressively kills BLE connections when app is backgrounded.
+// This sends a harmless read every 20s to keep the connection alive.
+function startKeepalive(deviceId: string, trigger: BoundTrigger) {
+  stopKeepalive(deviceId);
+  const iv = setInterval(async () => {
+    try {
+      await BleClient.read(deviceId, trigger.serviceUuid, trigger.characteristicUuid);
+    } catch {
+      // connection dropped — the onDisconnect callback will handle reconnect
+    }
+  }, 20_000);
+  keepaliveTimers.set(deviceId, iv);
+}
+
+function stopKeepalive(deviceId: string) {
+  const iv = keepaliveTimers.get(deviceId);
+  if (iv) { clearInterval(iv); keepaliveTimers.delete(deviceId); }
+}
+
+// Auto-reconnect with exponential backoff (1s → 2s → 4s → … → 60s max)
+export function scheduleReconnect(
+  deviceId: string,
+  trigger: BoundTrigger,
+  onButtonPress: () => void,
+  onDisconnect: () => void,
+  attempt = 0
+) {
+  const delay = Math.min(1000 * Math.pow(2, attempt), 60_000);
+  const t = setTimeout(async () => {
+    reconnectTimers.delete(deviceId);
+    try {
+      await subscribeToKnownTrigger(deviceId, trigger, onButtonPress, () => {
+        onDisconnect();
+        scheduleReconnect(deviceId, trigger, onButtonPress, onDisconnect, 0);
+      });
+      startKeepalive(deviceId, trigger);
+      console.log(`[BleService] Reconnected to ${deviceId}`);
+    } catch {
+      console.warn(`[BleService] Reconnect attempt ${attempt + 1} failed — retrying in ${delay * 2}ms`);
+      scheduleReconnect(deviceId, trigger, onButtonPress, onDisconnect, attempt + 1);
+    }
+  }, delay);
+  reconnectTimers.set(deviceId, t);
+}
 
 async function ensureInitialized(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
@@ -244,6 +291,7 @@ export async function subscribeToKnownTrigger(
     onDisconnect();
   });
   connectedDeviceIds.add(deviceId);
+  startKeepalive(deviceId, trigger);
 
   await BleClient.startNotifications(
     deviceId,
@@ -273,6 +321,9 @@ export async function subscribeToKnownTrigger(
 }
 
 export async function disconnectDevice(deviceId: string, trigger?: BoundTrigger): Promise<void> {
+  stopKeepalive(deviceId);
+  const rt = reconnectTimers.get(deviceId);
+  if (rt) { clearTimeout(rt); reconnectTimers.delete(deviceId); }
   if (!connectedDeviceIds.has(deviceId)) return;
   if (trigger) {
     try {
