@@ -21,17 +21,40 @@ async function sendViaTwilio(to, message) {
   return { providerId: result.sid, status: result.status };
 }
 
-/* ── Africa's Talking ── */
-async function sendViaAfricasTalking(to, message) {
-  const { default: AfricasTalking } = await import('@vonage/server-sdk').catch(() => null) || {};
+/* ── Reverse Geocoding (Nominatim — free, no key required) ── */
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'User-Agent': 'SafetyLink-Emergency/1.0 (support@safetylink.online)' } }
+    );
+    if (!res.ok) throw new Error('Nominatim error');
+    const data = await res.json();
+    // Build a human-readable address: street number + street, suburb, city
+    const a = data.address || {};
+    const parts = [
+      a.house_number && a.road ? `${a.house_number} ${a.road}` : a.road,
+      a.suburb || a.neighbourhood || a.village,
+      a.city || a.town || a.county,
+    ].filter(Boolean);
+    return parts.length ? parts.join(', ') : data.display_name || `${lat},${lng}`;
+  } catch {
+    return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  }
+}
 
-  const apiKey      = process.env.AT_API_KEY;
-  const username    = process.env.AT_USERNAME;
-  const senderId    = process.env.AT_SENDER_ID || '';
+export { reverseGeocode };
+
+/* ── Africa's Talking ── */
+async function sendViaAfricasTalking(to: string, message: string) {
+  const apiKey   = process.env.AT_API_KEY;
+  const username = process.env.AT_USERNAME;
+  const senderId = process.env.AT_SENDER_ID || '';
 
   if (!apiKey || !username) throw new Error("Africa's Talking credentials not configured");
 
-  const body = JSON.stringify({
+  // Africa's Talking uses form-encoded POST, not JSON
+  const params = new URLSearchParams({
     username,
     to,
     message,
@@ -43,9 +66,9 @@ async function sendViaAfricasTalking(to, message) {
     headers: {
       apiKey,
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body,
+    body: params.toString(),
   });
 
   const data = await res.json();

@@ -2,10 +2,11 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { ForegroundService } from '@capawesome-team/capacitor-android-foreground-service';
 import { Geolocation } from '@capacitor/geolocation';
-import { CapacitorHttp } from '@capacitor/core';
+import { CapacitorHttp, Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { useAppStore } from '../utils/store';
+import { reverseGeocode } from './sms_africas_talking';
 
 export class EmergencyBridgeService {
   private get AURA_API_URL() {
@@ -22,6 +23,10 @@ export class EmergencyBridgeService {
   }
 
   public async initialize(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      console.warn('[EmergencyBridge] Native platform required — skipping init on web.');
+      return;
+    }
     try {
       if (!(await VoiceRecorder.requestAudioRecordingPermission()).value) {
         throw new Error('Microphone permission is required for contextual audio.');
@@ -38,7 +43,7 @@ export class EmergencyBridgeService {
         smallIcon: 'ic_launcher',
       });
 
-      await BleClient.initialize();
+      await BleClient.initialize({ androidNeverForLocation: true });
       await BleClient.connect(this.DEVICE_ID);
 
       await BleClient.startNotifications(
@@ -68,9 +73,14 @@ export class EmergencyBridgeService {
         timeout: 10000,
       });
 
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const streetAddress = await reverseGeocode(lat, lng);
+
       const payload = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
+        latitude: lat,
+        longitude: lng,
+        streetAddress,
         timestamp: new Date().toISOString(),
       };
 
