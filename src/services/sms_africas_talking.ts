@@ -47,8 +47,9 @@ export { reverseGeocode };
 
 /* ── Africa's Talking ── */
 async function sendViaAfricasTalking(to: string, message: string) {
-  const apiKey   = process.env.AT_API_KEY;
-  const username = process.env.AT_USERNAME;
+  // AT_API_KEY and USSD_API_KEY are the same key — support both
+  const apiKey   = process.env.AT_API_KEY || process.env.USSD_API_KEY;
+  const username = process.env.AT_USERNAME || process.env.AT_USERNAME_OVERRIDE || 'sandbox';
   const senderId = process.env.AT_SENDER_ID || '';
 
   if (!apiKey || !username) throw new Error("Africa's Talking credentials not configured");
