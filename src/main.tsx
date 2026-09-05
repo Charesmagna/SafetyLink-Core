@@ -79,3 +79,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Deep links init after render
 setupDeepLinks();
 
+// Check for updates immediately on every app open — runs before login
+import('./services/UpdateService').then(({ checkForUpdate }) => {
+  checkForUpdate().then(info => {
+    if (info.available) {
+      useAppStore.getState().setUpdateInfo(info);
+    }
+  }).catch(() => {});
+}).catch(() => {});
+

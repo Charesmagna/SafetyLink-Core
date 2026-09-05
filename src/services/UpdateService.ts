@@ -16,21 +16,29 @@ export interface UpdateInfo {
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
+    // Public repo — no auth needed. Token only used if available to avoid rate limits.
     const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
     const ghToken = import.meta.env.VITE_GITHUB_TOKEN;
     if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
 
-    const res = await fetch(GITHUB_RELEASES_API, { headers });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(GITHUB_RELEASES_API, { headers, signal: controller.signal });
+    clearTimeout(timeout);
+
     if (!res.ok) return { available: false };
 
     const release = await res.json();
-    const latestVersion = release.tag_name?.replace(/^v/, '') || '0.0.0';
+    const latestVersion = (release.tag_name || '').replace(/^v/, '');
+    if (!latestVersion) return { available: false };
+
+    console.log(`[UpdateService] Installed: ${CURRENT_VERSION} | Latest: ${latestVersion}`);
 
     if (!isNewerVersion(latestVersion, CURRENT_VERSION)) {
       return { available: false };
     }
 
-    // Find APK and EXE assets
     const assets = release.assets || [];
     const apkAsset = assets.find((a: any) => a.name.endsWith('.apk'));
     const exeAsset = assets.find((a: any) => a.name.endsWith('.exe'));
@@ -39,10 +47,11 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
       available: true,
       version: latestVersion,
       apkUrl: apkAsset?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink.apk`,
-      exeUrl: exeAsset?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink-OrgConsole-Setup.exe`,
-      releaseNotes: release.body?.substring(0, 200) || 'New version available'
+      exeUrl: exeAsset?.browser_download_url,
+      releaseNotes: release.body?.substring(0, 200) || 'New version available',
     };
-  } catch {
+  } catch (e) {
+    console.warn('[UpdateService] Check failed:', e);
     return { available: false };
   }
 }

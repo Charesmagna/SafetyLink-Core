@@ -23,7 +23,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     generateReferralCode,
     applyReferralCode,
     demoMode,
-    toggleDemoMode
+    toggleDemoMode,
+    updateInfo,
   } = useAppStore();
   const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG' | 'POST_REGISTER_DECISION'>(initialView as any || 'LOGIN');
   const [registeredUsername, setRegisteredUsername] = useState('');
@@ -298,6 +299,17 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         className="fixed inset-0 w-full h-full object-contain opacity-[0.03] z-0 pointer-events-none" 
         alt="" 
       />
+
+      {updateInfo?.available && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[99999] bg-emerald-600 text-white text-[11px] font-bold text-center py-3 px-4 tracking-wider uppercase flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-900/50 animate-pulse"
+          onClick={() => window.open(updateInfo.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest', '_blank')}
+        >
+          <span>🚀</span>
+          <span>Update Available: v{updateInfo.version} — Tap to Download & Install</span>
+          <span>🚀</span>
+        </div>
+      )}
 
       {onBackToSite && (
         <button 
