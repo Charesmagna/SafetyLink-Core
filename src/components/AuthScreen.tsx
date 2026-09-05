@@ -1124,7 +1124,24 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         </AnimatePresence>
       </motion.div>
 
-      <div className="mt-6 text-center space-y-1">
+      <div className="mt-6 text-center space-y-3">
+        <div className="glass-panel rounded-2xl px-5 py-4 max-w-md mx-auto space-y-2.5">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">Need Help? Contact SafetyLink</p>
+          <div className="flex flex-col gap-2">
+            <a href="mailto:support@safetylink.online" className="flex items-center justify-center gap-2 text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors">
+              <span>✉️</span> support@safetylink.online
+            </a>
+            <a href="mailto:info@safetylink.online" className="flex items-center justify-center gap-2 text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors">
+              <span>✉️</span> info@safetylink.online
+            </a>
+            <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
+              <span>💬</span> Message SafetyLink on WhatsApp
+            </a>
+            <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
+              <span>📢</span> Follow SafetyLink Channel on WhatsApp
+            </a>
+          </div>
+        </div>
         <p className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em]">
           SECURE ENCRYPTED MESH MATRIX // DEEPMIND SECURITY Blueprints
         </p>

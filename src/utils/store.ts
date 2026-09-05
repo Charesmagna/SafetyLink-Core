@@ -235,9 +235,66 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
-const MOCK_ORGANIZATIONS: Organization[] = [];
 
-const MOCK_USERS: UserProfile[] = [];
+const MOCK_ORGANIZATIONS = [
+  { id: 'SL-WITS-4829', name: 'Wits University Campus Security', contactName: 'Commander Wits', contactEmail: 'security@wits.ac.za', password: 'demo1234', approved: true, members: ['thabo_m', 'commander_wits'], createdAt: new Date().toISOString() },
+  { id: 'SL-CITY-2810', name: 'City Patrol Armed Response', contactName: 'Chief Patrol', contactEmail: 'dispatch@citypatrol.co.za', password: 'demo1234', approved: true, members: ['chief_patrol'], createdAt: new Date().toISOString() },
+];
+
+const MOCK_USERS: UserProfile[] = [
+  {
+    id: 'demo-commander-wits',
+    username: 'commander_wits',
+    password: 'demo1234',
+    role: 'Responder' as any,
+    fullName: 'Commander Wits',
+    phone: '+27721111001',
+    whatsapp: '+27721111001',
+    email: 'security@wits.ac.za',
+    avatarUrl: '',
+    orgCode: 'SL-WITS-4829',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-chief-patrol',
+    username: 'chief_patrol',
+    password: 'demo1234',
+    role: 'Responder' as any,
+    fullName: 'City Patrol Dispatcher',
+    phone: '+27721111002',
+    whatsapp: '+27721111002',
+    email: 'dispatch@citypatrol.co.za',
+    avatarUrl: '',
+    orgCode: 'SL-CITY-2810',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-thabo-m',
+    username: 'thabo_m',
+    password: 'demo1234',
+    role: 'Community Member' as any,
+    fullName: 'Tshilidzi Mukwevho',
+    phone: '+27739441222',
+    whatsapp: '+27739441222',
+    email: 'tshilidzi@tmmediasolutions.co.za',
+    avatarUrl: '',
+    orgCode: 'SL-WITS-4829',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-lerato-k',
+    username: 'lerato_k',
+    password: 'demo1234',
+    role: 'Community Member' as any,
+    fullName: 'Lerato Khumalo',
+    phone: '+27721111004',
+    whatsapp: '+27721111004',
+    email: 'lerato@meshnet.co.za',
+    avatarUrl: '',
+    orgCode: '',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
