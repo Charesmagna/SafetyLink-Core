@@ -15,6 +15,7 @@ interface AppState {
   setGlobalTheme: (theme: 'dark' | 'light') => void;
   updateInfo: UpdateInfo | null;
   checkAppUpdates: () => Promise<void>;
+  setUpdateInfo: (info: UpdateInfo | null) => void;
   initMeshSync: () => void;
   contacts: Contact[];
   panicEvents: PanicEvent[];
@@ -370,6 +371,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const updateInfo = await checkForUpdate();
     set({ updateInfo });
   },
+  setUpdateInfo: (info) => set({ updateInfo: info }),
   demoMode: isDemoModeInitially,
   globalTheme: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
   setGlobalTheme: (theme: 'dark' | 'light') => {
