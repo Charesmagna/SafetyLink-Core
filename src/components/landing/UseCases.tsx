@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap, Activity, CheckCircle2, XCircle, ChevronDown, Bluetooth, Bot, Lock, Server } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+
 
 export function UseCases() {
   return (
