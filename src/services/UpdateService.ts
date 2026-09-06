@@ -14,34 +14,51 @@ export interface UpdateInfo {
   releaseNotes?: string;
 }
 
+// Use XHR instead of fetch to bypass the fetch interceptor in main.tsx
+function xhrGet(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+    xhr.timeout = 10000;
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('JSON parse error')); }
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Timeout'));
+    xhr.send();
+  });
+}
+
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
-    // Public repo — no auth needed. Token only used if available to avoid rate limits.
-    const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
-    const ghToken = import.meta.env.VITE_GITHUB_TOKEN;
-    if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
+    console.log(`[UpdateService] Checking for updates. Installed: ${CURRENT_VERSION}`);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const res = await fetch(GITHUB_RELEASES_API, { headers, signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) return { available: false };
-
-    const release = await res.json();
+    const release = await xhrGet(GITHUB_RELEASES_API);
     const latestVersion = (release.tag_name || '').replace(/^v/, '');
-    if (!latestVersion) return { available: false };
 
-    console.log(`[UpdateService] Installed: ${CURRENT_VERSION} | Latest: ${latestVersion}`);
+    if (!latestVersion) {
+      console.warn('[UpdateService] No tag_name in response');
+      return { available: false };
+    }
+
+    console.log(`[UpdateService] Latest: ${latestVersion} | Installed: ${CURRENT_VERSION}`);
 
     if (!isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      console.log('[UpdateService] Already on latest version');
       return { available: false };
     }
 
     const assets = release.assets || [];
     const apkAsset = assets.find((a: any) => a.name.endsWith('.apk'));
     const exeAsset = assets.find((a: any) => a.name.endsWith('.exe'));
+
+    console.log(`[UpdateService] Update available: v${latestVersion}`);
 
     return {
       available: true,

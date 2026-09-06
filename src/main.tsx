@@ -19,30 +19,6 @@ if (!Capacitor.isNativePlatform()) {
   }).catch(() => {});
 }
 
-// Global Fetch Interceptor for Trial Lock — only on web
-if (!Capacitor.isNativePlatform()) {
-  const originalFetch = window.fetch;
-  Object.defineProperty(window, 'fetch', {
-    configurable: true,
-    writable: true,
-    value: async (...args: Parameters<typeof fetch>) => {
-      const response = await originalFetch(...args);
-      try {
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const clone = response.clone();
-          clone.json().then((data: any) => {
-            if (data && data.code === 'TRIAL_EXPIRED') {
-              window.dispatchEvent(new Event('trial_expired'));
-            }
-          }).catch(() => {});
-        }
-      } catch (e) {}
-      return response;
-    }
-  });
-}
-
 // OneSignal — web push only
 if (!Capacitor.isNativePlatform()) {
   OneSignal.init({
