@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { auth, db } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool } from '../types';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
-import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
+
+export interface UpdateInfo { version: string; url: string; notes?: string; required?: boolean; available?: boolean; apkUrl?: string; exeUrl?: string; }
 
 interface AppState {
   isTrialEnabled: boolean;
@@ -15,7 +16,6 @@ interface AppState {
   setGlobalTheme: (theme: 'dark' | 'light') => void;
   updateInfo: UpdateInfo | null;
   checkAppUpdates: () => Promise<void>;
-  setUpdateInfo: (info: UpdateInfo | null) => void;
   initMeshSync: () => void;
   contacts: Contact[];
   panicEvents: PanicEvent[];
@@ -32,9 +32,9 @@ interface AppState {
   thingsBoardToken: string;
   customBackendUrl: string;
   connectyCubeConfig: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null;
-  setConnectyCubeConfig: (config: any) => void;
+  setConnectyCubeConfig: (config: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null) => void;
   tuyaConfig: { clientId: string; secret: string; baseUrl: string; } | null;
-  setTuyaConfig: (config: any) => void;
+  setTuyaConfig: (config: { clientId: string; secret: string; baseUrl: string; } | null) => void;
   auraApiUrl: string;
   setAuraApiUrl: (url: string) => void;
   auditLogs: AuditLog[];
@@ -104,6 +104,7 @@ interface AppState {
   registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'> & { password?: string }) => Promise<{ success: boolean; error?: string }>;
   registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string, password?: string }) => Promise<Organization | null>;
   login: (username: string, password?: string, orgCode?: string, skipPasswordCheck?: boolean) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string; role?: string }>;
   fetchSuperAdminData: () => Promise<void>;
   unlockOrganizationTrial: (id: string) => Promise<void>;
   logout: () => void;
@@ -236,66 +237,9 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
+const MOCK_ORGANIZATIONS: Organization[] = [];
 
-const MOCK_ORGANIZATIONS = [
-  { id: 'SL-WITS-4829', name: 'Wits University Campus Security', contactName: 'Commander Wits', contactEmail: 'security@wits.ac.za', password: 'demo1234', approved: true, members: ['thabo_m', 'commander_wits'], createdAt: new Date().toISOString() },
-  { id: 'SL-CITY-2810', name: 'City Patrol Armed Response', contactName: 'Chief Patrol', contactEmail: 'dispatch@citypatrol.co.za', password: 'demo1234', approved: true, members: ['chief_patrol'], createdAt: new Date().toISOString() },
-];
-
-const MOCK_USERS: UserProfile[] = [
-  {
-    id: 'demo-commander-wits',
-    username: 'commander_wits',
-    password: 'demo1234',
-    role: 'Responder' as any,
-    fullName: 'Commander Wits',
-    phone: '+27721111001',
-    whatsapp: '+27721111001',
-    email: 'security@wits.ac.za',
-    avatarUrl: '',
-    orgCode: 'SL-WITS-4829',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-chief-patrol',
-    username: 'chief_patrol',
-    password: 'demo1234',
-    role: 'Responder' as any,
-    fullName: 'City Patrol Dispatcher',
-    phone: '+27721111002',
-    whatsapp: '+27721111002',
-    email: 'dispatch@citypatrol.co.za',
-    avatarUrl: '',
-    orgCode: 'SL-CITY-2810',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-thabo-m',
-    username: 'thabo_m',
-    password: 'demo1234',
-    role: 'Community Member' as any,
-    fullName: 'Tshilidzi Mukwevho',
-    phone: '+27739441222',
-    whatsapp: '+27739441222',
-    email: 'tshilidzi@tmmediasolutions.co.za',
-    avatarUrl: '',
-    orgCode: 'SL-WITS-4829',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'demo-lerato-k',
-    username: 'lerato_k',
-    password: 'demo1234',
-    role: 'Community Member' as any,
-    fullName: 'Lerato Khumalo',
-    phone: '+27721111004',
-    whatsapp: '+27721111004',
-    email: 'lerato@meshnet.co.za',
-    avatarUrl: '',
-    orgCode: '',
-    createdAt: new Date().toISOString(),
-  },
-];
+const MOCK_USERS: UserProfile[] = [];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
@@ -320,7 +264,7 @@ const getStoredJSON = <T>(key: string, fallback: T): T => {
   }
 };
 
-const setStoredJSON = (key: string, data: any) => {
+const setStoredJSON = (key: string, data: unknown) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (err) {
@@ -368,10 +312,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   
   checkAppUpdates: async () => {
-    const updateInfo = await checkForUpdate();
+    const updateInfo = null; // await checkForUpdate();
     set({ updateInfo });
   },
-  setUpdateInfo: (info) => set({ updateInfo: info }),
   demoMode: isDemoModeInitially,
   globalTheme: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
   setGlobalTheme: (theme: 'dark' | 'light') => {
@@ -826,6 +769,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live)', `Username: ${newUser.username}, Token Provisioned`);
       return { success: true };
     } catch (e: any) {
+      if (e.code === 'auth/email-already-in-use') {
+        return { success: false, error: 'An account with this email already exists. Please log in or use Google Sign-In.' };
+      }
       return { success: false, error: e.message };
     }
     /*
@@ -1044,6 +990,9 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       setStoredJSON('sl_super_admin', false);
       return { success: true, role: 'USER' };
     } catch (e: any) {
+      if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+        return { success: false, error: 'Invalid credentials. Please check your username and password, or use Google Sign-In.', role: 'USER' };
+      }
       return { success: false, error: e.message, role: 'USER' };
     }
     /*
@@ -1120,6 +1069,48 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       return { success: false, error: 'Connection failure to auth server, and no local offline account found.', role: 'USER' };
     }
     // End commented out section */
+  },
+
+  signInWithGoogle: async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const userCred = await signInWithPopup(auth, provider);
+      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+      let userData = null;
+
+      if (!userDoc.exists()) {
+        userData = {
+          id: userCred.user.uid,
+          username: userCred.user.displayName || userCred.user.email?.split('@')[0] || 'Unknown',
+          email: userCred.user.email || '',
+          phone: userCred.user.phoneNumber || '',
+          fullName: userCred.user.displayName || '',
+          orgCode: '',
+          role: 'Community Member',
+          createdAt: Date.now()
+        };
+        await setDoc(doc(db, 'users', userCred.user.uid), userData);
+      } else {
+        userData = userDoc.data();
+      }
+
+      set({
+        currentUser: userData as any,
+        token: await userCred.user.getIdToken(),
+        superAdminActive: false,
+        currentOrg: userData.orgCode ? { id: userData.orgCode } as any : null,
+        users: get().users.find(u => u.id === userData.id) ? get().users : [...get().users, userData as any]
+      });
+      setStoredJSON('sl_jwt_token', await userCred.user.getIdToken());
+      setStoredJSON('sl_current_user', userData);
+      setStoredJSON('sl_super_admin', false);
+      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated via Google', `User: ${userData.username}`);
+      
+      return { success: true, role: 'USER' };
+    } catch (e: any) {
+      console.error('Google Sign-In Error:', e);
+      return { success: false, error: e.message };
+    }
   },
 
   fetchSuperAdminData: async () => {
