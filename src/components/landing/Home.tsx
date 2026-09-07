@@ -31,25 +31,24 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
             {/* ── HERO ── */}
       <section className="hero-new" style={{
-        backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%), url("/Polish_20260907_043403519.jpg")',
-        backgroundSize: 'cover', backgroundPosition: 'center', padding: '120px 24px 180px', position: 'relative', width: '100%', minHeight: '80vh', display: 'flex', alignItems: 'center'
+        background: '#0f172a', width: '100%', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '120px 24px 60px', position: 'relative'
       }}>
-        <div className="hero-inner-new" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '48px' }}>
-          <div className="hero-left-new" style={{ maxWidth: '600px', flex: '1', minWidth: '300px' }}>
-            <h1 style={{ fontSize: 'clamp(40px, 5vw, 56px)', fontWeight: 800, color: '#ffffff', lineHeight: 1.1, marginBottom: '16px' }}>Protect What Matters Most</h1>
-            <h2 style={{ fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 500, color: '#e2e8f0', marginBottom: '16px' }}>SafetyLink Core for Smarter Family Security</h2>
-            <p style={{ fontSize: '16px', color: '#cbd5e1', marginBottom: '32px' }}>End-to-end protection, from key fob to app.</p>
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-              <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
-              <button style={{ background: 'transparent', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
+        {/* Placeholder for the uploaded poster */}
+        <div style={{ maxWidth: '1000px', width: '100%', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', position: 'relative' }}>
+           <img src="/Polish_20260907_043403519.jpg" alt="SafetyLink Promotional Poster" style={{ width: '100%', height: 'auto', display: 'block', backgroundColor: '#1e293b' }} onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop'; }} />
+           
+           {/* Interactive Overlay Buttons at the bottom of the poster */}
+           <div style={{ position: 'absolute', bottom: '24px', left: '0', right: '0', display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px' }}>
+              <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
+              <button style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s', backdropFilter: 'blur(4px)' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch the Video
               </button>
-            </div>
-          </div>
-          <div className="hero-right-new" style={{ flex: '1', minWidth: '300px', display: 'flex', justifyContent: 'center', position: 'relative', height: '400px' }}>
-            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&q=80" alt="Laptop Dashboard" style={{ position: 'absolute', left: '0', bottom: '0', width: '80%', borderRadius: '8px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1, objectFit: 'cover' }} />
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png" alt="SafetyLink App UI" style={{ position: 'absolute', right: '0', bottom: '-20px', width: '35%', borderRadius: '16px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)', zIndex: 2 }} />
-          </div>
+           </div>
+        </div>
+        
+        {/* Missing Image Warning (Only shows if image fails) */}
+        <div style={{ marginTop: '24px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#fca5a5', padding: '12px 24px', borderRadius: '8px', fontSize: '14px', maxWidth: '600px', textAlign: 'center' }}>
+          <strong>Note:</strong> To display your promotional poster here, please upload <code>Polish_20260907_043403519.jpg</code> into the <strong>public</strong> folder using the file explorer on the left.
         </div>
       </section>
 
