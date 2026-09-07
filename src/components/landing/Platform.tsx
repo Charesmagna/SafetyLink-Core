@@ -1,11 +1,25 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import './Home.css';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
 export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoSrc, setVideoSrc] = useState('');
+  const [activePanel, setActivePanel] = useState<number | null>(1);
+  const tourIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopTour = () => { if (tourIntervalRef.current) { clearInterval(tourIntervalRef.current); tourIntervalRef.current = null; } };
+  const openPanel = (n: number) => { setActivePanel(n); stopTour(); };
+
   return (
     <div className="landing-page-root w-full overflow-x-hidden">
+      {showVideoModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => { setShowVideoModal(false); setVideoSrc(''); }} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: 'white', fontSize: '28px', cursor: 'pointer' }}>✕</button>
+          <video src={videoSrc} controls autoPlay style={{ width: '90%', maxWidth: '1000px', borderRadius: '12px' }} />
+        </div>
+      )}
                   {/* ══ DISPATCH SECTION ══ */}
       <section className="dispatch" id="technology">
         <div className="dispatch-inner">

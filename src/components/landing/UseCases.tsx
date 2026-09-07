@@ -1,11 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './Home.css';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
 export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoSrc, setVideoSrc] = useState('');
+
+  const toggleVideo = (src: string) => { setVideoSrc(src); setShowVideoModal(true); };
+  const handleVideoEnded = () => {};
+
   return (
     <div className="landing-page-root w-full overflow-x-hidden">
+      {showVideoModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => { setShowVideoModal(false); setVideoSrc(''); }} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: 'white', fontSize: '28px', cursor: 'pointer' }}>✕</button>
+          <video src={videoSrc} controls autoPlay style={{ width: '90%', maxWidth: '1000px', borderRadius: '12px' }} />
+        </div>
+      )}
       {/* ══ VIDEO USE CASES ══ */}
       <section className="video-band" id="usecases">
         <div className="video-inner">
@@ -14,7 +26,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
           <p className="section-sub">Every scenario. Every South African community. See how SafetyLink protects families, estates, schools, and neighbourhoods.</p>
           <div className="video-grid">
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png" onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Now_let_s_show_how_kids_would.mp4" type="video/mp4"/>
               </video>
@@ -22,7 +34,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div className="vid-label"><p>Family Protection Scenario</p><span>How SafetyLink protects your household</span></div>
             </div>
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Government_use_case_senario.mp4" type="video/mp4"/>
               </video>
@@ -30,7 +42,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div className="vid-label"><p>Government &amp; Municipal Use Case</p><span>Public safety infrastructure deployment</span></div>
             </div>
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Neighbourhood_watch_security_c.mp4" type="video/mp4"/>
               </video>
@@ -38,7 +50,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div className="vid-label"><p>Neighbourhood Watch</p><span>Community security network in action</span></div>
             </div>
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/drone_dispatch_tracking_crimin.mp4" type="video/mp4"/>
               </video>
@@ -46,7 +58,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div className="vid-label"><p>Drone Dispatch &amp; Tracking</p><span>Aerial response to active incidents</span></div>
             </div>
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Show_the_uses_in_school_and_wo.mp4" type="video/mp4"/>
               </video>
@@ -54,21 +66,21 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div className="vid-label"><p>Schools &amp; Workplaces</p><span>Protecting children and employees</span></div>
             </div>
 
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline  onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Government_use_case_senario.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>Elderly Alone at Home</p><span>Watch-Me Timer and proactive monitoring</span></div>
             </div>
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Now_let_s_show_how_kids_would.mp4" type="video/mp4"/>
               </video>
               <div className="vid-play"><svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg></div>
               <div className="vid-label"><p>SafetyLink Pitch Deck</p><span>Overview of our three pillars</span></div>
             </div>
-            <div className="vid-card" onClick={toggleVideo}>
+            <div className="vid-card" onClick={() => {}}>
               <video preload="none" playsInline onEnded={handleVideoEnded}>
                 <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/drone_dispatch_tracking_crimin.mp4" type="video/mp4"/>
               </video>
