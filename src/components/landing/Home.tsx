@@ -23,6 +23,8 @@ interface HomeProps {
 }
 
 export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeProps) {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
   const [language, setLanguage] = useState('en');
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
@@ -39,7 +41,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         {/* Interactive Overlay Buttons at the bottom of the poster */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px', width: '100%' }}>
            <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
-           <button style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s', backdropFilter: 'blur(4px)' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
+           <button onClick={() => setIsVideoOpen(true)} style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s', backdropFilter: 'blur(4px)' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch the Video
            </button>
         </div>
@@ -111,6 +113,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         </div>
       </div>
 
-    </div>
+    
+      {isVideoOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: '900px', aspectRatio: '16/9', backgroundColor: '#000', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
+            <button onClick={() => setIsVideoOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <iframe width="100%" height="100%" src="https://www.youtube.com/embed/L4gykMYDYjk?autoplay=1" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen></iframe>
+          </div>
+        </div>
+      )}
+</div>
   );
 }
