@@ -29,78 +29,54 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   return (
     <div className="landing-page-root w-full overflow-x-hidden">
 
-      {/* ── HERO ── */}
-      <section className="hero" id="home" style={{
-        backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%), url("https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop")',
-        backgroundSize: 'cover', backgroundPosition: 'center', padding: '80px 0 60px', position: 'relative'
+            {/* ── HERO ── */}
+      <section className="hero-new" style={{
+        backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%), url("https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop")',
+        backgroundSize: 'cover', backgroundPosition: 'center', padding: '120px 24px 180px', position: 'relative', width: '100%', minHeight: '80vh', display: 'flex', alignItems: 'center'
       }}>
-        <div className="hero-inner">
-          <div className="hero-left" style={{ maxWidth: '600px', backgroundColor: 'rgba(255,255,255,0.75)', padding: '40px', borderRadius: '24px', backdropFilter: 'blur(10px)' }}>
-            <div className="hero-eyebrow"><div className="hero-dot"></div>Live in South Africa</div>
-            <h1>{t.h1a} <span className="g">{t.h1b}</span></h1>
-            <p className="hero-sub" style={{ color: '#334155', fontWeight: 500 }}>{t.sub}</p>
-
-            <select value={language} onChange={e => setLanguage(e.target.value)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '7px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', outline: 'none', marginBottom: '16px', width: '100%' }}>
-              {[['en','🌐 ENGLISH'],['zu','🌐 ZULU'],['af','🌐 AFRIKAANS'],['xh','🌐 XHOSA'],['st','🌐 SESOTHO'],['tn','🌐 SETSWANA'],['ts','🌐 TSONGA'],['ss','🌐 SWATI'],['ve','🌐 VENDA'],['nr','🌐 NDEBELE'],['nso','🌐 SEPEDI']].map(([v,l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-
-            <div className="hero-btns" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button onClick={onRegisterUser} style={{ background: '#1e293b', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px' }}>Register Individual</button>
-              <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 24px', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px' }}>Start 14-day Trial</button>
+        <div className="hero-inner-new" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '48px' }}>
+          <div className="hero-left-new" style={{ maxWidth: '600px', flex: '1', minWidth: '300px' }}>
+            <h1 style={{ fontSize: 'clamp(40px, 5vw, 56px)', fontWeight: 800, color: '#ffffff', lineHeight: 1.1, marginBottom: '16px' }}>Protect What Matters Most</h1>
+            <h2 style={{ fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: 500, color: '#e2e8f0', marginBottom: '16px' }}>SafetyLink Core for Smarter Family Security</h2>
+            <p style={{ fontSize: '16px', color: '#cbd5e1', marginBottom: '32px' }}>End-to-end protection, from key fob to app.</p>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
+              <button style={{ background: 'transparent', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch the Video
+              </button>
             </div>
           </div>
-
-          <div className="hero-right">
-            <div className="hero-phone-wrap">
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png" alt="SafetyLink App UI" />
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260819_020134421.jpg" alt="SafetyLink Button" style={{ padding: '20px', objectFit: 'contain' }} />
-              <img className="hero-phone" src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260620_014530309.jpg" alt="Organizations Panel" />
-            </div>
-            <div className="hero-flow">
-              <div className="flow-step">
-                <div className="flow-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="#15803d"/></svg></div>
-                <span className="flow-label">Wearable &amp; App</span>
-              </div>
-              <span className="flow-arrow">→</span>
-              <div className="flow-step">
-                <div className="flow-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20v-1a6 6 0 0112 0v1"/></svg></div>
-                <span className="flow-label">Auto Response</span>
-              </div>
-              <span className="flow-arrow">→</span>
-              <div className="flow-step">
-                <div className="flow-icon"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 20h8M12 18v2"/></svg></div>
-                <span className="flow-label">Command &amp; Control</span>
-              </div>
-            </div>
+          <div className="hero-right-new" style={{ flex: '1', minWidth: '300px', display: 'flex', justifyContent: 'center', position: 'relative', height: '400px' }}>
+            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&q=80" alt="Laptop Dashboard" style={{ position: 'absolute', left: '0', bottom: '0', width: '80%', borderRadius: '8px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1, objectFit: 'cover' }} />
+            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png" alt="SafetyLink App UI" style={{ position: 'absolute', right: '0', bottom: '-20px', width: '35%', borderRadius: '16px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)', zIndex: 2 }} />
           </div>
         </div>
       </section>
 
-      {/* ── QUICK NAV CARDS ── */}
-      <section style={{ background: '#f8fafc', padding: '60px 24px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(20px,3vw,32px)', fontWeight: 900, color: '#0f172a', marginBottom: '8px' }}>Everything You Need</h2>
-          <p style={{ color: '#64748b', marginBottom: '40px', fontSize: '15px' }}>Tap any section to explore SafetyLink</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: '16px' }}>
-            {[
-              { emoji: '📱', label: 'Platform', sub: 'How it works', page: 'platform' },
-              { emoji: '📡', label: 'Hardware', sub: 'BLE & devices', page: 'hardware' },
-              { emoji: '🎯', label: 'Use Cases', sub: 'Who needs it', page: 'usecases' },
-              { emoji: '💎', label: 'Pricing', sub: 'Plans & costs', page: 'pricing' },
-              { emoji: '🏢', label: 'Enterprise', sub: 'For organisations', page: 'enterprise' },
-            ].map(c => (
-              <button key={c.page} onClick={() => navigate?.(c.page)}
-                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px 16px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
-                onMouseOver={e => (e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)')}
-                onMouseOut={e => (e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,0.06)')}>
-                <span style={{ fontSize: '2rem' }}>{c.emoji}</span>
-                <span style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>{c.label}</span>
-                <span style={{ fontSize: '11px', color: '#94a3b8' }}>{c.sub}</span>
-              </button>
-            ))}
-          </div>
+      {/* ── INFO CARDS ── */}
+      <section style={{ background: '#f8fafc', padding: '0 24px 60px', marginTop: '-60px', position: 'relative', zIndex: 10 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+          {[
+            { icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v8"/><path d="M9 11l3-3 3 3"/></svg>, title: 'Unified Monitoring', desc: 'Comprehensive security management in one place.' },
+            { icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><circle cx="18" cy="6" r="3" fill="#dc2626" stroke="none"/></svg>, title: 'Real-Time Alerts', desc: 'Instant SOS alerts and activity notifications' },
+            { icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>, title: 'Cross-Platform Integration', desc: 'Seamless access on desktop, tablet, and mobile devices.' }
+          ].map((card, i) => (
+            <div key={i} style={{ background: '#fff', borderRadius: '8px', padding: '32px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {card.icon}
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>{card.title}</h3>
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>{card.desc}</p>
+            </div>
+          ))}
+        </div>
+        
+        <div style={{ textAlign: 'center', marginTop: '80px' }}>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a' }}>Our Plans</h2>
+          <p style={{ fontSize: '18px', color: '#475569', fontWeight: 500, marginTop: '8px' }}>Affordable Security Solutions</p>
+          <div style={{ width: '100px', height: '2px', background: '#e2e8f0', margin: '24px auto 0' }}></div>
         </div>
       </section>
 
