@@ -1,3 +1,4 @@
+import SituationalAwareness from './components/SituationalAwareness';
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -59,7 +60,7 @@ const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto
 const klevaLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png';
 const polishLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -835,7 +836,13 @@ const App: React.FC = () => {
           )}
 
           
-          {activeTab === 'subsystems' && (
+          
+            {activeTab === 'intelligence' && (
+              <div className="animate-fadeIn p-4 overflow-y-auto h-full">
+                <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Intelligence...</div>}><SituationalAwareness /></Suspense>
+              </div>
+            )}
+            {activeTab === 'subsystems' && (
             <div className="animate-fadeIn">
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Subsystems...</div>}><AdvancedSubsystems /></Suspense>
             </div>
