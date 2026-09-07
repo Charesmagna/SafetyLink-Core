@@ -31,7 +31,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
             {/* ── HERO ── */}
       <section className="hero-new" style={{
-        backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%), url("https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop")',
+        backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%), url("/Polish_20260907_043403519.jpg")',
         backgroundSize: 'cover', backgroundPosition: 'center', padding: '120px 24px 180px', position: 'relative', width: '100%', minHeight: '80vh', display: 'flex', alignItems: 'center'
       }}>
         <div className="hero-inner-new" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '48px' }}>
