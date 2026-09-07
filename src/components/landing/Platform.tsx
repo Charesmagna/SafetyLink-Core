@@ -11,6 +11,12 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
 
   const stopTour = () => { if (tourIntervalRef.current) { clearInterval(tourIntervalRef.current); tourIntervalRef.current = null; } };
   const openPanel = (n: number) => { setActivePanel(n); stopTour(); };
+  const closePanel = () => { setActivePanel(null); stopTour(); };
+  const startTour = () => {
+    stopTour();
+    let n = 1;
+    tourIntervalRef.current = setInterval(() => { n = n >= 4 ? 1 : n + 1; setActivePanel(n); }, 3000);
+  };
 
   return (
     <div className="landing-page-root w-full overflow-x-hidden">

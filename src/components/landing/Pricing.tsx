@@ -46,7 +46,6 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <button onClick={onRegisterOrg} className="price-cta g" style={{border: "none", cursor: "pointer"}}>Start your 14-day trial</button>
             </div>
           </div>
-                  <PricingCalculator />
         </div>
       </section>
 
