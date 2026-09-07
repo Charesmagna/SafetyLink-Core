@@ -31,19 +31,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
             {/* ── HERO ── */}
       <section className="hero-new" style={{
-        background: '#0f172a', width: '100%', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative'
+        width: '100%', minHeight: '80vh', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '40px', backgroundColor: '#0f172a'
       }}>
-        {/* Full width hero image */}
-        <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative', display: 'flex' }}>
-           <img src="/Polish_20260907_043403519.jpg" alt="SafetyLink Promotional Poster" style={{ width: '100%', height: 'auto', minHeight: '100%', objectFit: 'cover', display: 'block', backgroundColor: '#1e293b' }} onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop'; }} />
-           
-           {/* Interactive Overlay Buttons at the bottom of the poster */}
-           <div style={{ position: 'absolute', bottom: '40px', left: '0', right: '0', display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px' }}>
-              <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
-              <button style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s', backdropFilter: 'blur(4px)' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch the Video
-              </button>
-           </div>
+        {/* Full cover absolute image */}
+        <img src="/Polish_20260907_043403519.jpg" alt="SafetyLink Promotional Poster" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }} onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2070&auto=format&fit=crop'; }} />
+        
+        {/* Interactive Overlay Buttons at the bottom of the poster */}
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px', width: '100%' }}>
+           <button onClick={onRegisterOrg} style={{ background: '#16a34a', color: '#fff', border: 'none', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', transition: 'background 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} onMouseOver={e => e.currentTarget.style.background='#15803d'} onMouseOut={e => e.currentTarget.style.background='#16a34a'}>Get Started</button>
+           <button style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer', padding: '14px 28px', borderRadius: '4px', fontWeight: 'bold', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'border-color 0.2s', backdropFilter: 'blur(4px)' }} onMouseOver={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.8)'} onMouseOut={e => e.currentTarget.style.borderColor='rgba(255,255,255,0.3)'}>
+             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Watch the Video
+           </button>
         </div>
       </section>
 
