@@ -14,35 +14,61 @@ export interface UpdateInfo {
   releaseNotes?: string;
 }
 
+// Use XHR instead of fetch to bypass the fetch interceptor in main.tsx
+function xhrGet(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+    xhr.timeout = 10000;
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('JSON parse error')); }
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Timeout'));
+    xhr.send();
+  });
+}
+
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
-    const headers: Record<string, string> = { 'Accept': 'application/vnd.github.v3+json' };
-    const ghToken = import.meta.env.VITE_GITHUB_TOKEN;
-    if (ghToken) headers['Authorization'] = `Bearer ${ghToken}`;
+    console.log(`[UpdateService] Checking for updates. Installed: ${CURRENT_VERSION}`);
 
-    const res = await fetch(GITHUB_RELEASES_API, { headers });
-    if (!res.ok) return { available: false };
+    const release = await xhrGet(GITHUB_RELEASES_API);
+    const latestVersion = (release.tag_name || '').replace(/^v/, '');
 
-    const release = await res.json();
-    const latestVersion = release.tag_name?.replace(/^v/, '') || '0.0.0';
-
-    if (!isNewerVersion(latestVersion, CURRENT_VERSION)) {
+    if (!latestVersion) {
+      console.warn('[UpdateService] No tag_name in response');
       return { available: false };
     }
 
-    // Find APK and EXE assets
+    console.log(`[UpdateService] Latest: ${latestVersion} | Installed: ${CURRENT_VERSION}`);
+
+    if (!isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      console.log('[UpdateService] Already on latest version');
+      return { available: false };
+    }
+
     const assets = release.assets || [];
     const apkAsset = assets.find((a: any) => a.name.endsWith('.apk'));
     const exeAsset = assets.find((a: any) => a.name.endsWith('.exe'));
+
+    console.log(`[UpdateService] Update available: v${latestVersion}`);
 
     return {
       available: true,
       version: latestVersion,
       apkUrl: apkAsset?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink.apk`,
-      exeUrl: exeAsset?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink-OrgConsole-Setup.exe`,
-      releaseNotes: release.body?.substring(0, 200) || 'New version available'
+      exeUrl: exeAsset?.browser_download_url,
+      releaseNotes: release.body?.substring(0, 200) || 'New version available',
     };
-  } catch {
+  } catch (e) {
+    console.warn('[UpdateService] Check failed:', e);
     return { available: false };
   }
 }
