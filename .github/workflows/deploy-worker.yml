@@ -20,22 +20,8 @@ jobs:
       - name: Install wrangler
         run: npm install -g wrangler
 
-      - name: Create D1 database if not exists
-        run: |
-          cd worker
-          npm install
-          # Create D1 and capture ID
-          DB_OUTPUT=$(wrangler d1 create safetylink-db 2>&1 || echo "already exists")
-          echo "$DB_OUTPUT"
-          # Extract database_id if newly created
-          DB_ID=$(echo "$DB_OUTPUT" | grep -oP 'database_id\s*=\s*"\K[^"]+' || echo "")
-          if [ -n "$DB_ID" ]; then
-            sed -i "s/database_id = \"local\"/database_id = \"$DB_ID\"/" wrangler.toml
-            echo "Set database_id=$DB_ID"
-          fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_PAGES_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+      - name: Install worker dependencies
+        run: cd worker && npm install
 
       - name: Deploy Worker
         run: cd worker && wrangler deploy
@@ -45,31 +31,20 @@ jobs:
 
       - name: Set Worker Secrets
         run: |
-          cd worker
-          echo "${{ secrets.JWT_SECRET }}"            | wrangler secret put JWT_SECRET --name safetylink-api
-          echo "${{ secrets.TWILIO_SID }}"            | wrangler secret put TWILIO_SID --name safetylink-api
-          echo "3a555d3f587af716d5f97dcc572604b0"     | wrangler secret put TWILIO_AUTH_TOKEN --name safetylink-api
-          echo "+16055695774"                         | wrangler secret put TWILIO_NUMBER --name safetylink-api
-          echo "${{ secrets.VAPI_PRIVATE_KEY }}"      | wrangler secret put VAPI_PRIVATE_KEY --name safetylink-api
-          echo "${{ secrets.VAPI_PHONE_NUMBER_ID }}"  | wrangler secret put VAPI_PHONE_NUMBER_ID --name safetylink-api
-          echo "${{ secrets.USSD_API_KEY }}"          | wrangler secret put AT_API_KEY --name safetylink-api
-          echo "safetylink"                           | wrangler secret put AT_USERNAME --name safetylink-api
-          echo "${{ secrets.BLAND_API_KEY }}"         | wrangler secret put BLAND_API_KEY --name safetylink-api
-          echo "${{ secrets.PAYSTACK_SECRET_KEY }}"   | wrangler secret put PAYSTACK_SECRET_KEY --name safetylink-api
-          echo "+27739441222"                         | wrangler secret put RESPONSE_CENTRE_NUMBER --name safetylink-api
-          echo "${{ secrets.INTERNAL_API_SECRET }}"  | wrangler secret put INTERNAL_API_SECRET --name safetylink-api
+          set_secret() { echo "$2" | wrangler secret put "$1" --name safetylink-api; }
+          set_secret JWT_SECRET           "${{ secrets.JWT_SECRET }}"
+          set_secret TWILIO_SID           "${{ secrets.TWILIO_SID }}"
+          set_secret TWILIO_AUTH_TOKEN    "3a555d3f587af716d5f97dcc572604b0"
+          set_secret TWILIO_NUMBER        "+16055695774"
+          set_secret VAPI_PRIVATE_KEY     "${{ secrets.VAPI_PRIVATE_KEY }}"
+          set_secret VAPI_PHONE_NUMBER_ID "${{ secrets.VAPI_PHONE_NUMBER_ID }}"
+          set_secret AT_API_KEY           "${{ secrets.USSD_API_KEY }}"
+          set_secret AT_USERNAME          "safetylink"
+          set_secret BLAND_API_KEY        "${{ secrets.BLAND_API_KEY }}"
+          set_secret PAYSTACK_SECRET_KEY  "${{ secrets.PAYSTACK_SECRET_KEY }}"
+          set_secret RESPONSE_CENTRE_NUMBER "+27739441222"
+          set_secret INTERNAL_API_SECRET  "${{ secrets.INTERNAL_API_SECRET }}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_PAGES_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
 
-      - name: Init database schema
-        run: |
-          cd worker
-          wrangler d1 execute safetylink-db --remote --command "
-            CREATE TABLE IF NOT EXISTS organisations (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact_name TEXT, contact_email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
-            CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, org_id TEXT, username TEXT, email TEXT, role TEXT DEFAULT 'User', last_seen INTEGER, lat REAL, lng REAL, sos_active INTEGER DEFAULT 0, created_at INTEGER, password_hash TEXT);
-            CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, org_id TEXT, user_id TEXT, type TEXT, lat REAL, lng REAL, resolved INTEGER DEFAULT 0, created_at INTEGER NOT NULL);
-          "
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_PAGES_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
