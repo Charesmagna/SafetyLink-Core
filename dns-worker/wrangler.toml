@@ -1,0 +1,11 @@
+name = "safetylink-dns"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "BLOCKLIST"
+id = "PLACEHOLDER"
+
+[vars]
+UPSTREAM_DOH = "https://1.1.1.1/dns-query"

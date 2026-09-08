@@ -24,6 +24,7 @@ import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
 import { LandingPage } from './components/LandingPage';
+import { DnsSetupGuide } from './components/DnsSetupGuide';
 import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
 const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
@@ -249,6 +250,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
+  const [showDnsGuide, setShowDnsGuide] = useState(false);
   useEffect(() => {
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
     if (Capacitor.isNativePlatform()) {
@@ -1047,6 +1049,17 @@ const App: React.FC = () => {
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Preferences & Ledger</p>
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => { setShowDnsGuide(true); setIsDrawerOpen(false); }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200"
+                  >
+                    <span className="text-sm shrink-0">🔑</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">DNS Shield</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Configure device DNS protection</p>
+                    </div>
+                  </button>
                 </div>
 
                 {/* Language preloader inside drawer */}
@@ -1202,6 +1215,7 @@ const App: React.FC = () => {
       {/* Critical Wearable Device Alert Sentinel Overlay */}
       <DeviceAlertOverlay />
       <LizzyPopup />
+      {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
 
       {/* Primary Dynamic App Screen Container */}
       <div className="flex-1 relative flex flex-col z-10">
