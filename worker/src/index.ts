@@ -5,7 +5,39 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 export interface Env {
-  DB?: D1Database;  // Optional until D1 is bound
+  DB?: D1Database;
+  // Auth
+  JWT_SECRET: string;
+  INTERNAL_API_SECRET: string;
+  // Twilio
+  TWILIO_SID: string;
+  TWILIO_AUTH_TOKEN: string;
+  TWILIO_NUMBER: string;
+  // VAPI
+  VAPI_PRIVATE_KEY: string;
+  VAPI_PHONE_NUMBER_ID: string;
+  VAPI_ASSISTANT_ID: string;
+  // Africa's Talking
+  AT_API_KEY: string;
+  AT_USERNAME: string;
+  // Bland.ai
+  BLAND_API_KEY: string;
+  // Paystack
+  PAYSTACK_SECRET_KEY: string;
+  PAYSTACK_PUBLIC_KEY: string;
+  // Cloudinary
+  CLOUDINARY_KEY: string;
+  CLOUDINARY_SECRET: string;
+  CLOUDINARY_CLOUD: string;
+  // Neon S3 — for audio/evidence file storage only
+  AWS_ENDPOINT_URL_S3: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  // Other
+  RESPONSE_CENTRE_NUMBER: string;
+  PIPEDREAM_WEBHOOK_URL: string;
+  RECAPTCHA_SECRET: string;
+}
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
