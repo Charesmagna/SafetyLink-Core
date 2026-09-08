@@ -1,0 +1,20 @@
+name = "safetylink-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+CLOUDINARY_CLOUD = "qcp4fx2v"
+PIPEDREAM_WEBHOOK_URL = "https://eomnz1lxw9o2hyq.m.pipedream.net"
+
+# D1 Database — created on first deploy via CI
+# database_id is set by the deploy script after creation
+[[d1_databases]]
+binding = "DB"
+database_name = "safetylink-db"
+database_id = "local"
+
+[routes]
+pattern = "safetylink.online/api/*"
+zone_name = "safetylink.online"
