@@ -331,7 +331,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
-  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', ''),
+  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', 'https://safetylink-api.safetylink-api.workers.dev'),
   connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
   tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
   auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
@@ -1395,7 +1395,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     if (!isActuallyOffline && !isDrill) {
       get().addAuditLog('DISPATCH', 'INFO', 'LAYER 1: DATA MODE', 'Attempting POST to /api/panic (2KB payload)');
       try {
-        const res = await fetch(`${get().customBackendUrl}/api/panic/trigger`, { 
+        const res = await fetch(`${get().customBackendUrl}/api/panic`, { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
