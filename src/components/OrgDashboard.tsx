@@ -87,10 +87,8 @@ export const OrgDashboard: React.FC = () => {
   const [ssUdpPort, setSsUdpPort] = useState(currentOrg?.sensorStream?.udpPort ? currentOrg?.sensorStream?.udpPort.toString() : '5005');
   const [ssEnabled, setSsEnabled] = useState(currentOrg?.sensorStream?.enabled || false);
 
-  if (!currentOrg) return null;
-
   // Filter students/members belonging to this organization code
-  const registeredStudents = useMemo(() => users.filter(u => u.orgCode === currentOrg.id), [users, currentOrg.id]);
+  const registeredStudents = useMemo(() => users.filter(u => u.orgCode === currentOrg?.id), [users, currentOrg?.id]);
   
   // Filter by search term
   const filteredStudents = useMemo(() => registeredStudents.filter(u => 
@@ -108,13 +106,16 @@ export const OrgDashboard: React.FC = () => {
 
   // Active panic alerts triggered by people in this organization
   const activeOrgPanics = useMemo(() => {
+    if (!currentOrg) return [];
     const orgUserIds = new Set(registeredStudents.map(s => s.username.toLowerCase()));
     return panicEvents.filter(p => 
       p.status !== 'RESOLVED' && 
       (p.description.toLowerCase().includes(currentOrg.name.toLowerCase()) || 
        orgUserIds.has(p.description.split(' ').pop()?.toLowerCase() || ''))
     );
-  }, [panicEvents, currentOrg.name, registeredStudents]);
+  }, [panicEvents, currentOrg?.name, registeredStudents]);
+
+  if (!currentOrg) return null;
 
   const handleEditClick = (student: UserProfile) => {
     setEditingUserId(student.id);
@@ -510,7 +511,7 @@ export const OrgDashboard: React.FC = () => {
             
             {/* Pending Membership Approvals Board */}
             {(() => {
-              const pendingUsers = useMemo(() => users.filter(u => u.pendingOrgCode === currentOrg.id), [users, currentOrg.id]);
+              const pendingUsers = users.filter(u => u.pendingOrgCode === currentOrg?.id);
               if (pendingUsers.length === 0) return null;
               
               return (

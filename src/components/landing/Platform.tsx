@@ -1,190 +1,204 @@
-// @ts-nocheck
+import React, { useState, useRef } from 'react';
+import './Home.css';
 
-import React, { useState, useEffect } from 'react';
-import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap, Activity, CheckCircle2, XCircle, ChevronDown, Bluetooth, Bot, Lock, Server } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
-export function Platform() {
+export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoSrc, setVideoSrc] = useState('');
+  const [activePanel, setActivePanel] = useState<number | null>(1);
+  const tourIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopTour = () => { if (tourIntervalRef.current) { clearInterval(tourIntervalRef.current); tourIntervalRef.current = null; } };
+  const openPanel = (n: number) => { setActivePanel(n); stopTour(); };
+  const closePanel = () => { setActivePanel(null); stopTour(); };
+  const startTour = () => {
+    stopTour();
+    let n = 1;
+    tourIntervalRef.current = setInterval(() => { n = n >= 4 ? 1 : n + 1; setActivePanel(n); }, 3000);
+  };
+
   return (
-    <>
-      {/* ══ PLATFORM FEATURES ════════════════════════════════════════════ */}
-      <section id="platform" className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16 max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-6 uppercase tracking-tight">ONE PLATFORM. TOTAL SITUATIONAL AWARENESS.</h2>
-            <p className="text-slate-600 text-[15px] leading-relaxed">
-              SafetyLink is not a single app. It is a three-layer intelligent emergency response platform built for South African conditions — offline-first, BLE mesh-connected, and deployable without internet infrastructure.
-            </p>
+    <div className="landing-page-root w-full overflow-x-hidden">
+      {showVideoModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 999999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => { setShowVideoModal(false); setVideoSrc(''); }} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: 'white', fontSize: '28px', cursor: 'pointer' }}>✕</button>
+          <video src={videoSrc} controls autoPlay style={{ width: '90%', maxWidth: '1000px', borderRadius: '12px' }} />
+        </div>
+      )}
+                  {/* ══ DISPATCH SECTION ══ */}
+      <section className="dispatch" id="technology">
+        <div className="dispatch-inner">
+          <div className="dispatch-header">
+            <div className="live-badge"><div className="ldot"></div><span>Live System</span></div>
+            <h2 className="dtitle" style={{ cursor: "pointer" }} onClick={() => { setVideoSrc("https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Okay_now_for_the_next_scene_.mp4"); setShowVideoModal(true); }}>SAFETYLINK — OFFLINE-FIRST INTELLIGENT DISPATCH <span style={{ fontSize: "12px", verticalAlign: "middle", opacity: 0.8 }}>▶ PLAY VIDEO</span></h2>
+            <p className="dsub">Intelligent Local Coordination · Local Processing · Local Control · Offline, On Purpose.</p>
           </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Layer 1 */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-[#15803d] mb-6">
-                <Smartphone size={28} />
+          <button className="tour-btn" onClick={startTour}>▶ &nbsp;TAKE A TOUR</button>
+          <div className="img-wrap">
+            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg" alt="SafetyLink Offline-First Intelligent Dispatch System" />
+            <div className="hgrid">
+              <div className={"hz" + (activePanel === 1 ? " active" : "")} id="z1" onClick={() => openPanel(1)} style={{boxShadow: activePanel === 1 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
+                <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
+                <div className="zlbl">1 · Wearable &amp; App Alerts</div>
               </div>
-              <h3 className="text-lg font-black text-slate-900 mb-2 uppercase">Layer 1 — SafetyLink Mobile (Citizen)</h3>
-              <p className="text-sm text-slate-500 mb-6">The personal safety hub for residents, individuals, and family members.</p>
-              
-              <ul className="space-y-4">
-                {[
-                  "Mission-Control SOS Actuator — hold 1.5 seconds to initiate sequential security escalation chain",
-                  "Watch-Me Timer — proactive protection that triggers an alert if you fail to check in",
-                  "Native iTAG Keyfob — BLE wearable panic button pairs directly to your phone",
-                  "Live Security Armed status — real-time confirmation your protection is active",
-                  "Sequential escalation chain — alert escalates automatically through contacts if unacknowledged",
-                  "Offline SMS fallback — alerts fire even when mobile data is unavailable",
-                  "TEST mode — safely verify your alert chain without triggering a real response",
-                  "LIVE PROTOCOL mode — activate full emergency dispatch",
-                  "11 South African languages supported"
-                ].map((item, i) => (
-                  <li key={i} className="flex gap-3 text-[13px] text-slate-700 leading-relaxed">
-                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#15803d] shrink-0"></div>
-                    <span dangerouslySetInnerHTML={{ __html: item.replace(/^([^—]+)—/, '<strong>$1</strong> —') }} />
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8 pt-6 border-t border-slate-100">
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Powered by: SafetyLink® · ©TM Media Solutions · Reg: 2018/500191/07</p>
+              <div className={"hz" + (activePanel === 2 ? " active" : "")} id="z2" onClick={() => openPanel(2)} style={{boxShadow: activePanel === 2 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
+                <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
+                <div className="zlbl">3 · Drone Dispatch</div>
+              </div>
+              <div className={"hz" + (activePanel === 3 ? " active" : "")} id="z3" onClick={() => openPanel(3)} style={{boxShadow: activePanel === 3 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
+                <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
+                <div className="zlbl">2 · Secure Local Network</div>
+              </div>
+              <div className={"hz" + (activePanel === 4 ? " active" : "")} id="z4" onClick={() => openPanel(4)} style={{boxShadow: activePanel === 4 ? 'inset 0 0 0 2px rgba(16,185,129,0.5)' : ''}}>
+                <div className="hdot"><div className="dp"></div><div className="dc"></div></div>
+                <div className="zlbl">4 · Live Coordination</div>
               </div>
             </div>
-
-            {/* Layer 2 */}
-            <div className="bg-[#0f172a] rounded-3xl p-8 border border-slate-800 shadow-xl text-white relative overflow-hidden transform lg:-translate-y-4">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#15803d] rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
-              <div className="relative z-10">
-                <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center text-[#15803d] mb-6">
-                  <MonitorSmartphone size={28} />
+            <div className="hub">
+              <div className="hub-rings"><div className="hr"></div><div className="hr"></div><div className="hr"></div></div>
+              <div className="hub-tag"><span>LIVE DISPATCH HUB</span></div>
+            </div>
+          </div>
+          <div className="panels">
+            <div className={"panel pt" + (activePanel === 1 ? " visible" : "")} id="p1">
+              <div className="pi">
+                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Code_Generated_Image_1.png" alt="SOS App"/></div>
+                <div className="pbody">
+                  <button className="pclose" onClick={closePanel}>×</button>
+                  <div className="pbadge">Offline Operation</div>
+                  <div className="ptitle">1. Wearable &amp; App Alerts</div>
+                  <p className="ptext"><strong>Instant triggers</strong> from iTAG keyfob or app. Hold SOS 1.5s to initiate sequential security escalation chain. Works fully <strong>offline</strong> via BLE mesh and SMS fallback. Family Linked. No internet required.</p>
                 </div>
-                <h3 className="text-lg font-black text-white mb-2 uppercase">Layer 2 — SafetyLink Command (Responder / Security Company)</h3>
-                <p className="text-sm text-slate-400 mb-6">The operator control deck for armed response companies, estate security, and neighbourhood watch commanders.</p>
-                
-                <ul className="space-y-4">
-                  {[
-                    "Secure Command Gateway — authorised access via Username/Callsign + Organisational Mesh Code",
-                    "Organisational Mesh Code format: SL-ORG-XXXX",
-                    "Real-time active alert feed with GPS coordinates and unit identification",
-                    "Responder dispatch and status tracking",
-                    "Multi-node visibility — monitor all residents and beacons in your network simultaneously",
-                    "Evidence Ledger — immutable log of every alert, acknowledgement, and response action",
-                    "Demo Showcase Mode — instantly populates mock networks and active supervisor nodes for client presentations",
-                    "Control room integration — compatible with existing CCTV and dispatch infrastructure"
-                  ].map((item, i) => (
-                    <li key={i} className="flex gap-3 text-[13px] text-slate-300 leading-relaxed">
-                      <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#15803d] shrink-0"></div>
-                      <span dangerouslySetInnerHTML={{ __html: item.replace(/^([^—]+)—/, '<strong class="text-white">$1</strong> —') }} />
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
-
-            {/* Layer 3 */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center text-[#15803d] mb-6">
-                <Server size={28} />
+            <div className={"panel pt" + (activePanel === 2 ? " visible" : "")} id="p2">
+              <div className="pi">
+                <div className="pbody">
+                  <button className="pclose" onClick={closePanel}>×</button>
+                  <div className="pbadge">Automated Physical Response</div>
+                  <div className="ptitle">3. Automated Drone Dispatch</div>
+                  <p className="ptext"><strong>Immediate dispatch</strong> on alert trigger. Pre-programmed offline flight path. SafetyLink <strong>Drone-in-a-Box</strong> — eyes on scene within minutes. Autonomous return-to-base on mission complete.</p>
+                </div>
               </div>
-              <h3 className="text-lg font-black text-slate-900 mb-2 uppercase">Layer 3 — SafetyLink Admin (Organisation / Estate Manager)</h3>
-              <p className="text-sm text-slate-500 mb-6">The administration and configuration panel for property managers and organisation administrators.</p>
-              
-              <ul className="space-y-4">
-                {[
-                  "Onboard and manage residents under your organisational node",
-                  "Assign and configure SL-ORG-XXXX mesh codes",
-                  "View audit logs and compliance reports",
-                  "Configure alert escalation chains per unit",
-                  "Manage hardware device inventory (iTAG keyfobs, beacons)",
-                  "Billing and subscription management — R49/month per resident + R149 once-off registration",
-                  "Multi-estate support — one admin panel managing multiple properties simultaneously"
-                ].map((item, i) => (
-                  <li key={i} className="flex gap-3 text-[13px] text-slate-700 leading-relaxed">
-                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#15803d] shrink-0"></div>
-                    <span dangerouslySetInnerHTML={{ __html: item.replace(/^([^—]+)—/, '<strong>$1</strong> —') }} />
-                  </li>
-                ))}
-              </ul>
+            </div>
+            <div className={"panel pt" + (activePanel === 3 ? " visible" : "")} id="p3">
+              <div className="pi">
+                <div className="pbody">
+                  <button className="pclose" onClick={closePanel}>×</button>
+                  <div className="pbadge">Offline Ready</div>
+                  <div className="ptitle">2. Private Local Mesh Network</div>
+                  <p className="ptext"><strong>Data Privacy-First.</strong> Encrypted local communication. No cloud dependency. Local devices connect via <strong>Secure Communication Gateway</strong>. Your data never leaves your property. Zero internet required.</p>
+                </div>
+              </div>
+            </div>
+            <div className={"panel pt" + (activePanel === 4 ? " visible" : "")} id="p4">
+              <div className="pi">
+                <div className="pthumb"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="Command Login"/></div>
+                <div className="pbody">
+                  <button className="pclose" onClick={closePanel}>×</button>
+                  <div className="pbadge">Local Operator Control</div>
+                  <div className="ptitle">4. Live Local Coordination</div>
+                  <p className="ptext"><strong>Control Room operators</strong> monitor all active incidents via Secure Command Gateway. Access with your <strong>SL-ORG-XXXX</strong> Mesh Code. Evidence Ledger auto-logs every action for compliance.</p>
+                </div>
+              </div>
             </div>
           </div>
+          <div className="caption"><p>From Trigger to Action: A Comprehensive Offline Emergency Ecosystem</p></div>
         </div>
       </section>
 
-      
-      {/* ══ AI CO-PILOT ═══════════════════════════════════════════════════ */}
-      <section id="ai-copilot" className="py-24 bg-[#0f172a] text-white border-t-[8px] border-[#15803d] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800/40 via-[#0f172a] to-[#0f172a] pointer-events-none"></div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="flex flex-col lg:flex-row gap-16">
-            {/* Left Col */}
-            <div className="flex-[1.2]">
-              <div className="inline-flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-full px-4 py-1.5 mb-8">
-                <Bot size={14} className="text-[#15803d]" />
-                <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Powered by Google Gemini</span>
-              </div>
-              <h2 className="text-3xl md:text-4xl font-black text-white mb-6 uppercase tracking-tight">DEEPMIND SECURITY INTELLIGENCE. ALWAYS ON.</h2>
-              <p className="text-slate-400 text-[15px] leading-relaxed mb-10">
-                SafetyLink integrates an AI Co-Pilot powered by Google Gemini — a purely additive intelligence layer that enhances situational awareness without modifying or interfering with the core emergency dispatch logic. The platform works without it. With it, it thinks ahead.
-              </p>
-
-              <h4 className="text-[13px] font-black text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 size={18} className="text-[#15803d]" /> What the AI Co-Pilot does:
-              </h4>
-              <ul className="space-y-4 mb-10">
-                {[
-                  "Analyses active alert patterns across your network and identifies anomalies",
-                  "Suggests optimal responder routing based on real-time location data",
-                  "Generates incident summaries for the Evidence Ledger automatically",
-                  "Translates alerts and communications into any of South Africa's 11 official languages instantly",
-                  "Monitors Watch-Me Timer compliance across your resident network and flags unusual patterns",
-                  "Provides natural language query access to your alert history — ask \"how many alerts came from Unit 14 last month\" and get an instant answer",
-                  "Assists commanders with incident classification — distinguishing false alarms from genuine emergencies using historical pattern data"
-                ].map((item, i) => (
-                  <li key={i} className="flex gap-3 text-[13px] text-slate-300 leading-relaxed">
-                    <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-[#15803d] shrink-0 shadow-[0_0_8px_#15803d]"></div>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Right Col */}
-            <div className="flex-1">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 mb-8 shadow-2xl">
-                <h4 className="text-[13px] font-black text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                  <XCircle size={18} className="text-red-500" /> What the AI Co-Pilot does NOT do:
-                </h4>
-                <ul className="space-y-4 mb-8">
-                  {[
-                    "It does not make dispatch decisions",
-                    "It does not modify alert thresholds or escalation chains",
-                    "It does not access any data outside your organisational mesh node",
-                    "It does not require internet to function at its core — AI features degrade gracefully when offline, core safety functions remain 100% operational"
-                  ].map((item, i) => (
-                    <li key={i} className="flex gap-3 text-[13px] text-slate-400 leading-relaxed">
-                      <div className="w-1.5 h-1.5 mt-1.5 rounded-full bg-slate-700 shrink-0"></div>
-                      <span>{item}</span>
-                    </li>
-                  ))}
+      {/* ══ PLATFORM FEATURES ══ */}
+      <section className="features" id="features">
+        <div className="feat-inner">
+          <div className="section-eye" style={{color:'var(--green)'}}>Platform Features</div>
+          <h2 style={{fontSize:'clamp(22px,3.5vw,38px)', fontWeight:'900', color:'var(--navy)', letterSpacing:'-.02em', marginBottom:'12px'}}>One Platform. Total Situational Awareness.</h2>
+          <p style={{fontSize:'15px', color:'var(--muted)', maxWidth:'520px', lineHeight:'1.7', marginBottom:'48px'}}>Three layers of intelligent emergency response — Mobile, Command, and Admin — built for South African conditions.</p>
+          <div className="feat-grid">
+            <div className="feat-card">
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Code_Generated_Image_1.png" alt="SafetyLink Mobile App" />
+              <div className="feat-body">
+                <span className="feat-tag mobile">SafetyLink Mobile</span>
+                <div className="feat-title">Citizen Safety Hub</div>
+                <ul className="feat-list">
+                  <li>Mission-Control SOS Actuator — hold 1.5s</li>
+                  <li>Watch-Me Timer proactive protection</li>
+                  <li>Native iTAG BLE keyfob pairing</li>
+                  <li>Sequential escalation chain</li>
+                  <li>Offline SMS fallback</li>
+                  <li>11 South African languages</li>
                 </ul>
-
-                <h4 className="text-[12px] font-black text-white mb-3 uppercase tracking-widest flex items-center gap-2 border-t border-slate-800 pt-8">
-                  <Lock size={14} className="text-slate-400" /> Privacy:
-                </h4>
-                <p className="text-[12px] text-slate-400 leading-relaxed">
-                  All AI processing runs through a secure server-side proxy. Your Gemini API key is never exposed in the app or on device. All data remains within your SL-ORG-XXXX node boundary.
-                </p>
               </div>
-              
-              <div className="text-[9px] font-bold tracking-[0.2em] text-slate-600 space-y-1.5 uppercase bg-slate-950 p-6 rounded-2xl border border-slate-800 text-center">
-                <p>Google Gemini · SafetyLink AI Co-Pilot v2.0 · SECURE ACTIVE NODE</p>
-                <p>SECURE ENCRYPTED MESH MATRIX // DEEPMIND SECURITY BLUEPRINTS</p>
-                <p className="text-[#15803d]">POWERED BY TM MEDIA SOLUTIONS</p>
+            </div>
+            <div className="feat-card">
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="SafetyLink Command" />
+              <div className="feat-body">
+                <span className="feat-tag command">SafetyLink Command</span>
+                <div className="feat-title">Responder Control Deck</div>
+                <ul className="feat-list">
+                  <li>Secure Command Gateway (SL-ORG-XXXX)</li>
+                  <li>Real-time alert feed with GPS</li>
+                  <li>Multi-responder dispatch</li>
+                  <li>Evidence Ledger — immutable logs</li>
+                  <li>Demo Showcase Mode</li>
+                  <li>Control room integration</li>
+                </ul>
+              </div>
+            </div>
+            <div className="feat-card">
+              <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="SafetyLink Admin" />
+              <div className="feat-body">
+                <span className="feat-tag admin">SafetyLink Admin</span>
+                <div className="feat-title">Organisation Management</div>
+                <ul className="feat-list">
+                  <li>Onboard and manage residents</li>
+                  <li>Assign SL-ORG-XXXX mesh codes</li>
+                  <li>Audit logs and compliance reports</li>
+                  <li>Hardware device inventory</li>
+                  <li>Billing and subscription management</li>
+                  <li>Multi-estate support</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </section>
+      {/* ══ PROMO GALLERY ══ */}
+      <section className="gallery">
+        <div className="gal-inner">
+          <div className="section-eye">Visual Library</div>
+          <h2 className="section-h">SafetyLink In Action</h2>
+          <div className="gal-grid">
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png" alt="SafetyLink tactical poster" /><div className="gal-caption">SafetyLink Tactical Deployment</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="System diagram" /><div className="gal-caption">Intelligent Dispatch Architecture</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg" alt="Drone minutes matter" /><div className="gal-caption">Minutes Matter. Drones Act Now.</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg" alt="SafetyLink business card" /><div className="gal-caption">SafetyLink Brand Identity</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/SafetyLink_3D_Render.png" alt="SafetyLink 3D logo" style={{ padding: '20px', objectFit: 'contain', background: '#1e293b' }} /><div className="gal-caption">SafetyLink Brand Identity</div></div>
+            <div className="gal-item"><img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png" alt="UI screenshot" /><div className="gal-caption">Command Dashboard Interface</div></div>
+          </div>
+        </div>
+      </section>
 
-      
-    </>
+      {/* ══ KLEV.AI ══ */}
+      <section className="klev" id="ai">
+        <div className="klev-inner">
+          <div className="klev-left">
+            <div className="section-eye">AI Co-Pilot</div>
+            <h2 className="section-h">DeepMind Security Intelligence. Always On.</h2>
+            <p className="section-sub">Powered by K'lev.ai — an additive intelligence layer that enhances situational awareness without modifying core emergency dispatch logic. The platform works without it. With it, it thinks ahead.</p>
+            <ul style={{listStyle:'none', display:'flex', flexDirection:'column', gap:'10px', marginTop:'16px'}}>
+              <li style={{fontSize:'13px', color:'#94a3b8', display:'flex', gap:'8px'}}><span style={{color:'#10b981', fontWeight:'700'}}>✓</span>Analyses alert patterns and flags anomalies</li>
+              <li style={{fontSize:'13px', color:'#94a3b8', display:'flex', gap:'8px'}}><span style={{color:'#10b981', fontWeight:'700'}}>✓</span>Generates incident summaries automatically</li>
+              <li style={{fontSize:'13px', color:'#94a3b8', display:'flex', gap:'8px'}}><span style={{color:'#10b981', fontWeight:'700'}}>✓</span>Translates into all 11 SA official languages</li>
+              <li style={{fontSize:'13px', color:'#94a3b8', display:'flex', gap:'8px'}}><span style={{color:'#10b981', fontWeight:'700'}}>✓</span>Degrades gracefully offline — core safety always 100%</li>
+            </ul>
+          </div>
+          <div className="klev-right">
+            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Gemini_Generated_Image_59psss59psss59ps.jpg" alt="SafetyLink App Analytics UI" style={{ borderRadius: '12px' }} />
+          </div>
+        </div>
+      </section>
+
+    </div>
   );
 }

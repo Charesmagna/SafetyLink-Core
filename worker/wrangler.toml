@@ -1,0 +1,9 @@
+name = "safetylink-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+CLOUDINARY_CLOUD = "qcp4fx2v"
+PIPEDREAM_WEBHOOK_URL = "https://eomnz1lxw9o2hyq.m.pipedream.net"

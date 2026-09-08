@@ -1,3 +1,4 @@
+import SituationalAwareness from './components/SituationalAwareness';
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -59,7 +60,7 @@ const newLogo1 = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto
 const klevaLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png';
 const polishLogo = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -835,7 +836,13 @@ const App: React.FC = () => {
           )}
 
           
-          {activeTab === 'subsystems' && (
+          
+            {activeTab === 'intelligence' && (
+              <div className="animate-fadeIn p-4 overflow-y-auto h-full">
+                <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Intelligence...</div>}><SituationalAwareness /></Suspense>
+              </div>
+            )}
+            {activeTab === 'subsystems' && (
             <div className="animate-fadeIn">
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Subsystems...</div>}><AdvancedSubsystems /></Suspense>
             </div>
@@ -1040,79 +1047,6 @@ const App: React.FC = () => {
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Preferences & Ledger</p>
                     </div>
                   </button>
-
-                  <button
-                    onClick={() => { setActiveTab('super'); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
-                      activeTab === 'super'
-                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 font-bold'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-sm shrink-0">🔮</span>
-                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Super Admin</span>
-                  </button>
-
-                  <button
-                    onClick={() => { setActiveTab('warroom'); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all border ${
-                      activeTab === 'warroom'
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 font-bold'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-sm shrink-0">⚔️</span>
-                    <span className="text-xs uppercase tracking-wider flex-1 text-left">Org War Room</span>
-                  </button>
-
-                  <button
-                    onClick={() => { setShowLanding(true); setIsDrawerOpen(false); }}
-                    className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-colors text-slate-400 hover:bg-slate-900/50 cursor-pointer`}
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <div className="text-left flex-1">
-                      <div className="font-black text-sm uppercase tracking-wider text-slate-200">Public Website</div>
-                      <div className="text-[10px] text-slate-500">View products & pricing</div>
-                    </div>
-                  </button>
-                  
-
-                  {demoMode && (
-                  
-                  <>
-                  <button
-                    onClick={() => { setActiveTab('subsystems'); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
-                      activeTab === 'subsystems'
-                        ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 font-bold'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-sm shrink-0">💻</span>
-                    <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">Subsystems</p>
-                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Advanced tactical modules</p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => { setActiveTab('workspace'); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
-                      activeTab === 'workspace'
-                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 font-bold'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-sm shrink-0">🏢</span>
-                    <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">Google Workspace</p>
-                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Drive, Docs, Meets & More</p>
-                    </div>
-                  </button>
-                  </>
-
-                  )}
                 </div>
 
                 {/* Language preloader inside drawer */}

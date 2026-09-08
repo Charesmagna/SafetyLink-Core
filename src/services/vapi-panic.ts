@@ -14,10 +14,13 @@ dotenv.config();
 const router = express.Router();
 
 // ── CLIENTS ────────────────────────────────────────────────────────────────
-const twilioClient = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
+const twilioClient = twilio(
+  process.env.TWILIO_SID,
+  process.env.WHATSAPP_ACCESS_TOKEN  // This is the Twilio Auth Token
+);
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD,
+  cloud_name: process.env.CLOUDINARY_CLOUD || 'qcp4fx2v',
   api_key:    process.env.CLOUDINARY_KEY,
   api_secret: process.env.CLOUDINARY_SECRET,
 });
@@ -71,40 +74,55 @@ async function fireAllAlerts({ callerNumber, callerName, location, trigger, cont
   }
 
   for (const c of contacts) {
-    if (process.env.TWILIO_WA) {
+    if (process.env.TWILIO_NUMBER) {
       jobs.push(
         twilioClient.messages.create({
           body: message,
-          from: `whatsapp:${process.env.TWILIO_WA}`,
+          from: `whatsapp:${process.env.TWILIO_NUMBER}`,
           to: `whatsapp:${c.phone}`,
         }).catch((e: any) => console.error('[Twilio WA]', e.message))
       );
     }
   }
 
-  if (contacts[0] && process.env.VAPI_KEY) {
+  // ── Native Twilio voice call to Contact 1 (rings their actual phone) ──
+  if (contacts[0] && process.env.TWILIO_SID && process.env.TWILIO_NUMBER) {
+    const locationText = location
+      ? `https://maps.google.com/?q=${location.lat},${location.lon}`
+      : 'location not available';
+    jobs.push(
+      twilioClient.calls.create({
+        twiml: `<Response><Say voice="alice">SafetyLink emergency alert. ${callerName || 'A registered user'} has triggered a panic alarm. Their location is ${locationText}. This is an automated SafetyLink emergency call. Please check on them immediately.</Say><Pause length="2"/><Say voice="alice">Repeating. SafetyLink emergency. ${callerName || 'User'} needs help. Location: ${locationText}.</Say></Response>`,
+        from: process.env.TWILIO_NUMBER,
+        to: contacts[0].phone,
+      }).catch((e: any) => console.error('[Twilio Voice Call]', e.message))
+    );
+  }
+
+  // ── VAPI AI voice call to Contact 1 (intelligent, multilingual) ──
+  if (contacts[0] && process.env.VAPI_PRIVATE_KEY) {
+    const locationText = location
+      ? `https://maps.google.com/?q=${location.lat},${location.lon}`
+      : 'location not available';
     jobs.push(
       axios.post('https://api.vapi.ai/call', {
-        phoneNumberId: process.env.VAPI_PHONE_ID,
+        phoneNumberId: process.env.VAPI_PHONE_NUMBER_ID,
         customer: { number: contacts[0].phone },
         assistant: {
-          firstMessage: `This is SafetyLink AI emergency alert. ${callerName || 'A registered user'} has triggered a panic call from number ${callerNumber}. Their location is ${locationText}. Please respond immediately. Press 1 to call them back now.`,
+          firstMessage: `This is SafetyLink AI. ${callerName || 'A registered user'} has triggered a panic alert. Their location is ${locationText}. Please respond immediately.`,
           model: {
             provider: 'openai',
             model: 'gpt-4o-mini',
-            systemPrompt: 'You are a SafetyLink emergency notification agent. Read the alert clearly and ask the recipient to confirm they received it. If they press 1, initiate a callback. Keep the call under 60 seconds.',
+            systemPrompt: 'You are a SafetyLink emergency notification agent. Read the alert clearly and ask the recipient to confirm they received it. Keep the call under 60 seconds.',
             temperature: 0.2,
           },
-          voice: {
-            provider: '11labs',
-            voiceId: '21m00Tcm4TlvDq8ikWAM',
-          },
+          voice: { provider: '11labs', voiceId: '21m00Tcm4TlvDq8ikWAM' },
           endCallFunctionEnabled: true,
           maxDurationSeconds: 90,
           recordingEnabled: false,
         },
       }, {
-        headers: { Authorization: `Bearer ${process.env.VAPI_KEY}` },
+        headers: { Authorization: `Bearer ${process.env.VAPI_PRIVATE_KEY}` },
       }).catch((e: any) => console.error('[VAPI Outbound]', e.message))
     );
   }
@@ -267,11 +285,11 @@ router.post('/vapi/webhook', async (req, res) => {
     }
 
     const contacts = await getContactsForNumber(callerNumber);
-    if (evidenceUrl && contacts.length && process.env.TWILIO_WA) {
+    if (evidenceUrl && contacts.length && process.env.TWILIO_NUMBER) {
       for (const c of contacts) {
         twilioClient.messages.create({
           body: `SafetyLink — Panic call recording from ${callerNumber}:\n${evidenceUrl}\nDuration: ${durationSecs}s`,
-          from: `whatsapp:${process.env.TWILIO_WA}`,
+          from: `whatsapp:${process.env.TWILIO_NUMBER}`,
           to: `whatsapp:${c.phone}`,
         }).catch(() => {});
       }

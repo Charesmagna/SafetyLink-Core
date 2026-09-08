@@ -1,10 +1,10 @@
 // @ts-nocheck
+import React from 'react';
+import { Bluetooth } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap, Activity, CheckCircle2, XCircle, ChevronDown, Bluetooth, Bot, Lock, Server } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
-export function Hardware() {
+export function Hardware({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   return (
     <>
       {/* ══ HARDWARE CONFIG ═══════════════════════════════════════════════ */}
@@ -18,17 +18,15 @@ export function Hardware() {
           </div>
 
           <div className="flex flex-col lg:flex-row gap-12 items-start">
-            {/* Images Column */}
             <div className="flex-1 space-y-6">
               <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex justify-center items-center h-auto min-h-[300px]">
-                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310009/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices" className="w-full max-w-[400px] object-contain rounded-xl" />
+                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260819_020219883.jpg" alt="SafetyLink iTAG devices" className="w-full max-w-[400px] object-contain rounded-xl" />
               </div>
               <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex justify-center items-center">
-                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787310010/Polish_20260819_020007723.jpg" alt="iTAG battery instructions" className="w-full max-w-[300px] object-contain rounded-xl" />
+                <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260819_020007723.jpg" alt="iTAG battery instructions" className="w-full max-w-[300px] object-contain rounded-xl" />
               </div>
             </div>
 
-            {/* Steps & Specs Column */}
             <div className="flex-1 space-y-10">
               <div className="space-y-8">
                 {[
@@ -46,7 +44,6 @@ export function Hardware() {
                 ))}
               </div>
 
-              {/* Specs Box */}
               <div className="bg-slate-100 rounded-2xl p-6 border border-slate-200">
                 <h4 className="text-[13px] font-black text-slate-900 mb-4 uppercase tracking-wider flex items-center gap-2">
                   <Bluetooth size={16}/> Device Specifications
@@ -64,8 +61,6 @@ export function Hardware() {
           </div>
         </div>
       </section>
-
-      
     </>
   );
 }
