@@ -18,7 +18,7 @@ jobs:
           node-version: '22'
 
       - name: Install wrangler
-        run: npm install -g wrangler
+        run: npm install -g wrangler@4
 
       - name: Install worker dependencies
         run: cd worker && npm install

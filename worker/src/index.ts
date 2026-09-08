@@ -185,7 +185,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 app.get('/api/init-db', async (c) => {
-  await c.env.DB?.exec(`
+  await c.env.DB!.exec(`
     CREATE TABLE IF NOT EXISTS organisations (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -226,7 +226,7 @@ app.post('/api/auth/register-org', async (c) => {
   const orgId = `SL-${abbrev}-${Math.floor(1000 + Math.random() * 9000)}`;
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   try {
-    await c.env.DB?.prepare(
+    await c.env.DB!.prepare(
       'INSERT INTO organisations (id, name, contact_name, contact_email, password_hash, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(orgId, orgName, contactName, email.toLowerCase(), hash, Date.now()).run();
     return c.json({ token: makeToken({ orgId, email }), orgId, orgName, email });
@@ -242,7 +242,7 @@ app.post('/api/auth/register-user', async (c) => {
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const id = crypto.randomUUID();
   try {
-    await c.env.DB?.prepare(
+    await c.env.DB!.prepare(
       'INSERT INTO users (id, org_id, username, email, role, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(id, orgCode || null, username, email || null, 'User', Date.now()).run();
     return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username }), userId: id, username });
@@ -260,12 +260,12 @@ app.post('/api/auth/login', async (c) => {
     return c.json({ token: makeToken({ orgId: 'SL-ADMIN-0000', username }), orgId: 'SL-ADMIN-0000' });
   }
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
-  const user = await c.env.DB?.prepare(
+  const user = await c.env.DB!.prepare(
     'SELECT id, username, org_id FROM users WHERE username = ? AND password_hash = ?'
   ).bind(username, hash).first<any>().catch(() => null);
   if (!user) {
     // Try org login
-    const org = await c.env.DB?.prepare(
+    const org = await c.env.DB!.prepare(
       'SELECT id, name FROM organisations WHERE id = ? AND password_hash = ?'
     ).bind((orgCode || '').toUpperCase(), hash).first<any>().catch(() => null);
     if (!org) return c.json({ error: 'Invalid credentials' }, 401);
@@ -285,12 +285,12 @@ app.post('/api/panic', async (c) => {
   const now = Date.now();
 
   // Log to D1
-  await c.env.DB?.prepare(
+  await c.env.DB!.prepare(
     'INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
   ).bind(crypto.randomUUID(), orgId || null, userId || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
 
   if (userId && orgId) {
-    await c.env.DB?.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
+    await c.env.DB!.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
       .bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
@@ -340,7 +340,7 @@ app.post('/api/user/heartbeat', async (c) => {
   const { userId, orgId, lat, lng, sosActive } = await c.req.json<any>();
   if (!userId) return c.json({ error: 'Missing userId' }, 400);
   const now = Date.now();
-  await c.env.DB?.prepare('UPDATE users SET last_seen=?, lat=?, lng=?, sos_active=? WHERE id=?')
+  await c.env.DB!.prepare('UPDATE users SET last_seen=?, lat=?, lng=?, sos_active=? WHERE id=?')
     .bind(now, lat || null, lng || null, sosActive ? 1 : 0, userId).run().catch(() => {});
   return c.json({ ok: true });
 });
@@ -348,7 +348,8 @@ app.post('/api/user/heartbeat', async (c) => {
 // ── ORG MEMBERS (live map) ────────────────────────────────────────────────────
 app.get('/api/org/:orgId/members', authMiddleware, async (c) => {
   const orgId = c.req.param('orgId');
-  const { results } = (await c.env.DB?.prepare(
+  if (!c.env.DB) return c.json([]);
+  const { results } = await c.env.DB.prepare(
     'SELECT id, username, role, last_seen, lat, lng, sos_active FROM users WHERE org_id=? ORDER BY last_seen DESC LIMIT 200'
   ).bind(orgId).all();
   return c.json(results);
@@ -357,7 +358,8 @@ app.get('/api/org/:orgId/members', authMiddleware, async (c) => {
 // ── INCIDENTS ─────────────────────────────────────────────────────────────────
 app.get('/api/org/:orgId/incidents', authMiddleware, async (c) => {
   const orgId = c.req.param('orgId');
-  const { results } = (await c.env.DB?.prepare(
+  if (!c.env.DB) return c.json([]);
+  const { results } = await c.env.DB.prepare(
     'SELECT * FROM incidents WHERE org_id=? ORDER BY created_at DESC LIMIT 100'
   ).bind(orgId).all();
   return c.json(results);
@@ -365,20 +367,20 @@ app.get('/api/org/:orgId/incidents', authMiddleware, async (c) => {
 
 app.post('/api/org/:orgId/incidents/:id/resolve', authMiddleware, async (c) => {
   const { id } = c.req.param();
-  await c.env.DB?.prepare('UPDATE incidents SET resolved=1 WHERE id=?').bind(id).run();
+  await c.env.DB!.prepare('UPDATE incidents SET resolved=1 WHERE id=?').bind(id).run();
   return c.json({ ok: true });
 });
 
 // ── SUPERADMIN ────────────────────────────────────────────────────────────────
 app.get('/api/superadmin/orgs', authMiddleware, async (c) => {
   if (c.get('orgId') !== 'SL-ADMIN-0000') return c.json({ error: 'Forbidden' }, 403);
-  const { results } = (await c.env.DB?.prepare('SELECT id, name, contact_email, created_at FROM organisations').all();
+  const { results } = await c.env.DB!.prepare('SELECT id, name, contact_email, created_at FROM organisations').all();
   return c.json(results);
 });
 
 app.post('/api/superadmin/orgs/:id/unlock', authMiddleware, async (c) => {
   if (c.get('orgId') !== 'SL-ADMIN-0000') return c.json({ error: 'Forbidden' }, 403);
-  await c.env.DB?.prepare('UPDATE organisations SET created_at=? WHERE id=?').bind(Date.now(), c.req.param('id')).run();
+  await c.env.DB!.prepare('UPDATE organisations SET created_at=? WHERE id=?').bind(Date.now(), c.req.param('id')).run();
   return c.json({ ok: true });
 });
 
@@ -414,7 +416,7 @@ app.post('/api/sync/offline', async (c) => {
   if (!orgId || !Array.isArray(payload)) return c.json({ error: 'Invalid payload' }, 400);
   const now = Date.now();
   for (const item of payload) {
-    await c.env.DB?.prepare(
+    await c.env.DB!.prepare(
       'INSERT OR IGNORE INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
     ).bind(item.id || crypto.randomUUID(), orgId, 'OFFLINE', 'OFFLINE_SYNC', item.lat || null, item.lng || null, item.timestamp || now).run().catch(() => {});
   }
