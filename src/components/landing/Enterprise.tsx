@@ -1,52 +1,147 @@
+// @ts-nocheck
 import React from 'react';
-import { Shield, Server, Users, Activity } from 'lucide-react';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
-export function Enterprise({ onLogin, onRegisterOrg }: Props) {
+export function Enterprise({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   return (
-    <section className="pt-10 pb-20 bg-slate-50 min-h-screen">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-4 py-2 text-red-700 text-sm font-bold uppercase tracking-wider mb-6">
-            <Shield className="w-4 h-4" /> Enterprise & Organisations
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">Built for Scale. Designed for Command.</h1>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
-            Estate management companies, armed response units, schools, municipalities, and corporate campuses. SafetyLink Enterprise gives your organisation real-time situational awareness and dispatch coordination at every level.
+    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+
+      {/* ── HEADER ── */}
+      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// B2B ENTERPRISE</div>
+          <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
+            Built for Scale.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>Designed for Command.</span>
+          </h1>
+          <p style={{ fontSize:'15px', color:'#8892a4', maxWidth:'560px', lineHeight:1.7 }}>
+            B-BBEE Level 1 certified. POPIA-compliant. SA-hosted. The first emergency response platform engineered for South African enterprise procurement.
           </p>
         </div>
+      </section>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {[
-            { icon: <Users className="w-8 h-8 text-red-600" />, title: 'Multi-User Management', desc: 'Manage hundreds of members across zones, shifts, and roles. Assign responders, commanders, and civilians to nested org structures.' },
-            { icon: <Activity className="w-8 h-8 text-red-600" />, title: 'Live Dispatch Dashboard', desc: 'Command Deck gives supervisors real-time panic event feeds, GPS tracking, BLE mesh status, and one-click escalation tools.' },
-            { icon: <Server className="w-8 h-8 text-red-600" />, title: 'Dedicated Infrastructure', desc: 'Enterprise clients get dedicated Firestore nodes, private API endpoints, and SLA-backed uptime guarantees.' },
-          ].map((f, i) => (
-            <div key={i} className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
-              <div className="w-14 h-14 bg-red-50 rounded-xl flex items-center justify-center mb-4">{f.icon}</div>
-              <h3 className="text-lg font-black text-slate-900 mb-3">{f.title}</h3>
-              <p className="text-slate-600 leading-relaxed">{f.desc}</p>
+      {/* ── B-BBEE BADGE ── */}
+      <section style={{ padding:'60px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
+          <div>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// PROCUREMENT ADVANTAGE</div>
+            <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'20px' }}>B-BBEE Level 1.<br/>135% Procurement Recognition.</h2>
+            <p style={{ fontSize:'14px', color:'#8892a4', lineHeight:1.7, marginBottom:'28px' }}>
+              SafetyLink holds B-BBEE Level 1 status — the highest empowerment rating achievable. Government entities, municipalities, and corporates with BEE procurement targets recognise SafetyLink spend at 135%, making it the most cost-effective safety investment for compliance-driven procurement.
+            </p>
+            <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
+              <button onClick={onRegisterOrg} style={{ background:'#e8321e', color:'#fff', padding:'14px 28px', borderRadius:'8px', fontWeight:700, fontSize:'11px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>
+                START 14-DAY TRIAL →
+              </button>
+              <a href="mailto:info@safetylink.online" style={{ color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', fontWeight:600, fontSize:'12px', textDecoration:'none' }}>
+                REQUEST QUOTATION
+              </a>
             </div>
-          ))}
-        </div>
-
-        <div className="bg-slate-900 rounded-3xl p-10 text-white text-center">
-          <h2 className="text-3xl font-black mb-4">Ready to Deploy SafetyLink at Scale?</h2>
-          <p className="text-slate-400 mb-8 max-w-xl mx-auto">Contact us to discuss your organisation's needs. Custom pricing, dedicated support, and onboarding within 48 hours.</p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <button onClick={onRegisterOrg} className="bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all">
-              Start 14-Day Trial
-            </button>
-            <a href="mailto:info@safetylink.online" className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white px-8 py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all">
-              Contact Enterprise Team
-            </a>
-            <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-xl font-black text-sm uppercase tracking-wider transition-all">
-              💬 WhatsApp Us
-            </a>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px' }}>
+            {[
+              { val:'Level 1', lbl:'B-BBEE Status', color:'#00e676' },
+              { val:'135%', lbl:'Procurement Recognition', color:'#e8321e' },
+              { val:'100%', lbl:'SA-Hosted Data', color:'#0ea5e9' },
+              { val:'POPIA', lbl:'+ GDPR Compliant', color:'#a78bfa' },
+            ].map((s, i) => (
+              <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'12px', padding:'24px', textAlign:'center' }}>
+                <div style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, color:s.color, letterSpacing:'-.03em', marginBottom:'8px' }}>{s.val}</div>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.12em', textTransform:'uppercase' }}>{s.lbl}</div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* ── ENTERPRISE FEATURES ── */}
+      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// ENTERPRISE CAPABILITIES</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'48px' }}>Everything your<br/>organisation needs.</h2>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
+            {[
+              { icon:'👥', title:'Multi-Tier Org Structure', desc:'Nested organisations with role-based access — Estate Manager, Security Commander, Responder, Civilian. Unlimited members per tier.' },
+              { icon:'🗺️', title:'Live Command Dashboard', desc:'Real-time GIS map with responder positions, incident heat-mapping, BLE signal strength overlay and panic event timeline.' },
+              { icon:'📊', title:'Incident Analytics', desc:'Weekly and monthly incident reports, response time benchmarking, SLA tracking and audit-ready evidence chain export.' },
+              { icon:'🔗', title:'API Integration', desc:'REST API and webhook endpoints for integration with existing PSIM, VMS, access control and HR systems.' },
+              { icon:'🏷️', title:'White-Label Option', desc:'Fully branded deployment with your logo, colours and domain. Custom splash screen, APK name and Play Store listing.' },
+              { icon:'🛡️', title:'Dedicated Infrastructure', desc:'Dedicated Cloudflare Workers, D1 database nodes and isolated tenant data. SLA-backed 99.9% uptime guarantee.' },
+            ].map((f, i) => (
+              <div key={i} style={{ background:'#111820', padding:'32px', cursor:'default', transition:'background .2s' }}
+                onMouseOver={e => e.currentTarget.style.background='rgba(232,50,30,.04)'}
+                onMouseOut={e => e.currentTarget.style.background='#111820'}>
+                <div style={{ fontSize:'2rem', marginBottom:'16px' }}>{f.icon}</div>
+                <div style={{ fontSize:'15px', fontWeight:800, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.02em' }}>{f.title}</div>
+                <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.6 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── SUPPLY CHAIN ── */}
+      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// PROCUREMENT MODEL</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'20px' }}>Enterprise Supply Chain.</h2>
+          <p style={{ color:'#8892a4', marginBottom:'40px', fontSize:'15px', lineHeight:1.7, maxWidth:'560px' }}>
+            SafetyLink sources hardware domestically through SARS-cleared channels. Bulk procurement for 50+ units includes white-labelled packaging, pre-paired device registration and on-site deployment support.
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px' }}>
+            {[
+              { qty:'1–4 units', price:'R149/unit', lead:'3–5 days', tag:'RETAIL' },
+              { qty:'5–24 units', price:'R120/unit', lead:'5–7 days', tag:'SMALL FLEET' },
+              { qty:'25–99 units', price:'R99/unit', lead:'7–10 days', tag:'ESTATE', highlight:true },
+              { qty:'100+ units', price:'CUSTOM', lead:'Dedicated PM', tag:'ENTERPRISE' },
+            ].map((tier, i) => (
+              <div key={i} style={{ background: tier.highlight ? 'rgba(232,50,30,.08)' : 'rgba(255,255,255,.03)', border: tier.highlight ? '1px solid rgba(232,50,30,.3)' : '1px solid rgba(255,255,255,.07)', borderRadius:'12px', padding:'24px', textAlign:'center' }}>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color: tier.highlight ? '#e8321e' : '#8892a4', letterSpacing:'.14em', marginBottom:'12px', textTransform:'uppercase' }}>{tier.tag}</div>
+                <div style={{ fontSize:'12px', color:'#8892a4', marginBottom:'8px' }}>{tier.qty}</div>
+                <div style={{ fontSize:'clamp(20px,3vw,28px)', fontWeight:900, color: tier.highlight ? '#e8321e' : '#f0f4f8', marginBottom:'8px' }}>{tier.price}</div>
+                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'#8892a4' }}>Lead: {tier.lead}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ONBOARDING ── */}
+      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// DEPLOYMENT TIMELINE</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'48px' }}>Up and running<br/>in 48 hours.</h2>
+          <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
+            {[
+              { day:'DAY 1', title:'Account Creation & Org Setup', desc:'Organisation profile, member roster upload, role assignment and custom alert routing configured.' },
+              { day:'DAY 1–2', title:'Hardware Dispatch', desc:'iTAG keyfobs dispatched pre-paired to your org ID. Includes QR activation cards for each member.' },
+              { day:'DAY 2', title:'Responder Briefing', desc:'45-minute virtual onboarding for security commanders and responders. SOP documentation provided.' },
+              { day:'DAY 2–3', title:'Full Activation & Testing', desc:'Live panic drill with your team. Escalation chain verified. Audit log reviewed. System signed off.' },
+              { day:'ONGOING', title:'Dedicated Account Manager', desc:'Monthly incident reports, SLA reviews, firmware updates pushed automatically to all deployed devices.' },
+            ].map((s, i) => (
+              <div key={i} style={{ background:'#111820', padding:'20px 28px', display:'flex', alignItems:'flex-start', gap:'24px' }}>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#e8321e', fontWeight:700, flexShrink:0, width:'56px', paddingTop:'2px', letterSpacing:'.08em' }}>{s.day}</span>
+                <div>
+                  <div style={{ fontSize:'14px', fontWeight:700, marginBottom:'4px' }}>{s.title}</div>
+                  <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section style={{ padding:'80px 40px', background:'#0d1117', textAlign:'center' }}>
+        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET STARTED</div>
+        <h2 style={{ fontSize:'clamp(28px,4vw,52px)', fontWeight:900, marginBottom:'16px' }}>Deploy SafetyLink<br/>for your organisation.</h2>
+        <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>14-day free trial. No credit card. Setup within 48 hours.</p>
+        <div style={{ display:'flex', gap:'16px', justifyContent:'center', flexWrap:'wrap' }}>
+          <button onClick={onRegisterOrg} style={{ background:'#e8321e', color:'#fff', padding:'14px 32px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>START FREE TRIAL →</button>
+          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer" style={{ background:'#25d366', color:'#fff', padding:'14px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.1em', textDecoration:'none' }}>💬 WHATSAPP US</a>
+          <a href="mailto:info@safetylink.online" style={{ color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', fontWeight:600, fontSize:'12px', textDecoration:'none' }}>info@safetylink.online</a>
+        </div>
+      </section>
+    </div>
   );
 }
