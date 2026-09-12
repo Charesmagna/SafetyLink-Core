@@ -37,8 +37,7 @@ export interface Env {
   RESPONSE_CENTRE_NUMBER: string;
   PIPEDREAM_WEBHOOK_URL: string;
   RECAPTCHA_SECRET: string;
-}
-  // Auth
+  // Auth (duplicated fields consolidated)
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
   // Twilio
