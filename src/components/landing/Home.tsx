@@ -310,8 +310,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
             {[
-              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://wa.me/27739441222?text=SafetyLink+APK+download', btn:'Download APK', c:'#00e676', cr:'0,230,118' },
-              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233' },
+              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-Signed.apk', btn:'Download APK', c:'#00e676', cr:'0,230,118' },
+              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+Windows+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233' },
               { icon:'🌐', label:'Web App (PWA)', sub:'Open in browser. Tap Add to Home Screen.', href:'https://safetylink.online', btn:'Open Web App', c:'#a78bfa', cr:'167,139,250' },
             ].map((d, i) => (
               <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
