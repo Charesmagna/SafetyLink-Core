@@ -60,8 +60,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: get().currentUser?.id || 'SL-U-DEMO',
-            latitude: loc.lat,
-            longitude: loc.lng,
+            orgId: get().currentOrg?.id || null,
+            lat: loc.lat,
+            lng: loc.lng,
+            callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
+            callerNumber: get().currentUser?.phone || '',
+            emergencyContacts: get().emergencyContacts?.map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.whatsapp || c.phone })) || [],
             description,
             isDrill
           }),

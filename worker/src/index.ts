@@ -127,23 +127,23 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 }
 
 // ── EMERGENCY DISPATCH ────────────────────────────────────────────────────────
-async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, address }: {
-  callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
+async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, address, contacts }: {
+  callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string; contacts?: string[];
 }) {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
   const smsBody = `🚨 SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\n📍 ${location}\n${mapsLink}`;
 
-  const contacts = [
-    env.RESPONSE_CENTRE_NUMBER || '+27739441222',
-  ];
+  const allContacts = contacts && allContacts.length > 0
+    ? contacts
+    : [env.RESPONSE_CENTRE_NUMBER || '+27739441222'];
 
   const jobs: Promise<any>[] = [];
 
   // ── Twilio SMS to all contacts ──
   if (env.TWILIO_SID && env.TWILIO_AUTH_TOKEN) {
     const auth = btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`);
-    for (const to of contacts) {
+    for (const to of allContacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -153,7 +153,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
     // ── Twilio Voice Call ──
     const twiml = `<Response><Say voice="alice">SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic from ${location}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">Repeating. SafetyLink emergency. ${callerName || 'User'} needs help. Location: ${location}.</Say></Response>`;
-    for (const to of contacts) {
+    for (const to of allContacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Calls.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -162,7 +162,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
     }
 
     // ── WhatsApp ──
-    for (const to of contacts) {
+    for (const to of allContacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -173,7 +173,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
   // ── VAPI AI Voice Call ──
   if (env.VAPI_PRIVATE_KEY && env.VAPI_PHONE_NUMBER_ID) {
-    for (const to of contacts) {
+    for (const to of allContacts) {
       jobs.push(fetch('https://api.vapi.ai/call', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${env.VAPI_PRIVATE_KEY}`, 'Content-Type': 'application/json' },
@@ -193,7 +193,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
   // ── Africa's Talking SMS ──
   if (env.AT_API_KEY && env.AT_USERNAME) {
-    for (const to of contacts) {
+    for (const to of allContacts) {
       jobs.push(fetch('https://api.africastalking.com/version1/messaging', {
         method: 'POST',
         headers: { apiKey: env.AT_API_KEY, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -309,8 +309,8 @@ app.post('/api/auth/login', async (c) => {
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
-  const { userId, orgId, lat, lng, callerName, callerNumber } = await c.req.json<any>();
-  if (!orgId && !callerNumber) return c.json({ error: 'Missing fields' }, 400);
+  const { userId, orgId, lat, lng, callerName, callerNumber, emergencyContacts, description, isDrill } = await c.req.json<any>();
+  if (!callerNumber && !userId) return c.json({ error: 'Missing fields' }, 400);
 
   const address = lat ? await reverseGeocode(lat, lng) : 'Location unknown';
   const now = Date.now();
@@ -318,17 +318,34 @@ app.post('/api/panic', async (c) => {
   // Log to D1
   await c.env.DB!.prepare(
     'INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(crypto.randomUUID(), orgId || null, userId || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
+  ).bind(crypto.randomUUID(), orgId || null, userId || null, isDrill ? 'DRILL' : 'PANIC', lat || null, lng || null, now).run().catch(() => {});
 
   if (userId && orgId) {
     await c.env.DB!.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
       .bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
-  // Fire all alerts in background
-  c.executionCtx.waitUntil(fireAllAlerts(c.env, { callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address }));
+  // Build contact list — user's contacts first, response centre as backup
+  const userContacts: string[] = Array.isArray(emergencyContacts)
+    ? emergencyContacts.map((c: any) => c.whatsapp || c.phone).filter(Boolean)
+    : [];
 
-  return c.json({ ok: true, address });
+  const allContacts = userContacts.length > 0
+    ? userContacts
+    : [c.env.RESPONSE_CENTRE_NUMBER || '+27739441222'];
+
+  // Always also notify response centre
+  if (!allContacts.includes(c.env.RESPONSE_CENTRE_NUMBER) && c.env.RESPONSE_CENTRE_NUMBER) {
+    allContacts.push(c.env.RESPONSE_CENTRE_NUMBER);
+  }
+
+  if (!isDrill) {
+    c.executionCtx.waitUntil(
+      fireAllAlerts(c.env, { callerNumber: callerNumber || '', callerName: callerName || 'SafetyLink User', lat, lng, address, contacts: allContacts })
+    );
+  }
+
+  return c.json({ ok: true, address, contacts: allContacts.length, isDrill: !!isDrill });
 });
 
 // ── USSD (Africa's Talking) ───────────────────────────────────────────────────
