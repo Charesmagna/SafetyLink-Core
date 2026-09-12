@@ -33,6 +33,8 @@ jobs:
       env:
         VITE_APP_VERSION: "1.1.${{ github.run_number }}"
         VITE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VITE_PAYSTACK_PUBLIC_KEY: ${{ secrets.PAYSTACK_PUBLIC_KEY }}
+        VITE_API_URL: "https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev"
       run: npm run build
 
     - name: Sync Capacitor

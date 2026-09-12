@@ -416,21 +416,73 @@ app.post('/api/superadmin/orgs/:id/unlock', authMiddleware, async (c) => {
   return c.json({ ok: true });
 });
 
+// ── PAYSTACK INITIALIZE ───────────────────────────────────────────────────────
+app.post('/api/paystack/initialize', async (c) => {
+  const { email, amount, plan_name } = await c.req.json<any>();
+  if (!email || !amount) return c.json({ error: 'email and amount required' }, 400);
+
+  const res = await fetch('https://api.paystack.co/transaction/initialize', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${c.env.PAYSTACK_SECRET_KEY || 'REDACTED_USE_ENV'}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      amount: Math.round(parseFloat(amount) * 100), // kobo
+      currency: 'ZAR',
+      callback_url: 'https://safetylink.online/#payment-success',
+      metadata: { plan_name, custom_fields: [{ display_name: 'Plan', variable_name: 'plan', value: plan_name }] },
+    }),
+  });
+
+  const data: any = await res.json();
+  if (data.status && data.data?.authorization_url) {
+    return c.json({ success: true, url: data.data.authorization_url, reference: data.data.reference });
+  }
+  return c.json({ error: data.message || 'Paystack init failed' }, 500);
+});
+
+// ── PAYSTACK WEBHOOK ──────────────────────────────────────────────────────────
+app.post('/api/paystack/webhook', async (c) => {
+  const body = await c.req.text();
+  const sig = c.req.header('x-paystack-signature') || '';
+  // Verify HMAC
+  const key = c.env.PAYSTACK_SECRET_KEY || 'REDACTED_USE_ENV';
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey('raw', encoder.encode(key), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(body));
+  const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
+  if (sig !== expected) return c.json({ error: 'Invalid signature' }, 401);
+
+  const event = JSON.parse(body);
+  if (event.event === 'charge.success') {
+    const { email, amount, reference } = event.data;
+    console.log(`[Paystack] Payment success: ${reference} — ${email} — R${amount/100}`);
+    // TODO: activate subscription in D1
+  }
+  return c.json({ ok: true });
+});
+
 // ── PAYFAST CHECKOUT ──────────────────────────────────────────────────────────
 app.post('/api/payfast/checkout', async (c) => {
   const { plan_name, amount, email } = await c.req.json<any>();
-  // PayFast ITN — return redirect URL for client
-  const pfData = {
-    merchant_id: '10000100',
-    merchant_key: 'key_here',
-    return_url: 'https://safetylink.online/#/payment-success',
-    cancel_url: 'https://safetylink.online/#/payment-cancel',
-    notify_url: 'https://safetylink-api.workers.dev/api/payfast/notify',
+  const pfData: Record<string, string> = {
+    merchant_id: '26778541',
+    merchant_key: 'gqgynogxhcomh',
+    return_url: 'https://safetylink.online/#payment-success',
+    cancel_url: 'https://safetylink.online/#payment-cancel',
+    notify_url: 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev/api/payfast/notify',
     email_address: email || 'user@safetylink.online',
-    amount: parseFloat(amount).toFixed(2),
-    item_name: `SafetyLink ${plan_name}`,
+    amount: parseFloat(amount || '49').toFixed(2),
+    item_name: `SafetyLink ${plan_name || 'Premium'}`,
+    subscription_type: '1',
+    billing_date: new Date().toISOString().split('T')[0],
+    recurring_amount: parseFloat(amount || '49').toFixed(2),
+    frequency: '3',
+    cycles: '0',
   };
-  const query = new URLSearchParams(pfData as any).toString();
+  const query = new URLSearchParams(pfData).toString();
   return c.json({ success: true, url: `https://www.payfast.co.za/eng/process?${query}` });
 });
 
