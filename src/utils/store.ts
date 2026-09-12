@@ -331,7 +331,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
-  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev'),
+  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', import.meta.env.VITE_API_URL || 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev'),
   connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
   tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
   auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
