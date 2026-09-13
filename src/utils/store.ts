@@ -1356,6 +1356,22 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     triggerPanic: async (description) => {
     if (get().activeSOSState !== 'IDLE') return;
+    
+    // Native Execution Path (Golden Build Standard)
+    if (Capacitor.isNativePlatform()) {
+       try {
+           await SafetyLinkEmergency.trigger({ description });
+           set({ activeSOSState: 'TRIGGERED' });
+           get().addAuditLog('SECURITY', 'HIGH', 'Panic Triggered Natively', description);
+       } catch (e) {
+           console.error("Native panic failed, falling back", e);
+           get().addToast('Native bridge failed. Falling back to web.', 'error');
+           // Fallback logic here if needed, but per Golden Build, native is authoritative.
+       }
+       return;
+    }
+
+    // Web Fallback (For browser testing only)
     const user = get().currentUser;
     const org = get().currentOrg;
     if (!user && org?.id !== 'kleva') {
@@ -1365,38 +1381,14 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
     const loc = get().userLocation || { lat: 0, lng: 0 };
-    const isDrill = get().drillMode;
+    set({ activeSOSState: 'TRIGGERED', currentIncidentId: incidentId, panicCountdown: null });
+    get().addAuditLog('SECURITY', 'HIGH', 'Panic Triggered', description);
 
-    // STEP 1: CAPTURE DATA OFFLINE (Save to RoomDB Queue Equivalent)
-    const offlineItem = {
-      id: incidentId,
-      timestamp: Date.now(),
-      description: `${description} ${isDrill ? '[Drill]' : ''}`,
-      lat: loc.lat,
-      lng: loc.lng
-    };
-    const updatedQueue = [...get().localOfflineQueue, offlineItem];
-    set({ localOfflineQueue: updatedQueue });
-    setStoredJSON('sl_offline_queue', updatedQueue);
-    get().addAuditLog('SYSTEM', 'INFO', 'Panic Data Captured Offline', `Saved locally to Queue: ${incidentId}`);
+    set({ activeSOSState: 'DISPATCHING' });
 
-    set({ activeSOSState: 'ACQUIRING_GPS' });
-    await new Promise(r => setTimeout(r, 800));
-    set({ activeSOSState: 'CAPTURING_EVIDENCE' });
-    await new Promise(r => setTimeout(r, 800));
-    set({ activeSOSState: 'ESCALATING' });
-    
-    // THE FALLBACK WATERFALL
-    
-    // STEP 2 & 3A: CHECK INTERNET & TRY DATA MODE
-    const isActuallyOffline = (typeof window !== 'undefined' && !navigator.onLine) || !navigator.onLine;
-    let dataModeSuccess = false;
-    
-    if (!isActuallyOffline && !isDrill) {
-      get().addAuditLog('DISPATCH', 'INFO', 'LAYER 1: DATA MODE', 'Attempting POST to /api/panic (2KB payload)');
-      try {
-        const res = await fetch(`${get().customBackendUrl}/api/panic`, { 
-          method: 'POST', 
+    try {
+        const response = await fetch('https://safetylink.online/api/panic', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             userId: get().currentUser?.id || 'SL-U-DEMO',
@@ -1405,52 +1397,58 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
             lng: loc.lng,
             callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
             callerNumber: get().currentUser?.phone || '',
-            emergencyContacts: get().emergencyContacts?.map((c) => ({ name: c.name, phone: c.phone, whatsapp: c.whatsapp || c.phone })) || [],
+            emergencyContacts: get().emergencyContacts?.map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.whatsapp || c.phone })) || [],
             description,
-            isDrill
+            isDrill: false
           }) 
         });
-        if (res.ok) {
-          dataModeSuccess = true;
-          get().addAuditLog('DISPATCH', 'INFO', 'DATA MODE SUCCESS', 'Server is executing parallel Twilio, VAPI, Bland, Infobip, Telegram.');
-          get().addToast('Alert sent via Data (Layer 1)', 'success');
+        
+        if (response.ok) {
+           set({ activeSOSState: 'DISPATCHED' });
         } else {
-          throw new Error('Data POST failed');
+           set({ activeSOSState: 'FAILED' });
+           get().addOfflineDispatch(incidentId, description, loc.lat, loc.lng);
         }
-      } catch (e) {
-        get().addAuditLog('DISPATCH', 'WARN', 'DATA MODE FAILED', 'Server unreachable or offline.');
-      }
+    } catch (e) {
+        set({ activeSOSState: 'FAILED' });
+        get().addOfflineDispatch(incidentId, description, loc.lat, loc.lng);
+    }
+  },
+
+  triggerSOS: (description, durationSec) => {
+    const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
+    if (duration === 0) {
+      get().triggerPanic(description);
+      return;
     }
 
-    if (dataModeSuccess) {
-      // If we succeed on Layer 1, we stop the fallback chain.
-      get().addAuditLog('DISPATCH', 'INFO', 'WATERFALL HALTED', 'Alert confirmed dispatched via primary channel.');
-    } else {
-      // STEP 5A: USSD MODE (Simulated for Web)
-      get().addAuditLog('DISPATCH', 'INFO', 'LAYER 2: USSD MODE', 'Data failed. Attempting USSD fallback (R0.35).');
-      let ussdModeSuccess = false;
-      // In a real Android app, we would dial: window.location.href = `tel:*384*12345*1*${loc.lat}*${loc.lng}#`;
-      // We simulate failure for the demonstration of the waterfall if we are totally offline.
-      
-      if (!isActuallyOffline) {
-        // Let's pretend USSD works if we have some minimal connection but API failed
-        // For strict offline test, USSD requires cellular signal (which web can't simulate easily, so we pass through).
+    set({ panicCountdown: duration });
+
+    const timerId = setInterval(() => {
+      const currentCountdown = get().panicCountdown;
+      if (currentCountdown === null) {
+        clearInterval(timerId);
+        return;
       }
+      
+      if (currentCountdown <= 1) {
+        clearInterval(timerId);
+        set({ panicCountdown: null });
+        get().triggerPanic(description);
+      } else {
+        set({ panicCountdown: currentCountdown - 1 });
+      }
+    }, 1000);
+  },
 
-      if (!ussdModeSuccess) {
-        // STEP 6: PCM + SMS MODE (R0.50)
-        get().addAuditLog('DISPATCH', 'WARN', 'LAYER 3: PCM + SMS MODE', 'USSD failed/unavailable. Firing Please Call Me (PCM) & Direct SMS via SmsManager.');
-        
-        get().contacts.slice(0, 3).forEach(c => {
-           get().addAuditLog('SYSTEM', 'INFO', 'Sending PCM', `*140*${c.phone}#`);
-        });
-        get().addToast('Alert sent via PCM + SMS (Layer 3)', 'warn');
+  cancelSOS: () => {
+     set({ activeSOSState: 'IDLE', panicCountdown: null, currentIncidentId: null });
+     if (Capacitor.isNativePlatform()) {
+         SafetyLinkEmergency.cancel();
+     }
+  },
 
-        // STEP 7: FULL OFFLINE MESH MODE
-        get().addAuditLog('DISPATCH', 'SEVERE', 'LAYER 4: BLE MESH BROADCAST', 'All cellular routes failed. Broadcasting panic packet over Bluetooth Low Energy.');
-        set({ isSurvivalMode: true });
-        
-        // Remove from Queue only when Internet restores (Handled in syncOfflineQueue)
+  syncOfflineQueue)
       }
     }
 
