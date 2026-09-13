@@ -51,7 +51,7 @@ export const ApkDownloadPopup: React.FC = () => {
           
           // Trigger actual file download download of a dummy file to satisfy the download requirement
           const link = document.createElement('a');
-          link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent('SafetyLink Android Production App Bundle v2.8.4');
+          link.href = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
           link.setAttribute('download', 'safetylink-v2.8.4-release.apk');
           document.body.appendChild(link);
           link.click();
