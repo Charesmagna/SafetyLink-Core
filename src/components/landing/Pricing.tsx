@@ -106,7 +106,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
                   <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:plan.color, letterSpacing:'.14em', marginBottom:'4px', textTransform:'uppercase' }}>{plan.tier}</div>
                   <div style={{ fontSize:'24px', fontWeight:900, color: plan.highlight ? '#00e676' : '#f0f4f8' }}>{plan.price}<span style={{ fontSize:'12px', fontWeight:400, color:'#8892a4' }}>/mo</span></div>
                 </div>
-                <div style={{ flex:'0 0 160px', fontSize:'12px', color:'#8892a4', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px' }}>{plan.clients}</div>
+                <div style={{ flex:'0 0 160px', color:'#8892a4', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px' }}>{plan.clients}</div>
                 <div style={{ flex:1, fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{plan.features}</div>
                 <button onClick={() => plan.price === 'Custom' ? window.open('mailto:info@safetylink.online','_blank') : handlePayfast(plan.tier, plan.price.replace(/[^0-9]/g,'') + '.00')}
                   style={{ flexShrink:0, background:`rgba(255,255,255,.05)`, color:plan.color, border:`1px solid rgba(255,255,255,.1)`, padding:'10px 20px', borderRadius:'8px', fontSize:'10px', fontWeight:700, letterSpacing:'.1em', cursor:'pointer', whiteSpace:'nowrap' }}>
