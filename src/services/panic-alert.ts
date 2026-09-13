@@ -64,7 +64,7 @@ export async function processPanicAlert(incidentId: string) {
   sendTelegramAlert(`🚨 INCOMING PANIC ALERT 🚨\nUser: ${incident.name}\n${location}`).catch(e => console.error(e));
 
   for (const contact of contacts) {
-    const destNumber = env.TEST_DESTINATION_NUMBER || contact.contact_phone as string;
+    const destNumber = contact.contact_phone as string;
     
     // Execute all 4 comms vectors in parallel (Twilio, Infobip fallback, VAPI, Bland fallback)
     await Promise.allSettled([
