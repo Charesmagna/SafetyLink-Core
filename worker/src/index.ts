@@ -37,7 +37,8 @@ export interface Env {
   RESPONSE_CENTRE_NUMBER: string;
   PIPEDREAM_WEBHOOK_URL: string;
   RECAPTCHA_SECRET: string;
-  // Auth (duplicated fields consolidated)
+}
+  // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
   // Twilio
@@ -127,23 +128,23 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 }
 
 // ── EMERGENCY DISPATCH ────────────────────────────────────────────────────────
-async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, address, contacts }: {
-  callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string; contacts?: string[];
+async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, address }: {
+  callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
 }) {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
   const smsBody = `🚨 SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\n📍 ${location}\n${mapsLink}`;
 
-  const allContacts = contacts && allContacts.length > 0
-    ? contacts
-    : [env.RESPONSE_CENTRE_NUMBER || '+27739441222'];
+  const contacts = [
+    env.RESPONSE_CENTRE_NUMBER || '+27739441222',
+  ];
 
   const jobs: Promise<any>[] = [];
 
   // ── Twilio SMS to all contacts ──
   if (env.TWILIO_SID && env.TWILIO_AUTH_TOKEN) {
     const auth = btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`);
-    for (const to of allContacts) {
+    for (const to of contacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -153,7 +154,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
     // ── Twilio Voice Call ──
     const twiml = `<Response><Say voice="alice">SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic from ${location}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">Repeating. SafetyLink emergency. ${callerName || 'User'} needs help. Location: ${location}.</Say></Response>`;
-    for (const to of allContacts) {
+    for (const to of contacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Calls.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -162,7 +163,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
     }
 
     // ── WhatsApp ──
-    for (const to of allContacts) {
+    for (const to of contacts) {
       jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -173,7 +174,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
   // ── VAPI AI Voice Call ──
   if (env.VAPI_PRIVATE_KEY && env.VAPI_PHONE_NUMBER_ID) {
-    for (const to of allContacts) {
+    for (const to of contacts) {
       jobs.push(fetch('https://api.vapi.ai/call', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${env.VAPI_PRIVATE_KEY}`, 'Content-Type': 'application/json' },
@@ -193,7 +194,7 @@ async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, add
 
   // ── Africa's Talking SMS ──
   if (env.AT_API_KEY && env.AT_USERNAME) {
-    for (const to of allContacts) {
+    for (const to of contacts) {
       jobs.push(fetch('https://api.africastalking.com/version1/messaging', {
         method: 'POST',
         headers: { apiKey: env.AT_API_KEY, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -309,8 +310,8 @@ app.post('/api/auth/login', async (c) => {
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
-  const { userId, orgId, lat, lng, callerName, callerNumber, emergencyContacts, description, isDrill } = await c.req.json<any>();
-  if (!callerNumber && !userId) return c.json({ error: 'Missing fields' }, 400);
+  const { userId, orgId, lat, lng, callerName, callerNumber } = await c.req.json<any>();
+  if (!orgId && !callerNumber) return c.json({ error: 'Missing fields' }, 400);
 
   const address = lat ? await reverseGeocode(lat, lng) : 'Location unknown';
   const now = Date.now();
@@ -318,34 +319,17 @@ app.post('/api/panic', async (c) => {
   // Log to D1
   await c.env.DB!.prepare(
     'INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(crypto.randomUUID(), orgId || null, userId || null, isDrill ? 'DRILL' : 'PANIC', lat || null, lng || null, now).run().catch(() => {});
+  ).bind(crypto.randomUUID(), orgId || null, userId || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
 
   if (userId && orgId) {
     await c.env.DB!.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
       .bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
-  // Build contact list — user's contacts first, response centre as backup
-  const userContacts: string[] = Array.isArray(emergencyContacts)
-    ? emergencyContacts.map((c: any) => c.whatsapp || c.phone).filter(Boolean)
-    : [];
+  // Fire all alerts in background
+  c.executionCtx.waitUntil(fireAllAlerts(c.env, { callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address }));
 
-  const allContacts = userContacts.length > 0
-    ? userContacts
-    : [c.env.RESPONSE_CENTRE_NUMBER || '+27739441222'];
-
-  // Always also notify response centre
-  if (!allContacts.includes(c.env.RESPONSE_CENTRE_NUMBER) && c.env.RESPONSE_CENTRE_NUMBER) {
-    allContacts.push(c.env.RESPONSE_CENTRE_NUMBER);
-  }
-
-  if (!isDrill) {
-    c.executionCtx.waitUntil(
-      fireAllAlerts(c.env, { callerNumber: callerNumber || '', callerName: callerName || 'SafetyLink User', lat, lng, address, contacts: allContacts })
-    );
-  }
-
-  return c.json({ ok: true, address, contacts: allContacts.length, isDrill: !!isDrill });
+  return c.json({ ok: true, address });
 });
 
 // ── USSD (Africa's Talking) ───────────────────────────────────────────────────
@@ -432,73 +416,21 @@ app.post('/api/superadmin/orgs/:id/unlock', authMiddleware, async (c) => {
   return c.json({ ok: true });
 });
 
-// ── PAYSTACK INITIALIZE ───────────────────────────────────────────────────────
-app.post('/api/paystack/initialize', async (c) => {
-  const { email, amount, plan_name } = await c.req.json<any>();
-  if (!email || !amount) return c.json({ error: 'email and amount required' }, 400);
-
-  const res = await fetch('https://api.paystack.co/transaction/initialize', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${c.env.PAYSTACK_SECRET_KEY || 'REDACTED_USE_ENV'}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      email,
-      amount: Math.round(parseFloat(amount) * 100), // kobo
-      currency: 'ZAR',
-      callback_url: 'https://safetylink.online/#payment-success',
-      metadata: { plan_name, custom_fields: [{ display_name: 'Plan', variable_name: 'plan', value: plan_name }] },
-    }),
-  });
-
-  const data: any = await res.json();
-  if (data.status && data.data?.authorization_url) {
-    return c.json({ success: true, url: data.data.authorization_url, reference: data.data.reference });
-  }
-  return c.json({ error: data.message || 'Paystack init failed' }, 500);
-});
-
-// ── PAYSTACK WEBHOOK ──────────────────────────────────────────────────────────
-app.post('/api/paystack/webhook', async (c) => {
-  const body = await c.req.text();
-  const sig = c.req.header('x-paystack-signature') || '';
-  // Verify HMAC
-  const key = c.env.PAYSTACK_SECRET_KEY || 'REDACTED_USE_ENV';
-  const encoder = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey('raw', encoder.encode(key), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
-  const mac = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(body));
-  const expected = Array.from(new Uint8Array(mac)).map(b => b.toString(16).padStart(2, '0')).join('');
-  if (sig !== expected) return c.json({ error: 'Invalid signature' }, 401);
-
-  const event = JSON.parse(body);
-  if (event.event === 'charge.success') {
-    const { email, amount, reference } = event.data;
-    console.log(`[Paystack] Payment success: ${reference} — ${email} — R${amount/100}`);
-    // TODO: activate subscription in D1
-  }
-  return c.json({ ok: true });
-});
-
 // ── PAYFAST CHECKOUT ──────────────────────────────────────────────────────────
 app.post('/api/payfast/checkout', async (c) => {
   const { plan_name, amount, email } = await c.req.json<any>();
-  const pfData: Record<string, string> = {
-    merchant_id: '26778541',
-    merchant_key: 'gqgynogxhcomh',
-    return_url: 'https://safetylink.online/#payment-success',
-    cancel_url: 'https://safetylink.online/#payment-cancel',
-    notify_url: 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev/api/payfast/notify',
+  // PayFast ITN — return redirect URL for client
+  const pfData = {
+    merchant_id: '10000100',
+    merchant_key: 'key_here',
+    return_url: 'https://safetylink.online/#/payment-success',
+    cancel_url: 'https://safetylink.online/#/payment-cancel',
+    notify_url: 'https://safetylink-api.workers.dev/api/payfast/notify',
     email_address: email || 'user@safetylink.online',
-    amount: parseFloat(amount || '49').toFixed(2),
-    item_name: `SafetyLink ${plan_name || 'Premium'}`,
-    subscription_type: '1',
-    billing_date: new Date().toISOString().split('T')[0],
-    recurring_amount: parseFloat(amount || '49').toFixed(2),
-    frequency: '3',
-    cycles: '0',
+    amount: parseFloat(amount).toFixed(2),
+    item_name: `SafetyLink ${plan_name}`,
   };
-  const query = new URLSearchParams(pfData).toString();
+  const query = new URLSearchParams(pfData as any).toString();
   return c.json({ success: true, url: `https://www.payfast.co.za/eng/process?${query}` });
 });
 

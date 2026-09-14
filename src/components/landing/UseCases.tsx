@@ -1,13 +1,54 @@
-// @ts-nocheck
 import React, { useState } from 'react';
+import { ASSETS, vid, img } from '../../utils/cloudinary';
 import './Home.css';
 
-interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
+interface Props {
+  onLogin: () => void;
+  onRegisterUser: () => void;
+  onRegisterOrg: () => void;
+  navigate?: (p: string) => void;
+}
 
-const VIDEOS = [
-  { id:'myQ09slWdRBdxOPnyVvZnqShDbSmTQkw', label:'Offline-First Demo', tag:'LOAD SHEDDING', desc:'See SafetyLink dispatch an alert with zero data and zero airtime during a load-shedding blackout.' },
-  { id:'1S-57V_CIqrP-A9FQkym4uzIEmBNimFtR', label:'Competitor Kill-Sheet', tag:'VS COMPETITION', desc:'How SafetyLink beats Namola, Life360, AURA and PanicSA — head to head.' },
-  { id:'1y4lEJw3Qlv8W2Wy-oP0b6z9dEO4q-lLZ', label:'Field Demonstration', tag:'LIVE DEMO', desc:'Live field demonstration of the BLE iTag panic trigger and AI voice dispatch sequence.' },
+interface VideoCardProps {
+  publicId: string;
+  title: string;
+  description: string;
+  poster?: string;
+}
+
+const VideoCard = ({ publicId, title, description, poster }: VideoCardProps) => (
+  <div style={{ borderRadius:'14px', overflow:'hidden', background:'#0f172a', border:'1px solid #1e293b' }}>
+    <video
+      style={{ width:'100%', height:'200px', objectFit:'cover', display:'block' }}
+      poster={poster ? img(poster) : undefined}
+      controls
+      preload="none"
+      playsInline
+    >
+      <source
+        src={vid(publicId)}
+        type="video/mp4"
+      />
+    </video>
+    <div style={{ padding:'14px' }}>
+      <p style={{ fontWeight:'700', color:'#fff', fontSize:'14px' }}>{title}</p>
+      <p style={{ color:'#64748b', fontSize:'12px', marginTop:'4px' }}>{description}</p>
+    </div>
+  </div>
+);
+
+export const USE_CASE_VIDEOS = [
+  { id: 'Okay_now_for_the_next_scene',    title: 'Family Protection',        desc: 'How SafetyLink protects your household', poster: 'Gemini_Generated_Image_virgVirg99' },
+  { id: 'Government_use_case_senario',    title: 'Government Use Case',      desc: 'Municipal and public safety deployment', poster: 'Gemini_Generated_Image_59psss59psss59ps' },
+  { id: 'Neighbourhood_watch_security_c', title: 'Neighbourhood Watch',      desc: 'Community security network in action', poster: 'Gemini_Generated_Image_waguavwagu' },
+  { id: 'drone_dispatch_tracking_crimin', title: 'Drone Dispatch',           desc: 'Aerial response to active incidents', poster: 'Gemini_Generated_Image_chze56oh0' },
+  { id: 'Show_the_uses_in_school_and_wo', title: 'Schools & Workplaces',     desc: 'Protecting learners and employees', poster: 'Gemini_Generated_Image_283x3m28' },
+  { id: 'Old_people_scenario_alone_at_h', title: 'Elderly at Home',          desc: 'Watch-Me Timer proactive protection', poster: 'Gemini_Generated_Image_virgVirg99' },
+  { id: 'SafetyLink_vision_when_ble_is',  title: 'BLE iTAG in Action',       desc: 'How the keyfob triggers an alert', poster: 'Polish_20260818_020279883' },
+  { id: 'Now_let_s_show_how_kids_would',  title: 'Children & Schools',       desc: 'Smart school safety deployment', poster: 'Gemini_Generated_Image_virgVirg99' },
+  { id: 'K_s_south_Africa_so_multirac',   title: 'Multilingual SA',          desc: 'All 11 South African languages', poster: 'Gemini_Generated_Image_virgVirg99' },
+  { id: 'Why',                            title: 'Why SafetyLink?',          desc: 'The story behind the platform', poster: 'copilot_image_178370354D283' },
+  { id: 'Pitch_deck',                     title: 'Investor Pitch',           desc: 'SafetyLink business overview', poster: 'Gemini_Generated_Image_s8bRy8s8b' },
 ];
 
 const SECTORS = [
@@ -20,23 +61,11 @@ const SECTORS = [
 ];
 
 export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [activeSector, setActiveSector] = useState(0);
 
   return (
     <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
-
-      {activeVideo && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.95)', zIndex:999999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-          <button onClick={() => setActiveVideo(null)} style={{ position:'absolute', top:'20px', right:'20px', background:'rgba(255,255,255,.1)', border:'1px solid rgba(255,255,255,.2)', color:'white', fontSize:'14px', padding:'8px 16px', borderRadius:'8px', cursor:'pointer' }}>✕ Close</button>
-          <video
-            src={`https://drive.google.com/uc?export=download&id=${activeVideo}`}
-            controls autoPlay
-            style={{ width:'90%', maxWidth:'1000px', borderRadius:'12px' }}
-          />
-        </div>
-      )}
-
+      
       {/* ── HEADER ── */}
       <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
@@ -55,22 +84,16 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEE IT IN ACTION</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Watch SafetyLink Work.</h2>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
-            {VIDEOS.map((v, i) => (
-              <button key={i} onClick={() => setActiveVideo(v.id)}
-                style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden', cursor:'pointer', textAlign:'left', transition:'all .2s' }}
-                onMouseOver={e => { e.currentTarget.style.borderColor='rgba(232,50,30,.4)'; e.currentTarget.style.background='rgba(232,50,30,.05)'; }}
-                onMouseOut={e => { e.currentTarget.style.borderColor='rgba(255,255,255,.07)'; e.currentTarget.style.background='rgba(255,255,255,.03)'; }}>
-                {/* Thumbnail area */}
-                <div style={{ aspectRatio:'16/9', background:'#111820', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-                  <div style={{ width:'52px', height:'52px', borderRadius:'50%', background:'rgba(232,50,30,.9)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'20px', zIndex:2 }}>▶</div>
-                  <span style={{ position:'absolute', top:'12px', left:'12px', fontFamily:"'JetBrains Mono',monospace", fontSize:'8px', color:'#e8321e', background:'rgba(232,50,30,.15)', border:'1px solid rgba(232,50,30,.3)', padding:'3px 8px', borderRadius:'4px', letterSpacing:'.1em' }}>{v.tag}</span>
-                </div>
-                <div style={{ padding:'20px' }}>
-                  <div style={{ fontSize:'14px', fontWeight:800, marginBottom:'8px', color:'#f0f4f8' }}>{v.label}</div>
-                  <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{v.desc}</div>
-                </div>
-              </button>
+          
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px' }}>
+            {USE_CASE_VIDEOS.map((v) => (
+              <VideoCard
+                key={v.id}
+                publicId={v.id}
+                title={v.title}
+                description={v.desc}
+                poster={v.poster}
+              />
             ))}
           </div>
         </div>
@@ -81,8 +104,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// DEPLOYMENT SECTORS</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Where We Deploy.</h2>
-
-          {/* Sector tabs */}
+          
           <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'32px' }}>
             {SECTORS.map((s, i) => (
               <button key={i} onClick={() => setActiveSector(i)}
@@ -95,22 +117,14 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
             ))}
           </div>
 
-          {/* Active sector detail */}
-          <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(232,50,30,.2)', borderRadius:'16px', padding:'36px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'40px', alignItems:'start' }}>
+          <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(232,50,30,.2)', borderRadius:'16px', padding:'36px', display:'grid', gridTemplateColumns:'1fr', gap:'40px', alignItems:'start' }}>
             <div>
-              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#e8321e', letterSpacing:'.16em', marginBottom:'12px' }}>{SECTORS[activeSector].tag}</div>
-              <h3 style={{ fontSize:'clamp(20px,3vw,32px)', fontWeight:900, marginBottom:'16px' }}>{SECTORS[activeSector].title}</h3>
-              <p style={{ fontSize:'14px', color:'#8892a4', lineHeight:1.7, marginBottom:'24px' }}>{SECTORS[activeSector].desc}</p>
-              <button onClick={onRegisterOrg} style={{ background:'#e8321e', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'11px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>
-                DEPLOY FOR MY SECTOR →
-              </button>
-            </div>
-            <div>
-              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.14em', marginBottom:'16px', textTransform:'uppercase' }}>Core Features</div>
-              <ul style={{ listStyle:'none' }}>
+              <div style={{ fontSize:'24px', fontWeight:900, marginBottom:'12px', color:'#fff' }}>{SECTORS[activeSector].title}</div>
+              <div style={{ fontSize:'14px', color:'#94a3b8', lineHeight:1.7, marginBottom:'24px' }}>{SECTORS[activeSector].desc}</div>
+              <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:'12px' }}>
                 {SECTORS[activeSector].features.map((f, i) => (
-                  <li key={i} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom:'1px solid rgba(255,255,255,.06)', fontSize:'13px', color:'#c8d0dc' }}>
-                    <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', flexShrink:0 }}/>
+                  <li key={i} style={{ display:'flex', gap:'12px', alignItems:'center', fontSize:'13px', color:'#cbd5e1' }}>
+                    <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#e8321e' }} />
                     {f}
                   </li>
                 ))}
@@ -119,51 +133,6 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
           </div>
         </div>
       </section>
-
-      {/* ── COMPETITOR MATRIX ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// COMPETITIVE POSITIONING</div>
-          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'16px' }}>Why SafetyLink Wins.</h2>
-          <p style={{ color:'#8892a4', marginBottom:'40px', fontSize:'15px', lineHeight:1.7 }}>
-            <strong style={{ color:'#f0f4f8' }}>70% cheaper. 11× more features.</strong> The only hardware-integrated, offline-resilient safety ecosystem in South Africa.
-          </p>
-
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontFamily:"'JetBrains Mono',monospace", fontSize:'11px' }}>
-              <thead>
-                <tr style={{ borderBottom:'1px solid rgba(255,255,255,.1)' }}>
-                  {['Feature', 'SafetyLink®', 'Namola', 'Life360', 'Google Safety', 'PanicSA'].map((h, i) => (
-                    <th key={i} style={{ padding:'12px 16px', textAlign:'left', color: i === 1 ? '#e8321e' : '#8892a4', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', fontSize:'10px', background: i === 1 ? 'rgba(232,50,30,.06)' : 'transparent' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  ['Offline / Zero-Data Trigger', '✅ USSD + BLE Mesh', '❌ Needs Data', '❌ Needs Data', '❌ Needs Data', '❌ Needs Data'],
-                  ['Physical Hardware Button', '✅ R100 iTAG', '❌ App Only', '❌ App Only', '❌ App Only', '❌ App Only'],
-                  ['AI Voice Dispatch (11 langs)', '✅ VAPI + Bland.ai', '❌ Human Ops', '❌ Human Ops', '❌ Human Ops', '❌ Human Ops'],
-                  ['Lock-Screen Bypass', '✅ 1.5s Hold', '❌ Unlock Required', '❌ Unlock Required', '⚠️ Power Button', '❌ Unlock Required'],
-                  ['B-BBEE Level 1 Certified', '✅ 135% Recognition', '❌ Level 4', '❌ Non-SA', '❌ Non-SA', '❌ Uncertified'],
-                  ['POPIA + SA-Hosted Data', '✅ 100% Local', '✅ Local', '❌ US Servers', '❌ US Servers', '✅ Local'],
-                  ['Price (Individual)', '✅ R49/month', 'R99–R149/mo', 'R120–R250/mo', 'OS-included', 'R89–R120/mo'],
-                ].map((row, i) => (
-                  <tr key={i} style={{ borderBottom:'1px solid rgba(255,255,255,.05)' }}>
-                    {row.map((cell, j) => (
-                      <td key={j} style={{ padding:'14px 16px', fontSize:'11px', background: j === 1 ? 'rgba(232,50,30,.04)' : 'transparent',
-                        color: j === 0 ? '#c8d0dc' : cell.startsWith('✅') ? '#00e676' : cell.startsWith('❌') ? '#ef4444' : cell.startsWith('⚠️') ? '#f5a623' : '#8892a4' }}>
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <style>{`@keyframes blink{0%,100%{opacity:1}50%{opacity:.12}}`}</style>
     </div>
   );
 }

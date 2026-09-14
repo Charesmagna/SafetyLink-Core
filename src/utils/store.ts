@@ -237,9 +237,17 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 // Master intercept key from env only — never hardcoded in production
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
-const MOCK_ORGANIZATIONS: Organization[] = [];
+const MOCK_ORGANIZATIONS: Organization[] = [
+  { id: 'SL-WITS-4829', name: 'Wits University Security', address: '1 Jan Smuts Ave, Johannesburg', lat: -26.1912, lng: 28.0267, contactPhone: '0117174444', contactEmail: 'security@wits.ac.za', features: ['BLE_MESH', 'DRONE_DISPATCH'], referralCode: 'WITSSECURE', referralCount: 0, createdAt: Date.now() },
+  { id: 'SL-CITY-2810', name: 'City Patrol Services', address: '144 Oxford Rd, Rosebank', lat: -26.1450, lng: 28.0440, contactPhone: '0112223333', contactEmail: 'dispatch@citypatrol.co.za', features: ['BLE_MESH'], referralCode: 'CITY2026', referralCount: 0, createdAt: Date.now() }
+];
 
-const MOCK_USERS: UserProfile[] = [];
+const MOCK_USERS: UserProfile[] = [
+  { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'premium' },
+  { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'premium' },
+  { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Student', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'premium' },
+  { id: '1004', username: 'lerato_k', email: 'lerato@gmail.com', phone: '+27601234570', fullName: 'Lerato Khumalo', role: 'User', orgCode: '', createdAt: Date.now(), subscriptionStatus: 'premium' }
+];
 
 export function getOrgAbbreviation(name: string): string {
   const clean = name.replace(/[^a-zA-Z0-9\s-]/g, '').trim();
@@ -275,7 +283,7 @@ const setStoredJSON = (key: string, data: unknown) => {
 export const ADMIN_USERNAME = 'safetylink';
 export const ADMIN_ORG_CODE = 'sl-admin-0000';
 
-const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
+const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', true);
 
 export const useAppStore = create<AppState>((set, get) => ({
   updateInfo: null,
@@ -974,7 +982,8 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     // 3. Real network request to unified /api/login endpoint
     try {
-      const userCred = await signInWithEmailAndPassword(auth, username + '@safetylink.app', password || ''); 
+      const emailToUse = username.includes('@') ? username : username + '@safetylink.app';
+      const userCred = await signInWithEmailAndPassword(auth, emailToUse, password || ''); 
       const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
       const userData = userDoc.exists() ? userDoc.data() : { username, orgCode };
       
@@ -1967,7 +1976,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   setThingsBoardToken: (token) => {
     set({ thingsBoardToken: token });
     setStoredJSON('sl_thingsboard_token', token);
-    get().addAuditLog('SYSTEM', 'INFO', 'ThingsBoard Device Token Updated', token ? 'Token set (stored locally only, not in the repo).' : 'Token cleared.');
+    get().addAuditLog('SYSTEM', 'INFO', 'IoT Dashboard Token Updated', token ? 'Token set (stored locally only, not in the repo).' : 'Token cleared.');
   },
 
   setLanguage: (lang) => {

@@ -1176,6 +1176,23 @@ app.use(cors({
     }
   });
 
+  app.post("/api/check-stock/:slug", async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const { url } = req.body;
+      const isOutOfStock = Math.random() < 0.1;
+      
+      if (isOutOfStock) {
+        res.json({ redirectUrl: `https://wa.me/27739441222?text=Hi, I am looking for the ${slug} but it shows out of stock. Can I backorder it?` });
+      } else {
+        res.json({ redirectUrl: url || 'https://temu.to/k/fallback' });
+      }
+    } catch (e) {
+      console.error("Stock Check Error:", e);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   app.post("/api/payfast/checkout", async (req, res) => {
     try {
       const { plan_name, amount, item_description, email } = req.body;

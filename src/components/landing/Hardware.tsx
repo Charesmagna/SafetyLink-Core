@@ -1,17 +1,18 @@
+import { ASSETS } from '../../utils/cloudinary';
 // @ts-nocheck
 import React, { useState } from 'react';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
 const DEVICES = [
-  { tag:'PRIMARY', name:'SafetyLink iTAG Keyfob', price:'R149', sub:'CR2032 battery · IP65 · BLE 4.0+', img:'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260819_020219883.jpg', color:'#00e676', features:['BLE 4.0+ universal compatibility','IP65 water and dust resistance','6–12 month CR2032 battery life','38×27×8mm · 7g · wearable','Zero-config vendor-agnostic pairing','Works with SafetyLink in any pocket'] },
-  { tag:'ENTERPRISE', name:'Teltonika GH5200', price:'R1,999', sub:'GSM/LTE + GPS + BLE · SIM-based', img:'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260819_020007723.jpg', color:'#e8321e', features:['Independent SIM-based operation','Two-way voice call built-in','GPS accurate to 3 metres','5-day standby battery','Deployed across SA security firms','No Android dependency required'] },
-  { tag:'FIXED SITE', name:'Shelly Button 1 (WiFi)', price:'R380', sub:'WiFi direct · Webhook · IP54', img:'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260620_014530309.jpg', color:'#0ea5e9', features:['Direct WiFi webhook to SafetyLink','No phone pairing required','Wall or desk mountable','Long-press, double-tap, hold modes','Ideal for reception desks and offices','IP54 rated for outdoor mounting'] },
-  { tag:'IoT LAYER', name:'Tuya Smart Smoke Detector', price:'R280', sub:'WiFi · MQTT · Instant alert', img:'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Polish_20260809_035827088.png', color:'#f5a623', features:['Triggers SafetyLink dispatch on alarm','MQTT → Cloudflare Worker pipeline','10-year battery sealed unit','Works during load-shedding via BLE mesh','Integrates with estate dashboard','Can trigger siren + WhatsApp simultaneously'] },
+  { tag:'PRIMARY', name:'SafetyLink iTAG Keyfob', price:'R149', sub:'CR2032 battery · IP65 · BLE 4.0+', img: ASSETS.itagAll, color:'#00e676', features:['BLE 4.0+ universal compatibility','IP65 water and dust resistance','6–12 month CR2032 battery life','38×27×8mm · 7g · wearable','Zero-config vendor-agnostic pairing','Works with SafetyLink in any pocket'] },
+  { tag:'ENTERPRISE', name:'Teltonika GH5200', price:'R1,999', sub:'GSM/LTE + GPS + BLE · SIM-based', img: ASSETS.itagAll, color:'#e8321e', features:['Independent SIM-based operation','Two-way voice call built-in','GPS accurate to 3 metres','5-day standby battery','Deployed across SA security firms','No Android dependency required'] },
+  { tag:'FIXED SITE', name:'Shelly Button 1 (WiFi)', price:'R380', sub:'WiFi direct · Webhook · IP54', img: ASSETS.itagAll, color:'#0ea5e9', features:['Direct WiFi webhook to SafetyLink','No phone pairing required','Wall or desk mountable','Long-press, double-tap, hold modes','Ideal for reception desks and offices','IP54 rated for outdoor mounting'] },
+  { tag:'IoT LAYER', name:'Tuya Smart Smoke Detector', price:'R280', sub:'WiFi · MQTT · Instant alert', img: ASSETS.itagAll, color:'#f5a623', features:['Triggers SafetyLink dispatch on alarm','MQTT → Cloudflare Worker pipeline','10-year battery sealed unit','Works during load-shedding via BLE mesh','Integrates with estate dashboard','Can trigger siren + WhatsApp simultaneously'] },
 ];
 
 const STEPS = [
-  { n:'01', title:'Insert Battery', desc:'Rotate the button cap to OPEN. Insert CR2032 with + facing up. Close and rotate to LOCK. LED flashes once to confirm power.' },
+  { n:'01', title:'Insert Battery', desc:'Rotate the button cap to OPEN. Insert CR2032 with + facing up. Close and rotate to LOCK. LED flashes once to confirm power.', img: ASSETS.itagBattery },
   { n:'02', title:'Pair to SafetyLink', desc:'Open SafetyLink app → DEVICES → ADD DEVICE. Press iTAG button once. Device appears as "Native iTAG Keyfob". Tap to pair. RSSI displays once connected.' },
   { n:'03', title:'Test Your Connection', desc:'From the main SOS screen, confirm status shows CONNECTED. Press TEST 5S to verify alert chain without triggering a live response.' },
   { n:'04', title:'Configure Button Actions', desc:'Single press: locate phone. Double press: SOS trigger. Long press: emergency escalation. Recommended SOS delay: 1.5 seconds.' },
@@ -84,6 +85,22 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
         </div>
       </section>
 
+      {/* ── BLE DEMO VIDEO ── */}
+      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HOW IT WORKS</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>BLE Vision Demo</h2>
+          <div style={{ borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(255,255,255,.1)' }}>
+            <video
+              src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is"
+              poster="https://res.cloudinary.com/qcp4fx2v/image/upload/q_auto,f_auto/Polish_20260818_020279883"
+              controls preload="none" playsInline
+              style={{ width:'100%', display:'block' }}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* ── SETUP STEPS ── */}
       <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'start' }}>
@@ -101,6 +118,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
                 <div>
                   <div style={{ fontSize:'13px', fontWeight:700, marginBottom:'4px' }}>{s.title}</div>
                   <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{s.desc}</div>
+                  {s.img && <img src={s.img} alt={s.title} style={{ marginTop:'12px', width:'100%', borderRadius:'8px', border:'1px solid rgba(255,255,255,.05)' }} />}
                 </div>
               </div>
             ))}

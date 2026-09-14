@@ -1,3 +1,4 @@
+import { ASSETS } from '../../utils/cloudinary';
 // @ts-nocheck
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +19,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
       <nav className="fixed w-full z-50 bg-[#0f172a] shadow-lg border-b border-slate-800">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Safety_Link_Logo_Black.png" className="h-10 w-auto" alt="SafetyLink Logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img src={ASSETS.logo} className="h-10 w-auto" alt="SafetyLink Logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </Link>
           
           <div className="hidden md:flex items-center gap-8">
@@ -60,7 +61,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
       <footer id="contact" className="bg-[#0f172a] border-t-[12px] border-[#15803d] pt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Safety_Link_Logo_Black.png" alt="SafetyLink Logo" className="h-24 w-auto mx-auto mb-8 opacity-80 mix-blend-lighten" />
+            <img src={ASSETS.logo} alt="SafetyLink Logo" className="h-24 w-auto mx-auto mb-8 opacity-80 mix-blend-lighten" />
             <h3 className="text-2xl font-black text-white tracking-[0.06em] uppercase mb-12">ONE APP. TOTAL PEACE OF MIND.</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               <div className="flex flex-col items-center gap-4 text-center">

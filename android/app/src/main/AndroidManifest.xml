@@ -36,16 +36,6 @@
         </service>
         <service android:name="com.safetylink.app.services.EmergencyService" android:exported="false" android:foregroundServiceType="location" />
 
-    
-        <receiver android:name="com.safetylink.app.receivers.BootReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-            </intent-filter>
-        </receiver>
-        <receiver android:name="com.safetylink.app.receivers.WatchdogAlarmReceiver" android:exported="false" />
-        <service android:name="com.safetylink.app.services.WatchdogService" android:exported="false" />
-
     </application>
 
     
@@ -64,7 +54,4 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

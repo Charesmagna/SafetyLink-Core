@@ -1,3 +1,6 @@
+import { ASSETS } from '../../utils/cloudinary';
+import appLoginImage from '../../assets/images/regenerated_image_1789423374103.jpg';
+import itagImage from '../../assets/images/regenerated_image_1789423376023.jpg';
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import './Home.css';
@@ -60,24 +63,19 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
       <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: '#000' }}>
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline
-          style={{ 
-            position:'absolute', 
-            inset: 0, 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover', 
-            zIndex: 0, 
-            opacity: 0.35 
-          }}
-        >
-          <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
-        </video>
+        <div style={{ position:'absolute', inset:0, overflow:'hidden', zIndex:0 }}>
+  <video
+    autoPlay muted loop playsInline
+    style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.15 }}
+  >
+    <source
+      src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/Why"
+      type="video/mp4"
+    />
+  </video>
+</div>
         {/* Overlay gradient to blend bottom edge and text readability */}
+        <img src={ASSETS.logo3d} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80%', opacity: 0.06, objectFit: 'contain', zIndex: 0 }} alt="Watermark" />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.7) 0%, rgba(13,17,23,0.9) 100%)', zIndex: 0 }} />
         {/* Scanline */}
         <div style={{ position:'absolute', inset:0, opacity:0.03, pointerEvents:'none', overflow:'hidden', zIndex:1 }}>
@@ -129,24 +127,9 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
           </div>
 
           {/* Live feed log */}
-          <div style={{ background:'rgba(7,10,15,.75)', border:'1px solid rgba(232,50,30,.25)', borderRadius:'14px', overflow:'hidden', backdropFilter:'blur(24px)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(0,0,0,.3)' }}>
-              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9.5px', color:'#8892a4', letterSpacing:'.1em' }}>LIVE_DISPATCH.LOG</span>
-              <span style={{ marginLeft:'auto', fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#00e676', display:'flex', alignItems:'center', gap:'5px' }}>
-                <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', display:'inline-block', animation:'blink 1.2s infinite' }}/>ACTIVE
-              </span>
-            </div>
-            <div style={{ padding:'6px 0', minHeight:'200px' }}>
-              {logRows.map((row, i) => (
-                <div key={i} style={{ display:'grid', gridTemplateColumns:'68px 1fr', gap:'8px', padding:'5px 14px', fontFamily:"'JetBrains Mono',monospace", fontSize:'10.5px', borderBottom:'1px solid rgba(255,255,255,.025)' }}>
-                  <span style={{ color:'rgba(136,146,164,.5)' }}>{row.t}</span>
-                  <span>
-                    <span style={{ color:row.c, fontWeight:700, marginRight:'5px' }}>{row.ch.toUpperCase()} ›</span>
-                    <span style={{ color:'#c8d0dc' }}>{row.ev}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div style={{ position: 'relative' }}>
+            <img src={appLoginImage} alt="SafetyLink App SOS" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
+            <img src={itagImage} alt="SafetyLink iTAG" style={{ position: 'absolute', bottom: '-20px', left: '-40px', width: '160px', borderRadius: '12px', transform: 'rotate(-15deg)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
           </div>
         </div>
       </section>
@@ -329,12 +312,12 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
             {[
-              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://wa.me/27739441222?text=SafetyLink+APK+download', btn:'Download APK', c:'#00e676', cr:'0,230,118' },
-              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233' },
+              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://wa.me/27739441222?text=SafetyLink+APK+download', btn:'Download APK', c:'#00e676', cr:'0,230,118', img: ASSETS.appLogin },
+              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233', img: ASSETS.dashboardDark },
               { icon:'🌐', label:'Web App (PWA)', sub:'Open in browser. Tap Add to Home Screen.', href:'https://safetylink.online', btn:'Open Web App', c:'#a78bfa', cr:'167,139,250' },
             ].map((d, i) => (
               <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
-                <div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
+                {d.img && <img src={d.img} alt={d.label} style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} />}<div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, textTransform:'uppercase', letterSpacing:'.02em' }}>{d.label}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55, flex:1 }}>{d.sub}</div>
                 <a href={d.href} target="_blank" rel="noreferrer"

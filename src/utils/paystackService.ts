@@ -1,4 +1,4 @@
-// SafetyLink Paystack Payment Service
+// SafetyLink Secure Payment Gateway Payment Service
 // Public key must be VITE_PAYSTACK_PUBLIC_KEY in environment
 // NEVER put secret key (gqgynogxhcomh) in frontend code
 
@@ -37,7 +37,7 @@ export function openPaystackCheckout({
 
   const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
   if (!key) {
-    // Fallback: open Paystack payment page directly
+    // Fallback: open Secure Payment Gateway payment page directly
     window.open('https://paystack.com/pay/safetylink', '_blank');
     return;
   }

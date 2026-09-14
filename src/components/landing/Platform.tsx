@@ -1,5 +1,8 @@
 // @ts-nocheck
 import React, { useState, useRef } from 'react';
+import { ASSETS } from '../../utils/cloudinary';
+import dispatchImage from '../../assets/images/regenerated_image_1789423374103.jpg';
+import blandAiImage from '../../assets/images/regenerated_image_1789423376023.jpg';
 import './Home.css';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
@@ -94,7 +97,8 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEQUENTIAL DISPATCH FIRING ORDER</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'48px' }}>The Zero-Fail<br/>Guarantee.</h2>
-          <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
             {[
               { step:'01', title:'BLE Click / Screen SOS', desc:'Trigger initiated — 1.5 second hold fires from pocket without screen unlock.', color:'#e8321e' },
               { step:'02', title:'Encrypted Local Storage Write', desc:'Incident data secured even if offline — AES-256-GCM with PBKDF2 derivation.', color:'#f5a623' },
@@ -113,9 +117,14 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               </div>
             ))}
           </div>
+            <div>
+              <img src={dispatchImage} alt="Dispatch Interface" style={{ width: '100%', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }} />
+              <img src={blandAiImage} alt="Voice Dispatch Visual" style={{ width: '100%', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', marginTop: '20px' }} />
+            </div>
+          </div>
         </div>
       </section>
-
+      
       {/* ── GHOST ENGINE ── */}
       <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
@@ -142,6 +151,9 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
 
       {/* ── IoT INTEGRATION ── */}
       <section style={{ padding:'80px 40px', background:'#0d1117' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto', marginBottom: '60px' }}>
+          <img src={ASSETS.mapDark} alt="SafetyLink Incident Heatmap" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
+        </div>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GLOBAL COMMAND CENTER</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'48px' }}>IoT Integration<br/>& Command.</h2>

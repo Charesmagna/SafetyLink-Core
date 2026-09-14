@@ -163,7 +163,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     features: [
       'Offline Cellular Sequential SMS',
       'Local BLE iTag Wearable Binding',
-      'ThingsBoard Cloud Telemetry Sync',
+      'IoT Sensor Dashboard Sync',
       'K\'lev.ai Smart Assistant Access'
     ]
   },
@@ -200,7 +200,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     priceZAR: 2499,
     period: 'monthly',
     features: [
-      'Dedicated Twilio Gateway & Voice calls',
+      'Dedicated Messaging Gateway & Voice calls',
       'Commander Real-time GIS Patrol Map',
       'Control Room Call Trigger Automation',
       'SLA tracking and guard telemetry logs'

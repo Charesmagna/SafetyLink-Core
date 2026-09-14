@@ -222,7 +222,7 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
                   </div>
                 </div>
                 <p className="text-[11px] text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
-                  <span className="text-emerald-400 font-bold">Universal Sourcing:</span> All devices are fulfilled locally. Secure Paystack checkout dynamically routes to optimal suppliers.
+                  <span className="text-emerald-400 font-bold">Universal Sourcing:</span> All devices are fulfilled locally. Secure Secure checkout dynamically routes to optimal suppliers.
                 </p>
               </div>
 

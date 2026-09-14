@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { ASSETS } from '../utils/cloudinary';
 import { Home } from './landing/Home';
 import { Hardware } from './landing/Hardware';
 import { Pricing } from './landing/Pricing';
 import { Platform } from './landing/Platform';
 import { UseCases } from './landing/UseCases';
 import { Enterprise } from './landing/Enterprise';
+import PrivacyPolicy from '../pages/PrivacyPolicy';
+import SafetyWareStore from './SafetyWareStore';
 
-type Page = 'home' | 'hardware' | 'pricing' | 'platform' | 'usecases' | 'enterprise';
+type Page = 'home' | 'hardware' | 'store' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
 
 interface LandingPageProps {
   onLogin?: () => void;
@@ -18,6 +21,7 @@ const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
   { id: 'home',       label: 'Home',        emoji: '🛡️' },
   { id: 'platform',   label: 'Platform',    emoji: '📱' },
   { id: 'hardware',   label: 'Hardware',    emoji: '📡' },
+  { id: 'store',      label: 'Store',       emoji: '🛒' },
   { id: 'usecases',   label: 'Use Cases',   emoji: '🎯' },
   { id: 'pricing',    label: 'Pricing',     emoji: '💎' },
   { id: 'enterprise', label: 'Enterprise',  emoji: '🏢' },
@@ -30,7 +34,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   // Sync with browser hash for direct links
   useEffect(() => {
     const hash = window.location.hash.replace('#', '') as Page;
-    if (NAV_ITEMS.find(n => n.id === hash)) setPage(hash);
+    if (NAV_ITEMS.find(n => n.id === hash) || hash === 'payment-success') setPage(hash as Page);
   }, []);
 
   const navigate = (p: Page) => {
@@ -48,7 +52,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       {/* ── Top Nav ── */}
       <nav className="fixed top-0 left-0 right-0 z-[9999] bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/60 px-4 py-3 flex items-center justify-between">
         <button onClick={() => navigate('home')} className="flex items-center gap-2.5">
-          <img src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/Safety_Link_Logo_Black.png" alt="SafetyLink" className="h-8 w-8 rounded-lg object-cover" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
+          <img src={ASSETS.logo} alt="SafetyLink" className="h-8 w-16 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
           <span className="font-black text-white tracking-wider text-sm uppercase font-mono">SafetyLink</span>
         </button>
 
@@ -107,12 +111,18 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       <div className="pt-14">
         {page === 'home'       && <Home       {...sharedProps} />}
         {page === 'hardware'   && <Hardware   {...sharedProps} />}
+        {page === 'store'      && <SafetyWareStore />}
         {page === 'pricing'    && <Pricing    {...sharedProps} />}
         {page === 'platform'   && <Platform   {...sharedProps} />}
         {page === 'usecases'   && <UseCases   {...sharedProps} />}
         {page === 'enterprise' && <Enterprise {...sharedProps} />}
+        {page === 'privacy'    && <PrivacyPolicy />}
+        {page === 'payment-success' && <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}><h1 style={{ fontSize: '32px', color: '#10b981', marginBottom: '16px' }}>Payment Successful!</h1><p style={{ color: '#94a3b8', marginBottom: '24px' }}>Your subscription has been activated.</p><button onClick={() => navigate('home')} style={{ padding: '12px 24px', background: '#0f172a', color: 'white', borderRadius: '8px' }}>Return to Home</button></div>}
       </div>
 
+      <div style={{ padding: '0 20px', maxWidth: '1200px', margin: '60px auto 0' }}>
+        <img src={ASSETS.banner} alt="SafetyLink Global Protection Network" style={{ width: '100%', borderRadius: '16px', border: '1px solid #1e293b' }} />
+      </div>
       {/* ── Footer ── */}
       <footer className="border-t border-slate-800 px-6 py-8 text-center space-y-3 mt-12">
         <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500 font-mono">
@@ -122,6 +132,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         </div>
         <div className="flex justify-center gap-6 text-xs">
           <a href="mailto:support@safetylink.online" className="text-blue-400 hover:text-blue-300 font-mono">support@safetylink.online</a>
+          <button onClick={() => navigate('privacy')} className="text-slate-400 hover:text-slate-300 font-mono">Privacy Policy</button>
           <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp</a>
         </div>
         <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">© TM Media Solutions · Reg 2018/500191/07 · safetylink.online</p>

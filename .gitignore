@@ -42,3 +42,5 @@ sqlite.db
 !.env.example
 safetylink.db
 android/keystore.properties
+vite.config.ts.timestamp-*.mjs
+vite.config.ts.timestamp-*

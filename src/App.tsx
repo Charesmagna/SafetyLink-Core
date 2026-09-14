@@ -48,6 +48,7 @@ import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
 const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
+const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -849,6 +850,11 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Subsystems...</div>}><AdvancedSubsystems /></Suspense>
             </div>
           )}
+          {activeTab === 'store' && (
+            <div className="animate-fadeIn h-full overflow-y-auto">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Store...</div>}><SafetyWareStore /></Suspense>
+            </div>
+          )}
           {activeTab === 'workspace' && (
             <div className="animate-fadeIn p-4 overflow-y-auto h-full">
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Workspace...</div>}><WorkspaceIntegrations /></Suspense>
@@ -1033,6 +1039,18 @@ const App: React.FC = () => {
                       <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.map')}</p>
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Offline GIS mapping</p>
                     </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('store'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'store'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🛒</span>
+                    <span className="text-sm font-medium">SafetyWare Store</span>
                   </button>
 
                   <button

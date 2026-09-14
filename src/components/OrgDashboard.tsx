@@ -1,4 +1,5 @@
 import WorkspaceIntegrations from "./WorkspaceIntegrations";
+import OrgWarRoom from "./OrgWarRoom";
 import React, { useState, useMemo } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -74,7 +75,7 @@ export const OrgDashboard: React.FC = () => {
   const [newToolType, setNewToolType] = useState<'WHATSAPP' | 'CALL' | 'SMS' | 'INFO' | 'WIDGET'>('INFO');
   const [newToolValue, setNewToolValue] = useState('');
 
-  // Twilio Setup State variables
+  // Gateway Setup State variables
 
   // Open Platforms State variables
   const [ntfyTopic, setNtfyTopic] = useState(currentOrg?.ntfy?.topic || '');
@@ -274,6 +275,14 @@ export const OrgDashboard: React.FC = () => {
           >
             🔌 Open Platforms
           </button>}
+          <button
+            onClick={() => setActiveSubTab('live-gis')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'live-gis' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            🗺️ Live GIS Map
+          </button>
           <button
             onClick={() => setActiveSubTab('mphakati-overwatch')}
             className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
@@ -1056,6 +1065,11 @@ export const OrgDashboard: React.FC = () => {
         {/* SUB TAB: OPERATIONS ANALYTICS & METRICS              */}
         {activeSubTab === 'analytics' && (
           <GeospatialAnalytics />
+        )}
+        {activeSubTab === 'live-gis' && (
+          <div className="animate-fadeIn mt-4 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden h-[600px]">
+            <OrgWarRoom />
+          </div>
         )}
         {activeSubTab === 'mphakati-overwatch' && (
           <div className="animate-fadeIn -mx-4 sm:-mx-8 lg:-mx-8">

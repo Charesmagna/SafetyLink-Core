@@ -164,7 +164,8 @@ export const OfflineMap: React.FC = () => {
       {/* Leaflet Interactive Map View */}
       <div className="relative w-full h-72 bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden mt-4 z-10">
         <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}>
-          <Map 
+          <Map
+            internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
             mapId="DEMO_MAP_ID" 
             defaultZoom={13} 
             center={{ lat: activeFocusCenter[0], lng: activeFocusCenter[1] }} 

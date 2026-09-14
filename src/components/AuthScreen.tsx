@@ -431,12 +431,12 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
               )}
 
               <div className="flex flex-col">
-                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Username / Callsign</label>
+                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Email / Username</label>
                 <input
                   type="text"
                   value={loginUsername}
                   onChange={e => setLoginUsername(e.target.value)}
-                  placeholder="e.g. thabo_m"
+                  placeholder="e.g. thabo_m or user@gmail.com"
                   className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
                   required
                 />
@@ -600,7 +600,11 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 onClick={async () => {
                   const res = await signInWithGoogle();
                   if (!res.success) {
-                    setLoginError(res.error || 'Google Sign-In failed.');
+                    if (res.error?.includes('missing initial state') || res.error?.includes('sessionStorage') || res.error?.includes('cross-origin')) {
+                      setLoginError('Iframe Error: Browser blocked Google Sign-In. Please open the app in a new tab (top right icon) to use Google Sign-In, or use a demo profile.');
+                    } else {
+                      setLoginError(res.error || 'Google Sign-In failed.');
+                    }
                   }
                 }}
                 className="w-full py-3.5 px-4 bg-white hover:bg-gray-100 transition-all text-slate-900 text-xs font-bold rounded-2xl uppercase tracking-widest shadow-lg flex items-center justify-center gap-3 font-mono"
@@ -982,7 +986,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                         Create & Provision Organization
                       </h4>
                       <p className="text-[10px] text-slate-500 mt-1 leading-normal font-sans">
-                        Establish an enterprise Safety Node Commander Deck to manage patrol guards, monitor student/staff rosters, and configure a Twilio cloud gateway.
+                        Establish an enterprise Safety Node Commander Deck to manage patrol guards, monitor student/staff rosters, and configure a Cloud Messaging Gateway.
                       </p>
                     </div>
                   </div>

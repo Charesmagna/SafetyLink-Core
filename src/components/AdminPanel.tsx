@@ -313,12 +313,12 @@ export const AdminPanel: React.FC = () => {
               </div>
             </div>
 
-            {/* ThingsBoard Cloud Integration */}
+            {/* IoT Dashboard Integration */}
             <div className="glass-panel p-6 space-y-4 text-left">
               <div>
-                <h3 className="text-sm font-bold text-slate-200">ThingsBoard Cloud Integration</h3>
+                <h3 className="text-sm font-bold text-slate-200">IoT Dashboard Integration</h3>
                 <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  Every real (non-drill) SOS trigger pushes incident telemetry to your ThingsBoard device,
+                  Every real (non-drill) SOS trigger pushes incident telemetry to your IoT Dashboard,
                   giving org-wide visibility on your dashboard. Paste your device access token below --
                   it's stored only on this device, never committed to the repo.
                 </p>
@@ -328,7 +328,7 @@ export const AdminPanel: React.FC = () => {
                   type="text"
                   value={tbTokenInput}
                   onChange={(e) => setTbTokenInput(e.target.value)}
-                  placeholder="ThingsBoard device access token"
+                  placeholder="IoT Device Access Token"
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
                 />
                 <button
@@ -343,15 +343,15 @@ export const AdminPanel: React.FC = () => {
                     setTbTestStatus('sending');
                     const ok = await sendTestEvent(thingsBoardToken);
                     setTbTestStatus(ok ? 'ok' : 'fail');
-                    addAuditLog('SYSTEM', ok ? 'INFO' : 'WARN', ok ? 'ThingsBoard test event sent' : 'ThingsBoard test event failed', '');
+                    addAuditLog('SYSTEM', ok ? 'INFO' : 'WARN', ok ? 'IoT test event sent' : 'IoT test event failed', '');
                   }}
                   className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors whitespace-nowrap"
                 >
                   {tbTestStatus === 'sending' ? 'SENDING...' : 'SEND TEST EVENT'}
                 </button>
               </div>
-              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your ThingsBoard device.</p>}
-              {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach ThingsBoard. Check the token and your connection.</p>}
+              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your IoT Dashboard.</p>}
+              {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach IoT Dashboard. Check the token and your connection.</p>}
             </div>
 
             {/* OTA Release Management */}
@@ -789,7 +789,7 @@ export const AdminPanel: React.FC = () => {
         {/* TAB 5: TOOLS & SETTINGS */}
         {activeTab === 'SETTINGS' && (
           <div className="space-y-6 animate-fadeIn text-left">
-            {/* Thingsboard Section (Existing top settings block) */}
+            {/* IoT Section (Existing top settings block) */}
             
             
             {/* Trial Settings */}
@@ -847,7 +847,7 @@ export const AdminPanel: React.FC = () => {
 
             <div className="glass-panel p-5 md:p-6 space-y-4">
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">ThingsBoard Edge Telemetry Route Configuration</h3>
+                <h3 className="text-sm font-bold text-slate-200">IoT Edge Telemetry Route Configuration</h3>
                 <p className="text-xs text-slate-500">
                   Bind this instance to your specific remote rule chain. Panics will automatically push device telemetries.
                 </p>
@@ -856,7 +856,7 @@ export const AdminPanel: React.FC = () => {
               <div className="flex flex-col md:flex-row gap-3">
                 <input
                   type="text"
-                  placeholder="Paste ThingsBoard device access token..."
+                  placeholder="Paste IoT Device Access Token..."
                   value={tbTokenInput}
                   onChange={e => setTbTokenInput(e.target.value)}
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
