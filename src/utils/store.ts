@@ -1448,37 +1448,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
      }
   },
 
-  syncOfflineQueue: async () => {
-    // Sync queued offline events when connection restores
-    const newEvent: PanicEvent = {
-      id: incidentId,
-      status: 'ESCALATING',
-      severity: isDrill ? 'LOW' : 'CRITICAL',
-      lat: loc.lat,
-      lng: loc.lng,
-      timestamp: Date.now(),
-      description: description,
-      timelineData: [
-        `${new Date().toLocaleTimeString()} - Fallback Chain executed.`
-      ],
-      profileUsed: get().currentUser?.id
-    };
-    
-    set(state => ({
-      panicEvents: [newEvent, ...state.panicEvents],
-      activeSOSState: 'ESCALATING',
-      showSOSModal: true
-    }));
-    
-    // Trigger Lizzy Voice Check as a backup
-    setTimeout(() => {
-      if (get().activeSOSState !== 'IDLE') {
-        get().setShowLizzyPopup(true);
-      }
-    }, 45000);
-  },
-
-
   startMultiStagePanic: (description, durationSec) => {
     const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
     if (duration === 0) {
