@@ -54,30 +54,30 @@ export const PricingModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: ()
   };
 
   const handlePayfastCheckout = async (planName: string, amount: string) => {
-    try {
-      setLoadingPlan(planName);
-      const response = await fetch('/api/payfast/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan_name: planName,
-          amount: amount,
-          item_description: `SafetyLink ${planName} Subscription`,
-          email: 'user@example.com'
-        })
-      });
-      const data = await response.json();
-      if (data.success && data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Checkout failed: ' + (data.error || 'Unknown error'));
+    setLoadingPlan(planName);
+    const { useAppStore } = require('../utils/store');
+    const user = useAppStore.getState().currentUser;
+    const customerEmail = user?.email || 'user@safetylink.online';
+    
+    const handler = (window as any).PaystackPop.setup({
+      key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+      email: customerEmail,
+      amount: parseInt(amount) * 100, // Paystack operates in cents
+      currency: 'ZAR',
+      ref: `SL-SUB-${Date.now()}`,
+      label: `SafetyLink ${planName} Subscription`,
+      metadata: {
+        plan_name: planName
+      },
+      callback: (transaction: any) => {
+        setLoadingPlan(null);
+        window.location.href = '/#payment-success';
+      },
+      onClose: () => {
+        setLoadingPlan(null);
       }
-    } catch (e) {
-      console.error(e);
-      alert('Network error during checkout.');
-    } finally {
-      setLoadingPlan(null);
-    }
+    });
+    handler.openIframe();
   };
   if (!isOpen) return null;
 
