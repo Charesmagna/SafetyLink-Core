@@ -1448,11 +1448,8 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
      }
   },
 
-  syncOfflineQueue)
-      }
-    }
-
-    // Set final state
+  syncOfflineQueue: async () => {
+    // Sync queued offline events when connection restores
     const newEvent: PanicEvent = {
       id: incidentId,
       status: 'ESCALATING',
