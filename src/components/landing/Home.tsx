@@ -75,7 +75,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             opacity: 0.35 
           }}
         >
-          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+          <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
         </video>
         {/* Overlay gradient to blend bottom edge and text readability */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.7) 0%, rgba(13,17,23,0.9) 100%)', zIndex: 0 }} />
