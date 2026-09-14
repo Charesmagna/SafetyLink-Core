@@ -396,7 +396,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     return false;
   },
-  cancelSOS: () => set({ activeSOSState: 'IDLE', panicCountdown: null }),
   attemptCancelSOS: (pin: string) => {
     if (get().userPin === pin) {
       set({ activeSOSState: 'IDLE' });
