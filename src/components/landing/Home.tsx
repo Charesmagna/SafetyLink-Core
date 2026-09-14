@@ -59,7 +59,26 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)' }}>
+      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: '#000' }}>
+        <video 
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+          style={{ 
+            position:'absolute', 
+            inset: 0, 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover', 
+            zIndex: 0, 
+            opacity: 0.35 
+          }}
+        >
+          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+        </video>
+        {/* Overlay gradient to blend bottom edge and text readability */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.7) 0%, rgba(13,17,23,0.9) 100%)', zIndex: 0 }} />
         {/* Scanline */}
         <div style={{ position:'absolute', inset:0, opacity:0.03, pointerEvents:'none', overflow:'hidden', zIndex:1 }}>
           <div style={{ position:'absolute', left:0, right:0, height:'2px', background:'linear-gradient(transparent,rgba(232,50,30,.8),transparent)', animation:'scanline 8s linear infinite' }}/>
@@ -310,8 +329,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
             {[
-              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-Signed.apk', btn:'Download APK', c:'#00e676', cr:'0,230,118' },
-              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+Windows+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233' },
+              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://wa.me/27739441222?text=SafetyLink+APK+download', btn:'Download APK', c:'#00e676', cr:'0,230,118' },
+              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/27739441222?text=SafetyLink+EXE+download', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233' },
               { icon:'🌐', label:'Web App (PWA)', sub:'Open in browser. Tap Add to Home Screen.', href:'https://safetylink.online', btn:'Open Web App', c:'#a78bfa', cr:'167,139,250' },
             ].map((d, i) => (
               <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
