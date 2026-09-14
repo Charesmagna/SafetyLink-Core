@@ -1,5 +1,7 @@
 // @ts-nocheck
 import React, { useState } from 'react';
+import { openPaystackCheckout } from '../../utils/paystackService';
+
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
@@ -8,16 +10,20 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   const handlePayfast = async (plan: string, amount: string) => {
-    try {
-      setLoadingPlan(plan);
-      const res = await fetch('/api/payfast/checkout', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ plan_name: plan, amount, email:'user@safetylink.online' }),
-      });
-      const data = await res.json();
-      if (data.success && data.url) window.location.href = data.url;
-    } catch(e) { alert('Checkout error. WhatsApp us to subscribe manually.'); }
-    finally { setLoadingPlan(null); }
+    setLoadingPlan(plan);
+    openPaystackCheckout({
+      planId: plan,
+      planName: plan,
+      amount: parseInt(amount) * 100, // convert to cents
+      email: 'user@safetylink.online',
+      onSuccess: () => {
+        setLoadingPlan(null);
+        window.location.href = '/#payment-success';
+      },
+      onClose: () => {
+        setLoadingPlan(null);
+      }
+    });
   };
 
   return (

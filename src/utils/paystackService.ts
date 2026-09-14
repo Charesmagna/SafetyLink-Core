@@ -14,12 +14,16 @@ export type PlanId = keyof typeof PLANS;
 
 export function openPaystackCheckout({
   planId,
+  amount,
+  planName,
   email,
   metadata = {},
   onSuccess,
   onClose,
 }: {
-  planId: PlanId;
+  planId?: string | PlanId;
+  amount?: number;
+  planName?: string;
   email: string;
   metadata?: Record<string, any>;
   onSuccess?: (ref: string) => void;
@@ -38,13 +42,13 @@ export function openPaystackCheckout({
     return;
   }
 
-  const plan = PLANS[planId];
+  const plan = planId && planId in PLANS ? PLANS[planId as PlanId] : { amount: amount || 0, name: planName || 'SafetyLink Subscription' };
   const handler = PaystackPop.setup({
     key,
     email,
     amount: plan.amount,
     currency: 'ZAR',
-    ref: `SL-${planId.toUpperCase()}-${Date.now()}`,
+    ref: `SL-${String(planId || 'CUSTOM').toUpperCase()}-${Date.now()}`,
     label: plan.name,
     metadata: {
       merchant_id: '26778541',
