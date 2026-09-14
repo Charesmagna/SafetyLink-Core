@@ -1,27 +1,16 @@
 // @ts-nocheck
-import React, { useState, useEffect } from 'react';
-
-const WORKER = 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+import React, { useState } from 'react';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
 export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const [billing, setBilling] = useState<'monthly'|'annual'>('monthly');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
-  const [apkUrl, setApkUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  useEffect(() => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET','https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest',true);
-    xhr.setRequestHeader('Accept','application/vnd.github.v3+json');
-    xhr.timeout = 8000;
-    xhr.onload = () => { try { const d=JSON.parse(xhr.responseText); const a=d?.assets?.find((x:any)=>x.name.endsWith('.apk')); if(a) setApkUrl(a.browser_download_url); } catch{} };
-    xhr.send();
-  }, []);
 
   const handlePayfast = async (plan: string, amount: string) => {
     try {
       setLoadingPlan(plan);
-      const res = await fetch(`${WORKER}/api/payfast/checkout`, {
+      const res = await fetch('/api/payfast/checkout', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ plan_name: plan, amount, email:'user@safetylink.online' }),
       });
@@ -37,7 +26,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       {/* ── HEADER ── */}
       <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// TRANSPARENT PRICING</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// TRANSPARENT PRICING</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
             Flexible protection.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>No surprises.</span>
           </h1>
@@ -62,7 +51,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       {/* ── INDIVIDUAL PLANS ── */}
       <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// INDIVIDUAL & FAMILY</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// INDIVIDUAL & FAMILY</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
             {[
               { name:'Free', price:'R0', period:'forever', color:'#8892a4', cr:'136,146,164', popular:false,
@@ -83,7 +72,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
                 </div>
                 <ul style={{ listStyle:'none', flex:1, marginBottom:'24px' }}>
                   {plan.features.map((f, j) => (
-                    <li key={j} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px 0', borderBottom:'1px solid rgba(255,255,255,.04)', fontSize:'12px', color:'#c8d0dc' }}>
+                    <li key={j} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'8px 0', borderBottom:'1px solid rgba(255,255,255,.04)', color:'#c8d0dc' }}>
                       <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:plan.color, flexShrink:0 }}/>
                       {f}
                     </li>
@@ -104,7 +93,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       {/* ── SECURITY PLANS ── */}
       <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// SECURITY COMPANIES & PATROL</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// SECURITY COMPANIES & PATROL</div>
           <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
             {[
               { tier:'Starter', price: billing==='annual'?'R832':'R999', clients:'Up to 50 clients', features:'Live client map · Basic reporting · Client management', color:'#8892a4' },
@@ -115,10 +104,10 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div key={i} style={{ background: plan.highlight ? 'rgba(0,230,118,.04)' : '#111820', padding:'24px 28px', display:'flex', alignItems:'center', gap:'32px' }}>
                 <div style={{ flex:'0 0 160px' }}>
                   <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:plan.color, letterSpacing:'.14em', marginBottom:'4px', textTransform:'uppercase' }}>{plan.tier}</div>
-                  <div style={{ fontSize:'24px', fontWeight:900, color: plan.highlight ? '#00e676' : '#f0f4f8' }}>{plan.price}<span style={{ fontSize:'12px', fontWeight:400, color:'#8892a4' }}>/mo</span></div>
+                  <div style={{ fontSize:'24px', fontWeight:900, color: plan.highlight ? '#00e676' : '#f0f4f8' }}>{plan.price}<span style={{ fontWeight:400, color:'#8892a4' }}>/mo</span></div>
                 </div>
-                <div style={{ flex:'0 0 160px', color:'#8892a4', fontFamily:"'JetBrains Mono',monospace" }}>{plan.clients}</div>
-                <div style={{ flex:1, fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{plan.features}</div>
+                <div style={{ flex:'0 0 160px', color:'#8892a4', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px' }}>{plan.clients}</div>
+                <div style={{ flex:1, color:'#8892a4', lineHeight:1.5 }}>{plan.features}</div>
                 <button onClick={() => plan.price === 'Custom' ? window.open('mailto:info@safetylink.online','_blank') : handlePayfast(plan.tier, plan.price.replace(/[^0-9]/g,'') + '.00')}
                   style={{ flexShrink:0, background:`rgba(255,255,255,.05)`, color:plan.color, border:`1px solid rgba(255,255,255,.1)`, padding:'10px 20px', borderRadius:'8px', fontSize:'10px', fontWeight:700, letterSpacing:'.1em', cursor:'pointer', whiteSpace:'nowrap' }}>
                   {plan.price === 'Custom' ? 'CONTACT US' : 'SUBSCRIBE →'}
@@ -132,7 +121,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       {/* ── HARDWARE ── */}
       <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// HARDWARE (BLUETOOTH iTAGS)</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// HARDWARE (BLUETOOTH iTAGS)</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'20px' }}>
             {[
               { label:'Single iTAG', price:'R149', sub:'+ 1 month Premium included', id:'single', qty:1 },
@@ -142,7 +131,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
             ].map((h, i) => (
               <div key={i} style={{ background: h.highlight ? 'rgba(232,50,30,.08)' : 'rgba(255,255,255,.03)', border: h.highlight ? '1px solid rgba(232,50,30,.3)' : '1px solid rgba(255,255,255,.07)', borderRadius:'12px', padding:'24px', textAlign:'center' }}>
                 {h.highlight && <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'8px', color:'#e8321e', letterSpacing:'.12em', marginBottom:'8px', textTransform:'uppercase' }}>BEST VALUE</div>}
-                <div style={{ fontSize:'12px', color:'#8892a4', marginBottom:'8px', fontWeight:600 }}>{h.label}</div>
+                <div style={{ color:'#8892a4', marginBottom:'8px', fontWeight:600 }}>{h.label}</div>
                 <div style={{ fontSize:'clamp(24px,3vw,32px)', fontWeight:900, color: h.highlight ? '#e8321e' : '#f0f4f8', marginBottom:'6px' }}>{h.price}</div>
                 <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', marginBottom:'16px', lineHeight:1.4 }}>{h.sub}</div>
                 <a href="https://wa.me/27739441222?text=SafetyLink+iTAG+order" target="_blank" rel="noreferrer"
@@ -161,7 +150,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       {/* ── ADD-ONS ── */}
       <section style={{ padding:'80px 40px', background:'#070a0f' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// OPTIONAL ADD-ONS</div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'32px' }}>// OPTIONAL ADD-ONS</div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'16px' }}>
             {[
               { icon:'🏷️', name:'White-Label APK', price:'R1,000/mo', desc:'Your logo, your brand, your APK name. Custom Play Store listing available.' },
@@ -176,7 +165,7 @@ export function Pricing({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
                 <div>
                   <div style={{ fontSize:'14px', fontWeight:800, marginBottom:'4px' }}>{a.name}</div>
                   <div style={{ fontSize:'13px', color:'#e8321e', fontWeight:700, marginBottom:'8px' }}>{a.price}</div>
-                  <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{a.desc}</div>
+                  <div style={{ color:'#8892a4', lineHeight:1.5 }}>{a.desc}</div>
                 </div>
               </div>
             ))}
