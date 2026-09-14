@@ -1,3 +1,22 @@
+let panicQueue: any = null;
+function getPanicQueue() {
+  if (!panicQueue) {
+    const { Queue } = require("bullmq");
+    
+    const connection = { url: process.env.REDIS_URL };
+    const hasRedisEnv = !!process.env.REDIS_URL;
+    if (!hasRedisEnv) {
+      panicQueue = {
+        add: async (...args: any[]) => console.warn("Redis not configured. Mock queue added job:", args),
+        on: () => {}
+      };
+      return panicQueue;
+    }
+    panicQueue = new Queue("panicQueue", { connection });
+    panicQueue.on("error", (err: any) => console.warn("panicQueue connection error (ignored in sandbox):", err.message));
+  }
+  return panicQueue;
+}
 console.log("STARTING SERVER SCRIPT PID:", process.pid);
 import { createIncident, processPanicAlert } from "./src/services/panic-alert";
 import { ussdRouter } from "./src/routes/ussd";
@@ -13,7 +32,7 @@ import path from "path";
 import { db } from "./src/db/index";
 import crypto from "crypto";
 import twilio from "twilio";
-import { Queue, Worker } from "bullmq";
+import { Queue } from "bullmq";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { initializeApp } from 'firebase-admin/app';
@@ -118,19 +137,31 @@ async function initDb() {
   `);
 }
 
-const stytchClient = new stytch.Client({
+let stytchClient = null;
+function getStytchClient() {
+  if (!stytchClient) {
+    stytchClient = new stytch.Client({ project_id: process.env.STYTCH_PROJECT_ID || "test-id", secret: process.env.STYTCH_SECRET || "test-secret", env: stytch.envs.test });
+  }
+  return stytchClient;
+}
+/*
   project_id: process.env.STYTCH_PROJECT_ID,
   secret: process.env.STYTCH_SECRET,
-  env: stytch.envs.test,
-});
+  */
 
-const pusher = new Pusher({
+let pusher = null;
+function getPusher() {
+  if (!pusher) {
+    pusher = new Pusher({ appId: process.env.PUSHER_APP_ID || "test", key: process.env.PUSHER_KEY || "test", secret: process.env.PUSHER_SECRET || "test", cluster: "ap2", useTLS: true });
+  }
+  return pusher;
+}
+/*
   appId: process.env.PUSHER_APP_ID,
   key: process.env.PUSHER_KEY,
   secret: process.env.PUSHER_SECRET, // User did not provide explicit secret, placeholder
   cluster: "ap2",
-  useTLS: true
-});
+  */
 
 
 
@@ -138,8 +169,8 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://mock.supabase.co';
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'mock_key';
 const supabase = createSupabaseClient(supabaseUrl, supabaseKey);
 
-const hasRedis = false; // Forced false to prevent ECONNREFUSED on Cloud Run
-const connection = hasRedis ? { url: process.env.REDIS_URL } : undefined;
+ // Forced false to prevent ECONNREFUSED on Cloud Run
+const connection = { url: process.env.REDIS_URL };
 
 
 async function startServer() {
@@ -152,7 +183,9 @@ app.use(cors({
   credentials: true
 }));
 
+  
   const PORT = 3000;
+  
 
   // Security Hardening: Helmet protects from common web vulnerabilities by setting HTTP headers.
   // We disable the contentSecurityPolicy in dev so Vite HMR works.
@@ -410,7 +443,8 @@ app.use(cors({
           return res.status(400).json({ error: "Missing required parameters." });
       }
       try {
-          await panicQueue.add('sms_dispatch', { phone, message, accountSid, authToken, fromNumber, liveSmsEnabled, timestamp: new Date().toISOString() }, {
+          const queue = getPanicQueue();
+          await queue.add('sms_dispatch', { phone, message, accountSid, authToken, fromNumber, liveSmsEnabled, timestamp: new Date().toISOString() }, {
               attempts: 3, backoff: { type: 'exponential', delay: 2000 }
           });
           return res.status(200).json({ message: "SMS dispatch queued." });
@@ -677,7 +711,7 @@ app.use(cors({
 
       // Broadcast real-time panic event via Pusher
       try {
-        await pusher.trigger(`org-${org_code}`, "panic_alert", {
+        await getPusher().trigger(`org-${org_code}`, "panic_alert", {
           user_id: user.id,
           name: user.name,
           latitude,
