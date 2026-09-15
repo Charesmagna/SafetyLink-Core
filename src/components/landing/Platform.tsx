@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React, { useState, useRef } from 'react';
 import { ASSETS } from '../../utils/cloudinary';
-import dispatchImage from '../../assets/images/regenerated_image_1789423374103.jpg';
-import blandAiImage from '../../assets/images/regenerated_image_1789423376023.jpg';
+import dispatchImage from '../../assets/images/regenerated_image_1787314967610.jpg';
+import blandAiImage from '../../assets/images/regenerated_image_1787314665815.jpg';
 import './Home.css';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }

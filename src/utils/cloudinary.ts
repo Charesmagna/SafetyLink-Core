@@ -4,8 +4,8 @@ import img2 from '../assets/images/regenerated_image_1787314665815.jpg';
 import img3 from '../assets/images/regenerated_image_1787314961487.jpg';
 import img4 from '../assets/images/regenerated_image_1787314967610.jpg';
 import img5 from '../assets/images/regenerated_image_1787314983102.jpg';
-import img6 from '../assets/images/regenerated_image_1789423374103.jpg';
-import img7 from '../assets/images/regenerated_image_1789423376023.jpg';
+import img6 from '../assets/images/regenerated_image_1787314967610.jpg';
+import img7 from '../assets/images/regenerated_image_1787314665815.jpg';
 import img8 from '../assets/images/Polish_20260620_014530309.jpg';
 import img9 from '../assets/images/sl_ui_template.jpeg';
 

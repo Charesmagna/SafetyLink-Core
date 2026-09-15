@@ -1,6 +1,6 @@
 import { ASSETS } from '../../utils/cloudinary';
-import appLoginImage from '../../assets/images/regenerated_image_1789423374103.jpg';
-import itagImage from '../../assets/images/regenerated_image_1789423376023.jpg';
+import appLoginImage from '../../assets/images/regenerated_image_1787314967610.jpg';
+import itagImage from '../../assets/images/regenerated_image_1787314665815.jpg';
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import './Home.css';
