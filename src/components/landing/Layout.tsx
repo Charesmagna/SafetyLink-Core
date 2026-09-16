@@ -1,3 +1,4 @@
+import { Header } from "./Header";
 import { ASSETS } from '../../utils/cloudinary';
 // @ts-nocheck
 
@@ -6,8 +7,8 @@ import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap,
 
 
 
+import { Link, useLocation } from 'react-router-dom';
 export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -16,44 +17,8 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
 
   return (
     <div className="bg-white min-h-screen font-sans text-slate-800 antialiased overflow-x-hidden">
-      <nav className="fixed w-full z-50 bg-[#0f172a] shadow-lg border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={ASSETS.logo} className="h-10 w-auto" alt="SafetyLink Logo" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-          </Link>
-          
-          <div className="hidden md:flex items-center gap-8">
-            <Link to="/platform" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Platform</Link>
-            <Link to="/use-cases" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Use Cases</Link>
-            <Link to="/enterprise" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">For Security Companies</Link>
-            <Link to="/hardware" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Hardware</Link>
-            <Link to="/pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Pricing</Link>
-            
-            <button onClick={onLogin} className="text-sm font-bold text-white hover:text-[#15803d] transition-colors ml-2">Login</button>
-            <button onClick={onRegisterOrg} className="bg-[#15803d] hover:bg-green-700 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-colors shadow-sm">Start your 14-day trial</button>
-          </div>
-          
-          <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
-        </div>
-        
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0f172a] border-t border-slate-800 p-6 flex flex-col gap-4 absolute w-full shadow-2xl">
-            <Link to="/platform" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Platform</Link>
-            <Link to="/use-cases" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Use Cases</Link>
-            <Link to="/enterprise" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">For Security Companies</Link>
-            <Link to="/hardware" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Hardware</Link>
-            <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="text-slate-300 font-medium text-[15px]">Pricing</Link>
-            <button onClick={() => { setMobileMenuOpen(false); if(onLogin) onLogin(); }} className="text-slate-300 font-medium text-[15px] text-left">Login</button>
-            <button onClick={onRegisterOrg} className="bg-[#15803d] text-white p-3 rounded-full font-bold text-center text-[15px] block w-full">Start your 14-day trial</button>
-          </div>
-        )}
-      </nav>
-
-      <main className="pt-20">
+      <Header onLogin={onLogin} onRegisterOrg={onRegisterOrg} />
+      <main className="pt-0">
         {children}
       </main>
 
@@ -112,7 +77,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
                 <a href="#" className="text-[14px] text-slate-400 hover:text-white transition-colors">About Us</a>
                 <a href="#" className="text-[14px] text-slate-400 hover:text-white transition-colors">Our Partners</a>
                 <a href="#" className="text-[14px] text-slate-400 hover:text-white transition-colors">Company</a>
-                <a href="https://wa.me/27680079911" target="_blank" rel="noreferrer" className="text-[14px] text-slate-400 hover:text-white transition-colors">Contact Us</a>
+                <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer" className="text-[14px] text-slate-400 hover:text-white transition-colors">Contact Us</a>
               </div>
             </div>
             <div>
@@ -168,7 +133,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
               STAY CONNECTED. STAY PROTECTED. STAY IN CONTROL.
             </p>
             <div className="flex flex-col gap-1.5 text-center md:text-right">
-              <span className="text-[12px] text-slate-400">Contact: 068 007 9911</span>
+              <span className="text-[12px] text-slate-400">Contact: 068 007 9911 / 081 673 8186</span>
               <span className="text-[12px] text-slate-500 italic font-semibold">K'lev.c</span>
             </div>
           </div>
