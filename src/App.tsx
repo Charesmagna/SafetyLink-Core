@@ -23,6 +23,8 @@ import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
+import { GlobalBackground } from "./components/GlobalBackground";
+import { SplashReveal } from "./components/SplashReveal";
 import { LandingPage } from './components/LandingPage';
 import { DnsSetupGuide } from './components/DnsSetupGuide';
 import { ResponderDashboard } from './components/ResponderDashboard';
@@ -251,7 +253,7 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   useEffect(() => {
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
@@ -1195,6 +1197,8 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+      <GlobalBackground />
+      {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}
       {updateInfo?.available && (
         <div className="w-full bg-emerald-600/90 text-white text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 backdrop-blur-md cursor-pointer" onClick={() => window.open(updateInfo.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest', '_blank')}>
