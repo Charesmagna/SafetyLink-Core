@@ -59,7 +59,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
                   📱 Download Android APK
                 </a>
               ) : (
-                <a href="https://wa.me/27680079911?text=SafetyLink+APK+download" target="_blank" rel="noreferrer"
+                <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer"
                   className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all">
                   📱 Request Android APK
                 </a>
@@ -70,7 +70,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
                   💻 Download Windows EXE
                 </a>
               ) : (
-                <a href="https://wa.me/27680079911?text=SafetyLink+Windows+EXE+download" target="_blank" rel="noreferrer"
+                <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer"
                   className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all">
                   💻 Request Windows EXE
                 </a>
