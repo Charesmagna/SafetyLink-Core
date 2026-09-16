@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SafetyLink Header</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:#f1f5f9;}
+
+#nav{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  background:rgba(255,255,255,0.97);
+  border-bottom:1px solid #e2e8f0;
+  transition:box-shadow .3s;
+}
+#nav.scrolled{box-shadow:0 4px 24px rgba(0,0,0,.08);}
+
+.nav-inner{
+  max-width:1200px;margin:0 auto;
+  padding:0 20px;height:60px;
+  display:flex;align-items:center;
+  justify-content:space-between;gap:8px;
+}
+
+/* LOGO */
+.nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none;flex-shrink:0;}
+.nav-logo img{height:32px;width:auto;object-fit:contain;}
+.nav-logo span{font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.02em;}
+
+/* NAV LINKS — desktop only */
+.nav-links{display:flex;align-items:center;gap:20px;}
+.nav-links a{font-size:12px;font-weight:500;color:#64748b;text-decoration:none;transition:color .2s;white-space:nowrap;}
+.nav-links a:hover{color:#15803d;}
+.nav-links a.active{color:#15803d;border-bottom:2px solid #15803d;padding-bottom:2px;}
+
+/* RIGHT CLUSTER */
+.nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+/* Language select */
+.lang-wrap{position:relative;}
+.lang-wrap select{
+  appearance:none;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:7px;
+  padding:6px 24px 6px 9px;
+  font-size:11px;font-weight:700;
+  color:#1e293b;cursor:pointer;outline:none;
+  font-family:inherit;
+}
+.lang-wrap svg{position:absolute;right:7px;top:50%;transform:translateY(-50%);pointer-events:none;}
+
+/* View toggle */
+.view-toggle{
+  display:flex;align-items:center;gap:5px;
+  background:#f8fafc;border:1px solid #e2e8f0;
+  border-radius:7px;padding:6px 10px;
+  cursor:pointer;font-size:11px;font-weight:600;
+  color:#475569;font-family:inherit;
+  transition:background .2s;
+}
+.view-toggle:hover{background:#f1f5f9;}
+
+/* Social icons */
+.social-row{display:flex;align-items:center;gap:5px;}
+.soc-btn{
+  width:32px;height:32px;
+  background:#f8fafc;border:1px solid #e2e8f0;
+  border-radius:7px;display:flex;
+  align-items:center;justify-content:center;
+  text-decoration:none;transition:background .2s;flex-shrink:0;
+}
+.soc-btn:hover{background:#e0f2fe;}
+.soc-btn.wa:hover{background:#dcfce7;}
+.soc-btn.fb:hover{background:#dbeafe;}
+
+/* CTA */
+.nav-cta{
+  background:#15803d;color:#fff;
+  padding:8px 16px;border-radius:7px;
+  font-size:12px;font-weight:700;
+  text-decoration:none;white-space:nowrap;
+  transition:background .2s;
+}
+.nav-cta:hover{background:#166534;}
+
+/* Hamburger */
+#ham{
+  display:none;background:none;
+  border:none;cursor:pointer;padding:4px;
+}
+
+/* Mobile menu */
+#mob-menu{
+  display:none;flex-direction:column;gap:0;
+  background:#fff;border-top:1px solid #e2e8f0;
+}
+#mob-menu.open{display:flex;}
+#mob-menu a{
+  color:#1e293b;font-weight:500;text-decoration:none;
+  font-size:14px;padding:12px 20px;
+  border-bottom:1px solid #f1f5f9;
+}
+#mob-menu a:hover{background:#f8fafc;}
+.mob-social{
+  display:flex;gap:12px;padding:12px 20px;
+  align-items:center;background:#f8fafc;
+}
+.mob-social a{font-size:12px;color:#64748b;text-decoration:none;}
+
+/* RESPONSIVE */
+@media(max-width:960px){
+  .nav-links{display:none;}
+  #ham{display:block;}
+}
+@media(max-width:600px){
+  .view-toggle span{display:none;}
+  .nav-logo span{display:none;}
+}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-inner">
+
+    <!-- Logo -->
+    <a href="#" class="nav-logo">
+      <img
+        src="https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308"
+        alt="SafetyLink"
+        onerror="this.style.display='none'"
+      />
+      <span>SafetyLink</span>
+    </a>
+
+    <!-- Desktop nav links -->
+    <nav class="nav-links">
+      <a href="#home" class="active">Home</a>
+      <a href="#features">Platform Features</a>
+      <a href="#usecases">Use Cases</a>
+      <a href="#hardware">Hardware Config</a>
+      <a href="#ai">AI Co-Pilot</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#download">Download</a>
+    </nav>
+
+    <!-- Right cluster -->
+    <div class="nav-right">
+
+      <!-- Language selector -->
+      <div class="lang-wrap">
+        <select id="lang-select" onchange="changeLanguage(this.value)" aria-label="Select language">
+          <option value="en">🌐 ENGLISH</option>
+          <option value="zu">🌐 ZULU</option>
+          <option value="af">🌐 AFRIKAANS</option>
+          <option value="xh">🌐 XHOSA</option>
+          <option value="st">🌐 SESOTHO</option>
+          <option value="tn">🌐 SETSWANA</option>
+          <option value="ts">🌐 TSONGA</option>
+          <option value="ss">🌐 SWATI</option>
+          <option value="ve">🌐 VENDA</option>
+          <option value="nr">🌐 NDEBELE</option>
+          <option value="nso">🌐 SEPEDI</option>
+        </select>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+
+      <!-- Desktop / Mobile view toggle -->
+      <button class="view-toggle" onclick="toggleView()" id="view-btn" title="Toggle mobile/desktop view">
+        <svg id="icon-desktop" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <svg id="icon-mobile" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
+        <span id="view-label">Desktop</span>
+      </button>
+
+      <!-- Social icons -->
+      <div class="social-row">
+        <a href="mailto:info@safetylink.online" class="soc-btn" title="Email us">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+        </a>
+        <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" class="soc-btn fb" title="Facebook">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+        <a href="https://wa.me/27739441222" target="_blank" class="soc-btn wa" title="WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <a href="https://wa.me/27739441222?text=Hi+I+want+to+get+SafetyLink" target="_blank" class="nav-cta">
+        Get Started
+      </a>
+
+      <!-- Hamburger -->
+      <button id="ham" onclick="toggleMenu()" aria-label="Open menu">
+        <svg width="22" height="22" fill="none" stroke="#0f172a" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Mobile dropdown menu -->
+  <div id="mob-menu">
+    <a href="#home">Home</a>
+    <a href="#features">Platform Features</a>
+    <a href="#usecases">Use Cases</a>
+    <a href="#hardware">Hardware Config</a>
+    <a href="#ai">AI Co-Pilot</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#download">Download</a>
+    <a href="https://wa.me/27739441222" target="_blank" style="background:#15803d;color:#fff;font-weight:700;text-align:center;">Contact Us on WhatsApp</a>
+    <div class="mob-social">
+      <a href="mailto:info@safetylink.online">✉️ info@safetylink.online</a>
+      <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" style="color:#1877f2;">📘 Facebook</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Spacer so content isn't hidden under fixed nav -->
+<div style="height:60px;"></div>
+
+<script>
+// ── MOBILE MENU ──────────────────────────────────────────
+function toggleMenu() {
+  document.getElementById('mob-menu').classList.toggle('open');
+}
+// Close menu on nav link click
+document.querySelectorAll('#mob-menu a').forEach(function(a) {
+  a.addEventListener('click', function() {
+    document.getElementById('mob-menu').classList.remove('open');
+  });
+});
+
+// ── NAVBAR SCROLL SHADOW ─────────────────────────────────
+window.addEventListener('scroll', function() {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 10);
+});
+
+// ── DESKTOP / MOBILE VIEW TOGGLE ─────────────────────────
+var mobileView = false;
+function toggleView() {
+  mobileView = !mobileView;
+  var label   = document.getElementById('view-label');
+  var iconD   = document.getElementById('icon-desktop');
+  var iconM   = document.getElementById('icon-mobile');
+  var body    = document.body;
+
+  if (mobileView) {
+    label.textContent = 'Mobile';
+    iconD.style.display = 'none';
+    iconM.style.display = 'block';
+    body.style.maxWidth     = '390px';
+    body.style.margin       = '60px auto 0';
+    body.style.boxShadow    = '0 0 0 1px #e2e8f0, 0 8px 48px rgba(0,0,0,0.15)';
+    body.style.borderRadius = '20px';
+    body.style.overflow     = 'hidden';
+  } else {
+    label.textContent = 'Desktop';
+    iconD.style.display = 'block';
+    iconM.style.display = 'none';
+    body.style.maxWidth     = '';
+    body.style.margin       = '';
+    body.style.boxShadow    = '';
+    body.style.borderRadius = '';
+    body.style.overflow     = '';
+  }
+}
+
+// ── LANGUAGE SWITCHER ────────────────────────────────────
+var T = {
+  en:  { h1a:'SAFETY FOR YOUR FAMILY AND', h1b:'HOUSE HOLD',    sub:'Peace of mind STARTS AT HOME. Protect what matters most – your family and your home.' },
+  zu:  { h1a:'UKUPHEPHA KOMNDENI WAKHO',   h1b:'IKHAYA',        sub:'Ukuthula kwengqondo kuQALA EKHAYA. Vikela okukubalulekile.' },
+  af:  { h1a:'VEILIGHEID VIR JOU GESIN EN',h1b:'HUISHOUDING',   sub:'Gemoedsrus BEGIN TUIS. Beskerm wat die meeste saakmaak.' },
+  xh:  { h1a:'UKHUSELEKO LOSAPHO LWAKHO',  h1b:'IKHAYA',        sub:'Ukuzola kwengqondo kuQALA EKHAYA. Khusela okubalulekileyo.' },
+  st:  { h1a:'TSHIRELETSO YA LELAPA',      h1b:'LAPENG',        sub:'Kgotso ya kelello e qala habo. Sireletsa se hlokehang.' },
+  tn:  { h1a:'TSHIRELETSO YA LELWAPA',     h1b:'LAPENG',        sub:'Kagiso ya kelelo e simolola gago. Sireletsa se tlhokegang.' },
+  ts:  { h1a:'ANTSWISO YA NDYANGU',        h1b:'KAYA',          sub:'Ku rula ka miehleketo ku sungula kaya. Hlayisa leswi fambisanaka.' },
+  ss:  { h1a:'KUVIKELWA KWEMNDENI',        h1b:'EKHAYA',        sub:'Kuthula kwenhlitiyo kweQALA EKHAYA. Vikela loko kubalulekile.' },
+  ve:  { h1a:'VHUSIRELE HA MUVHUSO',       h1b:'HAYANI',        sub:'Vhutondoli vhu sumbedzela hayani. Vhusirele zwine zwa vha muhulwane.' },
+  nr:  { h1a:'UKUVIKELWA KOMNDENI',        h1b:'EKHAYA',        sub:'Ukuthula kwenhliziyo kuqala ekhaya. Vikela okuyimqoka.' },
+  nso: { h1a:'TSHIRELETSO YA LELOKO',      h1b:'LAPENG',        sub:'Kgotso ya kelelo e thoma lapeng. Sireletsa seo se hlokegago.' },
+};
+
+function changeLanguage(lang) {
+  var t = T[lang] || T.en;
+  // Update hero headline if it exists on page
+  var h1 = document.getElementById('hero-h1');
+  if (h1) h1.innerHTML = t.h1a + '<br/><span style="color:#15803d;">' + t.h1b + '</span>';
+  var sub = document.getElementById('hero-sub');
+  if (sub) sub.textContent = t.sub;
+  // Update status badge
+  var badge = document.getElementById('lang-badge');
+  if (badge) badge.textContent = document.getElementById('lang-select').options[document.getElementById('lang-select').selectedIndex].text.replace('🌐 ','');
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+appId: com.safetylink.core
+productName: SafetyLink
+directories:
+  output: release
+files:
+  - "dist/**/*"
+  - "electron/**/*"
+  - "package.json"
+win:
+  target: nsis
+  icon: public/safetylink-metallic.svg

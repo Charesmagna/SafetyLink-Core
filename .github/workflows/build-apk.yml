@@ -1,0 +1,175 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Bump package.json version
+      run: npm version "1.1.${{ github.run_number }}" --no-git-tag-version
+
+    - name: Build Web App
+      env:
+        VITE_APP_VERSION: "1.1.${{ github.run_number }}"
+        VITE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: npm run build
+
+    - name: Sync Capacitor
+      run: npm run cap:sync
+
+    - name: Force Java 17 in all generated gradle files
+      run: |
+        echo "=== Patching capacitor.build.gradle to Java 17 ==="
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} \;
+        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        echo "=== Verification ==="
+        grep -r "JavaVersion" android/ | grep -v ".git" || echo "No JavaVersion found (all good)"
+
+    - name: Patch plugins and create init script
+      run: |
+        sed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true
+        cat << 'INNER_EOF' > init.gradle
+        allprojects {
+            buildscript {
+                configurations.all {
+                    resolutionStrategy {
+                        force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
+                        force 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+                    }
+                }
+            }
+            configurations.all {
+                resolutionStrategy {
+                    force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
+                    force 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+                }
+            }
+        }
+        INNER_EOF
+
+    - name: Decode keystore
+      run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
+
+    - name: Write signing properties
+      run: |
+        cat > android/signing.properties << 'PROPS'
+        storeFile=safetylink-release.keystore
+        storePassword=SafetyLink2024!
+        keyAlias=safetylink
+        keyPassword=SafetyLink2024!
+        PROPS
+
+    - name: Create mock google-services.json
+      run: |
+        cat << 'JSON_EOF' > android/app/google-services.json
+        {
+          "project_info": {
+            "project_number": "1234567890",
+            "project_id": "safetylink-mock",
+            "storage_bucket": "safetylink-mock.appspot.com"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:1234567890:android:mock",
+                "android_client_info": {
+                  "package_name": "com.aistudio.safetylink.vqnztp"
+                }
+              },
+              "oauth_client": [],
+              "api_key": [{"current_key": "MOCK_KEY"}],
+              "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+            }
+          ],
+          "configuration_version": "1"
+        }
+        JSON_EOF
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
+
+    - name: Fix gradle-wrapper.jar
+      run: |
+        curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
+          -o android/gradle/wrapper/gradle-wrapper.jar
+
+    - name: Stop Daemons
+      run: cd android && ./gradlew --stop || true
+
+    - name: Clean Gradle Cache
+      run: rm -rf ~/.gradle/caches
+
+    - name: Build Release APK
+      working-directory: ./android
+      run: |
+        KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
+        echo "Keystore path: $KEYSTORE_ABS"
+        ls -la "$KEYSTORE_ABS"
+        ./gradlew assembleRelease \
+          -PKEYSTORE_PATH="$KEYSTORE_ABS" \
+          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
+          -PKEY_ALIAS="safetylink" \
+          -PKEY_PASSWORD="SafetyLink2024!" \
+          --init-script ../init.gradle \
+          --no-daemon --no-parallel --no-build-cache
+        echo "=== Build output files ==="
+        find . -name "*.apk" 2>/dev/null || echo "NO APK FOUND"
+        find . -name "*.aab" 2>/dev/null || echo "NO AAB FOUND"
+        ls -la app/build/outputs/ 2>/dev/null || echo "No outputs dir"
+        ls -la app/build/outputs/apk/ 2>/dev/null || echo "No apk dir"
+        ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "No release dir" 
+
+    - name: Rename APK
+      run: |
+        mkdir -p release-output
+        echo "=== Searching for APK ==="
+        find android -name "*.apk" 2>/dev/null
+        APK=$(find android -name "*.apk" | grep -v debug | head -1)
+        if [ -z "$APK" ]; then
+          APK=$(find android -name "*.apk" | head -1)
+        fi
+        echo "Using APK: $APK"
+        cp "$APK" release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SafetyLink-Release-APK
+        path: release-output/*.apk
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.1.${{ github.run_number }}
+        name: "SafetyLink Core v1.1.${{ github.run_number }}"
+        files: release-output/*.apk
+        body: |
+          ## SafetyLink Core v1.1.${{ github.run_number }}
+          **Released by TM Media Solutions · Reg: 2018/500191/07**
+          Download and install directly on Android 8.0+.
+          Enable "Install from unknown sources" in settings.
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

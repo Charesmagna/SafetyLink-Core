@@ -1,0 +1,5 @@
+root       218  0.2  1.7 1054856 72860 ?       Sl   12:53   0:00 node /app/applet/node_modules/.bin/tsx server.ts --port 3000 --host 0.0.0.0
+root       229 13.2 13.4 45458296 564592 ?     Sl   12:53   0:08 /usr/local/bin/node --require /app/applet/node_modules/tsx/dist/preflight.cjs --import file:///app/applet/node_modules/tsx/dist/loader.mjs server.ts --port 3000 --host 0.0.0.0
+root       237  0.3  0.7 1278404 31600 ?       Sl   12:53   0:00 /app/applet/node_modules/@esbuild/linux-x64/bin/esbuild --service=0.28.2 --ping
+root       325  0.0  0.0  10632  2628 ?        S    12:54   0:00 sh -c ps aux | grep node > node_procs.txt && cat node_procs.txt
+root       327  0.0  0.1  14388  5712 ?        S    12:54   0:00 grep node

@@ -1,0 +1,12 @@
+name = "safetylink-api"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+[env.production]
+routes = [
+  { pattern = "api.safetylink.online/*", zone_name = "safetylink.online" }
+]
+
+[vars]
+ENVIRONMENT = "production"

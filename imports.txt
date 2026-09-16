@@ -1,0 +1,14 @@
+
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { HARDWARE_CATALOG } from '../config/brand';
+import { LogoSetPart } from './LogoSetPart';
+
+interface LandingPageProps {
+  onLogin: () => void;
+  onRegisterOrg?: () => void;
+  onRegisterUser?: () => void;
+  onBackToApp?: () => void;
+  isLoggedIn?: boolean;
+}
+

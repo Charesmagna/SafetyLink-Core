@@ -1,0 +1,42 @@
+name: Deploy DNS Shield Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dns-worker/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      - name: Install dns-worker deps
+        run: cd dns-worker && npm install
+
+      - name: Create KV namespace if needed
+        run: |
+          cd dns-worker
+          KV_OUTPUT=$(wrangler kv namespace create BLOCKLIST 2>&1 || echo "exists")
+          echo "$KV_OUTPUT"
+          KV_ID=$(echo "$KV_OUTPUT" | grep -oP 'id\s*=\s*"\K[^"]+' || echo "")
+          if [ -n "$KV_ID" ]; then
+            sed -i "s/id = \"PLACEHOLDER\"/id = \"$KV_ID\"/" wrangler.toml
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+
+      - name: Deploy DNS Worker
+        run: cd dns-worker && wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc

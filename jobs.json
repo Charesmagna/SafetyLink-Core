@@ -1,0 +1,169 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 89025243561,
+      "run_id": 29950068601,
+      "workflow_name": "Build Android APK",
+      "head_branch": "master",
+      "run_url": "https://api.github.com/repos/Charesmagna/SafetyLink-Core/actions/runs/29950068601",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOTE5bvs8AAAAUulFpqQ",
+      "head_sha": "481c3bfa9e8da28ca833936b398a442e75da7799",
+      "url": "https://api.github.com/repos/Charesmagna/SafetyLink-Core/actions/jobs/89025243561",
+      "html_url": "https://github.com/Charesmagna/SafetyLink-Core/actions/runs/29950068601/job/89025243561",
+      "status": "in_progress",
+      "conclusion": null,
+      "created_at": "2026-07-22T19:13:37Z",
+      "started_at": "2026-07-22T19:13:40Z",
+      "completed_at": null,
+      "name": "build",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-07-22T19:13:41Z",
+          "completed_at": "2026-07-22T19:13:42Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-07-22T19:13:42Z",
+          "completed_at": "2026-07-22T19:13:46Z"
+        },
+        {
+          "name": "set up JDK 17",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-07-22T19:13:46Z",
+          "completed_at": "2026-07-22T19:13:46Z"
+        },
+        {
+          "name": "Setup Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-07-22T19:13:46Z",
+          "completed_at": "2026-07-22T19:13:50Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-07-22T19:13:50Z",
+          "completed_at": "2026-07-22T19:15:35Z"
+        },
+        {
+          "name": "Build Web App",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-07-22T19:15:35Z",
+          "completed_at": "2026-07-22T19:15:43Z"
+        },
+        {
+          "name": "Sync Capacitor",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-07-22T19:15:43Z",
+          "completed_at": "2026-07-22T19:15:44Z"
+        },
+        {
+          "name": "Grant execute permission for gradlew",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-07-22T19:15:44Z",
+          "completed_at": "2026-07-22T19:15:44Z"
+        },
+        {
+          "name": "Stop Daemons",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-07-22T19:15:44Z",
+          "completed_at": "2026-07-22T19:15:49Z"
+        },
+        {
+          "name": "Clean Gradle Cache",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-07-22T19:15:49Z",
+          "completed_at": "2026-07-22T19:15:49Z"
+        },
+        {
+          "name": "Build with Gradle (Debug)",
+          "status": "in_progress",
+          "conclusion": null,
+          "number": 11,
+          "started_at": "2026-07-22T19:15:49Z",
+          "completed_at": null
+        },
+        {
+          "name": "Build with Gradle (Release)",
+          "status": "pending",
+          "conclusion": null,
+          "number": 12,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Upload Debug APK",
+          "status": "pending",
+          "conclusion": null,
+          "number": 13,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Upload Unsigned Release APK",
+          "status": "pending",
+          "conclusion": null,
+          "number": 14,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Post Setup Node.js",
+          "status": "pending",
+          "conclusion": null,
+          "number": 26,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Post set up JDK 17",
+          "status": "pending",
+          "conclusion": null,
+          "number": 27,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "pending",
+          "conclusion": null,
+          "number": 28,
+          "started_at": null,
+          "completed_at": null
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/Charesmagna/SafetyLink-Core/check-runs/89025243561",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000000835,
+      "runner_name": "GitHub Actions 1000000835",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}
