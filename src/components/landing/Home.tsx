@@ -128,8 +128,6 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           {/* Live feed log */}
           <div style={{ position: 'relative' }}>
-            <img src={ASSETS.appLogin} alt="SafetyLink App SOS" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
-            <img src={ASSETS.itagAll} alt="SafetyLink iTAG" style={{ position: 'absolute', bottom: '-20px', left: '-40px', width: '160px', borderRadius: '12px', transform: 'rotate(-15deg)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
           </div>
         </div>
       </section>
@@ -163,6 +161,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
               <button onClick={onRegisterUser} style={{ background:'#e8321e', color:'#fff', padding:'14px 28px', borderRadius:'8px', fontWeight:700, fontSize:'11px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>START PROTECTION →</button>
               <button onClick={() => navigate?.('platform')} style={{ color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', fontSize:'12px', cursor:'pointer', fontWeight:600 }}>LEARN MORE</button>
+            </div>
+            <div style={{ position: 'relative', marginTop: '40px', maxWidth: '400px' }}>
+              <img src={ASSETS.appLogin} alt="SafetyLink App SOS" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
+              <img src={ASSETS.itagAll} alt="SafetyLink iTAG" style={{ position: 'absolute', bottom: '-20px', left: '-40px', width: '160px', borderRadius: '12px', transform: 'rotate(-15deg)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
