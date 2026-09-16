@@ -77,7 +77,7 @@ const PaystackCheckout: React.FC = () => {
     const totalAmount = (plan.once_off * 100) + plan.amount; // kobo
 
     const params = new URLSearchParams({
-      key: 'pk_live_e1b5a3e2f6d0c9a4b8e7f2d1c3a5b9e8f4d2c6a0b3e7f1d5c9a2b6e0f4d8c2',
+      key: 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3',
       email,
       amount: totalAmount.toString(),
       ref,
