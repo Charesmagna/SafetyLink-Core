@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%" class="safety-logo-container">
+  <defs>
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#1a1f24" />
+      <stop offset="100%" stop-color="#05070a" />
+    </radialGradient>
+
+    <linearGradient id="red-metal" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff4d4d" />
+      <stop offset="40%" stop-color="#cc0000" />
+      <stop offset="80%" stop-color="#800000" />
+      <stop offset="100%" stop-color="#4d0000" />
+    </linearGradient>
+
+    <linearGradient id="silver-metal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6e6e6" />
+      <stop offset="50%" stop-color="#8c8c8c" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+
+    <filter id="drop-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <rect width="100%" height="100%" fill="url(#bg-grad)" />
+
+  <g class="animated-heart-group" transform="translate(400, 220)">
+    
+    <path class="animated-pulse-path"
+          d="M 0,-40 
+             C -60,-100 -160,-50 -140,20 
+             C -130,55 -90,75 -60,75 
+             L -200,75 
+             L -60,75 
+             L -30,25 
+             L 20,130 
+             L 50,75 
+             L 200,75 
+             L 50,75 
+             C 80,75 130,55 140,20 
+             C 160,-50 60,-100 0,-40 Z" 
+          fill="url(#red-metal)" 
+          stroke="url(#silver-metal)" 
+          stroke-width="4" 
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          filter="url(#drop-shadow)" />
+  </g>
+
+  <g transform="translate(400, 400)">
+    <text text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="52" letter-spacing="18" fill="url(#red-metal)" stroke="url(#silver-metal)" stroke-width="1.5" filter="url(#drop-shadow)">
+      SAFETYLINK
+    </text>
+    <text text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="22" letter-spacing="24" fill="url(#red-metal)" y="50" filter="url(#drop-shadow)">
+      PANIC
+    </text>
+    
+    <path d="M -160,42 L -90,42 M 90,42 L 160,42" stroke="url(#silver-metal)" stroke-width="2" />
+  </g>
+</svg>

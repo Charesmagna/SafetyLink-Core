@@ -1,0 +1,26 @@
+--- src/components/PanicButton.tsx
++++ src/components/PanicButton.tsx
+@@ -718,22 +718,23 @@
+ 
+-      {showDistressVideo && (
+       <AnimatePresence>
+         {isGhostMode && (
+           <motion.div
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             exit={{ opacity: 0 }}
+             className="fixed inset-0 z-[9999] bg-black cursor-pointer"
+             onClick={handleGhostTap}
+             onTouchEnd={handleGhostTap}
+           />
+         )}
+       </AnimatePresence>
++
++      {showDistressVideo && (
+         <DistressVideoStream 
+           callerId={1000} 
+           calleeId={2000} 
+           onCallEnd={() => setShowDistressVideo(false)}
+         />
+       )}
+ </motion.div>

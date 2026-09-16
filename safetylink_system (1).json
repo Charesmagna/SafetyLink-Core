@@ -1,0 +1,409 @@
+{
+  "system": "SafetyLink",
+  "version": "2.0",
+  "company": "TM Media Solutions",
+  "registration": "2018/500191/07",
+  "founder": "Tshilidzi Mukwevho",
+  "contact": {
+    "whatsapp": "+27739441222",
+    "email": "info@safetylink.online",
+    "facebook": "https://www.facebook.com/share/1D8xnzfY8T/",
+    "website": "https://safetylink.online",
+    "api": "https://api.safetylink.online",
+    "sip": "sip:safetylink@sip.linphone.org"
+  },
+
+  "infrastructure": {
+    "hosting": {
+      "app": "AI Studio → GitHub Actions → APK/EXE/PWA",
+      "server": "Oracle Free VPS → Cloudflare Tunnel → api.safetylink.online",
+      "media": "Cloudinary (cloud: qcp4fx2v)",
+      "database": "Upstash Redis + Search",
+      "domain": "domains.co.za → safetylink.online"
+    },
+    "subdomains": {
+      "api": "api.safetylink.online → Oracle VPS port 3000",
+      "vpn": "vpn.safetylink.online → WireGuard port 51820",
+      "dns": "dns.safetylink.online → AdGuard Home"
+    }
+  },
+
+  "subscriptions": {
+    "free": {
+      "price_monthly": 0,
+      "price_once_off": 0,
+      "label": "SafetyLink Free — The Digital Companion",
+      "features": [
+        "1 user profile",
+        "Digital on-screen SOS button",
+        "Home screen widget",
+        "Live GPS location sharing",
+        "2 emergency contacts — SMS dispatch",
+        "Basic alert via data"
+      ],
+      "restrictions": [
+        "No physical iTag pairing",
+        "No armed response monitoring",
+        "No Watch-Me Timer",
+        "No audio recording"
+      ]
+    },
+    "premium": {
+      "price_monthly": 49,
+      "price_once_off": 149,
+      "label": "SafetyLink Premium — The Hardware Shield",
+      "trigger": "Activated automatically when user pairs physical iTag",
+      "features": [
+        "Up to 5 physical iTags per profile",
+        "Armed response monitoring",
+        "Geofenced safe zones",
+        "Emergency audio recording",
+        "Priority cloud routing",
+        "Watch-Me Timer",
+        "Sequential escalation chain",
+        "Offline SMS fallback",
+        "11 SA languages"
+      ],
+      "hardware_profit": {
+        "customer_pays": 149,
+        "device_cost": 41,
+        "payfast_fee": 6.12,
+        "month1_profit": 101.88,
+        "margin_percent": 68,
+        "recurring_monthly": 49
+      }
+    },
+    "family": {
+      "price_monthly": 99,
+      "price_once_off": 149,
+      "label": "SafetyLink Family — 5 Members",
+      "members": 5,
+      "features": [
+        "All Premium features per member",
+        "Shared emergency contact pool",
+        "Family dashboard view"
+      ]
+    },
+    "organisation": {
+      "price_monthly": "49 per resident",
+      "price_once_off": "149 per resident",
+      "label": "SafetyLink Organisation — Estate/Company",
+      "features": [
+        "SL-ORG-XXXX mesh node",
+        "SafetyLink Command Deck",
+        "Multi-responder dispatch",
+        "Live GIS beacon overlay",
+        "Evidence Ledger",
+        "Admin panel + audit logs",
+        "API access"
+      ]
+    },
+    "enterprise": {
+      "price_monthly": "custom",
+      "label": "SafetyLink Enterprise",
+      "features": [
+        "All Organisation features",
+        "Multi-estate management",
+        "Custom branding",
+        "Dedicated support",
+        "Control room integration",
+        "Drone dispatch module"
+      ]
+    }
+  },
+
+  "alert_chain": {
+    "description": "6-layer reactive dispatch — fires from highest to lowest based on available connectivity",
+    "layers": [
+      {
+        "layer": 1,
+        "name": "Full Data Dispatch",
+        "requires": "2KB internet data",
+        "cost": "~R0.01",
+        "flow": [
+          "App POST → api.safetylink.online/api/panic",
+          "Twilio SMS → 5 emergency contacts",
+          "Twilio WhatsApp → 5 emergency contacts",
+          "VAPI.ai AI voice call → primary contact",
+          "Infobip SMS → fallback if Twilio fails",
+          "Bland.ai AI call → secondary voice fallback",
+          "Telegram Bot → command center notification",
+          "Cloudinary → upload photo evidence",
+          "Upstash → log alert to Redis + Search index"
+        ]
+      },
+      {
+        "layer": 2,
+        "name": "Compressed Data Dispatch",
+        "requires": "200 bytes data",
+        "cost": "~R0.00",
+        "payload": "uid,lat,lon,timestamp,trigger",
+        "flow": [
+          "App POST compressed packet → api.safetylink.online",
+          "Server fires same alert chain as Layer 1"
+        ]
+      },
+      {
+        "layer": 3,
+        "name": "Direct SMS",
+        "requires": "R1 airtime, signal only",
+        "cost": "~R0.50 per SMS",
+        "flow": [
+          "Android SmsManager API → direct SMS",
+          "Message: PANIC [name] [lat,lon] [timestamp]",
+          "Sends to all 5 stored emergency contacts"
+        ]
+      },
+      {
+        "layer": 4,
+        "name": "Please Call Me (PCM)",
+        "requires": "R0 — free on all SA networks",
+        "cost": "R0",
+        "flow": [
+          "App fires Intent.ACTION_CALL → *140*[contact]#",
+          "Contact receives free missed call from user",
+          "Configured for top 3 emergency contacts",
+          "Network: Vodacom, MTN, Cell C, Telkom all support"
+        ]
+      },
+      {
+        "layer": 5,
+        "name": "USSD Dispatch",
+        "requires": "R0 — no airtime, no data",
+        "cost": "R0.35 per session (billed to operator)",
+        "status": "Pending Africa's Talking approval",
+        "flow": [
+          "User dials *120*[SafetyLink_code]#",
+          "Africa's Talking webhook POST → api.safetylink.online/ussd",
+          "Server parses session, fires alert chain",
+          "USSD menu: 1=Panic, 2=Update contacts, 3=Subscription"
+        ]
+      },
+      {
+        "layer": 6,
+        "name": "Offline Queue + BLE Mesh",
+        "requires": "Nothing — fully offline",
+        "cost": "R0",
+        "flow": [
+          "Alert saved to Room DB local queue",
+          "BLE broadcast to nearby SafetyLink devices",
+          "WorkManager retries every 15min when connectivity restores",
+          "Queue persists for 7 days"
+        ]
+      }
+    ]
+  },
+
+  "ai_services": {
+    "vapi": {
+      "name": "VAPI.ai",
+      "purpose": "Primary AI voice call on panic trigger",
+      "free_tier": "100 minutes/month",
+      "endpoint": "https://api.vapi.ai/call",
+      "call_script": "This is SafetyLink AI. [NAME] has triggered a panic alert. Their location is [LOCATION]. Press 1 to call them back, press 2 to confirm you are dispatching help.",
+      "env_vars": ["VAPI_KEY", "VAPI_PHONE_ID"]
+    },
+    "bland_ai": {
+      "name": "Bland.ai",
+      "purpose": "Secondary AI voice call fallback",
+      "endpoint": "https://api.bland.ai/v1/calls",
+      "voice_id": "45bfac80-786f-409e-acd0-6c424603a12e",
+      "model": "base",
+      "language": "babel-en",
+      "max_duration": 12,
+      "env_vars": ["BLAND_API_KEY", "BLAND_VOICE_ID"]
+    },
+    "gemini": {
+      "name": "Google Gemini via K'lev.ai",
+      "purpose": "AI Co-Pilot — pattern analysis, incident summaries, language translation",
+      "integration": "AI Studio project",
+      "offline_behaviour": "Degrades gracefully — core safety functions unaffected"
+    },
+    "upstash_agent": {
+      "name": "Upstash Agent Analytics",
+      "purpose": "Track AI agent interactions, rate limit panic endpoint",
+      "rate_limit": "10 requests per 60 seconds per user",
+      "env_vars": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]
+    }
+  },
+
+  "sms_and_comms": {
+    "twilio": {
+      "purpose": "Primary SMS + WhatsApp dispatch",
+      "number": "+16055695774",
+      "env_vars": ["TWILIO_SID", "TWILIO_TOKEN", "TWILIO_NUMBER", "TWILIO_WA"]
+    },
+    "infobip": {
+      "purpose": "SMS fallback when Twilio fails",
+      "base_url": "y4jwjd.api.infobip.com",
+      "mcp_url": "https://mcp.infobip.com/sms",
+      "env_vars": ["INFOBIP_BASE_URL", "INFOBIP_API_KEY"]
+    },
+    "telegram": {
+      "purpose": "Free instant command center notifications",
+      "cost": "R0 forever",
+      "env_vars": ["TELEGRAM_BOT", "TELEGRAM_CHAT"]
+    },
+    "africas_talking": {
+      "purpose": "USSD gateway — R0 panic for users with no data",
+      "cost_per_session": "R0.35",
+      "status": "Application submitted",
+      "callback_url": "https://api.safetylink.online/ussd",
+      "expected_sessions": "5000-20000 per month year 1"
+    },
+    "sip": {
+      "address": "sip:safetylink@sip.linphone.org",
+      "username": "safetylink",
+      "domain": "sip.linphone.org",
+      "purpose": "VoIP fallback calling"
+    }
+  },
+
+  "payments": {
+    "provider": "Payfast",
+    "merchant_id": "26778541",
+    "note": "Merchant key — regenerate after credential exposure",
+    "return_url": "https://safetylink.online/success",
+    "cancel_url": "https://safetylink.online/cancel",
+    "notify_url": "https://api.safetylink.online/payfast/notify",
+    "subscription_frequency": 3,
+    "subscription_cycles": 0
+  },
+
+  "android_triggers": {
+    "trigger_1": {
+      "name": "BLE iTag",
+      "class": "SafetyBlePlugin.kt",
+      "requires": "Bluetooth LE, BLUETOOTH_SCAN permission",
+      "action": "Single press locate, Double press SOS, Long press escalation"
+    },
+    "trigger_2": {
+      "name": "Volume Button Triple Press",
+      "class": "VolumeKeyListener.kt via AccessibilityService",
+      "requires": "ACCESSIBILITY_SERVICE permission",
+      "action": "Triple VolUp+VolDown within 3s → triggerPanic()"
+    },
+    "trigger_3": {
+      "name": "Offline Voice Keyword",
+      "class": "VoiceKeywordService.kt",
+      "library": "Vosk offline speech recognition",
+      "keyword": "SafetyLink Activate",
+      "requires": "RECORD_AUDIO permission"
+    },
+    "trigger_4": {
+      "name": "Watch-Me Timer",
+      "class": "WatchMeTimer.kt",
+      "action": "User fails to check in within set interval → escalation fires"
+    },
+    "trigger_5": {
+      "name": "On-Screen SOS Button",
+      "class": "PanicButton.tsx",
+      "action": "Hold 1.5s → triggerPanic()",
+      "available_on": "free and premium tiers"
+    }
+  },
+
+  "hardware": {
+    "itag": {
+      "protocol": "Bluetooth Low Energy 4.0+",
+      "battery": "CR2032 replaceable",
+      "range_meters": "10-30",
+      "colours": ["Blue", "White", "Pink", "Green", "Black"],
+      "dimensions": "38x27x8mm",
+      "weight_g": 7
+    },
+    "sourcing": {
+      "takealot_5pack_price": 205,
+      "cost_per_unit": 41,
+      "takealot_product_id": "PLID101160267",
+      "gouav_contact": "Sales@gouav.co.za",
+      "planecrazyrc": "https://www.planecrazyrc.co.za"
+    },
+    "drone": {
+      "purpose": "Automated aerial dispatch on panic trigger",
+      "model": "5G Drone with auto-follow return",
+      "supplier": "gouav.co.za + planecrazyrc.co.za + Takealot",
+      "status": "Future phase"
+    }
+  },
+
+  "media": {
+    "cloudinary_cloud": "qcp4fx2v",
+    "base_url": "https://res.cloudinary.com/qcp4fx2v",
+    "total_assets": 121,
+    "key_assets": {
+      "logo_white": "Polish_20260818_074430308",
+      "logo_shield_main": "copilot_image_178370354D283",
+      "app_sos_screen": "Screenshot_20260820_201927_com_aistudio_safetylink_vqnztp",
+      "app_login_screen": "Screenshot_20260820_202202_com_aistudio_safetylink_vqnztp",
+      "itag_5colours": "Polish_20260818_020279883",
+      "itag_pink_single": "Polish_20260818_020134421",
+      "itag_battery_guide": "Polish_20260818_020007723",
+      "dispatch_diagram": "Gemini_Generated_Image_waguavwagu",
+      "family_promo": "Gemini_Generated_Image_virgVirg99",
+      "klev_ai_logo": "K_leva",
+      "network_banner": "SafetyLink_Global_Protection_Network",
+      "tactical_poster": "Gemini_Generated_Image_8ikrgy9t0r",
+      "drone_poster": "Gemini_Generated_Image_chze56oh0"
+    },
+    "videos": [
+      "Okay_now_for_the_next_scene",
+      "Government_use_case_scenario",
+      "Neighbourhood_watch_security_c",
+      "drone_dispatch_tracking_crimin",
+      "Show_the_uses_in_school_and_wo",
+      "Old_people_scenario_alone_at_h",
+      "It_almost_made_sense_just_a_li",
+      "Now_let_s_show_how_kids_would",
+      "K_s_south_Africa_so_multirac",
+      "Pitch_deck",
+      "Why",
+      "SafetyLink_vision_when_ble_is"
+    ]
+  },
+
+  "implementation_phases": [
+    {
+      "phase": 1,
+      "name": "Revenue — This Week",
+      "tasks": [
+        "Add Payfast subscription checkout to website",
+        "Wire BLE pairing subscription gate in app",
+        "iTag order flow via WhatsApp",
+        "Deploy safetylink_complete.html to public_html"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Alert Chain — Next Week",
+      "tasks": [
+        "Deploy Node server to Oracle Free VPS",
+        "Setup Cloudflare Tunnel → api.safetylink.online",
+        "Wire Twilio + Infobip + VAPI + Bland.ai + Telegram",
+        "Test full panic chain end-to-end",
+        "Add Upstash rate limiting to panic endpoint"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "USSD — Month 2",
+      "tasks": [
+        "Africa's Talking shortcode approval",
+        "Wire /ussd webhook endpoint",
+        "Test *120*[code]# flow",
+        "Please Call Me *140*# integration"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Intelligence — Month 3",
+      "tasks": [
+        "Upstash Search alert history",
+        "K'lev.ai analytics dashboard",
+        "WireGuard VPN at vpn.safetylink.online",
+        "Internal drag-drop builder for site updates",
+        "Drone dispatch module"
+      ]
+    }
+  ]
+}

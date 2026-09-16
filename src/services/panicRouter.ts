@@ -1,0 +1,138 @@
+import { supabase } from '../lib/supabase';
+import { Network } from '@capacitor/network';
+import { App as CapacitorApp } from '@capacitor/app';
+
+// 1. Android SMS Manager (Native Intent)
+async function sendNativeSMS(phone: string, message: string) {
+  try {
+    if ((CapacitorApp as any).openUrl) {
+      await (CapacitorApp as any).openUrl({ url: `sms:${phone}?body=${encodeURIComponent(message)}` });
+      return true;
+    }
+  } catch (e) {
+    console.warn("SMS Intent failed", e);
+  }
+  return false;
+}
+
+// 2. Android Native Call (Native Intent)
+async function makeNativeCall(phone: string) {
+  try {
+    if ((CapacitorApp as any).openUrl) {
+      await (CapacitorApp as any).openUrl({ url: `tel:${phone}` });
+      return true;
+    }
+  } catch (e) {
+    console.warn("Call Intent failed", e);
+  }
+  return false;
+}
+
+// 3. WhatsApp (Native Intent)
+async function sendWhatsApp(phone: string, message: string) {
+  try {
+    if ((CapacitorApp as any).canOpenUrl) {
+      const res = await (CapacitorApp as any).canOpenUrl({ url: 'whatsapp://' });
+      if (res.value && (CapacitorApp as any).openUrl) {
+        await (CapacitorApp as any).openUrl({ url: `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}` });
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn("WhatsApp Intent failed", e);
+  }
+  return false;
+}
+
+export async function sendPanic(panicData: any, contacts: any[], customServerUrl?: string) {
+  const status = await Network.getStatus();
+  const hasData = status.connected;
+  const emergencyPhone = contacts?.[0]?.phone || '+27820000000';
+  const isDrill = panicData?.isDrill;
+  const prefix = isDrill ? '[DRILL] ' : '';
+  const message = `${isDrill ? '⚠️ DRILL ⚠️' : '🚨 SAFETYLINK PANIC 🚨'}\nName: ${panicData?.name || 'User'}\nLocation: https://maps.google.com/?q=${panicData?.coords || '0,0'}`;
+
+  // PRIORITY 1: Native Android SMS
+  console.log(`${prefix}Attempting Priority 1: Native SMS`);
+  if (!isDrill) await sendNativeSMS(emergencyPhone, message);
+
+  // PRIORITY 2: Native Android Call (Optional delay/prompt can be added if needed, but for now we initiate it)
+  // We may not want to auto-call immediately after SMS without a delay, but as per request, we initiate.
+  console.log(`${prefix}Attempting Priority 2: Native Call`);
+  if (!isDrill) await makeNativeCall(emergencyPhone);
+
+  // PRIORITY 3: WhatsApp Offline-First
+  console.log(`${prefix}Attempting Priority 3: WhatsApp`);
+  if (!isDrill) await sendWhatsApp(emergencyPhone, message);
+  
+  // SUPABASE EDGE FUNCTION
+  if (hasData) {
+    console.log(`${prefix}Attempting Supabase Edge Function`);
+    if (!isDrill) {
+      try {
+        const functionUrl = import.meta.env.VITE_SUPABASE_URL 
+          ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sos`
+          : 'https://oirbmgpfqxojshfoguzo.supabase.co/functions/v1/send-sos';
+          
+        // For now, pass a dummy access token if we don't have a logged-in user in supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          await fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: session.user.id, lat: panicData.lat, lng: panicData.lng })
+          });
+        }
+      } catch (e) {
+        console.warn("Supabase edge function failed", e);
+      }
+    }
+  }
+
+  // PRIORITY 4: User's linked servers
+  if (hasData && customServerUrl) {
+    console.log(`${prefix}Attempting Priority 4: Custom Server`);
+    if (!isDrill) {
+      try {
+        await fetch(`${customServerUrl}/api/panic`, { method: 'POST', body: JSON.stringify(panicData) });
+      } catch (e) {
+        console.warn("Custom server failed", e);
+      }
+    }
+  }
+
+  // PRIORITY 5: Moya App
+  let hasMoya = false;
+  try {
+    if ((CapacitorApp as any).canOpenUrl) {
+      const res = await (CapacitorApp as any).canOpenUrl({ url: 'moya://' });
+      hasMoya = res.value;
+    }
+  } catch (e) {
+    console.error('Moya check failed', e);
+  }
+
+  if (!hasData && hasMoya) {
+    console.log(`${prefix}Attempting Priority 5: Moya Share`);
+    if (!isDrill) {
+      try {
+        if ((CapacitorApp as any).openUrl) {
+          await (CapacitorApp as any).openUrl({ url: `moya://share?text=${encodeURIComponent(message)}` });
+        }
+      } catch (e) { 
+         console.error('Failed to open Moya', e);
+      }
+    }
+  }
+
+  // PRIORITY 6: Offline Fallback (This is handled by the caller/store usually, but we signify it here)
+  if (!hasData) {
+    console.log(`${prefix}Priority 6: Queued for Offline Fallback`);
+  }
+
+  // Return completion so Lizzy can be triggered in the UI/Store
+  return "ALERT_SEQUENCE_COMPLETED";
+}

@@ -1,0 +1,3436 @@
+[
+  {
+    "asset_id": "eb3bd2124fc90532bc72c6f912428024",
+    "public_id": "Gemini_Generated_Image_",
+    "format": "png",
+    "version": 1787313199,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:19Z",
+    "bytes": 2882153,
+    "width": 1376,
+    "height": 768,
+    "asset_folder": "",
+    "display_name": "Buttons and tiers",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313199/Gemini_Generated_Image_.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313199/Gemini_Generated_Image_.png"
+  },
+  {
+    "asset_id": "252fa1909721593ff6775584314976ff",
+    "public_id": "Gemini_Generated_Image_n4gy5ln4gy5ln4gy",
+    "format": "jpg",
+    "version": 1787313197,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:17Z",
+    "bytes": 293125,
+    "width": 1024,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_n4gy5ln4gy5ln4gy",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313197/Gemini_Generated_Image_n4gy5ln4gy5ln4gy.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313197/Gemini_Generated_Image_n4gy5ln4gy5ln4gy.jpg"
+  },
+  {
+    "asset_id": "bc3533f277a8dd0b2bf2425cfd5fe953",
+    "public_id": "Safety_Link_Logo_Black",
+    "format": "pdf",
+    "version": 1787313195,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:15Z",
+    "bytes": 43189,
+    "width": 737,
+    "height": 737,
+    "asset_folder": "",
+    "display_name": "Safety_Link_Logo_Black",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313195/Safety_Link_Logo_Black.pdf",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313195/Safety_Link_Logo_Black.pdf"
+  },
+  {
+    "asset_id": "b4c7fc34675c7770ace271195987aeab",
+    "public_id": "Code_Generated_Image",
+    "format": "png",
+    "version": 1787313195,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:15Z",
+    "bytes": 51063,
+    "width": 1600,
+    "height": 1600,
+    "asset_folder": "",
+    "display_name": "Code_Generated_Image",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313195/Code_Generated_Image.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313195/Code_Generated_Image.png"
+  },
+  {
+    "asset_id": "388fcfcce39577c97f2c07e872c2eba0",
+    "public_id": "Safety_Link_Logo_Black_1",
+    "format": "pdf",
+    "version": 1787313194,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:14Z",
+    "bytes": 43189,
+    "width": 737,
+    "height": 737,
+    "asset_folder": "",
+    "display_name": "Safety_Link_Logo_Black_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Safety_Link_Logo_Black_1.pdf",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Safety_Link_Logo_Black_1.pdf"
+  },
+  {
+    "asset_id": "9294e09f9500dd89b944c148e2f3f1fa",
+    "public_id": "SafetyLink_3D_Render",
+    "format": "pdf",
+    "version": 1787313194,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:14Z",
+    "bytes": 166609,
+    "width": 1105,
+    "height": 737,
+    "asset_folder": "",
+    "display_name": "SafetyLink_3D_Render",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/SafetyLink_3D_Render.pdf",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/SafetyLink_3D_Render.pdf"
+  },
+  {
+    "asset_id": "e816b618886f76afb260dfc941018baf",
+    "public_id": "Code_Generated_Image_1",
+    "format": "png",
+    "version": 1787313194,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:14Z",
+    "bytes": 8409,
+    "width": 1024,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "Code_Generated_Image_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Code_Generated_Image_1.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Code_Generated_Image_1.png"
+  },
+  {
+    "asset_id": "3d722e4a1a85d6c4b995ec79f50c1de2",
+    "public_id": "Gemini_Generated_Image__3",
+    "format": "jpg",
+    "version": 1787313194,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:14Z",
+    "bytes": 2487459,
+    "width": 1376,
+    "height": 768,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image__3",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Gemini_Generated_Image__3.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Gemini_Generated_Image__3.jpg"
+  },
+  {
+    "asset_id": "44f153679c1c98462e65896ec33a2119",
+    "public_id": "Gemini_Generated_Image__2",
+    "format": "png",
+    "version": 1787313194,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:14Z",
+    "bytes": 1586088,
+    "width": 1376,
+    "height": 768,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image__2",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Gemini_Generated_Image__2.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313194/Gemini_Generated_Image__2.png"
+  },
+  {
+    "asset_id": "767ca8aae93de8784d1bea5b4bbac454",
+    "public_id": "Gemini_Generated_Image_4jokgv4jokgv4jok",
+    "format": "jpg",
+    "version": 1787313191,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:11Z",
+    "bytes": 2143471,
+    "width": 1688,
+    "height": 2528,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_4jokgv4jokgv4jok",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313191/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313191/Gemini_Generated_Image_4jokgv4jokgv4jok.jpg"
+  },
+  {
+    "asset_id": "21786b5ac16f53a8908ff23efac84eb4",
+    "public_id": "Gemini_Generated_Image__1",
+    "format": "jpg",
+    "version": 1787313192,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:12Z",
+    "bytes": 811369,
+    "width": 768,
+    "height": 1376,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image__1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313192/Gemini_Generated_Image__1.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313192/Gemini_Generated_Image__1.jpg"
+  },
+  {
+    "asset_id": "fbbf675983617be3e0a42848ad46246e",
+    "public_id": "Code_Generated_Image_3",
+    "format": "png",
+    "version": 1787313192,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:53:12Z",
+    "bytes": 2686500,
+    "width": 1536,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "Code_Generated_Image_3",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787313192/Code_Generated_Image_3.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787313192/Code_Generated_Image_3.png"
+  },
+  {
+    "asset_id": "3611c5c62e652d749deaabec5903f17f",
+    "public_id": "Gemini_Generated_Image_viirg9viirg9viir",
+    "format": "png",
+    "version": 1787310215,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:35Z",
+    "bytes": 2004193,
+    "width": 1408,
+    "height": 768,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_viirg9viirg9viir",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310215/Gemini_Generated_Image_viirg9viirg9viir.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310215/Gemini_Generated_Image_viirg9viirg9viir.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:36.768513+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "0df361d0c73ff05a18263c7b9f30dd62",
+    "public_id": "copilot_image_1783201115036",
+    "format": "png",
+    "version": 1787310062,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:02Z",
+    "bytes": 2753030,
+    "width": 1536,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "copilot_image_1783201115036",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310062/copilot_image_1783201115036.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310062/copilot_image_1783201115036.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:09.156629+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "1fdfb13347549a5178ee8b9da4feabd2",
+    "public_id": "copilot_image_1783702988629",
+    "format": "png",
+    "version": 1787310053,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:53Z",
+    "bytes": 1916063,
+    "width": 1024,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "copilot_image_1783702988629",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310053/copilot_image_1783702988629.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310053/copilot_image_1783702988629.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:01.934100+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "7a57ea45c324a8aef4c715bb88a0bdc5",
+    "public_id": "copilot_image_1786916979200",
+    "format": "png",
+    "version": 1787310052,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:52Z",
+    "bytes": 2557173,
+    "width": 1024,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "copilot_image_1786916979200",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310052/copilot_image_1786916979200.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310052/copilot_image_1786916979200.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:39.743006+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "a2842a86849e7c256fb0da9a0fb36bbc",
+    "public_id": "copilot_image_1783703540293",
+    "format": "png",
+    "version": 1787310052,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:52Z",
+    "bytes": 2298607,
+    "width": 1536,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "copilot_image_1783703540293",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310052/copilot_image_1783703540293.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310052/copilot_image_1783703540293.png",
+    "metadata": {
+      "moderation_date": "2026-08-21T11:18:37.875101+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "6a2f1be58b4d15fe71ad6ecba7deb938",
+    "public_id": "copilot_image_1786916665016",
+    "format": "png",
+    "version": 1787310051,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:51Z",
+    "bytes": 2612059,
+    "width": 1536,
+    "height": 1024,
+    "asset_folder": "",
+    "display_name": "copilot_image_1786916665016",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310051/copilot_image_1786916665016.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310051/copilot_image_1786916665016.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:36.274515+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "afea4998ad52b17acbbedffc528a4e3c",
+    "public_id": "Polish_20260809_035827088",
+    "format": "png",
+    "version": 1787310050,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:50Z",
+    "bytes": 6108896,
+    "width": 1376,
+    "height": 3124,
+    "asset_folder": "",
+    "display_name": "Polish_20260809_035827088",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310050/Polish_20260809_035827088.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310050/Polish_20260809_035827088.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:01.398152+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "5350b6114dbf556437f725ce42842162",
+    "public_id": "Polish_20260620_014530309",
+    "format": "jpg",
+    "version": 1787310049,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:49Z",
+    "bytes": 409444,
+    "width": 3320,
+    "height": 3320,
+    "asset_folder": "",
+    "display_name": "Polish_20260620_014530309",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310049/Polish_20260620_014530309.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310049/Polish_20260620_014530309.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:47.408982+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "6cadb54bd0ab7296e93ffd4af13d51c6",
+    "public_id": "Polish_20260819_020007723",
+    "format": "jpg",
+    "version": 1787310010,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:10Z",
+    "bytes": 292423,
+    "width": 1080,
+    "height": 1235,
+    "asset_folder": "",
+    "display_name": "Polish_20260819_020007723",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310010/Polish_20260819_020007723.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310010/Polish_20260819_020007723.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:36.305406+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "762014f8b7e04f9693c79286dc137e95",
+    "public_id": "Polish_20260819_014832026",
+    "format": "jpg",
+    "version": 1787310010,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:10Z",
+    "bytes": 640023,
+    "width": 2160,
+    "height": 2160,
+    "asset_folder": "",
+    "display_name": "Polish_20260819_014832026",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310010/Polish_20260819_014832026.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310010/Polish_20260819_014832026.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:36.116145+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "b76968dfda99713c752c89fbf2d67d42",
+    "public_id": "Polish_20260819_020134421",
+    "format": "jpg",
+    "version": 1787310009,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:09Z",
+    "bytes": 293654,
+    "width": 1344,
+    "height": 2208,
+    "asset_folder": "",
+    "display_name": "Polish_20260819_020134421",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310009/Polish_20260819_020134421.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310009/Polish_20260819_020134421.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:39.063976+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "4049ae5673d610ea49b58a6714d57c2a",
+    "public_id": "Polish_20260819_020219883",
+    "format": "jpg",
+    "version": 1787310009,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:09Z",
+    "bytes": 173758,
+    "width": 1368,
+    "height": 710,
+    "asset_folder": "",
+    "display_name": "Polish_20260819_020219883",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310009/Polish_20260819_020219883.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310009/Polish_20260819_020219883.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:35.624660+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "8a1f46e3ec7a7db20dd6c979c6578fd5",
+    "public_id": "Polish_20260819_023658467",
+    "format": "jpg",
+    "version": 1787310008,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:08Z",
+    "bytes": 1996556,
+    "width": 2700,
+    "height": 3598,
+    "asset_folder": "",
+    "display_name": "Polish_20260819_023658467",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310008/Polish_20260819_023658467.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310008/Polish_20260819_023658467.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:09.990810+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "022a53d2beed4688a9f760b108c22017",
+    "public_id": "s-zoom.file_4",
+    "format": "jpg",
+    "version": 1787310004,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T11:00:04Z",
+    "bytes": 93205,
+    "width": 1100,
+    "height": 1089,
+    "asset_folder": "",
+    "display_name": "s-zoom.file_4",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787310004/s-zoom.file_4.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787310004/s-zoom.file_4.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:48.345685+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 2, \"failed\": 2, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "watermark-detected",
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "4084dfb8c4f4e6d10388d586c76b0799",
+    "public_id": "Gemini_Generated_Image_k9vgu9k9vgu9k9vg",
+    "format": "png",
+    "version": 1787309980,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:40Z",
+    "bytes": 5561743,
+    "width": 2926,
+    "height": 1440,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_k9vgu9k9vgu9k9vg",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309980/Gemini_Generated_Image_k9vgu9k9vgu9k9vg.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309980/Gemini_Generated_Image_k9vgu9k9vgu9k9vg.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:41.922747+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "b37a9af7c1f24f6c4b6e2c8cf583c443",
+    "public_id": "leuawty2dx",
+    "format": "png",
+    "version": 1787309981,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:41Z",
+    "bytes": 2807880,
+    "width": 1920,
+    "height": 1088,
+    "asset_folder": "",
+    "display_name": "leuawty2dx",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309981/leuawty2dx.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309981/leuawty2dx.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:37.402899+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "5917e05575c8c7183ff9e7a675c0c083",
+    "public_id": "ChatGPT_Image_Jul_3_2026_11_33_15_PM",
+    "format": "png",
+    "version": 1787309979,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:39Z",
+    "bytes": 1421177,
+    "width": 1254,
+    "height": 1254,
+    "asset_folder": "",
+    "display_name": "ChatGPT_Image_Jul_3_2026_11_33_15_PM",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309979/ChatGPT_Image_Jul_3_2026_11_33_15_PM.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:43.444599+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "af81c4bcfaacb1bb830eedddd791a90b",
+    "public_id": "K_leva",
+    "format": "png",
+    "version": 1787309978,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:38Z",
+    "bytes": 867913,
+    "width": 1774,
+    "height": 887,
+    "asset_folder": "",
+    "display_name": "K_leva",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309978/K_leva.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309978/K_leva.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:51.234026+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "fadc22c9b9295b3747b2049e09a20f9f",
+    "public_id": "Gemini_Generated_Image_6iikvx6iikvx6iik",
+    "format": "png",
+    "version": 1787309977,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:37Z",
+    "bytes": 7399832,
+    "width": 1376,
+    "height": 3124,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_6iikvx6iikvx6iik",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309977/Gemini_Generated_Image_6iikvx6iikvx6iik.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309977/Gemini_Generated_Image_6iikvx6iikvx6iik.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:18:42.980237+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "watermark-detected"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "14df616b8c153697085027d5ad491275",
+    "public_id": "Gemini_Generated_Image_td9rg6td9rg6td9r",
+    "format": "png",
+    "version": 1787309975,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:35Z",
+    "bytes": 7115173,
+    "width": 1684,
+    "height": 2528,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_td9rg6td9rg6td9r",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309975/Gemini_Generated_Image_td9rg6td9rg6td9r.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309975/Gemini_Generated_Image_td9rg6td9rg6td9r.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:05.279894+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "fb9f3737443a271abf26ea830922ec1e",
+    "public_id": "image_1786374730511",
+    "format": "jpg",
+    "version": 1787309971,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:31Z",
+    "bytes": 668642,
+    "width": 772,
+    "height": 1158,
+    "asset_folder": "",
+    "display_name": "image_1786374730511",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309971/image_1786374730511.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309971/image_1786374730511.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:51.889814+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "368ad9510fbffc013bc0bc54281c6594",
+    "public_id": "Gemini_Generated_Image_48euet48euet48eu",
+    "format": "png",
+    "version": 1787309945,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:05Z",
+    "bytes": 8548637,
+    "width": 1536,
+    "height": 2730,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_48euet48euet48eu",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309945/Gemini_Generated_Image_48euet48euet48eu.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309945/Gemini_Generated_Image_48euet48euet48eu.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:53.084615+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "watermark-detected"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:06+00:00",
+      "updated_at": "2026-08-21T11:21:06+00:00"
+    }
+  },
+  {
+    "asset_id": "22344888024163e1a15e3a981b67477b",
+    "public_id": "Gemini_Generated_Image_59psss59psss59ps",
+    "format": "jpg",
+    "version": 1787309945,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:05Z",
+    "bytes": 2402911,
+    "width": 2816,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_59psss59psss59ps",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:46.432503+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "99cae5825b1280825b160f40a805caec",
+    "public_id": "Gemini_Generated_Image_swlp4kswlp4kswlp_1",
+    "format": "jpg",
+    "version": 1787309942,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:02Z",
+    "bytes": 2733569,
+    "width": 2816,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_swlp4kswlp4kswlp_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309942/Gemini_Generated_Image_swlp4kswlp4kswlp_1.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309942/Gemini_Generated_Image_swlp4kswlp4kswlp_1.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:54.018215+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "c34a51e9fd126eb2c68c1e6979642b35",
+    "public_id": "Gemini_Generated_Image_283s3m283s3m283s",
+    "format": "jpg",
+    "version": 1787309942,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:02Z",
+    "bytes": 2664276,
+    "width": 2816,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_283s3m283s3m283s",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309942/Gemini_Generated_Image_283s3m283s3m283s.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309942/Gemini_Generated_Image_283s3m283s3m283s.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:57.615985+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "59104b37c3476b8b80788ce01cd0c42f",
+    "public_id": "Gemini_Generated_Image_ohoz6sohoz6sohoz",
+    "format": "jpg",
+    "version": 1787309940,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:59:00Z",
+    "bytes": 2999777,
+    "width": 2816,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_ohoz6sohoz6sohoz",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309940/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309940/Gemini_Generated_Image_ohoz6sohoz6sohoz.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:50.316416+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "75bce7f139894cc39b3d0e2819922e80",
+    "public_id": "Gemini_Generated_Image_waguavwaguavwagu",
+    "format": "jpg",
+    "version": 1787309937,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:58:57Z",
+    "bytes": 1093299,
+    "width": 1408,
+    "height": 768,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_waguavwaguavwagu",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309937/Gemini_Generated_Image_waguavwaguavwagu.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309937/Gemini_Generated_Image_waguavwaguavwagu.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:50.875386+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "7bd1d8dbbdafcb0e17e11af55ef20028",
+    "public_id": "Gemini_Generated_Image_s8bl6ps8bl6ps8bl",
+    "format": "jpg",
+    "version": 1787309937,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:58:57Z",
+    "bytes": 3062780,
+    "width": 2816,
+    "height": 1536,
+    "asset_folder": "",
+    "display_name": "Gemini_Generated_Image_s8bl6ps8bl6ps8bl",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309937/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309937/Gemini_Generated_Image_s8bl6ps8bl6ps8bl.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:52.784644+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "6b88513d31cf8affa92c1918763beff3",
+    "public_id": "1785107409613",
+    "format": "png",
+    "version": 1787309819,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:56:59Z",
+    "bytes": 1236581,
+    "width": 1198,
+    "height": 880,
+    "asset_folder": "",
+    "display_name": "1785107409613",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309819/1785107409613.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309819/1785107409613.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:54.609386+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "a3b1524ad7aac2849a454ef07233aed9",
+    "public_id": "main-sample",
+    "format": "png",
+    "version": 1787309110,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:10Z",
+    "bytes": 1868954,
+    "width": 1248,
+    "height": 832,
+    "asset_folder": "",
+    "display_name": "main-sample",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/main-sample.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/main-sample.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:54.946898+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "4435c89465ea8c365c2580120f68fa4c",
+    "public_id": "cld-sample-5",
+    "format": "jpg",
+    "version": 1787309110,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:10Z",
+    "bytes": 379132,
+    "width": 1870,
+    "height": 1250,
+    "asset_folder": "",
+    "display_name": "cld-sample-5",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-5.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-5.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:04.997979+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "3180a1f214d195275b86246dd2108877",
+    "public_id": "cld-sample-4",
+    "format": "jpg",
+    "version": 1787309110,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:10Z",
+    "bytes": 818600,
+    "width": 1870,
+    "height": 1250,
+    "asset_folder": "",
+    "display_name": "cld-sample-4",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-4.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-4.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:04.302529+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "4e161e0874ee5432925432930bca0a05",
+    "public_id": "cld-sample-3",
+    "format": "jpg",
+    "version": 1787309110,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:10Z",
+    "bytes": 905834,
+    "width": 1870,
+    "height": 1250,
+    "asset_folder": "",
+    "display_name": "cld-sample-3",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-3.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309110/cld-sample-3.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:18:58.389335+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "19826fca082298631eec10b40a8f6c49",
+    "public_id": "cld-sample-2",
+    "format": "jpg",
+    "version": 1787309109,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:09Z",
+    "bytes": 592235,
+    "width": 1870,
+    "height": 1250,
+    "asset_folder": "",
+    "display_name": "cld-sample-2",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/cld-sample-2.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/cld-sample-2.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:18:58.987455+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "0ad4388603b7c25b8dbddce474b76754",
+    "public_id": "cld-sample",
+    "format": "jpg",
+    "version": 1787309109,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:09Z",
+    "bytes": 476846,
+    "width": 1870,
+    "height": 1250,
+    "asset_folder": "",
+    "display_name": "cld-sample",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/cld-sample.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/cld-sample.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:07.294941+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "429e301e4666179043f7e412960da768",
+    "public_id": "samples/radial_02",
+    "format": "png",
+    "version": 1787309109,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:09Z",
+    "bytes": 123165,
+    "width": 427,
+    "height": 271,
+    "asset_folder": "samples",
+    "display_name": "radial_02",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/radial_02.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/radial_02.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:00.528918+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "5cfb740c63c550d8093a112017792a88",
+    "public_id": "samples/waves",
+    "format": "png",
+    "version": 1787309109,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:09Z",
+    "bytes": 1563444,
+    "width": 1024,
+    "height": 1024,
+    "asset_folder": "samples",
+    "display_name": "waves",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/waves.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/waves.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:08.296073+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "f12b53dfedf564c2049704cd0cc9f0d5",
+    "public_id": "samples/paper",
+    "format": "png",
+    "version": 1787309109,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:09Z",
+    "bytes": 1440561,
+    "width": 1024,
+    "height": 1024,
+    "asset_folder": "samples",
+    "display_name": "paper",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/paper.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309109/samples/paper.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:01.100487+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "f9cd07b2ef44798ed9908b760ea6f716",
+    "public_id": "samples/zoom",
+    "format": "avif",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 2863,
+    "width": 484,
+    "height": 324,
+    "asset_folder": "samples",
+    "display_name": "zoom",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/zoom.avif",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/zoom.avif",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:32.473546+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "ae8e70cc40eec21fc43ad705cb3b8ab2",
+    "public_id": "samples/radial",
+    "format": "avif",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 4503,
+    "width": 950,
+    "height": 640,
+    "asset_folder": "samples",
+    "display_name": "radial",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/radial.avif",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/radial.avif",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:03.225321+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "c1288070062aa396efb66cb50d1e5e26",
+    "public_id": "samples/canvas",
+    "format": "jpg",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 61928,
+    "width": 600,
+    "height": 388,
+    "asset_folder": "samples",
+    "display_name": "canvas",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/canvas.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/canvas.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:03.902492+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "dcc4e46578c8ea4013b04241ee088ec3",
+    "public_id": "samples/logo",
+    "format": "png",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 10897,
+    "width": 480,
+    "height": 314,
+    "asset_folder": "samples",
+    "display_name": "logo",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/logo.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/logo.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:05.953978+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "3a2a18606c3007e6bb9ddd4752e31a5c",
+    "public_id": "samples/woman-on-a-football-field",
+    "format": "jpg",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 416598,
+    "width": 1200,
+    "height": 1350,
+    "asset_folder": "samples",
+    "display_name": "woman-on-a-football-field",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/woman-on-a-football-field.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/woman-on-a-football-field.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:06.822637+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "ccdcef60dd6f5ec6182a56a4c47aaa21",
+    "public_id": "samples/upscale-face-1",
+    "format": "jpg",
+    "version": 1787309108,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:08Z",
+    "bytes": 18110,
+    "width": 233,
+    "height": 233,
+    "asset_folder": "samples",
+    "display_name": "upscale-face-1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/upscale-face-1.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309108/samples/upscale-face-1.jpg",
+    "metadata": {
+      "moderation_date": "2026-08-21T11:19:08.067142+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 2, \"failed\": 2, \"total\": 4}",
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality",
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "8c5cd279f3aba123088e2d040ca632e1",
+    "public_id": "samples/dessert-on-a-plate",
+    "format": "jpg",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 348717,
+    "width": 1200,
+    "height": 1200,
+    "asset_folder": "samples",
+    "display_name": "dessert-on-a-plate",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/dessert-on-a-plate.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/dessert-on-a-plate.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:17.051881+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "97f8f4d76b4252901bb9da085ac634ea",
+    "public_id": "samples/cup-on-a-table",
+    "format": "jpg",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 134300,
+    "width": 2246,
+    "height": 1500,
+    "asset_folder": "samples",
+    "display_name": "cup-on-a-table",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/cup-on-a-table.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/cup-on-a-table.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:17.215549+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:07+00:00",
+      "updated_at": "2026-08-21T11:21:07+00:00"
+    }
+  },
+  {
+    "asset_id": "80037c270ea0327bbdc946e339983192",
+    "public_id": "samples/coffee",
+    "format": "jpg",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 165287,
+    "width": 1920,
+    "height": 1280,
+    "asset_folder": "samples",
+    "display_name": "coffee",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/coffee.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/coffee.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:10.666247+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "0d746e84cb40b425f8037b53e1be5017",
+    "public_id": "samples/chair",
+    "format": "png",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 130488,
+    "width": 800,
+    "height": 600,
+    "asset_folder": "samples",
+    "display_name": "chair",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/chair.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/chair.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:46.184018+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "9496ab2a6ce186c44824335dcc7df274",
+    "public_id": "samples/man-portrait",
+    "format": "jpg",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 505607,
+    "width": 1333,
+    "height": 2000,
+    "asset_folder": "samples",
+    "display_name": "man-portrait",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/man-portrait.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/man-portrait.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:11.578873+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "e7827ae1103f298dd2e67cc830d37646",
+    "public_id": "samples/chair-and-coffee-table",
+    "format": "jpg",
+    "version": 1787309107,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:07Z",
+    "bytes": 64504,
+    "width": 1001,
+    "height": 1500,
+    "asset_folder": "samples",
+    "display_name": "chair-and-coffee-table",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/chair-and-coffee-table.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309107/samples/chair-and-coffee-table.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:12.274265+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "d533ecc6d00dc0e8816e790ea3bdf4f2",
+    "public_id": "samples/man-on-a-street",
+    "format": "jpg",
+    "version": 1787309106,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:06Z",
+    "bytes": 564013,
+    "width": 1340,
+    "height": 1340,
+    "asset_folder": "samples",
+    "display_name": "man-on-a-street",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/man-on-a-street.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/man-on-a-street.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:20.220532+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "a1241daf4365cb39664b0eb15af79f21",
+    "public_id": "samples/man-on-a-escalator",
+    "format": "jpg",
+    "version": 1787309106,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:06Z",
+    "bytes": 563708,
+    "width": 1340,
+    "height": 1340,
+    "asset_folder": "samples",
+    "display_name": "man-on-a-escalator",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/man-on-a-escalator.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/man-on-a-escalator.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:13.308500+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "30ee6ceafef5ab003944e20c21385f12",
+    "public_id": "samples/outdoor-woman",
+    "format": "jpg",
+    "version": 1787309106,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:06Z",
+    "bytes": 93473,
+    "width": 640,
+    "height": 963,
+    "asset_folder": "samples",
+    "display_name": "outdoor-woman",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/outdoor-woman.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/outdoor-woman.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:14.034165+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "041730dc7916101a4f52b257b5dd5fe0",
+    "public_id": "samples/look-up",
+    "format": "jpg",
+    "version": 1787309106,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:06Z",
+    "bytes": 414964,
+    "width": 900,
+    "height": 900,
+    "asset_folder": "samples",
+    "display_name": "look-up",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/look-up.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309106/samples/look-up.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:21.530701+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "5b79952483eb662892e2718caed71912",
+    "public_id": "samples/breakfast",
+    "format": "jpg",
+    "version": 1787309104,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:04Z",
+    "bytes": 3024938,
+    "width": 2447,
+    "height": 2196,
+    "asset_folder": "samples",
+    "display_name": "breakfast",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/breakfast.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/breakfast.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:22.619996+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "c3b0611aade442636297dd4c0b1efffa",
+    "public_id": "samples/smile",
+    "format": "jpg",
+    "version": 1787309104,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:04Z",
+    "bytes": 657749,
+    "width": 1552,
+    "height": 1000,
+    "asset_folder": "samples",
+    "display_name": "smile",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/smile.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/smile.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:21.919831+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "8f8b95ebd2567480e595e01f64d7e557",
+    "public_id": "samples/balloons",
+    "format": "jpg",
+    "version": 1787309104,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:04Z",
+    "bytes": 117237,
+    "width": 1000,
+    "height": 667,
+    "asset_folder": "samples",
+    "display_name": "balloons",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/balloons.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309104/samples/balloons.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:44.869060+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "ee6593db77d69663a0fec8cd510684d9",
+    "public_id": "samples/shoe",
+    "format": "jpg",
+    "version": 1787309103,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:03Z",
+    "bytes": 72888,
+    "width": 1000,
+    "height": 1140,
+    "asset_folder": "samples",
+    "display_name": "shoe",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309103/samples/shoe.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309103/samples/shoe.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:24.789447+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:08+00:00",
+      "updated_at": "2026-08-21T11:21:08+00:00"
+    }
+  },
+  {
+    "asset_id": "7d8b9081075b0fa42f99b55134399cb1",
+    "public_id": "samples/two-ladies",
+    "format": "jpg",
+    "version": 1787309102,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:02Z",
+    "bytes": 211712,
+    "width": 1500,
+    "height": 1200,
+    "asset_folder": "samples",
+    "display_name": "two-ladies",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309102/samples/two-ladies.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309102/samples/two-ladies.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:18.116929+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "186ba0e9f1c91a484afc344808217111",
+    "public_id": "samples/animals/kitten-playing",
+    "format": "gif",
+    "version": 1787309101,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 6620002,
+    "width": 320,
+    "height": 180,
+    "asset_folder": "samples/animals",
+    "display_name": "kitten-playing",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/animals/kitten-playing.gif",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/animals/kitten-playing.gif",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:25.925189+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 2, \"failed\": 2, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "low-image-quality",
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "bcc9198e200966e45845eb6add65984c",
+    "public_id": "samples/landscapes/landscape-panorama",
+    "format": "jpg",
+    "version": 1787309101,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 7858062,
+    "width": 10906,
+    "height": 2349,
+    "asset_folder": "samples/landscapes",
+    "display_name": "landscape-panorama",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/landscapes/landscape-panorama.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/landscapes/landscape-panorama.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:25.264529+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "19da2b85db1cdf6d68502b80bfcaaa5b",
+    "public_id": "samples/landscapes/nature-mountains",
+    "format": "jpg",
+    "version": 1787309101,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 3171453,
+    "width": 3000,
+    "height": 2000,
+    "asset_folder": "samples/landscapes",
+    "display_name": "nature-mountains",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/landscapes/nature-mountains.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309101/samples/landscapes/nature-mountains.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:27.819767+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "abc1e9923fcd64ddbddbdc52b96a562d",
+    "public_id": "samples/cloudinary-group",
+    "format": "jpg",
+    "version": 1787309100,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:00Z",
+    "bytes": 2856169,
+    "width": 3000,
+    "height": 1526,
+    "asset_folder": "samples",
+    "display_name": "cloudinary-group",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/cloudinary-group.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/cloudinary-group.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:29.392616+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "44f18c86004e786eae056b6c0d82bc57",
+    "public_id": "samples/food/spices",
+    "format": "jpg",
+    "version": 1787309100,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:00Z",
+    "bytes": 2129950,
+    "width": 2000,
+    "height": 2000,
+    "asset_folder": "samples/food",
+    "display_name": "spices",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/food/spices.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/food/spices.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:23.890150+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "36563c7dfbc70f31641f223ef908a23f",
+    "public_id": "samples/imagecon-group",
+    "format": "jpg",
+    "version": 1787309100,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:00Z",
+    "bytes": 1487070,
+    "width": 2800,
+    "height": 1867,
+    "asset_folder": "samples",
+    "display_name": "imagecon-group",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/imagecon-group.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/imagecon-group.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:32.017800+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "2fc3cfff5f9b5fd88e026a45c6998ef5",
+    "public_id": "samples/ecommerce/leather-bag-gray",
+    "format": "jpg",
+    "version": 1787309099,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:59Z",
+    "bytes": 1323582,
+    "width": 2385,
+    "height": 1590,
+    "asset_folder": "samples/ecommerce",
+    "display_name": "leather-bag-gray",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/ecommerce/leather-bag-gray.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/ecommerce/leather-bag-gray.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:26.917989+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "32d5e8d49511a7f7ca8be3a307ccbf24",
+    "public_id": "samples/ecommerce/accessories-bag",
+    "format": "jpg",
+    "version": 1787309100,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:00Z",
+    "bytes": 1459256,
+    "width": 3000,
+    "height": 2000,
+    "asset_folder": "samples/ecommerce",
+    "display_name": "accessories-bag",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/ecommerce/accessories-bag.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309100/samples/ecommerce/accessories-bag.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:31.125964+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "7cea0b4739e1076fcb5a5c94114e2ed6",
+    "public_id": "samples/ecommerce/car-interior-design",
+    "format": "jpg",
+    "version": 1787309099,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:59Z",
+    "bytes": 1254103,
+    "width": 2000,
+    "height": 2667,
+    "asset_folder": "samples/ecommerce",
+    "display_name": "car-interior-design",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/ecommerce/car-interior-design.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/ecommerce/car-interior-design.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:27.777196+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "logo-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "377b52bbf7c1dba571c52c846842adc3",
+    "public_id": "samples/landscapes/beach-boat",
+    "format": "jpg",
+    "version": 1787309099,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:59Z",
+    "bytes": 1235823,
+    "width": 2600,
+    "height": 1950,
+    "asset_folder": "samples/landscapes",
+    "display_name": "beach-boat",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/landscapes/beach-boat.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/landscapes/beach-boat.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:49.928800+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "8be197519ddb87b4ed36ba506d3a7e3b",
+    "public_id": "samples/people/bicycle",
+    "format": "jpg",
+    "version": 1787309099,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:59Z",
+    "bytes": 1130015,
+    "width": 2889,
+    "height": 1926,
+    "asset_folder": "samples/people",
+    "display_name": "bicycle",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/people/bicycle.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309099/samples/people/bicycle.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:29.996702+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "0061b9970ce16eccfe69c23ab09eca5f",
+    "public_id": "samples/landscapes/architecture-signs",
+    "format": "jpg",
+    "version": 1787309098,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:58Z",
+    "bytes": 945255,
+    "width": 3000,
+    "height": 2000,
+    "asset_folder": "samples/landscapes",
+    "display_name": "architecture-signs",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/landscapes/architecture-signs.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/landscapes/architecture-signs.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:30.679621+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 2, \"failed\": 2, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed",
+        "logo-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "4414d1a7c6253ff39ff6296fca9bfcbe",
+    "public_id": "samples/animals/three-dogs",
+    "format": "jpg",
+    "version": 1787309098,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:58Z",
+    "bytes": 854929,
+    "width": 2700,
+    "height": 1800,
+    "asset_folder": "samples/animals",
+    "display_name": "three-dogs",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/animals/three-dogs.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/animals/three-dogs.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:50.532587+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "3abbd882141b7c69242a103558934de1",
+    "public_id": "samples/people/jazz",
+    "format": "jpg",
+    "version": 1787309098,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:58Z",
+    "bytes": 695548,
+    "width": 3000,
+    "height": 1993,
+    "asset_folder": "samples/people",
+    "display_name": "jazz",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/people/jazz.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/people/jazz.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "approved",
+      "moderation_date": "2026-08-21T11:19:31.874279+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "de9a455fb12193f0f5e73c407f488a3d",
+    "public_id": "samples/people/boy-snow-hoodie",
+    "format": "jpg",
+    "version": 1787309098,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:58Z",
+    "bytes": 581238,
+    "width": 1777,
+    "height": 1332,
+    "asset_folder": "samples/people",
+    "display_name": "boy-snow-hoodie",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/people/boy-snow-hoodie.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/people/boy-snow-hoodie.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:41.245856+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "2ad939435e5ff821a21c6e5aa07cb574",
+    "public_id": "samples/bike",
+    "format": "jpg",
+    "version": 1787309098,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:58Z",
+    "bytes": 475687,
+    "width": 2000,
+    "height": 1333,
+    "asset_folder": "samples",
+    "display_name": "bike",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/bike.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309098/samples/bike.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:51.127637+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "119ec32afa82618946b84c5087d3eca9",
+    "public_id": "samples/landscapes/girl-urban-view",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 372778,
+    "width": 2048,
+    "height": 1252,
+    "asset_folder": "samples/landscapes",
+    "display_name": "girl-urban-view",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/landscapes/girl-urban-view.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/landscapes/girl-urban-view.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:35.190552+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "e3ffdca62e931719f6218f344baea942",
+    "public_id": "samples/ecommerce/shoes",
+    "format": "png",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 393265,
+    "width": 587,
+    "height": 507,
+    "asset_folder": "samples/ecommerce",
+    "display_name": "shoes",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/ecommerce/shoes.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/ecommerce/shoes.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:34.132254+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 4, \"failed\": 0, \"total\": 4}",
+      "moderation_rejection_reasons_list": []
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "69ad504fbc18f87737968b89bbe89d63",
+    "public_id": "samples/people/smiling-man",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 338794,
+    "width": 849,
+    "height": 565,
+    "asset_folder": "samples/people",
+    "display_name": "smiling-man",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/people/smiling-man.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/people/smiling-man.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:35.953978+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "24e8cf2ec74b7616310d93443091042a",
+    "public_id": "samples/sheep",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 269304,
+    "width": 1600,
+    "height": 1067,
+    "asset_folder": "samples",
+    "display_name": "sheep",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/sheep.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/sheep.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:36.419271+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "d54fc76a62c7d9697f5e455ca8724d7e",
+    "public_id": "samples/food/pot-mussels",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 191852,
+    "width": 1220,
+    "height": 818,
+    "asset_folder": "samples/food",
+    "display_name": "pot-mussels",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/food/pot-mussels.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/food/pot-mussels.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:36.956610+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "8ee7c639cd2f0024b9c6f87e9683e965",
+    "public_id": "samples/food/fish-vegetables",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 169013,
+    "width": 1220,
+    "height": 813,
+    "asset_folder": "samples/food",
+    "display_name": "fish-vegetables",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/food/fish-vegetables.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/food/fish-vegetables.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:38.190335+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "f525c76e91bfbe2a0160dc0940de3476",
+    "public_id": "samples/people/kitchen-bar",
+    "format": "jpg",
+    "version": 1787309096,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:56Z",
+    "bytes": 154151,
+    "width": 1220,
+    "height": 813,
+    "asset_folder": "samples/people",
+    "display_name": "kitchen-bar",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309096/samples/people/kitchen-bar.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309096/samples/people/kitchen-bar.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:39.154094+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "a16be99c3fee9660b400f741e202447a",
+    "public_id": "samples/animals/reindeer",
+    "format": "jpg",
+    "version": 1787309097,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:57Z",
+    "bytes": 161150,
+    "width": 1220,
+    "height": 813,
+    "asset_folder": "samples/animals",
+    "display_name": "reindeer",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/animals/reindeer.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309097/samples/animals/reindeer.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:46.426359+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:09+00:00",
+      "updated_at": "2026-08-21T11:21:09+00:00"
+    }
+  },
+  {
+    "asset_id": "bd78ed815d63933fc15237163f9d6371",
+    "public_id": "samples/cloudinary-logo-vector",
+    "format": "svg",
+    "version": 1787309095,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:55Z",
+    "bytes": 5961,
+    "width": 1000,
+    "height": 320,
+    "asset_folder": "samples",
+    "display_name": "cloudinary-logo-vector",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/cloudinary-logo-vector.svg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/cloudinary-logo-vector.svg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:46.577074+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "logo-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "8721cea72c0ed3a59aa361cd701704bc",
+    "public_id": "samples/animals/cat",
+    "format": "jpg",
+    "version": 1787309095,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:55Z",
+    "bytes": 92690,
+    "width": 768,
+    "height": 1024,
+    "asset_folder": "samples/animals",
+    "display_name": "cat",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/animals/cat.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/animals/cat.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:47.664195+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "0c0325a617d89f6e953d79299677e2f7",
+    "public_id": "samples/food/dessert",
+    "format": "jpg",
+    "version": 1787309095,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:55Z",
+    "bytes": 125888,
+    "width": 1220,
+    "height": 813,
+    "asset_folder": "samples/food",
+    "display_name": "dessert",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/food/dessert.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/food/dessert.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:42.433550+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "363b8ae510f9ea6f3b10e981f3ad6547",
+    "public_id": "samples/ecommerce/analog-classic",
+    "format": "jpg",
+    "version": 1787309095,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:55Z",
+    "bytes": 72558,
+    "width": 1280,
+    "height": 853,
+    "asset_folder": "samples/ecommerce",
+    "display_name": "analog-classic",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/ecommerce/analog-classic.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/ecommerce/analog-classic.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:48.749418+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "834e5dfd5f86f31f10709620edfd729e",
+    "public_id": "samples/cloudinary-icon",
+    "format": "png",
+    "version": 1787309095,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:55Z",
+    "bytes": 57334,
+    "width": 1000,
+    "height": 1000,
+    "asset_folder": "samples",
+    "display_name": "cloudinary-icon",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/cloudinary-icon.png",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309095/samples/cloudinary-icon.png",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "needs_review",
+      "moderation_date": "2026-08-21T11:19:43.226723+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "logo-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "81ccff620bd3be669969b226ca7661d8",
+    "public_id": "sample",
+    "format": "jpg",
+    "version": 1787309092,
+    "resource_type": "image",
+    "type": "upload",
+    "created_at": "2026-08-21T10:44:52Z",
+    "bytes": 120253,
+    "width": 864,
+    "height": 576,
+    "asset_folder": "",
+    "display_name": "sample",
+    "url": "http://res.cloudinary.com/qcp4fx2v/image/upload/v1787309092/sample.jpg",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/image/upload/v1787309092/sample.jpg",
+    "metadata": {
+      "moderation_source": "automatic",
+      "moderation_status": "rejected",
+      "moderation_date": "2026-08-21T11:19:44.432267+00:00",
+      "moderation_job_url": "https://console.cloudinary.com/app/moderation/jobs/8c3e7ba5-eeee-4235-b607-438ffbbe7b83",
+      "moderation_rules_summary": "{\"passed\": 3, \"failed\": 1, \"total\": 4}",
+      "moderation_rejection_reasons_list": [
+        "background-check-failed"
+      ]
+    },
+    "last_updated": {
+      "metadata_updated_at": "2026-08-21T11:21:10+00:00",
+      "updated_at": "2026-08-21T11:21:10+00:00"
+    }
+  },
+  {
+    "asset_id": "25a0bdf978bd82aa8293f520bfdb60ab",
+    "public_id": "Make_this_come_to_life",
+    "format": "mp4",
+    "version": 1787696129,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-25T22:15:29Z",
+    "bytes": 3134569,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "4 offline dispatch",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787696129/Make_this_come_to_life.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787696129/Make_this_come_to_life.mp4"
+  },
+  {
+    "asset_id": "72f47e031a2944a2b118afe7009b2d5e",
+    "public_id": "I_want_a_sophisticated_and_pro",
+    "format": "mp4",
+    "version": 1787696121,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-25T22:15:21Z",
+    "bytes": 2526643,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Additional 3d logo animation reel",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787696121/I_want_a_sophisticated_and_pro.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787696121/I_want_a_sophisticated_and_pro.mp4"
+  },
+  {
+    "asset_id": "74561720138dcc892d46fd327094f72a",
+    "public_id": "I_ve_attatched_actual_products",
+    "format": "mp4",
+    "version": 1787696116,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-25T22:15:16Z",
+    "bytes": 2917833,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "I_ve_attatched_actual_products",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787696116/I_ve_attatched_actual_products.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787696116/I_ve_attatched_actual_products.mp4"
+  },
+  {
+    "asset_id": "748f7e76b6d0932f99e70d50b898cd5a",
+    "public_id": "Okay_now_for_the_next_scene_",
+    "format": "mp4",
+    "version": 1787310214,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:34Z",
+    "bytes": 2678572,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Okay_now_for_the_next_scene_",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310214/Okay_now_for_the_next_scene_.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310214/Okay_now_for_the_next_scene_.mp4"
+  },
+  {
+    "asset_id": "9c6424edb9b66c1d04faf68c2807942e",
+    "public_id": "Video_that_shows_demonstrate_h",
+    "format": "mp4",
+    "version": 1787310213,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:33Z",
+    "bytes": 2510664,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Video_that_shows_demonstrate_h",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310213/Video_that_shows_demonstrate_h.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310213/Video_that_shows_demonstrate_h.mp4"
+  },
+  {
+    "asset_id": "8c58746a4b6b8622ef1107409c571f9f",
+    "public_id": "Now_I_need_the_d_animation_lo",
+    "format": "mp4",
+    "version": 1787310213,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:33Z",
+    "bytes": 2360174,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Now_I_need_the_d_animation_lo",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310213/Now_I_need_the_d_animation_lo.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310213/Now_I_need_the_d_animation_lo.mp4"
+  },
+  {
+    "asset_id": "45d66c8f0665b300fc6d2acbaff55e54",
+    "public_id": "Now_I_need_the_d_animation_lo_1",
+    "format": "mp4",
+    "version": 1787310212,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:32Z",
+    "bytes": 2316165,
+    "width": 720,
+    "height": 1280,
+    "asset_folder": "",
+    "display_name": "Now_I_need_the_d_animation_lo_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310212/Now_I_need_the_d_animation_lo_1.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310212/Now_I_need_the_d_animation_lo_1.mp4"
+  },
+  {
+    "asset_id": "ecf52511441e4aa4582999d9c52c419f",
+    "public_id": "It_doesn_t_make_sense_because",
+    "format": "mp4",
+    "version": 1787310210,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:30Z",
+    "bytes": 2802710,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "It_doesn_t_make_sense_because",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310210/It_doesn_t_make_sense_because.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310210/It_doesn_t_make_sense_because.mp4"
+  },
+  {
+    "asset_id": "bf420732319eb35e989f251a04998309",
+    "public_id": "It_almost_made_sense_just_a_li",
+    "format": "mp4",
+    "version": 1787310210,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:30Z",
+    "bytes": 2763386,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "It_almost_made_sense_just_a_li",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310210/It_almost_made_sense_just_a_li.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310210/It_almost_made_sense_just_a_li.mp4"
+  },
+  {
+    "asset_id": "9b12e20afbd0b7162e820578f9bf6bcc",
+    "public_id": "Next",
+    "format": "mp4",
+    "version": 1787310209,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:29Z",
+    "bytes": 2168608,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Next",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310209/Next.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310209/Next.mp4"
+  },
+  {
+    "asset_id": "13970ad9cf00c45c908d47fedf4f1513",
+    "public_id": "Last_one",
+    "format": "mp4",
+    "version": 1787310208,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:28Z",
+    "bytes": 2567748,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Last_one",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310208/Last_one.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310208/Last_one.mp4"
+  },
+  {
+    "asset_id": "c54e3d39d05c3359427e068cf04c5edc",
+    "public_id": "Go_ahead_1",
+    "format": "mp4",
+    "version": 1787310206,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:26Z",
+    "bytes": 2424172,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Go_ahead_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/Go_ahead_1.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/Go_ahead_1.mp4"
+  },
+  {
+    "asset_id": "4d0b7827c80a9dec75cf61b37f5d17e7",
+    "public_id": "Government_use_case_senario",
+    "format": "mp4",
+    "version": 1787310206,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:26Z",
+    "bytes": 2637230,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Government_use_case_senario",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/Government_use_case_senario.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/Government_use_case_senario.mp4"
+  },
+  {
+    "asset_id": "2927499c6b9d8e0012eeb9301c29083a",
+    "public_id": "It_got_cut_while_saying_organi",
+    "format": "mp4",
+    "version": 1787310206,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:26Z",
+    "bytes": 2690757,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "It_got_cut_while_saying_organi",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/It_got_cut_while_saying_organi.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310206/It_got_cut_while_saying_organi.mp4"
+  },
+  {
+    "asset_id": "3bd785a0a90e7e4f9f5455d00c6092b6",
+    "public_id": "SafetyLink_vision_when_ble_is_1",
+    "format": "mp4",
+    "version": 1787310205,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:25Z",
+    "bytes": 2862458,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "SafetyLink_vision_when_ble_is_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310205/SafetyLink_vision_when_ble_is_1.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310205/SafetyLink_vision_when_ble_is_1.mp4"
+  },
+  {
+    "asset_id": "74d90b19eac8f348f985e303d462ffba",
+    "public_id": "Show_the_uses_in_school_and_wo",
+    "format": "mp4",
+    "version": 1787310205,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:25Z",
+    "bytes": 2683296,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Show_the_uses_in_school_and_wo",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310205/Show_the_uses_in_school_and_wo.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310205/Show_the_uses_in_school_and_wo.mp4"
+  },
+  {
+    "asset_id": "670b9ba2c0acf8e65b38f14fec7d08ff",
+    "public_id": "Now_let_s_show_how_kids_would",
+    "format": "mp4",
+    "version": 1787310204,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:24Z",
+    "bytes": 2621557,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Now_let_s_show_how_kids_would",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310204/Now_let_s_show_how_kids_would.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310204/Now_let_s_show_how_kids_would.mp4"
+  },
+  {
+    "asset_id": "d819c3644481439103536cb7c5291134",
+    "public_id": "Next_ones_but_in_a_South_Afric_1",
+    "format": "mp4",
+    "version": 1787310203,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:23Z",
+    "bytes": 2628489,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Next_ones_but_in_a_South_Afric_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310203/Next_ones_but_in_a_South_Afric_1.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310203/Next_ones_but_in_a_South_Afric_1.mp4"
+  },
+  {
+    "asset_id": "708f508a7bb37b714d31de0cc03ea496",
+    "public_id": "Next_ones_but_in_a_South_Afric",
+    "format": "mp4",
+    "version": 1787310202,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:22Z",
+    "bytes": 2764678,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Next_ones_but_in_a_South_Afric",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310202/Next_ones_but_in_a_South_Afric.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310202/Next_ones_but_in_a_South_Afric.mp4"
+  },
+  {
+    "asset_id": "437a3f1b7a45bb0352bd3e10987d272b",
+    "public_id": "Neighbourhood_watch_security_c",
+    "format": "mp4",
+    "version": 1787310200,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:20Z",
+    "bytes": 2829797,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Neighbourhood_watch_security_c",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310200/Neighbourhood_watch_security_c.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310200/Neighbourhood_watch_security_c.mp4"
+  },
+  {
+    "asset_id": "29a0b043f1766f1acc51874921daf35f",
+    "public_id": "Old_people_scenario_alone_at_h",
+    "format": "mp4",
+    "version": 1787310200,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:20Z",
+    "bytes": 2730995,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Old_people_scenario_alone_at_h",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310200/Old_people_scenario_alone_at_h.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310200/Old_people_scenario_alone_at_h.mp4"
+  },
+  {
+    "asset_id": "3a66f4dcb27ebad04f740d4a8127e2ee",
+    "public_id": "It_s_south_Africa_so_multiraci",
+    "format": "mp4",
+    "version": 1787310199,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:19Z",
+    "bytes": 2725092,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "It_s_south_Africa_so_multiraci",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310199/It_s_south_Africa_so_multiraci.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310199/It_s_south_Africa_so_multiraci.mp4"
+  },
+  {
+    "asset_id": "590c1a22e8a54b46a5f7ba9816170e34",
+    "public_id": "Let_s_focus_in_cctv_broadcasts",
+    "format": "mp4",
+    "version": 1787310199,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:19Z",
+    "bytes": 2869273,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Let_s_focus_in_cctv_broadcasts",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310199/Let_s_focus_in_cctv_broadcasts.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310199/Let_s_focus_in_cctv_broadcasts.mp4"
+  },
+  {
+    "asset_id": "20a5cfef124f2f0c693f1e61bf65cfee",
+    "public_id": "Neighbourhood_watch_security_c_1",
+    "format": "mp4",
+    "version": 1787310195,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:15Z",
+    "bytes": 2403833,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Neighbourhood_watch_security_c_1",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310195/Neighbourhood_watch_security_c_1.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310195/Neighbourhood_watch_security_c_1.mp4"
+  },
+  {
+    "asset_id": "4a17b77c89aff85bd8a35d648ced5d53",
+    "public_id": "drone_dispatch_tracking_crimin",
+    "format": "mp4",
+    "version": 1787310194,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:14Z",
+    "bytes": 2432726,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "drone_dispatch_tracking_crimin",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310194/drone_dispatch_tracking_crimin.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310194/drone_dispatch_tracking_crimin.mp4"
+  },
+  {
+    "asset_id": "d9bff16bed0f377aa36b31d21c9652cc",
+    "public_id": "SafetyLink_vision_when_ble_is",
+    "format": "mp4",
+    "version": 1787310193,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:13Z",
+    "bytes": 2488759,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "SafetyLink_vision_when_ble_is",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310193/SafetyLink_vision_when_ble_is.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310193/SafetyLink_vision_when_ble_is.mp4"
+  },
+  {
+    "asset_id": "ab723316ba30edb40b7cd9c56511edf7",
+    "public_id": "Pitch_deck",
+    "format": "mp4",
+    "version": 1787310192,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:12Z",
+    "bytes": 2647856,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Pitch_deck",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310192/Pitch_deck.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310192/Pitch_deck.mp4"
+  },
+  {
+    "asset_id": "d12e0c34e56600af636c1c97a59e7142",
+    "public_id": "Why",
+    "format": "mp4",
+    "version": 1787310191,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:03:11Z",
+    "bytes": 2502566,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "Why",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310191/Why.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310191/Why.mp4"
+  },
+  {
+    "asset_id": "42affcb6a34f6a2714dd0879ea3e3cd2",
+    "public_id": "petal_20260727_180314",
+    "format": "mp4",
+    "version": 1787310110,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:50Z",
+    "bytes": 51939816,
+    "width": 720,
+    "height": 1600,
+    "asset_folder": "",
+    "display_name": "petal_20260727_180314",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310110/petal_20260727_180314.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310110/petal_20260727_180314.mp4"
+  },
+  {
+    "asset_id": "c340289529afcd072875f2471c360441",
+    "public_id": "petal_20260725_124813",
+    "format": "mp4",
+    "version": 1787310106,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:46Z",
+    "bytes": 24474774,
+    "width": 1920,
+    "height": 1080,
+    "asset_folder": "",
+    "display_name": "petal_20260725_124813",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310106/petal_20260725_124813.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310106/petal_20260725_124813.mp4"
+  },
+  {
+    "asset_id": "7b013eabe912db731c4536ecd4908ec9",
+    "public_id": "petal_20260725_124513",
+    "format": "mp4",
+    "version": 1787310106,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:46Z",
+    "bytes": 25028298,
+    "width": 1920,
+    "height": 1080,
+    "asset_folder": "",
+    "display_name": "petal_20260725_124513",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310106/petal_20260725_124513.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310106/petal_20260725_124513.mp4"
+  },
+  {
+    "asset_id": "66adf92263850bb154d8388a3d711230",
+    "public_id": "petal_20260720_024055",
+    "format": "mp4",
+    "version": 1787310096,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:36Z",
+    "bytes": 5525093,
+    "width": 1280,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "petal_20260720_024055",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310096/petal_20260720_024055.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310096/petal_20260720_024055.mp4"
+  },
+  {
+    "asset_id": "e93e50c642f9f7a21cc29e04f2131b80",
+    "public_id": "petal_20260720_023729",
+    "format": "mp4",
+    "version": 1787310088,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:28Z",
+    "bytes": 2883493,
+    "width": 720,
+    "height": 720,
+    "asset_folder": "",
+    "display_name": "petal_20260720_023729",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310088/petal_20260720_023729.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310088/petal_20260720_023729.mp4"
+  },
+  {
+    "asset_id": "65edb89a6ad86866aff0569f76f54979",
+    "public_id": "petal_20260720_022023",
+    "format": "mp4",
+    "version": 1787310081,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:21Z",
+    "bytes": 2199525,
+    "width": 720,
+    "height": 1280,
+    "asset_folder": "",
+    "display_name": "petal_20260720_022023",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310081/petal_20260720_022023.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310081/petal_20260720_022023.mp4"
+  },
+  {
+    "asset_id": "4004f777addfc7d26b3fa40d16658134",
+    "public_id": "petal_20260731_013618",
+    "format": "mp4",
+    "version": 1787310069,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T11:01:09Z",
+    "bytes": 9963390,
+    "width": 1080,
+    "height": 1920,
+    "asset_folder": "",
+    "display_name": "petal_20260731_013618",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787310069/petal_20260731_013618.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787310069/petal_20260731_013618.mp4"
+  },
+  {
+    "asset_id": "316577e1ebdb5eda2ae5b4535e16f443",
+    "public_id": "samples/dance-2",
+    "format": "mp4",
+    "version": 1787309102,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:02Z",
+    "bytes": 22373558,
+    "width": 3840,
+    "height": 2160,
+    "asset_folder": "samples",
+    "display_name": "dance-2",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787309102/samples/dance-2.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787309102/samples/dance-2.mp4"
+  },
+  {
+    "asset_id": "3d64ca7b6c5015c64f5e063da777592c",
+    "public_id": "samples/elephants",
+    "format": "mp4",
+    "version": 1787309101,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 38855178,
+    "width": 1920,
+    "height": 1080,
+    "asset_folder": "samples",
+    "display_name": "elephants",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/elephants.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/elephants.mp4"
+  },
+  {
+    "asset_id": "88291f18e50067662c5cb3e39ce48bcf",
+    "public_id": "samples/cld-sample-video",
+    "format": "mp4",
+    "version": 1787309101,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 35988643,
+    "width": 3840,
+    "height": 2160,
+    "asset_folder": "samples",
+    "display_name": "cld-sample-video",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/cld-sample-video.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/cld-sample-video.mp4"
+  },
+  {
+    "asset_id": "93874653475f7664cfe234bcaf7dbf1f",
+    "public_id": "samples/sea-turtle",
+    "format": "mp4",
+    "version": 1787309101,
+    "resource_type": "video",
+    "type": "upload",
+    "created_at": "2026-08-21T10:45:01Z",
+    "bytes": 27932506,
+    "width": 1920,
+    "height": 1080,
+    "asset_folder": "samples",
+    "display_name": "sea-turtle",
+    "url": "http://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/sea-turtle.mp4",
+    "secure_url": "https://res.cloudinary.com/qcp4fx2v/video/upload/v1787309101/samples/sea-turtle.mp4"
+  }
+]
