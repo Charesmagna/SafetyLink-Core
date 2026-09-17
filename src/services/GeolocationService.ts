@@ -18,7 +18,7 @@ class GeolocationCacheService {
   private listeners = new Set<(pos: GeolocationCoordinates) => void>();
   private isPolling = false;
   private pollInterval: NodeJS.Timeout | null = null;
-  private cacheExpiry = 5000; // 5 seconds
+  private cacheExpiry = 15000; // 5 seconds
 
   private constructor() {}
 
