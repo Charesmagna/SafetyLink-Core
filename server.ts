@@ -1333,7 +1333,16 @@ app.use(cors({
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  const wss = new WebSocketServer({ server: httpServer, path: '/live' });
+  const wss = new WebSocketServer({ noServer: true });
+  httpServer.on('upgrade', (request, socket, head) => {
+    if (request.url === '/live') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
 
   wss.on("connection", async (clientWs) => {
     const ai = initGemini();
