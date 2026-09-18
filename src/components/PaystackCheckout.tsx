@@ -75,9 +75,10 @@ const PaystackCheckout: React.FC = () => {
     // One-time registration fee first, then subscription
     const ref = `SL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const totalAmount = (plan.once_off * 100) + plan.amount; // kobo
+    const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_e1b5a3e2f6d0c9a4b8e7f2d1c3a5b9e8f4d2c6a0b3e7f1d5c9a2b6e0f4d8c2';
 
     const params = new URLSearchParams({
-      key: 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3',
+      key: paystackKey,
       email,
       amount: totalAmount.toString(),
       ref,

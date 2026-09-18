@@ -10,7 +10,7 @@ echo "REDACTED_STRIPE_KEY" | wrangler secret put PAYSTACK_SECRET_KEY
 echo "+27680079911" | wrangler secret put RESPONSE_CENTRE_NUMBER
 echo "true" | wrangler secret put ALERTS_ENABLED
 echo "africastalking" | wrangler secret put USSD_PROVIDER
-echo "atsk_da89a68ad07727795c9d06541d8299f2df50a4da3fb2d62d762892e5fd5f268533c9573b" | wrangler secret put USSD_API_KEY
+echo "atsk_REDACTEDREDACTED33c9573b" | wrangler secret put USSD_API_KEY
 
 # These you fill in manually:
 # wrangler secret put VAPI_PRIVATE_KEY

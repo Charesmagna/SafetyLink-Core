@@ -42,7 +42,11 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 initializeApp({
   projectId: 'safetylink-99e56'
 });
-const firestoreDb = getFirestore();
+let firestoreDb: any = null;
+function getFirestoreDb() {
+  if (!firestoreDb) firestoreDb = getFirestore();
+  return firestoreDb;
+}
 
 
 // --- Environment Variables (from GitHub Secrets via CI) ---
@@ -1271,11 +1275,11 @@ app.use(cors({
          
          // Update Firestore Database Role/Status
          try {
-           const usersRef = firestoreDb.collection('users');
+           const usersRef = getFirestoreDb().collection('users');
            const snapshot = await usersRef.where('email', '==', pfData.email_address).get();
            
            if (!snapshot.empty) {
-             const batch = firestoreDb.batch();
+             const batch = getFirestoreDb().batch();
              snapshot.forEach(doc => {
                batch.update(doc.ref, {
                  subscription_status: 'active',
@@ -1309,12 +1313,12 @@ app.use(cors({
 
 
   if (process.env.NODE_ENV !== "production" && (!process.argv[1] || !process.argv[1].endsWith("server.cjs"))) {
-    const { createServer: createViteServer } = await import("vite");
+    try { const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true, hmr: { port: 24678 } },
       appType: "spa",
     });
-    app.use(vite.middlewares);
+    app.use(vite.middlewares); } catch (e) { console.error("Vite not found."); const distPath = path.join(process.cwd(), "dist"); app.use(express.static(distPath)); app.get("*all", (req, res) => res.sendFile(path.join(distPath, "index.html"))); }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

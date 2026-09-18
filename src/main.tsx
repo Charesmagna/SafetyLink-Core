@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import { Capacitor } from '@capacitor/core'
+import { useAppStore } from './utils/store'
 import './styles/index.css'
 
 // Only register service worker on web — not inside Android WebView
