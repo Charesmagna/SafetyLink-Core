@@ -10,9 +10,9 @@ export const vid = (publicId: string, transforms = 'q_auto,f_auto') =>
   `${VID_BASE}/${transforms}/${publicId}`;
 
 export const ASSETS = {
-  // Use the exact ID for the logo the user provided: Polish_20260620_014530309 or Safety_Link_Logo_Black_1
-  logo: img('Polish_20260620_014530309'),
-  logo3d: img('Safety_Link_Logo_Black_1'),
+  // Use the verified brand logo: Polish_20260818_074430308
+  logo: img('Polish_20260818_074430308'),
+  logo3d: img('Polish_20260818_074430308'),
   logoKlev: img('K_leva'),
   appSos: img('Gemini_Generated_Image_ohoz6sohoz6sohoz'), // using one of the generated images from previous grep
   appLogin: img('main-sample'),
