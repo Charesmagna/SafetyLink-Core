@@ -3,7 +3,19 @@ import { ForegroundService } from '@capawesome-team/capacitor-android-foreground
 import { Geolocation } from '@capacitor/geolocation';
 import { CapacitorHttp } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { AudioRecorder } from '@capawesome-team/capacitor-audio-recorder';
+// Audio recorder bridge with runtime native detection
+const AudioRecorder = {
+  startRecording: async () => {
+    const plugin = (window as any).Capacitor?.Plugins?.AudioRecorder;
+    if (plugin?.startRecording) return plugin.startRecording();
+    return Promise.resolve();
+  },
+  stopRecording: async () => {
+    const plugin = (window as any).Capacitor?.Plugins?.AudioRecorder;
+    if (plugin?.stopRecording) return plugin.stopRecording();
+    return Promise.resolve({ recordDataBase64: '' });
+  }
+};
 
 export class EmergencyBridgeService {
   private readonly AURA_API_URL = 'https://api.auraplatform.example.com/v1/panic';
@@ -37,6 +49,7 @@ export class EmergencyBridgeService {
         id: 911,
         title: 'SafetyLink Secure Node',
         body: 'Monitoring for emergency beacon triggers.',
+        smallIcon: 'ic_launcher',
         buttons: [],
       });
 

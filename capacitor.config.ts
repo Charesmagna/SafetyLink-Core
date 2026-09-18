@@ -5,7 +5,14 @@ const config: CapacitorConfig = {
   appName: 'SafetyLink Core',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: [
+      'safetylink.online',
+      '*.safetylink.online',
+      'api.safetylink.online',
+      'checkout.paystack.com',
+      'api.paystack.co'
+    ]
   },
   plugins: {
     SplashScreen: {

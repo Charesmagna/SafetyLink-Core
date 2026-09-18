@@ -29,6 +29,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import path from "path";
+import fs from "fs";
 import { db } from "./src/db/index";
 import crypto from "crypto";
 import twilio from "twilio";
@@ -139,6 +140,22 @@ async function initDb() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS fleet_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      node_key TEXT NOT NULL UNIQUE,
+      platform TEXT NOT NULL,
+      app_version TEXT NOT NULL,
+      customer_email TEXT,
+      customer_name TEXT,
+      org_code TEXT,
+      first_installed_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      status TEXT NOT NULL DEFAULT 'active'
+    );
+  `);
 }
 
 let stytchClient = null;
@@ -216,6 +233,183 @@ app.use(cors({
 
   app.use(express.json({ limit: "50mb", verify: (req: any, res, buf) => { req.rawBody = buf; } }));
   app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
+  // --- SafetyLink Fleet Telemetry & In-App OTA Endpoints ---
+  const FLEET_BACKUP_FILE = path.join(process.cwd(), "data", "fleet_registry.json");
+  const CUSTOMERS_BACKUP_FILE = path.join(process.cwd(), "data", "customers_backup.json");
+
+  const readPersistentJSON = (filePath: string, fallback: any = []) => {
+    try {
+      if (fs.existsSync(filePath)) {
+        return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      }
+    } catch (e) {
+      console.warn("Failed to read", filePath, e);
+    }
+    return fallback;
+  };
+
+  const writePersistentJSON = (filePath: string, data: any) => {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+    } catch (e) {
+      console.warn("Failed to write", filePath, e);
+    }
+  };
+
+  // Version endpoint for light/OTA in-app update checks
+  app.get("/api/version", (_req, res) => {
+    res.json({
+      version: "1.1.896",
+      buildTime: "2026-09-18T16:10:38Z",
+      releaseName: "SafetyLink Core v1.1.896",
+      apkUrl: "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.896/SafetyLink-v1.1.896-Signed.apk",
+      liveWebUrl: "https://safetylink.online",
+      isLiveUpdateAvailable: true
+    });
+  });
+
+  // Fleet device registration (Alerts server whenever someone installs or launches app)
+  app.post("/api/fleet/register", async (req, res) => {
+    try {
+      const { nodeKey, platform, appVersion, customerEmail, customerName, orgCode, firstInstalledAt, userAgent } = req.body;
+      if (!nodeKey) return res.status(400).json({ error: "nodeKey required" });
+
+      const clientIp = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+      const now = new Date().toISOString();
+
+      console.log(`📱 [FLEET TELEMETRY] New installation node connected: ${nodeKey} | Platform: ${platform} | Version: ${appVersion} | Customer: ${customerEmail || "Anonymous"}`);
+
+      // 1. Upsert into database
+      try {
+        await db.execute({
+          sql: `
+            INSERT INTO fleet_devices (node_key, platform, app_version, customer_email, customer_name, org_code, first_installed_at, last_seen_at, ip_address, user_agent, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            ON CONFLICT(node_key) DO UPDATE SET
+              last_seen_at = excluded.last_seen_at,
+              app_version = excluded.app_version,
+              customer_email = COALESCE(excluded.customer_email, fleet_devices.customer_email),
+              customer_name = COALESCE(excluded.customer_name, fleet_devices.customer_name),
+              org_code = COALESCE(excluded.org_code, fleet_devices.org_code),
+              status = 'active';
+          `,
+          args: [nodeKey, platform || "web_pwa", appVersion || "1.1.896", customerEmail || null, customerName || null, orgCode || null, firstInstalledAt || now, now, String(clientIp), userAgent || ""]
+        });
+      } catch (dbErr: any) {
+        console.warn("DB fleet execute note:", dbErr.message);
+      }
+
+      // 2. Persistent file backup in ./data/
+      const fleetBackup = readPersistentJSON(FLEET_BACKUP_FILE, []);
+      const existingIdx = fleetBackup.findIndex((d: any) => d.node_key === nodeKey);
+      const deviceEntry = {
+        node_key: nodeKey,
+        platform: platform || "web_pwa",
+        app_version: appVersion || "1.1.896",
+        customer_email: customerEmail || (existingIdx >= 0 ? fleetBackup[existingIdx].customer_email : null),
+        customer_name: customerName || (existingIdx >= 0 ? fleetBackup[existingIdx].customer_name : null),
+        org_code: orgCode || (existingIdx >= 0 ? fleetBackup[existingIdx].org_code : null),
+        first_installed_at: firstInstalledAt || (existingIdx >= 0 ? fleetBackup[existingIdx].first_installed_at : now),
+        last_seen_at: now,
+        ip_address: String(clientIp),
+        user_agent: userAgent || "",
+        status: "active"
+      };
+
+      if (existingIdx >= 0) {
+        fleetBackup[existingIdx] = deviceEntry;
+      } else {
+        fleetBackup.push(deviceEntry);
+      }
+      writePersistentJSON(FLEET_BACKUP_FILE, fleetBackup);
+
+      // 3. Sync to Firestore collection if configured
+      try {
+        const firestore = getFirestoreDb();
+        if (firestore) {
+          await firestore.collection("fleet_devices").doc(nodeKey).set(deviceEntry, { merge: true });
+        }
+      } catch {}
+
+      res.json({ success: true, nodeKey, status: "registered" });
+    } catch (err: any) {
+      console.error("Fleet register error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Fleet Heartbeat
+  app.post("/api/fleet/heartbeat", async (req, res) => {
+    try {
+      const { nodeKey, appVersion, customerEmail } = req.body;
+      if (!nodeKey) return res.status(400).json({ error: "nodeKey required" });
+      const now = new Date().toISOString();
+
+      try {
+        await db.execute({
+          sql: `UPDATE fleet_devices SET last_seen_at = ?, app_version = COALESCE(?, app_version) WHERE node_key = ?`,
+          args: [now, appVersion || null, nodeKey]
+        });
+      } catch {}
+
+      const fleetBackup = readPersistentJSON(FLEET_BACKUP_FILE, []);
+      const match = fleetBackup.find((d: any) => d.node_key === nodeKey);
+      if (match) {
+        match.last_seen_at = now;
+        if (appVersion) match.app_version = appVersion;
+        if (customerEmail) match.customer_email = customerEmail;
+        writePersistentJSON(FLEET_BACKUP_FILE, fleetBackup);
+      }
+
+      res.json({ success: true, timestamp: now });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Fleet list for Admin Dashboard
+  app.get("/api/fleet/devices", async (_req, res) => {
+    try {
+      let devices: any[] = [];
+      try {
+        const result = await db.execute("SELECT * FROM fleet_devices ORDER BY last_seen_at DESC");
+        devices = result.rows as any[];
+      } catch {
+        devices = readPersistentJSON(FLEET_BACKUP_FILE, []);
+      }
+
+      if (!devices || devices.length === 0) {
+        devices = readPersistentJSON(FLEET_BACKUP_FILE, []);
+      }
+
+      res.json({ success: true, count: devices.length, devices });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Persistent Customers Backup Sync
+  app.post("/api/sync/backup-customers", async (req, res) => {
+    try {
+      const { customers } = req.body;
+      if (Array.isArray(customers) && customers.length > 0) {
+        writePersistentJSON(CUSTOMERS_BACKUP_FILE, customers);
+        res.json({ success: true, savedCount: customers.length });
+      } else {
+        res.status(400).json({ error: "Valid customers array required" });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/sync/customers", (_req, res) => {
+    const customers = readPersistentJSON(CUSTOMERS_BACKUP_FILE, []);
+    res.json({ success: true, customers });
+  });
 
   // Modular Provider Routes
   app.use("/ussd", ussdRouter);
