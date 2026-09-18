@@ -292,7 +292,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         muted 
         playsInline 
         className="fixed inset-0 w-full h-full object-cover opacity-40 z-0 pointer-events-none" 
-        src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4"
+        src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/Now_I_need_the_d_animation_lo.mp4"
+        onError={e => (e.currentTarget.style.display = 'none')}
       />
       <div className="fixed inset-0 bg-slate-950/60 z-0 pointer-events-none"></div>
       <img 
@@ -343,7 +344,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
             playsInline
             className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen"
           >
-            <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310110/petal_20260727_180314.mp4" type="video/mp4" />
+            <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/petal_20260727_180314.mp4" type="video/mp4" />
           </video>
         {/* HUD Overlay Scanlines and grid */}
         <div className="absolute inset-0 digital-grid opacity-[0.08]" />
