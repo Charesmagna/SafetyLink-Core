@@ -584,18 +584,24 @@ const App: React.FC = () => {
         </div>
 
         {/* Right Side: Language & Account */}
-        <div className="flex items-center gap-3">
-          <div className="relative mr-2 group">
+        <div className="flex items-center gap-2.5">
+          <div className="relative mr-1 group">
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="appearance-none bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+              className="appearance-none bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9.5px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
             >
-              <option value="en">English</option>
-              <option value="ve">Tshivenda</option>
-              <option value="af">Afrikaans</option>
-              <option value="zu">Zulu</option>
-              <option value="hi">Hindi</option>
+              <option value="en">🌐 English</option>
+              <option value="zu">🌐 Zulu</option>
+              <option value="af">🌐 Afrikaans</option>
+              <option value="xh">🌐 Xhosa</option>
+              <option value="st">🌐 Sesotho</option>
+              <option value="tn">🌐 Setswana</option>
+              <option value="ts">🌐 Tsonga</option>
+              <option value="ss">🌐 Swati</option>
+              <option value="ve">🌐 Venda</option>
+              <option value="nr">🌐 Ndebele</option>
+              <option value="nso">🌐 Sepedi</option>
             </select>
             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-slate-300 transition-colors">
               <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -603,12 +609,11 @@ const App: React.FC = () => {
               </svg>
             </div>
           </div>
-          <div className="text-right">
+
+          <div className="text-right hidden sm:block">
             <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>
             <span className="text-[7.5px] font-mono text-slate-500 uppercase mt-0.5 block leading-none">@{currentUser.username}</span>
           </div>
-
-          <div className="h-4.5 w-[1px] bg-slate-850" />
 
           {/* Active View Indicator Badge */}
           <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase bg-slate-950 px-2.5 py-1 rounded-full border ${
@@ -623,6 +628,14 @@ const App: React.FC = () => {
           }`}>
             {t(`tab.${activeTab}`)}
           </span>
+
+          <button
+            onClick={() => useAppStore.getState().logout()}
+            className="text-[9px] font-mono text-slate-400 hover:text-red-400 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
+            title="Sign Out to Website"
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
