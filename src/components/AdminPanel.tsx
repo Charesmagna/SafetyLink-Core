@@ -14,9 +14,10 @@ const slide5 = ASSETS.logo;
 const newBg1 = ASSETS.promoGraphic;
 const newLogo1 = ASSETS.logo;
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE';
+type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET';
 
 import { EvidenceLedger } from './EvidenceLedger';
+import { FleetMonitor } from './FleetMonitor';
 
 export const AdminPanel: React.FC = () => {
   const { 
@@ -228,7 +229,7 @@ export const AdminPanel: React.FC = () => {
 
       {/* Admin Nav Bar */}
       <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
-        {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
+        {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -241,7 +242,7 @@ export const AdminPanel: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {tab === 'PANICS' ? '🚨 distress signals' : tab === 'ORGANIZATIONS' ? '🏢 organizations' : tab === 'USERS' ? '👥 registered users' : tab === 'SETTINGS' ? '⚙️ tools & settings' : '📊 overview'}
+            {tab === 'PANICS' ? '🚨 distress signals' : tab === 'ORGANIZATIONS' ? '🏢 organizations' : tab === 'USERS' ? '👥 registered users' : tab === 'FLEET' ? '📱 device fleet & updates' : tab === 'SETTINGS' ? '⚙️ tools & settings' : '📊 overview'}
           </button>
         ))}
       </nav>
@@ -1019,6 +1020,13 @@ export const AdminPanel: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB 7: FLEET & UPDATES */}
+        {activeTab === 'FLEET' && (
+          <div className="space-y-6 animate-fadeIn text-left">
+            <FleetMonitor />
           </div>
         )}
       </main>

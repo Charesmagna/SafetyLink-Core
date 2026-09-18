@@ -54,6 +54,7 @@ const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
+import { UpdateBanner } from './components/UpdateBanner';
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
@@ -193,6 +194,7 @@ const App: React.FC = () => {
     syncOfflineQueue,
     checkAppUpdates,
     updateInfo,
+    setUpdateInfo,
     globalTheme
   } = useAppStore();
 
@@ -1200,11 +1202,7 @@ const App: React.FC = () => {
       <GlobalBackground />
       {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}
-      {updateInfo?.available && (
-        <div className="w-full bg-emerald-600/90 text-white text-[10px] font-bold text-center py-2 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50 backdrop-blur-md cursor-pointer" onClick={() => window.open(updateInfo.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest', '_blank')}>
-          <span>🚀 Update Available: v{updateInfo.version} - Click to Download</span>
-        </div>
-      )}
+      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
       <TrialReminderModal />
 
       {/* High fidelity cyber background lighting elements */}

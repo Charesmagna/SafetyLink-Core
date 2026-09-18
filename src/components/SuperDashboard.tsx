@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { translate } from '../utils/translations';
+import { FleetMonitor } from './FleetMonitor';
 
 export const SuperDashboard: React.FC = () => {
   const { organizations, panicEvents, users, language } = useAppStore();
@@ -76,6 +77,10 @@ export const SuperDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <FleetMonitor />
       </div>
     </div>
   );

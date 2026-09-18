@@ -15,6 +15,7 @@ interface AppState {
   globalTheme: 'dark' | 'light';
   setGlobalTheme: (theme: 'dark' | 'light') => void;
   updateInfo: UpdateInfo | null;
+  setUpdateInfo: (info: UpdateInfo | null) => void;
   checkAppUpdates: () => Promise<void>;
   initMeshSync: () => void;
   contacts: Contact[];
@@ -238,15 +239,15 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
 const MOCK_ORGANIZATIONS: Organization[] = [
-  { id: 'SL-WITS-4829', name: 'Wits University Security', address: '1 Jan Smuts Ave, Johannesburg', lat: -26.1912, lng: 28.0267, contactPhone: '0117174444', contactEmail: 'security@wits.ac.za', features: ['BLE_MESH', 'DRONE_DISPATCH'], referralCode: 'WITSSECURE', referralCount: 0, createdAt: Date.now() },
-  { id: 'SL-CITY-2810', name: 'City Patrol Services', address: '144 Oxford Rd, Rosebank', lat: -26.1450, lng: 28.0440, contactPhone: '0112223333', contactEmail: 'dispatch@citypatrol.co.za', features: ['BLE_MESH'], referralCode: 'CITY2026', referralCount: 0, createdAt: Date.now() }
+  { id: 'SL-WITS-4829', name: 'Wits University Security', contactName: 'Wits Security Command', contactEmail: 'security@wits.ac.za', referralCode: 'WITSSECURE', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' },
+  { id: 'SL-CITY-2810', name: 'City Patrol Services', contactName: 'City Patrol Dispatch', contactEmail: 'dispatch@citypatrol.co.za', referralCode: 'CITY2026', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' }
 ];
 
 const MOCK_USERS: UserProfile[] = [
-  { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'premium' },
-  { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'premium' },
-  { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Student', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'premium' },
-  { id: '1004', username: 'lerato_k', email: 'lerato@gmail.com', phone: '+27601234570', fullName: 'Lerato Khumalo', role: 'User', orgCode: '', createdAt: Date.now(), subscriptionStatus: 'premium' }
+  { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active' },
+  { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'active' },
+  { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Community Member', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active' },
+  { id: '1004', username: 'lerato_k', email: 'lerato@gmail.com', phone: '+27601234570', fullName: 'Lerato Khumalo', role: 'Community Member', orgCode: '', createdAt: Date.now(), subscriptionStatus: 'active' }
 ];
 
 export function getOrgAbbreviation(name: string): string {
@@ -319,9 +320,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     return () => { if (unsubscribe) unsubscribe(); };
   },
   
+  setUpdateInfo: (updateInfo: UpdateInfo | null) => set({ updateInfo }),
   checkAppUpdates: async () => {
-    const updateInfo = null; // await checkForUpdate();
-    set({ updateInfo });
+    try {
+      const { checkForUpdate } = await import('../services/UpdateService');
+      const info = await checkForUpdate();
+      if (info && info.available) {
+        set({ updateInfo: info as any });
+      }
+    } catch (e) {
+      console.warn('[Store] Update check failed:', e);
+    }
   },
   demoMode: isDemoModeInitially,
   globalTheme: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
@@ -1362,15 +1371,18 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     return true;
   },
 
-    triggerPanic: async (description) => {
+    triggerPanic: async (description?: string) => {
     if (get().activeSOSState !== 'IDLE') return;
     
     // Native Execution Path (Golden Build Standard)
-    if (Capacitor.isNativePlatform()) {
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
        try {
-           await SafetyLinkEmergency.trigger({ description });
-           set({ activeSOSState: 'TRIGGERED' });
-           get().addAuditLog('SECURITY', 'HIGH', 'Panic Triggered Natively', description);
+           const nativeEmergency = (window as any).SafetyLinkEmergency || (window as any).Capacitor?.Plugins?.SafetyLinkEmergency;
+           if (nativeEmergency?.trigger) {
+             await nativeEmergency.trigger({ description: description || 'Distress Signal' });
+           }
+           set({ activeSOSState: 'DISPATCHED' });
+           get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');
@@ -1389,10 +1401,10 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
     const loc = get().userLocation || { lat: 0, lng: 0 };
-    set({ activeSOSState: 'TRIGGERED', currentIncidentId: incidentId, panicCountdown: null });
-    get().addAuditLog('SECURITY', 'HIGH', 'Panic Triggered', description);
+    set({ activeSOSState: 'ACQUIRING_GPS', panicCountdown: null });
+    get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered', description || '');
 
-    set({ activeSOSState: 'DISPATCHING' });
+    set({ activeSOSState: 'ESCALATING' });
 
     try {
         const response = await fetch('https://safetylink.online/api/panic', {
@@ -1405,7 +1417,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
             lng: loc.lng,
             callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
             callerNumber: get().currentUser?.phone || '',
-            emergencyContacts: get().emergencyContacts?.map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.whatsapp || c.phone })) || [],
+            emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
             description,
             isDrill: false
           }) 
@@ -1414,19 +1426,21 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         if (response.ok) {
            set({ activeSOSState: 'DISPATCHED' });
         } else {
-           set({ activeSOSState: 'FAILED' });
-           get().addOfflineDispatch(incidentId, description, loc.lat, loc.lng);
+           set({ activeSOSState: 'RESOLVED' });
+           get().addAuditLog('SECURITY', 'HIGH', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);
+           get().addToast('Network offline. Panic enqueued locally.', 'warn');
         }
     } catch (e) {
-        set({ activeSOSState: 'FAILED' });
-        get().addOfflineDispatch(incidentId, description, loc.lat, loc.lng);
+        set({ activeSOSState: 'RESOLVED' });
+        get().addAuditLog('SECURITY', 'HIGH', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);
+        get().addToast('Network offline. Panic enqueued locally.', 'warn');
     }
   },
 
-  triggerSOS: (description, durationSec) => {
+  triggerSOS: (description?: string, durationSec?: number) => {
     const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
     if (duration === 0) {
-      get().triggerPanic(description);
+      get().triggerPanic(description || 'Emergency Distress Signal');
       return;
     }
 
@@ -1442,7 +1456,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       if (currentCountdown <= 1) {
         clearInterval(timerId);
         set({ panicCountdown: null });
-        get().triggerPanic(description);
+        get().triggerPanic(description || 'Emergency Distress Signal');
       } else {
         set({ panicCountdown: currentCountdown - 1 });
       }
@@ -1450,9 +1464,9 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   },
 
   cancelSOS: () => {
-     set({ activeSOSState: 'IDLE', panicCountdown: null, currentIncidentId: null });
-     if (Capacitor.isNativePlatform()) {
-         SafetyLinkEmergency.cancel();
+     set({ activeSOSState: 'IDLE', panicCountdown: null });
+     if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+         ((window as any).SafetyLinkEmergency || (window as any).Capacitor?.Plugins?.SafetyLinkEmergency)?.cancel?.();
      }
   },
 

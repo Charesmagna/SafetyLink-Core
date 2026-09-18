@@ -49,6 +49,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 // Deep links init after render
 setupDeepLinks();
 
+// Start Device Fleet Telemetry & Hardware Node Key Registration
+import('./services/FleetService').then(({ startFleetTelemetry }) => {
+  startFleetTelemetry();
+}).catch(() => {});
+
 // Check for updates immediately on every app open — runs before login
 import('./services/UpdateService').then(({ checkForUpdate }) => {
   checkForUpdate().then(info => {
