@@ -44,7 +44,7 @@ function startKeepalive(deviceId: string, trigger: BoundTrigger) {
     } catch {
       // connection dropped — the onDisconnect callback will handle reconnect
     }
-  }, 20_000);
+  }, 60_000);
   keepaliveTimers.set(deviceId, iv);
 }
 

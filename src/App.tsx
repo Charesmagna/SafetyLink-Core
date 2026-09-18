@@ -53,10 +53,10 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
+import { ASSETS } from './utils/cloudinary';
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
-import { ASSETS } from './utils/cloudinary';
 const slide3 = ASSETS.promoGraphic;
 const slLogoMain = ASSETS.logo;
 const slLogoSet = ASSETS.logo;

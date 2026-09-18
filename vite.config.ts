@@ -6,6 +6,28 @@ export default defineConfig({
   css: { postcss: "./postcss.config.cjs" },
   plugins: [
     react(),
+    {
+      name: 'add-cfasync-false',
+      enforce: 'post',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html: string) {
+          return html.replace(/<script (?!data-cfasync="false")/g, '<script data-cfasync="false" ');
+        }
+      },
+      closeBundle() {
+        import('fs').then(fs => {
+          import('path').then(path => {
+            const indexPath = path.resolve(process.cwd(), 'dist/index.html');
+            if (fs.existsSync(indexPath)) {
+              let html = fs.readFileSync(indexPath, 'utf-8');
+              html = html.replace(/<script (?!data-cfasync="false")/g, '<script data-cfasync="false" ');
+              fs.writeFileSync(indexPath, html);
+            }
+          });
+        });
+      }
+    },
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
