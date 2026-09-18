@@ -47,7 +47,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   const sharedProps = { onLogin: onLogin || (() => {}), onRegisterOrg: onRegisterOrg || (() => {}), onRegisterUser: onRegisterUser || (() => {}), navigate };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans relative">
+    <div className="min-h-screen bg-slate-950/70 text-white font-sans relative backdrop-blur-[1px]">
 
       {/* ── Top Nav ── */}
       <nav className="fixed top-0 left-0 right-0 z-[9999] bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/60 px-4 py-3 flex items-center justify-between">

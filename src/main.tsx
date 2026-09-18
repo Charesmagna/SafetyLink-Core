@@ -15,10 +15,14 @@ if (!Capacitor.isNativePlatform()) {
 
 // OneSignal — web push only
 if (!Capacitor.isNativePlatform()) {
-  OneSignal.init({
-    appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
-    allowLocalhostAsSecureOrigin: true,
-  }).catch(() => {});
+  try {
+    OneSignal.init({
+      appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
+      allowLocalhostAsSecureOrigin: true,
+    }).catch(() => {});
+  } catch (e) {
+    console.warn('OneSignal init error ignored:', e);
+  }
 }
 
 // Wake lock — Cordova plugin, native only
@@ -47,7 +51,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 
 // Deep links init after render
-setupDeepLinks();
+try {
+  setupDeepLinks();
+} catch (e) {
+  console.warn('DeepLinks init error:', e);
+}
 
 // Start Device Fleet Telemetry & Hardware Node Key Registration
 import('./services/FleetService').then(({ startFleetTelemetry }) => {

@@ -4,22 +4,23 @@ import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
+import { ASSETS } from '../utils/cloudinary';
+import { EvidenceLedger } from './EvidenceLedger';
+import { FleetMonitor } from './FleetMonitor';
+import { EditorialStudio } from './editorial/EditorialStudio';
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
-import { ASSETS } from '../utils/cloudinary';
 const slide3 = ASSETS.promoGraphic;
 const slide4 = ASSETS.logo;
 const slide5 = ASSETS.logo;
 const newBg1 = ASSETS.promoGraphic;
 const newLogo1 = ASSETS.logo;
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET';
-
-import { EvidenceLedger } from './EvidenceLedger';
-import { FleetMonitor } from './FleetMonitor';
+type AdminTab = 'OVERVIEW' | 'USERS' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET' | 'EDITORIAL';
 
 export const AdminPanel: React.FC = () => {
+  const [showEditorialStudio, setShowEditorialStudio] = useState(false);
   const { 
     users, 
     organizations, 
@@ -112,6 +113,8 @@ export const AdminPanel: React.FC = () => {
 
   const activePanicEventsCount = useMemo(() => panicEvents.filter(p => p.status !== 'RESOLVED').length, [panicEvents]);
   const globalCustomTools = useMemo(() => customTools.filter(t => !t.targetOrgId), [customTools]);
+  const pendingOrgs = useMemo(() => organizations.filter(o => o.approved === false), [organizations]);
+  const approvedOrgs = useMemo(() => organizations.filter(o => o.approved !== false), [organizations]);
 
   // Custom tool form state
   const [newToolTitle, setNewToolTitle] = useState('');
@@ -219,22 +222,35 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="px-4 py-1.5 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-500/30 text-amber-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full"
-        >
-          SIGNOUT SECURE LINK
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEditorialStudio(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white font-mono font-bold text-[10px] uppercase tracking-wider rounded-full shadow-lg shadow-amber-950/40 border border-amber-400/40 transition-all cursor-pointer"
+          >
+            <span>🎨 EDIT ENVIRONMENT</span>
+          </button>
+
+          <button
+            onClick={logout}
+            className="px-4 py-1.5 bg-amber-900/40 hover:bg-amber-900/60 border border-amber-500/30 text-amber-300 hover:text-white transition-colors text-[10px] font-mono font-bold rounded-full"
+          >
+            SIGNOUT SECURE LINK
+          </button>
+        </div>
       </header>
 
       {/* Admin Nav Bar */}
       <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
-        {(['OVERVIEW', 'USERS', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
+        {(['OVERVIEW', 'EDITORIAL', 'USERS', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
-              setActiveTab(tab);
-              setSearchTerm('');
+              if (tab === 'EDITORIAL') {
+                setShowEditorialStudio(true);
+              } else {
+                setActiveTab(tab);
+                setSearchTerm('');
+              }
             }}
             className={`px-4.5 py-2.5 text-[10px] font-mono font-bold tracking-wider rounded-xl uppercase transition-all whitespace-nowrap ${
               activeTab === tab
@@ -242,10 +258,15 @@ export const AdminPanel: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {tab === 'PANICS' ? '🚨 distress signals' : tab === 'ORGANIZATIONS' ? '🏢 organizations' : tab === 'USERS' ? '👥 registered users' : tab === 'FLEET' ? '📱 device fleet & updates' : tab === 'SETTINGS' ? '⚙️ tools & settings' : '📊 overview'}
+            {tab === 'EDITORIAL' ? '🎨 edit environment (studio)' : tab === 'PANICS' ? '🚨 distress signals' : tab === 'ORGANIZATIONS' ? '🏢 organizations' : tab === 'USERS' ? '👥 registered users' : tab === 'FLEET' ? '📱 device fleet & updates' : tab === 'SETTINGS' ? '⚙️ tools & settings' : '📊 overview'}
           </button>
         ))}
       </nav>
+
+      {/* Editorial Studio Overlay */}
+      {showEditorialStudio && (
+        <EditorialStudio onClose={() => setShowEditorialStudio(false)} />
+      )}
 
       {/* Content Body */}
       <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6 relative z-10">
@@ -254,6 +275,34 @@ export const AdminPanel: React.FC = () => {
         {activeTab === 'OVERVIEW' && (
           <div className="space-y-6 animate-fadeIn text-left">
             
+            {/* Platform Studio Visual Customizer Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-red-950/30 border border-amber-500/40 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl">
+                  🎨
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black font-mono text-white uppercase tracking-wider">
+                      Platform Environment Studio (Wix / Sitey-Style)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] font-mono font-bold">
+                      READY
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                    Visual drag-and-drop platform editor. Interactively modify text, hero banners, theme colors, and section structures for <strong>SafetyLink.online</strong>, <strong>Android APK</strong>, and <strong>Desktop EXE</strong>, then push live OTA updates to all connected users.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEditorialStudio(true)}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white font-mono font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-950/50 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
+              >
+                <span>🚀 Launch Visual Editor</span>
+              </button>
+            </div>
+
             {/* CI/CD Build Status */}
             <div className="glass-panel p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-l-emerald-500">
               <div className="flex items-center gap-4">
@@ -559,26 +608,22 @@ export const AdminPanel: React.FC = () => {
         )}
 
         {/* TAB 3: ORGANIZATIONS MANAGEMENT */}
-        {activeTab === 'ORGANIZATIONS' && (() => {
-          const pendingOrgs = useMemo(() => organizations.filter(o => o.approved === false), [organizations]);
-          const approvedOrgs = useMemo(() => organizations.filter(o => o.approved !== false), [organizations]);
-
-          return (
-            <div className="space-y-4 animate-fadeIn text-left">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wider">Registered Housing Nodes ({approvedOrgs.length})</h2>
-                  <p className="text-xs text-slate-500">Add, edit, or deprecate organization profile codes.</p>
-                </div>
-
-                <input
-                  type="text"
-                  placeholder="Search residence name..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono w-full md:w-64"
-                />
+        {activeTab === 'ORGANIZATIONS' && (
+          <div className="space-y-4 animate-fadeIn text-left">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-200 font-mono uppercase tracking-wider">Registered Housing Nodes ({approvedOrgs.length})</h2>
+                <p className="text-xs text-slate-500">Add, edit, or deprecate organization profile codes.</p>
               </div>
+
+              <input
+                type="text"
+                placeholder="Search residence name..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono w-full md:w-64"
+              />
+            </div>
 
               {/* Pending Approvals */}
               {pendingOrgs.length > 0 && (
@@ -718,8 +763,7 @@ export const AdminPanel: React.FC = () => {
                 })}
               </div>
             </div>
-          );
-        })()}
+          )}
 
         {/* TAB 4: ACTIVE PANICS / DISTRESS FEED */}
         {activeTab === 'EVIDENCE' && (

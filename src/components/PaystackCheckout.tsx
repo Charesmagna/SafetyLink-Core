@@ -72,24 +72,71 @@ const PaystackCheckout: React.FC = () => {
     }
     setLoading(plan.name);
 
-    // One-time registration fee first, then subscription
+    const totalAmount = (plan.once_off * 100) + plan.amount; // amount in cents/kobo
     const ref = `SL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const totalAmount = (plan.once_off * 100) + plan.amount; // kobo
-    const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_e1b5a3e2f6d0c9a4b8e7f2d1c3a5b9e8f4d2c6a0b3e7f1d5c9a2b6e0f4d8c2';
 
-    const params = new URLSearchParams({
-      key: paystackKey,
-      email,
-      amount: totalAmount.toString(),
-      ref,
-      currency: 'ZAR',
-      'metadata[name]': name,
-      'metadata[plan]': plan.name,
-      'metadata[plan_code]': plan.plan_code,
-      callback_url: 'https://safetylink.online/#payment-success',
-    });
+    try {
+      // 1. Attempt official Paystack transaction initialization via backend
+      const res = await fetch('/api/paystack/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          amount: totalAmount,
+          planId: plan.plan_code || plan.name,
+          metadata: {
+            name,
+            plan: plan.name,
+            plan_code: plan.plan_code,
+            registration_fee: plan.once_off,
+            callback_url: 'https://safetylink.online/#payment-success'
+          }
+        })
+      });
 
-    window.location.href = `https://checkout.paystack.com/new?${params}`;
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data?.authorization_url) {
+          window.location.href = data.data.authorization_url;
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend Paystack initialize error, falling back to inline popup:', err);
+    }
+
+    // 2. Fallback to inline modal using window.PaystackPop
+    const PaystackPop = (window as any).PaystackPop;
+    const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || '';
+
+    if (PaystackPop && paystackKey) {
+      const handler = PaystackPop.setup({
+        key: paystackKey,
+        email,
+        amount: totalAmount,
+        ref,
+        currency: 'ZAR',
+        metadata: {
+          name,
+          plan: plan.name,
+          plan_code: plan.plan_code,
+        },
+        callback: (response: any) => {
+          setLoading(null);
+          alert(`Payment successful! Reference: ${response.reference}`);
+          window.location.href = 'https://safetylink.online/#payment-success';
+        },
+        onClose: () => {
+          setLoading(null);
+        },
+      });
+
+      handler.openIframe();
+      return;
+    }
+
+    setLoading(null);
+    alert('Unable to initialize Paystack transaction. Please ensure PAYSTACK_SECRET_KEY or VITE_PAYSTACK_PUBLIC_KEY is configured.');
   };
 
   return (

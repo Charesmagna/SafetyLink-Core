@@ -1,5 +1,5 @@
 import { ASSETS } from '../../utils/cloudinary';
-
+import { useEditorialStore } from '../../utils/editorialStore';
 
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
@@ -31,11 +31,18 @@ const LOG_EVENTS = [
 ];
 
 export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeProps) {
+  const { web } = useEditorialStore();
   const [language, setLanguage] = useState('en');
   const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
   const [tick, setTick] = useState(0);
   const logRef = useRef(null);
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  const heroH1a = language === 'en' && web.heroTitle1 ? web.heroTitle1 : t.h1a;
+  const heroH1b = language === 'en' && web.heroTitle2 ? web.heroTitle2 : t.h1b;
+  const heroSub = language === 'en' && web.heroSubtitle ? web.heroSubtitle : t.sub;
+  const ctaPrimary = web.heroCtaPrimary || 'GET PROTECTED →';
+  const ctaSecondary = web.heroCtaSecondary || 'DEPLOY FOR MY ORGANISATION';
 
   // Live log animation
   useEffect(() => {
@@ -59,14 +66,14 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   }, []);
 
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'rgba(7,10,15,0.72)', backdropFilter:'blur(2px)', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: '#000' }}>
+      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: 'transparent' }}>
         <div style={{ position:'absolute', inset:0, overflow:'hidden', zIndex:0 }}>
   <video
     autoPlay muted loop playsInline
-    style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.15 }}
+    style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.25 }}
   >
     <source
       src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/Now_I_need_the_d_animation_lo.mp4"
@@ -105,19 +112,19 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </select>
 
             <h1 style={{ fontSize:'clamp(42px,7vw,80px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.95, marginBottom:'28px' }}>
-              {t.h1a}<br/>
-              <span style={{ color:'#e8321e', fontStyle:'italic' }}>{t.h1b}</span>
+              {heroH1a}<br/>
+              <span style={{ color: web.primaryColor || '#e8321e', fontStyle:'italic' }}>{heroH1b}</span>
             </h1>
-            <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'460px', marginBottom:'36px' }}>{t.sub}</p>
+            <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'460px', marginBottom:'36px' }}>{heroSub}</p>
 
             <div style={{ display:'flex', alignItems:'center', gap:'16px', flexWrap:'wrap' }}>
               <button onClick={onRegisterUser}
-                style={{ background:'#e8321e', color:'#fff', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', padding:'14px 28px', borderRadius:'8px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
-                GET PROTECTED →
+                style={{ background: web.primaryColor || '#e8321e', color:'#fff', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', padding:'14px 28px', borderRadius:'8px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
+                {ctaPrimary}
               </button>
               <button onClick={onRegisterOrg}
                 style={{ fontSize:'12px', fontWeight:600, color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', cursor:'pointer' }}>
-                DEPLOY FOR MY ORGANISATION
+                {ctaSecondary}
               </button>
               <button onClick={onLogin}
                 style={{ fontSize:'11px', fontWeight:600, color:'#8892a4', background:'transparent', border:'none', cursor:'pointer', letterSpacing:'.08em' }}>
@@ -133,7 +140,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── OPERATIONAL STATUS TICKER ──────────────────────────── */}
-      <div style={{ background:'#0d1117', borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'16px 40px', display:'flex', alignItems:'center', gap:'32px', overflow:'hidden' }}>
+      <div style={{ background:'rgba(13,17,23,0.75)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'16px 40px', display:'flex', alignItems:'center', gap:'32px', overflow:'hidden' }}>
         <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', letterSpacing:'.16em', color:'#e8321e', flexShrink:0, display:'flex', alignItems:'center', gap:'6px' }}>
           <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', animation:'blink 1.2s infinite', display:'inline-block' }}/>OPERATIONAL STATUS
         </span>
@@ -148,7 +155,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </div>
 
       {/* ── ARMOURING COMMUNITIES ──────────────────────────────── */}
-      <section style={{ padding:'100px 40px', background:'#070a0f', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'100px 40px', background:'rgba(7,10,15,0.78)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
           <div>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SOUTH AFRICAN PLATFORM</div>
