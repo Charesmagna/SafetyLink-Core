@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ASSETS } from '../utils/cloudinary';
+import { Header } from './landing/Header';
 import { Home } from './landing/Home';
 import { Hardware } from './landing/Hardware';
 import { Pricing } from './landing/Pricing';
@@ -50,65 +51,15 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
     <div className="min-h-screen bg-slate-950/70 text-white font-sans relative backdrop-blur-[1px]">
 
       {/* ── Top Nav ── */}
-      <nav className="fixed top-0 left-0 right-0 z-[9999] bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/60 px-4 py-3 flex items-center justify-between">
-        <button onClick={() => navigate('home')} className="flex items-center gap-2.5">
-          <img src={ASSETS.logo} alt="SafetyLink" className="h-8 w-16 object-contain" onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
-          <span className="font-black text-white tracking-wider text-sm uppercase font-mono">SafetyLink</span>
-        </button>
-
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-1">
-          {NAV_ITEMS.map(n => (
-            <button key={n.id} onClick={() => navigate(n.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider font-mono transition-all ${
-                page === n.id ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}>
-              {n.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={onLogin} className="hidden md:flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
-            Open App
-          </button>
-          {/* Hamburger */}
-          <button onClick={() => setMenuOpen(v => !v)} className="md:hidden p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300">
-            {menuOpen
-              ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-              : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
-            }
-          </button>
-        </div>
-      </nav>
-
-      {/* ── Mobile Menu ── */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-[9998] bg-slate-950/95 backdrop-blur-xl pt-20 px-6 flex flex-col gap-2">
-          {NAV_ITEMS.map(n => (
-            <button key={n.id} onClick={() => navigate(n.id)}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-left transition-all border ${
-                page === n.id
-                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'
-              }`}>
-              <span className="text-2xl">{n.emoji}</span>
-              <span className="font-black uppercase tracking-wider text-sm font-mono">{n.label}</span>
-            </button>
-          ))}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button onClick={onLogin} className="bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black uppercase tracking-wider text-sm transition-all">
-              Login
-            </button>
-            <button onClick={onRegisterUser} className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-4 rounded-2xl font-black uppercase tracking-wider text-sm transition-all">
-              Register
-            </button>
-          </div>
-        </div>
-      )}
+      <Header
+        onLogin={onLogin}
+        onRegisterOrg={onRegisterOrg}
+        onNavigate={(p: any) => navigate(p)}
+        activePage={page}
+      />
 
       {/* ── Page Content ── */}
-      <div className="pt-14">
+      <div>
         {page === 'home'       && <Home       {...sharedProps} />}
         {page === 'hardware'   && <Hardware   {...sharedProps} />}
         {page === 'store'      && <SafetyWareStore />}
