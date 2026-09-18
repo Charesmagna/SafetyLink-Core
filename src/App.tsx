@@ -4,21 +4,11 @@ import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
-
-const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
-const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
-
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
 import { initFirebaseSync } from './services/FirebaseSyncService';
 import { DispatchChain } from './components/DispatchChain';
-const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
-const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
-const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
-const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations'));
-const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
 import { StatusIndicator } from './components/StatusIndicator';
-const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
@@ -29,32 +19,41 @@ import { LandingPage } from './components/LandingPage';
 import { DnsSetupGuide } from './components/DnsSetupGuide';
 import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
-const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
-const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
-const AppTour = lazy(() => import('./components/AppTour').then(m => ({ default: m.AppTour })));
-const AIHub = lazy(() => import('./components/AIHub').then(m => ({ default: m.AIHub })));
-const MediaHub = lazy(() => import('./components/MediaHub').then(m => ({ default: m.MediaHub })));
-const AndroidWidgetSimulator = lazy(() => import('./components/AndroidWidgetSimulator').then(m => ({ default: m.AndroidWidgetSimulator })));
 import { translate, SA_LANGUAGES } from './utils/translations';
-const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
-const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
 import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
-const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
-const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
-const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
-const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
+
+const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
+const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
+const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
+const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
+const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
+const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations'));
+const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
+const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
+const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const AppTour = lazy(() => import('./components/AppTour').then(m => ({ default: m.AppTour })));
+const AIHub = lazy(() => import('./components/AIHub').then(m => ({ default: m.AIHub })));
+const MediaHub = lazy(() => import('./components/MediaHub').then(m => ({ default: m.MediaHub })));
+const AndroidWidgetSimulator = lazy(() => import('./components/AndroidWidgetSimulator').then(m => ({ default: m.AndroidWidgetSimulator })));
+const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
+const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
+const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
+const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
+const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
+const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
@@ -255,7 +254,7 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   useEffect(() => {
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
@@ -1198,7 +1197,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+    <div className={`min-h-screen w-full bg-transparent text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       <GlobalBackground />
       {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}

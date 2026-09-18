@@ -1,9 +1,10 @@
-export interface SatTelemetry { satelliteCount?: number; accuracy?: number; lastFix?: number; provider?: string; latitude: number; longitude: number; altitude: number; velocity: number; timestamp: number; visibility?: string; }
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion } from 'motion/react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
+
+export interface SatTelemetry { satelliteCount?: number; accuracy?: number; lastFix?: number; provider?: string; latitude: number; longitude: number; altitude: number; velocity: number; timestamp: number; visibility?: string; }
 
 
 

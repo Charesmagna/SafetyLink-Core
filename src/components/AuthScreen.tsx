@@ -6,10 +6,10 @@ import { PricingModal } from './PricingModal';
 import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { motion, AnimatePresence } from 'motion/react';
+import { ASSETS } from '../utils/cloudinary';
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
-import { ASSETS } from '../utils/cloudinary';
 const slide3 = ASSETS.promoGraphic;
 const slide4 = ASSETS.logo;
 const slide5 = ASSETS.logo;
