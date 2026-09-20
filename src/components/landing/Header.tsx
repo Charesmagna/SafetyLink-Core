@@ -85,8 +85,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
     <>
       <nav
         id="nav"
-        className={`fixed top-0 left-0 right-0 z-[1000] bg-[rgba(255,255,255,0.97)] border-b border-[#e2e8f0] transition-all duration-300 ${
-          scrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.08)]' : ''
+        className={`fixed top-0 left-0 right-0 z-[1000] bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 transition-all duration-300 ${
+          scrolled ? 'shadow-[0_4px_24px_rgba(0,0,0,0.4)]' : ''
         }`}
       >
         <div className="max-w-[1200px] mx-auto px-5 h-[60px] flex items-center justify-between gap-2">
@@ -108,7 +108,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 }
               }}
             />
-            <span className="text-[17px] font-[800] text-[#0f172a] tracking-[-0.02em] hidden min-[601px]:inline">
+            <span className="text-[17px] font-[800] text-slate-100 tracking-[-0.02em] hidden min-[601px]:inline">
               SafetyLink
             </span>
           </a>
@@ -120,8 +120,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'home')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'home'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Home
@@ -131,8 +131,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'platform')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'platform' || activePage === 'features'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Platform Features
@@ -142,8 +142,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'usecases')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'usecases'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Use Cases
@@ -153,8 +153,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'hardware')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'hardware'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Hardware Config
@@ -164,8 +164,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'enterprise')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'enterprise' || activePage === 'ai'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               AI Co-Pilot
@@ -175,8 +175,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'pricing')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'pricing'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Pricing
@@ -186,8 +186,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               onClick={(e) => handleLinkClick(e, 'store')}
               className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
                 activePage === 'store' || activePage === 'download'
-                  ? 'text-[#15803d] border-b-2 border-[#15803d] pb-[2px]'
-                  : 'text-[#64748b] hover:text-[#15803d]'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400 pb-[2px]'
+                  : 'text-slate-400 hover:text-emerald-400'
               }`}
             >
               Download
@@ -195,7 +195,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             {onLogin && (
               <button
                 onClick={onLogin}
-                className="text-[12px] font-[600] text-[#0f172a] hover:text-[#15803d] bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-[7px] transition-colors"
+                className="text-[12px] font-[600] text-slate-200 hover:text-emerald-400 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-[7px] border border-slate-700 transition-colors"
               >
                 Log In
               </button>
@@ -212,7 +212,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 value={selectedLang}
                 onChange={(e) => handleLanguageChange(e.target.value)}
                 aria-label="Select language"
-                className="appearance-none bg-[#f8fafc] border border-[#e2e8f0] rounded-[7px] py-[6px] pl-[9px] pr-[24px] text-[11px] font-[700] text-[#1e293b] cursor-pointer outline-none font-sans"
+                className="appearance-none bg-slate-900 border border-slate-700 rounded-[7px] py-[6px] pl-[9px] pr-[24px] text-[11px] font-[700] text-slate-200 cursor-pointer outline-none font-sans"
               >
                 <option value="en">🌐 ENGLISH</option>
                 <option value="zu">🌐 ZULU</option>
@@ -232,7 +232,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 height="10"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#64748b"
+                stroke="#94a3b8"
                 strokeWidth="2.5"
               >
                 <path d="M6 9l6 6 6-6"/>
@@ -242,7 +242,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             {/* Desktop / Mobile view toggle (hidden on native app) */}
             {!Capacitor.isNativePlatform() && (
               <button
-                className="flex items-center gap-[5px] bg-[#f8fafc] border border-[#e2e8f0] rounded-[7px] px-[10px] py-[6px] cursor-pointer text-[11px] font-[600] text-[#475569] font-sans transition-colors hover:bg-[#f1f5f9]"
+                className="flex items-center gap-[5px] bg-slate-900 border border-slate-700 rounded-[7px] px-[10px] py-[6px] cursor-pointer text-[11px] font-[600] text-slate-300 font-sans transition-colors hover:bg-slate-800"
                 onClick={toggleView}
                 id="view-btn"
                 title="Toggle mobile/desktop view"
@@ -325,7 +325,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               className="block min-[961px]:hidden bg-transparent border-none cursor-pointer p-1"
               aria-label="Open menu"
             >
-              <svg width="22" height="22" fill="none" stroke="#0f172a" strokeWidth="2">
+              <svg width="22" height="22" fill="none" stroke="#e2e8f0" strokeWidth="2">
                 <line x1="3" y1="6" x2="21" y2="6"/>
                 <line x1="3" y1="12" x2="21" y2="12"/>
                 <line x1="3" y1="18" x2="21" y2="18"/>
@@ -337,60 +337,60 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
 
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
-          <div id="mob-menu" className="flex flex-col bg-white border-t border-[#e2e8f0] shadow-xl">
+          <div id="mob-menu" className="flex flex-col bg-slate-950 border-t border-slate-800 shadow-2xl">
             <a
               href="#home"
               onClick={(e) => handleLinkClick(e, 'home')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Home
             </a>
             <a
               href="#features"
               onClick={(e) => handleLinkClick(e, 'platform')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Platform Features
             </a>
             <a
               href="#usecases"
               onClick={(e) => handleLinkClick(e, 'usecases')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Use Cases
             </a>
             <a
               href="#hardware"
               onClick={(e) => handleLinkClick(e, 'hardware')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Hardware Config
             </a>
             <a
               href="#ai"
               onClick={(e) => handleLinkClick(e, 'enterprise')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               AI Co-Pilot
             </a>
             <a
               href="#pricing"
               onClick={(e) => handleLinkClick(e, 'pricing')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Pricing
             </a>
             <a
               href="#download"
               onClick={(e) => handleLinkClick(e, 'store')}
-              className="text-[#1e293b] font-[500] no-underline text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc]"
+              className="text-slate-200 font-[500] no-underline text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900"
             >
               Download
             </a>
             {onLogin && (
               <button
                 onClick={() => { setMobileMenuOpen(false); onLogin(); }}
-                className="text-left text-[#1e293b] font-[600] text-[14px] py-3 px-5 border-b border-[#f1f5f9] hover:bg-[#f8fafc] bg-transparent"
+                className="text-left text-slate-200 font-[600] text-[14px] py-3 px-5 border-b border-slate-900 hover:bg-slate-900 bg-transparent"
               >
                 🔑 Log In to Portal
               </button>
@@ -411,11 +411,11 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             >
               👥 Join WhatsApp Community Group
             </a>
-            <div className="flex flex-wrap gap-4 py-3 px-5 items-center bg-[#f8fafc]">
-              <a href="mailto:info@safetylink.online" className="text-[12px] text-[#64748b] no-underline">
+            <div className="flex flex-wrap gap-4 py-3 px-5 items-center bg-slate-900">
+              <a href="mailto:info@safetylink.online" className="text-[12px] text-slate-400 no-underline">
                 ✉️ info@safetylink.online
               </a>
-              <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noreferrer" className="text-[12px] text-[#1877f2] no-underline font-semibold">
+              <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noreferrer" className="text-[12px] text-[#38bdf8] no-underline font-semibold">
                 📘 Facebook
               </a>
               <a href="https://youtu.be/L4gykMYDYjk" target="_blank" rel="noreferrer" className="text-[12px] text-[#ef4444] no-underline font-semibold">

@@ -77,25 +77,46 @@ const PaystackCheckout: React.FC = () => {
 
     try {
       // 1. Attempt official Paystack transaction initialization via backend
-      const WORKER = 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
-      const res = await fetch(`${WORKER}/api/paystack/initialize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          amount: totalAmount,
-          planId: plan.plan_code || plan.name,
-          metadata: {
-            name,
-            plan: plan.name,
-            plan_code: plan.plan_code,
-            registration_fee: plan.once_off,
-            callback_url: 'https://safetylink.online/#payment-success'
-          }
-        })
-      });
+      let res: Response | null = null;
+      try {
+        res = await fetch('/api/paystack/initialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            amount: totalAmount,
+            planId: plan.plan_code || plan.name,
+            metadata: {
+              name,
+              plan: plan.name,
+              plan_code: plan.plan_code,
+              registration_fee: plan.once_off,
+              callback_url: 'https://safetylink.online/#payment-success'
+            }
+          })
+        });
+      } catch (e) {
+        // Fallback to worker if local endpoint not accessible
+        const WORKER = 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+        res = await fetch(`${WORKER}/api/paystack/initialize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            amount: totalAmount,
+            planId: plan.plan_code || plan.name,
+            metadata: {
+              name,
+              plan: plan.name,
+              plan_code: plan.plan_code,
+              registration_fee: plan.once_off,
+              callback_url: 'https://safetylink.online/#payment-success'
+            }
+          })
+        }).catch(() => null);
+      }
 
-      if (res.ok) {
+      if (res && res.ok) {
         const data = await res.json();
         if (data?.data?.authorization_url) {
           window.location.href = data.data.authorization_url;

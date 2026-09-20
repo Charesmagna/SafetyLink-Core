@@ -63,7 +63,7 @@ export async function openPaystackCheckout({
 
   // 2. Fallback to client-side PaystackPop inline modal
   const PaystackPop = (window as any).PaystackPop;
-  const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '';
+  const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
 
   if (PaystackPop && key) {
     const handler = PaystackPop.setup({
