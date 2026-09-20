@@ -77,7 +77,8 @@ const PaystackCheckout: React.FC = () => {
 
     try {
       // 1. Attempt official Paystack transaction initialization via backend
-      const res = await fetch('/api/paystack/initialize', {
+      const WORKER = 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+      const res = await fetch(`${WORKER}/api/paystack/initialize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +108,8 @@ const PaystackCheckout: React.FC = () => {
 
     // 2. Fallback to inline modal using window.PaystackPop
     const PaystackPop = (window as any).PaystackPop;
-    const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || '';
+    const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY
+      || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
 
     if (PaystackPop && paystackKey) {
       const handler = PaystackPop.setup({
