@@ -118,18 +118,39 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'460px', marginBottom:'36px' }}>{heroSub}</p>
 
             <div style={{ display:'flex', alignItems:'center', gap:'16px', flexWrap:'wrap' }}>
-              <button onClick={onRegisterUser}
-                style={{ background: web.primaryColor || '#e8321e', color:'#fff', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', padding:'14px 28px', borderRadius:'8px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
-                {ctaPrimary}
-              </button>
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                <button onClick={onRegisterUser}
+                  style={{ background: web.primaryColor || '#e8321e', color:'#fff', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', padding:'14px 28px', borderRadius:'8px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
+                  REGISTER AS INDIVIDUAL →
+                </button>
+                <span style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  right: '-8px',
+                  backgroundColor: '#10b981',
+                  color: '#020617',
+                  fontSize: '9px',
+                  fontWeight: 900,
+                  letterSpacing: '0.12em',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.5)',
+                  pointerEvents: 'none',
+                  textTransform: 'uppercase'
+                }}>
+                  FREE
+                </span>
+              </div>
               <button onClick={onRegisterOrg}
                 style={{ fontSize:'12px', fontWeight:600, color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', cursor:'pointer' }}>
                 {ctaSecondary}
               </button>
-              <button onClick={onLogin}
-                style={{ fontSize:'11px', fontWeight:600, color:'#8892a4', background:'transparent', border:'none', cursor:'pointer', letterSpacing:'.08em' }}>
-                SIGN IN →
-              </button>
+              <a href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+talk+to+SafetyLink"
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize:'11px', fontWeight:700, color:'#25d366', background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.3)', padding:'12px 18px', borderRadius:'8px', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:'6px', letterSpacing:'.05em' }}>
+                💬 TALK TO US ON WHATSAPP
+              </a>
             </div>
           </div>
 
