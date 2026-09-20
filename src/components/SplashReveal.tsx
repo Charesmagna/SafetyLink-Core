@@ -27,9 +27,10 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
     <div 
       id="splash-reveal-container" 
       onClick={handleComplete}
-      className={`fixed inset-0 bg-[#000000] flex flex-col items-center justify-center z-[99999] overflow-hidden select-none cursor-pointer transition-opacity duration-500 ease-out ${
+      className={`fixed inset-0 w-screen h-screen bg-[#000000] flex flex-col items-center justify-center z-[99999] overflow-hidden select-none cursor-pointer transition-opacity duration-500 ease-out m-0 p-0 border-none ${
         fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
+      style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, border: 'none', background: '#000000' }}
     >
       {/* Blurred background image fallback if video fails */}
       {videoError && (
@@ -40,15 +41,16 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
         />
       )}
 
-      {/* Main Video */}
-      <div className="relative z-10 w-full h-full flex items-center justify-center">
+      {/* Main Video: 100% full screen edge-to-edge */}
+      <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black overflow-hidden m-0 p-0 border-none">
         <video
           autoPlay
           muted
           playsInline
           onEnded={handleComplete}
           onError={() => setVideoError(true)}
-          className="w-full h-full object-cover mix-blend-screen"
+          className="w-full h-full object-cover m-0 p-0 border-none"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         >
           <source src="/splash-video.mp4" type="video/mp4" />
         </video>

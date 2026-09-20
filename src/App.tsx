@@ -260,6 +260,11 @@ const App: React.FC = () => {
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready
     if (Capacitor.isNativePlatform()) {
       SplashScreen.hide().catch(console.warn);
+      // Fallback timeout ensuring no lingering splash overlay on native
+      const t = setTimeout(() => {
+        SplashScreen.hide().catch(() => {});
+      }, 800);
+      return () => clearTimeout(t);
     }
   }, []);
   

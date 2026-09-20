@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 interface HeaderProps {
   onLogin?: () => void;
@@ -238,26 +239,28 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               </svg>
             </div>
 
-            {/* Desktop / Mobile view toggle */}
-            <button
-              className="flex items-center gap-[5px] bg-[#f8fafc] border border-[#e2e8f0] rounded-[7px] px-[10px] py-[6px] cursor-pointer text-[11px] font-[600] text-[#475569] font-sans transition-colors hover:bg-[#f1f5f9]"
-              onClick={toggleView}
-              id="view-btn"
-              title="Toggle mobile/desktop view"
-            >
-              {!mobileView ? (
-                <svg id="icon-desktop" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-                </svg>
-              ) : (
-                <svg id="icon-mobile" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/>
-                </svg>
-              )}
-              <span id="view-label" className="hidden min-[601px]:inline">
-                {!mobileView ? 'Desktop' : 'Mobile'}
-              </span>
-            </button>
+            {/* Desktop / Mobile view toggle (hidden on native app) */}
+            {!Capacitor.isNativePlatform() && (
+              <button
+                className="flex items-center gap-[5px] bg-[#f8fafc] border border-[#e2e8f0] rounded-[7px] px-[10px] py-[6px] cursor-pointer text-[11px] font-[600] text-[#475569] font-sans transition-colors hover:bg-[#f1f5f9]"
+                onClick={toggleView}
+                id="view-btn"
+                title="Toggle mobile/desktop view"
+              >
+                {!mobileView ? (
+                  <svg id="icon-desktop" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+                  </svg>
+                ) : (
+                  <svg id="icon-mobile" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/>
+                  </svg>
+                )}
+                <span id="view-label" className="hidden min-[601px]:inline">
+                  {!mobileView ? 'Desktop' : 'Mobile'}
+                </span>
+              </button>
+            )}
 
             {/* Social icons */}
             <div className="flex items-center gap-[5px]">
