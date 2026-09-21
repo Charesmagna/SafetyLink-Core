@@ -200,6 +200,15 @@ const App: React.FC = () => {
 
   useEffect(() => {
     checkAppUpdates();
+    const updateInterval = setInterval(() => {
+      checkAppUpdates();
+    }, 15 * 60 * 1000);
+
+    const handleFocus = () => {
+      checkAppUpdates();
+    };
+    window.addEventListener('focus', handleFocus);
+
     initFirebaseSync();
     
     // Initialize real-time mesh node sync if firestore sync is active
@@ -241,6 +250,8 @@ const App: React.FC = () => {
     const handleTrialExpired = () => setTrialExpired(true);
     window.addEventListener('trial_expired', handleTrialExpired);
     return () => { 
+      clearInterval(updateInterval);
+      window.removeEventListener('focus', handleFocus);
       window.removeEventListener('trial_expired', handleTrialExpired);
       if (cleanupSync) cleanupSync(); 
       unsub(); 

@@ -5,7 +5,7 @@
 export const CURRENT_VERSION: string =
   (import.meta as any).env?.VITE_APP_VERSION ||
   localStorage.getItem('sl_active_version') ||
-  '1.1.896';
+  '1.1.906';
 
 const GITHUB_RELEASES_API = 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest';
 const APK_DOWNLOAD_BASE = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download';

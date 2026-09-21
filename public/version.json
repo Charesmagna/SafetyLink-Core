@@ -1,12 +1,12 @@
 {
-  "version": "1.1.896",
-  "buildTime": "2026-09-18T16:10:38Z",
-  "releaseName": "SafetyLink Core v1.1.896",
-  "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.896/SafetyLink-v1.1.896-Signed.apk",
+  "version": "1.1.906",
+  "buildTime": "2026-09-21T18:14:00Z",
+  "releaseName": "SafetyLink Core v1.1.906",
+  "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.906/SafetyLink-v1.1.906-Signed.apk",
   "liveWebUrl": "https://safetylink.online",
   "features": [
-    "Over-The-Air light update system (no manual APK reinstall required)",
-    "Hardware device key and fleet telemetry heartbeat",
-    "Customer and fleet database persistence protection"
+    "Automatic Over-The-Air release detection & in-app update prompt banner",
+    "Direct APK & Windows EXE downloads from latest GitHub release",
+    "Restored comprehensive multi-tier pricing with hardware and patrol packages"
   ]
 }
