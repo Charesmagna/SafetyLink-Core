@@ -24,7 +24,7 @@
     body { font-family: 'Inter', system-ui, sans-serif; color: var(--gray-900); background: var(--white); line-height: 1.6; }
 
     /* NAV */
-    nav {
+    .legacy-landing-nav {
       position: sticky; top: 0; z-index: 100;
       background: var(--navy);
       display: flex; align-items: center; justify-content: space-between;
@@ -289,7 +289,7 @@
       .footer-grid { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 768px) {
-      nav { padding: 0 4%; }
+      .legacy-landing-nav { padding: 0 4%; }
       .nav-links { display: none; }
       .nav-mobile-btn { display: block; }
       .hero { grid-template-columns: 1fr; padding: 3rem 4%; text-align: center; }
