@@ -84,28 +84,56 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
     setMobileMenuOpen(false);
   };
 
+  const isLight = globalTheme === 'light';
+
   return (
     <>
       <nav
         id="nav"
-        className={`fixed top-0 left-0 right-0 z-[1000] backdrop-blur-md border-b transition-all duration-300 ${
-          globalTheme === 'light'
-            ? 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
-            : 'bg-slate-950/90 border-slate-800/80 text-slate-100'
-        } ${scrolled ? (globalTheme === 'light' ? 'shadow-[0_4px_20px_rgba(0,0,0,0.06)]' : 'shadow-[0_4px_24px_rgba(0,0,0,0.4)]') : ''}`}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          background: isLight ? 'rgba(255, 255, 255, 0.97)' : 'rgba(2, 6, 23, 0.96)',
+          borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b',
+          transition: 'box-shadow .3s, background .3s',
+          boxShadow: scrolled
+            ? (isLight ? '0 4px 24px rgba(0,0,0,.08)' : '0 4px 24px rgba(0,0,0,.5)')
+            : 'none',
+        }}
       >
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-5 h-[60px] flex items-center justify-between gap-2">
-
-          {/* Logo */}
+        <div
+          className="nav-inner"
+          style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '0 20px',
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+          }}
+        >
+          {/* LOGO */}
           <a
             href="#home"
             onClick={(e) => handleLinkClick(e, 'home')}
-            className="flex items-center gap-2 no-underline shrink-0"
+            className="nav-logo"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              flexShrink: 0,
+            }}
           >
             <img
               src="https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308"
               alt="SafetyLink"
-              className="h-8 w-auto object-contain"
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => {
                 const imgEl = e.currentTarget as HTMLImageElement;
                 if (!imgEl.src.includes('Polish_20260620')) {
@@ -113,142 +141,190 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 }
               }}
             />
-            <span className={`text-[17px] font-[800] tracking-[-0.02em] hidden min-[601px]:inline ${
-              globalTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
-            }`}>
+            <span
+              className="nav-brand-text"
+              style={{
+                fontSize: '17px',
+                fontWeight: 800,
+                color: isLight ? '#0f172a' : '#f8fafc',
+                letterSpacing: '-.02em',
+              }}
+            >
               SafetyLink
             </span>
           </a>
 
-          {/* Desktop nav links (visible on lg screens) */}
-          <div className="hidden lg:flex items-center gap-5">
+          {/* NAV LINKS — desktop only */}
+          <div className="nav-links">
             <a
               href="#home"
               onClick={(e) => handleLinkClick(e, 'home')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'home'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'home' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: activePage === 'home' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: activePage === 'home' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'home' ? '2px' : '0',
+              }}
             >
               Home
             </a>
             <a
               href="#features"
               onClick={(e) => handleLinkClick(e, 'platform')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'platform' || activePage === 'features'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'platform' || activePage === 'features' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: (activePage === 'platform' || activePage === 'features') ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: (activePage === 'platform' || activePage === 'features') ? '2px solid #15803d' : 'none',
+                paddingBottom: (activePage === 'platform' || activePage === 'features') ? '2px' : '0',
+              }}
             >
               Platform Features
             </a>
             <a
               href="#usecases"
               onClick={(e) => handleLinkClick(e, 'usecases')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'usecases'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'usecases' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: activePage === 'usecases' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: activePage === 'usecases' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'usecases' ? '2px' : '0',
+              }}
             >
               Use Cases
             </a>
             <a
               href="#hardware"
               onClick={(e) => handleLinkClick(e, 'hardware')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'hardware'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'hardware' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: activePage === 'hardware' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: activePage === 'hardware' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'hardware' ? '2px' : '0',
+              }}
             >
               Hardware Config
             </a>
             <a
               href="#ai"
               onClick={(e) => handleLinkClick(e, 'enterprise')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'enterprise' || activePage === 'ai'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'enterprise' || activePage === 'ai' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: (activePage === 'enterprise' || activePage === 'ai') ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: (activePage === 'enterprise' || activePage === 'ai') ? '2px solid #15803d' : 'none',
+                paddingBottom: (activePage === 'enterprise' || activePage === 'ai') ? '2px' : '0',
+              }}
             >
               AI Co-Pilot
             </a>
             <a
               href="#pricing"
               onClick={(e) => handleLinkClick(e, 'pricing')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'pricing'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'pricing' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: activePage === 'pricing' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: activePage === 'pricing' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'pricing' ? '2px' : '0',
+              }}
             >
               Pricing
             </a>
             <a
               href="#download"
               onClick={(e) => handleLinkClick(e, 'store')}
-              className={`text-[12px] font-[500] no-underline whitespace-nowrap transition-colors py-0.5 ${
-                activePage === 'store' || activePage === 'download'
-                  ? 'text-emerald-500 border-b-2 border-emerald-500 pb-[2px]'
-                  : globalTheme === 'light'
-                  ? 'text-slate-600 hover:text-emerald-600'
-                  : 'text-slate-400 hover:text-emerald-400'
-              }`}
+              className={activePage === 'store' || activePage === 'download' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: (activePage === 'store' || activePage === 'download') ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: (activePage === 'store' || activePage === 'download') ? '2px solid #15803d' : 'none',
+                paddingBottom: (activePage === 'store' || activePage === 'download') ? '2px' : '0',
+              }}
             >
               Download
             </a>
             {onLogin && (
               <button
                 onClick={onLogin}
-                className={`text-[12px] font-[600] px-3 py-1.5 rounded-[7px] border transition-colors ${
-                  globalTheme === 'light'
-                    ? 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border-slate-300'
-                    : 'text-slate-200 hover:text-emerald-400 bg-slate-800 hover:bg-slate-700 border-slate-700'
-                }`}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: isLight ? '#475569' : '#cbd5e1',
+                  background: isLight ? '#f8fafc' : '#1e293b',
+                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  borderRadius: '7px',
+                  padding: '5px 10px',
+                  cursor: 'pointer',
+                  transition: 'background .2s',
+                }}
               >
                 Log In
               </button>
             )}
           </div>
 
-          {/* Right cluster */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* RIGHT CLUSTER */}
+          <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
 
             {/* Language selector */}
-            <div className="relative">
+            <div className="lang-wrap" style={{ position: 'relative' }}>
               <select
                 id="lang-select"
                 value={selectedLang}
                 onChange={(e) => handleLanguageChange(e.target.value)}
                 aria-label="Select language"
-                className={`appearance-none rounded-[7px] py-[6px] pl-[7px] sm:pl-[9px] pr-[22px] sm:pr-[24px] text-[10px] sm:text-[11px] font-[700] cursor-pointer outline-none font-sans transition-colors ${
-                  globalTheme === 'light'
-                    ? 'bg-slate-100 border border-slate-300 text-slate-800 focus:border-slate-400'
-                    : 'bg-slate-900 border border-slate-700 text-slate-200 focus:border-slate-500'
-                }`}
+                style={{
+                  appearance: 'none',
+                  background: isLight ? '#f8fafc' : '#0f172a',
+                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  borderRadius: '7px',
+                  padding: '6px 24px 6px 9px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: isLight ? '#1e293b' : '#f1f5f9',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
               >
-                <option value="en">🌐 EN</option>
+                <option value="en">🌐 ENGLISH</option>
                 <option value="zu">🌐 ZULU</option>
-                <option value="af">🌐 AFR</option>
+                <option value="af">🌐 AFRIKAANS</option>
                 <option value="xh">🌐 XHOSA</option>
-                <option value="st">🌐 SOTHO</option>
-                <option value="tn">🌐 TSWANA</option>
+                <option value="st">🌐 SESOTHO</option>
+                <option value="tn">🌐 SETSWANA</option>
                 <option value="ts">🌐 TSONGA</option>
                 <option value="ss">🌐 SWATI</option>
                 <option value="ve">🌐 VENDA</option>
@@ -256,200 +332,76 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 <option value="nso">🌐 SEPEDI</option>
               </select>
               <svg
-                className="absolute right-[6px] top-1/2 -translate-y-1/2 pointer-events-none"
                 width="10"
                 height="10"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={globalTheme === 'light' ? '#475569' : '#94a3b8'}
+                stroke={isLight ? '#64748b' : '#94a3b8'}
                 strokeWidth="2.5"
+                style={{ position: 'absolute', right: '7px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
               >
                 <path d="M6 9l6 6 6-6"/>
               </svg>
             </div>
 
-            {/* Desktop / Mobile view toggle (hidden on native app and compact mobile) */}
+            {/* Desktop / Mobile view toggle (hidden on native app) */}
             {!Capacitor.isNativePlatform() && (
               <button
-                className={`hidden md:flex items-center gap-[5px] rounded-[7px] px-[9px] py-[6px] cursor-pointer text-[11px] font-[600] font-sans transition-colors ${
-                  globalTheme === 'light'
-                    ? 'bg-slate-100 border border-slate-300 text-slate-700 hover:bg-slate-200'
-                    : 'bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800'
-                }`}
+                className="view-toggle"
                 onClick={toggleView}
                 id="view-btn"
                 title="Toggle mobile/desktop view"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: isLight ? '#f8fafc' : '#0f172a',
+                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  borderRadius: '7px',
+                  padding: '6px 10px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: isLight ? '#475569' : '#cbd5e1',
+                  fontFamily: 'inherit',
+                  transition: 'background .2s',
+                }}
               >
                 {!mobileView ? (
-                  <svg id="icon-desktop" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg id="icon-desktop" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
                   </svg>
                 ) : (
-                  <svg id="icon-mobile" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg id="icon-mobile" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/>
                   </svg>
                 )}
-                <span id="view-label" className="hidden lg:inline">
-                  {!mobileView ? 'Desktop' : 'Mobile'}
-                </span>
+                <span id="view-label" className="view-toggle-text">{!mobileView ? 'Desktop' : 'Mobile'}</span>
               </button>
             )}
 
-            {/* Social icons - visible on tablets and desktop */}
-            <div className="hidden md:flex items-center gap-[4px]">
-              <a
-                href="mailto:info@safetylink.online"
-                className={`w-7 h-7 rounded-[7px] flex items-center justify-center text-inherit no-underline transition-colors shrink-0 ${
-                  globalTheme === 'light'
-                    ? 'bg-slate-100 border border-slate-300 hover:bg-slate-200'
-                    : 'bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#e0f2fe]'
-                }`}
-                title="Email us"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
-                </svg>
-              </a>
-              <a
-                href="https://www.facebook.com/share/1D8xnzfY8T/"
-                target="_blank"
-                rel="noreferrer"
-                className={`w-7 h-7 rounded-[7px] flex items-center justify-center text-inherit no-underline transition-colors shrink-0 ${
-                  globalTheme === 'light'
-                    ? 'bg-slate-100 border border-slate-300 hover:bg-slate-200'
-                    : 'bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#dbeafe]'
-                }`}
-                title="Facebook"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="#1877f2">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </a>
-              {/* Directionable WhatsApp Hub */}
-              <div className="relative">
-                <button
-                  onClick={() => setWhatsappMenuOpen(prev => !prev)}
-                  onMouseEnter={() => setWhatsappMenuOpen(true)}
-                  className={`w-7 h-7 rounded-[7px] flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
-                    whatsappMenuOpen
-                      ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-sm'
-                      : globalTheme === 'light'
-                      ? 'bg-slate-100 border border-slate-300 hover:bg-slate-200'
-                      : 'bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#dcfce7]'
-                  }`}
-                  title="Connect on WhatsApp (Direct Support, Channel & Community)"
-                  aria-label="Open WhatsApp Channels Menu"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                </button>
-
-                {whatsappMenuOpen && (
-                  <div
-                    onMouseLeave={() => setWhatsappMenuOpen(false)}
-                    className={`absolute right-0 top-full mt-2 w-72 p-2.5 rounded-2xl shadow-2xl border z-[1050] animate-in fade-in zoom-in-95 duration-150 ${
-                      globalTheme === 'light'
-                        ? 'bg-white border-slate-200 text-slate-800'
-                        : 'bg-slate-900 border-slate-700/80 text-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.6)]'
-                    }`}
-                  >
-                    <div className="px-2 py-1.5 border-b border-slate-700/30 mb-1.5 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 font-mono">
-                        WhatsApp Channels
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">
-                        +27 68 009 911
-                      </span>
-                    </div>
-
-                    <a
-                      href="https://wa.me/message/YIEA73M7H3P5M1"
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setWhatsappMenuOpen(false)}
-                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
-                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
-                      }`}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-sm">
-                        💬
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-emerald-400 flex items-center justify-between">
-                          <span>Chat on WhatsApp</span>
-                          <span className="text-[9px] font-mono text-emerald-500/80">Support</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
-                          Direct chat with dispatch & team (+27 68 009 911)
-                        </p>
-                      </div>
-                    </a>
-
-                    <a
-                      href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s"
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setWhatsappMenuOpen(false)}
-                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
-                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
-                      }`}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center shrink-0 text-sm">
-                        📢
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-teal-400 flex items-center justify-between">
-                          <span>Official WA Channel</span>
-                          <span className="text-[9px] font-mono text-teal-500/80">Follow</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
-                          Live platform advisories & emergency broadcasts
-                        </p>
-                      </div>
-                    </a>
-
-                    <a
-                      href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5"
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setWhatsappMenuOpen(false)}
-                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
-                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
-                      }`}
-                    >
-                      <div className="w-7 h-7 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center shrink-0 text-sm">
-                        👥
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-green-400 flex items-center justify-between">
-                          <span>Community Group</span>
-                          <span className="text-[9px] font-mono text-green-500/80">Join</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
-                          Estate, neighbourhood & mesh responder community
-                        </p>
-                      </div>
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Theme Toggle (Moon / Sun) - Always Prominently Visible */}
+            {/* Theme Toggle (Moon / Sun) */}
             <button
               id="theme-toggle-btn"
-              onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
-              className={`w-8 h-8 rounded-[7px] flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-sm ${
-                globalTheme === 'dark'
-                  ? 'bg-slate-900 border border-slate-700 text-amber-400 hover:text-amber-300 hover:border-amber-500/50 hover:bg-slate-850'
-                  : 'bg-slate-100 border border-slate-300 text-indigo-600 hover:text-indigo-700 hover:border-indigo-400 hover:bg-slate-200'
-              }`}
-              title={globalTheme === 'dark' ? "Switch to Light Mode" : "Switch to Tactical Dark Mode"}
+              onClick={() => setGlobalTheme(isLight ? 'dark' : 'light')}
+              style={{
+                width: '32px',
+                height: '32px',
+                background: isLight ? '#f8fafc' : '#0f172a',
+                border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                borderRadius: '7px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background .2s',
+                flexShrink: 0,
+              }}
+              title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
               aria-label="Toggle visual theme"
             >
-              {globalTheme === 'dark' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+              {!isLight ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="5" />
                   <line x1="12" y1="1" x2="12" y2="3" />
                   <line x1="12" y1="21" x2="12" y2="23" />
@@ -461,238 +413,485 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                   <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                 </svg>
               ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                 </svg>
               )}
             </button>
 
-            {/* CTA button (visible on tablet/desktop) */}
+            {/* Social icons */}
+            <div className="social-row" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <a
+                href="mailto:info@safetylink.online"
+                className="soc-btn"
+                title="Email us (info@safetylink.online)"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  background: isLight ? '#f8fafc' : '#0f172a',
+                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  borderRadius: '7px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textDecoration: 'none',
+                  transition: 'background .2s',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={isLight ? '#64748b' : '#94a3b8'} strokeWidth="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>
+                </svg>
+              </a>
+
+              <a
+                href="https://www.facebook.com/share/1D8xnzfY8T/"
+                target="_blank"
+                rel="noreferrer"
+                className="soc-btn fb"
+                title="Facebook"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  background: isLight ? '#f8fafc' : '#0f172a',
+                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  borderRadius: '7px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textDecoration: 'none',
+                  transition: 'background .2s',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#1877f2">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </a>
+
+              {/* WhatsApp button with direction popover */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setWhatsappMenuOpen(prev => !prev)}
+                  onMouseEnter={() => setWhatsappMenuOpen(true)}
+                  className="soc-btn wa"
+                  title="WhatsApp (+27 68 009 911)"
+                  aria-label="Connect on WhatsApp"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    background: isLight ? '#f8fafc' : '#0f172a',
+                    border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                    borderRadius: '7px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'background .2s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                </button>
+
+                {whatsappMenuOpen && (
+                  <div
+                    onMouseLeave={() => setWhatsappMenuOpen(false)}
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      marginTop: '6px',
+                      width: '270px',
+                      padding: '10px',
+                      borderRadius: '12px',
+                      background: isLight ? '#ffffff' : '#0f172a',
+                      border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                      boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+                      zIndex: 1050,
+                    }}
+                  >
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', paddingBottom: '6px', borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>WhatsApp Directory</span>
+                      <span style={{ color: '#64748b' }}>+27 68 009 911</span>
+                    </div>
+
+                    <a
+                      href="https://wa.me/message/YIEA73M7H3P5M1"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 8px',
+                        borderRadius: '7px',
+                        textDecoration: 'none',
+                        color: isLight ? '#1e293b' : '#f8fafc',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        transition: 'background .15s',
+                      }}
+                    >
+                      <span style={{ fontSize: '14px' }}>💬</span>
+                      <div>
+                        <div>Chat on WhatsApp</div>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 400 }}>Direct Support & Dispatch</div>
+                      </div>
+                    </a>
+
+                    <a
+                      href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 8px',
+                        borderRadius: '7px',
+                        textDecoration: 'none',
+                        color: isLight ? '#1e293b' : '#f8fafc',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        transition: 'background .15s',
+                      }}
+                    >
+                      <span style={{ fontSize: '14px' }}>📢</span>
+                      <div>
+                        <div>Follow WA Channel</div>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 400 }}>Official Platform Broadcasts</div>
+                      </div>
+                    </a>
+
+                    <a
+                      href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 8px',
+                        borderRadius: '7px',
+                        textDecoration: 'none',
+                        color: isLight ? '#1e293b' : '#f8fafc',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        transition: 'background .15s',
+                      }}
+                    >
+                      <span style={{ fontSize: '14px' }}>👥</span>
+                      <div>
+                        <div>Join Community Group</div>
+                        <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 400 }}>Estates & Mesh Responders</div>
+                      </div>
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CTA */}
             <a
               href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#15803d] hover:bg-[#166534] text-white px-3.5 py-1.5 rounded-[7px] text-[11px] font-[700] no-underline whitespace-nowrap transition-colors hidden sm:block shadow-sm"
+              className="nav-cta"
+              style={{
+                background: '#15803d',
+                color: '#fff',
+                padding: '8px 16px',
+                borderRadius: '7px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                transition: 'background .2s',
+              }}
             >
               Get Started
             </a>
 
-            {/* Hamburger Button (visible on <lg screens) */}
+            {/* Hamburger */}
             <button
               id="ham"
               onClick={() => setMobileMenuOpen(prev => !prev)}
-              className={`flex lg:hidden rounded-[7px] cursor-pointer p-2 shrink-0 items-center justify-center transition-all ${
-                globalTheme === 'light'
-                  ? 'bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200'
-                  : 'bg-slate-900 border border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800'
-              }`}
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'none',
+              }}
             >
-              {mobileMenuOpen ? (
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              ) : (
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="3" y1="6" x2="21" y2="6"/>
-                  <line x1="3" y1="12" x2="21" y2="12"/>
-                  <line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-              )}
+              <svg width="22" height="22" fill="none" stroke={isLight ? '#0f172a' : '#f8fafc'} strokeWidth="2">
+                {mobileMenuOpen ? (
+                  <>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </>
+                ) : (
+                  <>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                  </>
+                )}
+              </svg>
             </button>
 
           </div>
         </div>
-      </nav>
 
-      {/* Mobile Drawer Backdrop */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 top-[60px] bg-black/60 backdrop-blur-xs z-[1001] lg:hidden transition-opacity"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Dropdown Menu Drawer */}
-      {mobileMenuOpen && (
+        {/* Mobile dropdown menu */}
         <div
           id="mob-menu"
-          className={`fixed top-[60px] left-0 right-0 z-[1002] flex flex-col border-b shadow-2xl max-h-[calc(100vh-60px)] overflow-y-auto lg:hidden transition-all ${
-            globalTheme === 'light'
-              ? 'bg-white/98 border-slate-200 text-slate-800'
-              : 'bg-slate-950/98 border-slate-800 text-slate-100'
-          }`}
+          className={mobileMenuOpen ? 'open' : ''}
+          style={{
+            display: mobileMenuOpen ? 'flex' : 'none',
+            flexDirection: 'column',
+            gap: 0,
+            background: isLight ? '#ffffff' : '#020617',
+            borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.15)',
+          }}
         >
-          {/* Quick Theme Toggle Row in Mobile Drawer */}
-          <div className={`flex items-center justify-between py-3 px-5 border-b ${
-            globalTheme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-850'
-          }`}>
-            <div className="flex items-center gap-2">
-              <span className="text-base">{globalTheme === 'dark' ? '☀️' : '🌙'}</span>
-              <span className={`text-xs font-semibold uppercase tracking-wider ${globalTheme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
-                Visual Mode: {globalTheme === 'dark' ? 'Tactical Dark' : 'Daylight High-Contrast'}
-              </span>
-            </div>
-            <button
-              onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
-              className={`text-[11px] font-bold px-2.5 py-1 rounded-md border transition-colors ${
-                globalTheme === 'dark'
-                  ? 'bg-slate-800 text-amber-400 border-slate-700 hover:bg-slate-700'
-                  : 'bg-white text-indigo-600 border-slate-300 hover:bg-slate-100 shadow-xs'
-              }`}
-            >
-              Switch to {globalTheme === 'dark' ? 'Light' : 'Dark'}
-            </button>
-          </div>
-
           <a
             href="#home"
             onClick={(e) => handleLinkClick(e, 'home')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Home</span>
-            <span className="text-xs text-slate-500 font-mono">01</span>
+            Home
           </a>
           <a
             href="#features"
             onClick={(e) => handleLinkClick(e, 'platform')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Platform Features</span>
-            <span className="text-xs text-slate-500 font-mono">02</span>
+            Platform Features
           </a>
           <a
             href="#usecases"
             onClick={(e) => handleLinkClick(e, 'usecases')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Use Cases</span>
-            <span className="text-xs text-slate-500 font-mono">03</span>
+            Use Cases
           </a>
           <a
             href="#hardware"
             onClick={(e) => handleLinkClick(e, 'hardware')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Hardware Config</span>
-            <span className="text-xs text-slate-500 font-mono">04</span>
+            Hardware Config
           </a>
           <a
             href="#ai"
             onClick={(e) => handleLinkClick(e, 'enterprise')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>AI Co-Pilot</span>
-            <span className="text-xs text-slate-500 font-mono">05</span>
+            AI Co-Pilot
           </a>
           <a
             href="#pricing"
             onClick={(e) => handleLinkClick(e, 'pricing')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Pricing</span>
-            <span className="text-xs text-slate-500 font-mono">06</span>
+            Pricing
           </a>
           <a
             href="#download"
             onClick={(e) => handleLinkClick(e, 'store')}
-            className={`font-[500] no-underline text-[14px] py-3.5 px-5 border-b transition-colors flex items-center justify-between ${
-              globalTheme === 'light'
-                ? 'text-slate-800 border-slate-100 hover:bg-slate-50'
-                : 'text-slate-200 border-slate-900 hover:bg-slate-900'
-            }`}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
           >
-            <span>Download</span>
-            <span className="text-xs text-slate-500 font-mono">07</span>
+            Download
           </a>
 
           {onLogin && (
             <button
               onClick={() => { setMobileMenuOpen(false); onLogin(); }}
-              className={`text-left font-[600] text-[14px] py-3.5 px-5 border-b transition-colors flex items-center gap-2 ${
-                globalTheme === 'light'
-                  ? 'text-slate-900 border-slate-200 hover:bg-slate-100 bg-slate-50/50'
-                  : 'text-slate-100 border-slate-900 hover:bg-slate-900 bg-slate-900/30'
-              }`}
+              style={{
+                color: isLight ? '#1e293b' : '#f8fafc',
+                fontWeight: 600,
+                fontSize: '14px',
+                padding: '12px 20px',
+                border: 'none',
+                background: 'none',
+                textAlign: 'left',
+                borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+                cursor: 'pointer',
+              }}
             >
-              <span>🔑</span>
-              <span>Log In to Portal</span>
+              🔑 Log In to Portal
             </button>
           )}
 
-          <div className="p-4 flex flex-col gap-2.5">
+          <a
+            href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              background: '#15803d',
+              color: '#fff',
+              fontWeight: 700,
+              textAlign: 'center',
+              textDecoration: 'none',
+              fontSize: '13px',
+              padding: '12px 20px',
+            }}
+          >
+            💬 Contact Us on WhatsApp (+27 68 009 911)
+          </a>
+
+          <div
+            className="mob-social"
+            style={{
+              display: 'flex',
+              gap: '12px',
+              padding: '12px 20px',
+              alignItems: 'center',
+              background: isLight ? '#f8fafc' : '#0f172a',
+              flexWrap: 'wrap',
+            }}
+          >
             <a
-              href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
+              href="mailto:info@safetylink.online"
+              style={{ fontSize: '12px', color: isLight ? '#64748b' : '#94a3b8', textDecoration: 'none' }}
+            >
+              ✉️ info@safetylink.online
+            </a>
+            <a
+              href="https://www.facebook.com/share/1D8xnzfY8T/"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#15803d] hover:bg-[#166534] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
+              style={{ fontSize: '12px', color: '#1877f2', textDecoration: 'none', fontWeight: 600 }}
             >
-              <span>💬</span>
-              <span>Chat on WhatsApp (+27 68 009 911)</span>
+              📘 Facebook
             </a>
             <a
               href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#0f766e] hover:bg-[#115e59] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
+              style={{ fontSize: '12px', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}
             >
-              <span>📢</span>
-              <span>Follow WhatsApp Official Channel</span>
+              📢 Channel
             </a>
             <a
               href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#25d366] hover:bg-[#20ba59] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
+              style={{ fontSize: '12px', color: '#15803d', textDecoration: 'none', fontWeight: 600 }}
             >
-              <span>👥</span>
-              <span>Join WhatsApp Community Group</span>
-            </a>
-          </div>
-
-          <div className={`flex flex-wrap gap-4 py-3 px-5 items-center text-[12px] ${
-            globalTheme === 'light' ? 'bg-slate-100 text-slate-600' : 'bg-slate-900 text-slate-400'
-          }`}>
-            <a href="mailto:info@safetylink.online" className="no-underline hover:underline flex items-center gap-1">
-              <span>✉️</span> info@safetylink.online
-            </a>
-            <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noreferrer" className="text-[#0284c7] no-underline font-semibold hover:underline flex items-center gap-1">
-              <span>📘</span> Facebook
-            </a>
-            <a href="https://youtu.be/L4gykMYDYjk" target="_blank" rel="noreferrer" className="text-[#ef4444] no-underline font-semibold hover:underline flex items-center gap-1">
-              <span>▶️</span> Video Demo
+              👥 Group
             </a>
           </div>
         </div>
-      )}
+      </nav>
 
       {/* Spacer so content isn't hidden under fixed nav */}
-      <div className="h-[60px]" style={{ height: '60px' }}></div>
+      <div style={{ height: '60px' }}></div>
+
+      {/* Inline styles matching the exact specification */}
+      <style>{`
+        .nav-links {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+        .nav-links a:hover {
+          color: #15803d !important;
+        }
+        .view-toggle:hover {
+          background: ${isLight ? '#f1f5f9' : '#1e293b'} !important;
+        }
+        .soc-btn:hover {
+          background: ${isLight ? '#e0f2fe' : '#1e293b'} !important;
+        }
+        .soc-btn.wa:hover {
+          background: ${isLight ? '#dcfce7' : '#064e3b'} !important;
+        }
+        .soc-btn.fb:hover {
+          background: ${isLight ? '#dbeafe' : '#1e3a8a'} !important;
+        }
+        .nav-cta:hover {
+          background: #166534 !important;
+        }
+        #mob-menu a:hover {
+          background: ${isLight ? '#f8fafc' : '#0f172a'};
+        }
+
+        @media(max-width: 960px) {
+          .nav-links {
+            display: none !important;
+          }
+          #ham {
+            display: block !important;
+          }
+        }
+        @media(max-width: 600px) {
+          .view-toggle-text {
+            display: none !important;
+          }
+          .nav-brand-text {
+            display: none !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
