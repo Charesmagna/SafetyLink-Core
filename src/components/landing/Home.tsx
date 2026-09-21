@@ -35,8 +35,34 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [language, setLanguage] = useState('en');
   const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
   const [tick, setTick] = useState(0);
+  const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.906/SafetyLink-v1.1.906-Signed.apk');
+  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
+  const [releaseVersion, setReleaseVersion] = useState('v1.1.906');
   const logRef = useRef(null);
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  // Dynamically resolve latest release APK & EXE from GitHub releases
+  useEffect(() => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', true);
+    xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+    xhr.timeout = 7000;
+    xhr.onload = () => {
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (data?.tag_name) setReleaseVersion(data.tag_name);
+        if (data?.assets && Array.isArray(data.assets)) {
+          const apk = data.assets.find((a: any) => a.name && a.name.endsWith('.apk'));
+          const exe = data.assets.find((a: any) => a.name && a.name.endsWith('.exe'));
+          if (apk?.browser_download_url) setApkDownloadUrl(apk.browser_download_url);
+          if (exe?.browser_download_url) setExeDownloadUrl(exe.browser_download_url);
+        }
+      } catch (e) {
+        console.warn('Failed to parse latest release metadata', e);
+      }
+    };
+    xhr.send();
+  }, []);
 
   const heroH1a = language === 'en' && web.heroTitle1 ? web.heroTitle1 : t.h1a;
   const heroH1b = language === 'en' && web.heroTitle2 ? web.heroTitle2 : t.h1b;
@@ -342,16 +368,50 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
             {[
-              { icon:'📱', label:'Android APK', sub:'Minimum Android 8.0. BLE required.', href:'https://wa.me/message/YIEA73M7H3P5M1', btn:'Download APK', c:'#00e676', cr:'0,230,118', img: ASSETS.appLogin },
-              { icon:'💻', label:'Windows EXE', sub:'SafetyLink Command Deck. Requires SL-ORG code.', href:'https://wa.me/message/YIEA73M7H3P5M1', btn:'Request Installer', c:'#0ea5e9', cr:'14,165,233', img: ASSETS.dashboardDark },
-              { icon:'🌐', label:'Web App (PWA)', sub:'Open in browser. Tap Add to Home Screen.', href:'https://safetylink.online', btn:'Open Web App', c:'#a78bfa', cr:'167,139,250' },
+              {
+                icon: '📱',
+                label: `Android APK (${releaseVersion})`,
+                sub: 'Signed release APK with BLE hardware integration. Android 8.0+.',
+                href: apkDownloadUrl,
+                btn: `Download APK (${releaseVersion})`,
+                c: '#00e676',
+                cr: '0,230,118',
+                img: ASSETS.appLogin,
+                download: true,
+              },
+              {
+                icon: '💻',
+                label: 'Windows EXE',
+                sub: 'SafetyLink Dispatch & Control Room Desktop executable for Windows 10/11.',
+                href: exeDownloadUrl,
+                btn: 'Download Windows EXE',
+                c: '#0ea5e9',
+                cr: '14,165,233',
+                img: ASSETS.dashboardDark,
+                download: true,
+              },
+              {
+                icon: '🌐',
+                label: 'Web App (PWA)',
+                sub: 'Open in browser on any device. Tap Add to Home Screen.',
+                href: 'https://safetylink.online',
+                btn: 'Open Web App',
+                c: '#a78bfa',
+                cr: '167,139,250',
+                download: false,
+              },
             ].map((d, i) => (
               <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
                 {d.img && <img src={d.img} alt={d.label} style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} />}<div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, textTransform:'uppercase', letterSpacing:'.02em' }}>{d.label}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55, flex:1 }}>{d.sub}</div>
-                <a href={d.href} target="_blank" rel="noreferrer"
-                  style={{ display:'block', textAlign:'center', padding:'13px', borderRadius:'8px', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', background:`rgba(${d.cr},.1)`, color:d.c, border:`1px solid rgba(${d.cr},.3)`, textDecoration:'none', transition:'all .2s' }}>
+                <a
+                  href={d.href}
+                  target={d.download ? undefined : "_blank"}
+                  rel="noreferrer"
+                  download={d.download ? true : undefined}
+                  style={{ display:'block', textAlign:'center', padding:'13px', borderRadius:'8px', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', background:`rgba(${d.cr},.1)`, color:d.c, border:`1px solid rgba(${d.cr},.3)`, textDecoration:'none', transition:'all .2s' }}
+                >
                   {d.btn}
                 </a>
               </div>
