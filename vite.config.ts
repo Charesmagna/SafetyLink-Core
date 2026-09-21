@@ -60,12 +60,13 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom', 'framer-motion', 'zustand'],
-          maps: ['react-leaflet', 'leaflet', '@vis.gl/react-google-maps'],
-          icons: ['lucide-react'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
-          supabase: ['@supabase/supabase-js']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('firebase')) return 'firebase';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('@capacitor')) return 'capacitor';
+            return 'vendor';
+          }
         }
       }
     }

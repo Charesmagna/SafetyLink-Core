@@ -336,9 +336,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   globalTheme: (() => {
     const t = getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark');
     if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('theme-light', t === 'light');
-      document.body.classList.toggle('theme-light', t === 'light');
-      document.documentElement.classList.toggle('dark', t === 'dark');
+      try {
+        if (document.documentElement && document.documentElement.classList) {
+          document.documentElement.classList.toggle('theme-light', t === 'light');
+          document.documentElement.classList.toggle('dark', t === 'dark');
+        }
+        if (document.body && document.body.classList) {
+          document.body.classList.toggle('theme-light', t === 'light');
+        }
+      } catch (e) {
+        console.warn('Theme init non-fatal warning:', e);
+      }
     }
     return t;
   })(),
@@ -346,9 +354,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ globalTheme: theme });
     setStoredJSON('sl_global_theme', theme);
     if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('theme-light', theme === 'light');
-      document.body.classList.toggle('theme-light', theme === 'light');
-      document.documentElement.classList.toggle('dark', theme === 'dark');
+      try {
+        if (document.documentElement && document.documentElement.classList) {
+          document.documentElement.classList.toggle('theme-light', theme === 'light');
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+        }
+        if (document.body && document.body.classList) {
+          document.body.classList.toggle('theme-light', theme === 'light');
+        }
+      } catch (e) {
+        console.warn('Theme toggle warning:', e);
+      }
     }
   },
   contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
