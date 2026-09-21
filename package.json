@@ -1,21 +1,13 @@
 {
   "name": "safetylink-core",
-  "private": true,
   "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "start": "node dist/server.cjs",
-    "build:backend": "mkdir -p dist && echo \"API is running\" > dist/index.html && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server.cjs",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "cap:sync": "npx cap sync android",
-    "branding": "node branding/generate-branding.cjs",
+    "start": "node dist/server.cjs",
     "preview": "npm run build && node dist/server.cjs",
-    "tauri": "tauri",
-    "tauri:build": "tauri build",
-    "lint": "tsc --noEmit",
-    "verify": "npm run lint && npm run build",
-    "test-argv": "node test-argv.js"
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^6.0.0",

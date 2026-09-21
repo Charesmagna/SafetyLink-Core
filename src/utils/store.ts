@@ -333,10 +333,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   demoMode: isDemoModeInitially,
-  globalTheme: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
+  globalTheme: (() => {
+    const t = getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark');
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('theme-light', t === 'light');
+      document.body.classList.toggle('theme-light', t === 'light');
+      document.documentElement.classList.toggle('dark', t === 'dark');
+    }
+    return t;
+  })(),
   setGlobalTheme: (theme: 'dark' | 'light') => {
     set({ globalTheme: theme });
     setStoredJSON('sl_global_theme', theme);
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('theme-light', theme === 'light');
+      document.body.classList.toggle('theme-light', theme === 'light');
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+    }
   },
   contacts: getStoredJSON<Contact[]>('sl_contacts', isDemoModeInitially ? DEFAULT_CONTACTS : []),
   panicEvents: getStoredJSON<PanicEvent[]>('sl_panic_events', []),

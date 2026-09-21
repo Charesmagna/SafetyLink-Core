@@ -26,6 +26,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     applyReferralCode,
     demoMode,
     toggleDemoMode,
+    globalTheme,
+    setGlobalTheme,
   } = useAppStore();
   const [view, setView] = useState<'LOGIN' | 'REGISTER_USER' | 'REGISTER_ORG' | 'POST_REGISTER_DECISION'>(initialView as any || 'LOGIN');
   const [registeredUsername, setRegisteredUsername] = useState('');
@@ -305,11 +307,41 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       {onBackToSite && (
         <button 
           onClick={onBackToSite}
-          className="absolute top-4 left-4 z-50 px-4 py-2 bg-slate-900 border border-slate-700 text-slate-300 rounded-full font-mono text-xs font-bold uppercase hover:bg-slate-800 transition-colors"
+          className="absolute top-4 left-4 z-50 px-4 py-2 bg-slate-900/90 border border-slate-700 text-slate-300 rounded-full font-mono text-xs font-bold uppercase hover:bg-slate-800 transition-colors shadow-lg cursor-pointer"
         >
           ← Back to Website
         </button>
       )}
+
+      {/* Top Right Theme Toggle */}
+      <button
+        onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
+        className={`absolute top-4 right-4 z-50 p-2.5 rounded-full border transition-all shadow-lg cursor-pointer ${
+          globalTheme === 'dark'
+            ? 'bg-slate-900/90 border-slate-700 text-amber-400 hover:border-amber-500/50 hover:bg-slate-850'
+            : 'bg-white/95 border-slate-300 text-indigo-600 hover:border-indigo-400 hover:bg-slate-100'
+        }`}
+        title={globalTheme === 'dark' ? "Switch to Light Mode" : "Switch to Tactical Dark Mode"}
+        aria-label="Toggle theme"
+      >
+        {globalTheme === 'dark' ? (
+          <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        )}
+      </button>
       
       {showClosingLogo && <CinematicClosingLogo onComplete={() => CapacitorApp.exitApp()} />}
       {showVoiceAssistant && <VoiceAccessibilityAssistant onClose={() => setShowVoiceAssistant(false)} />}

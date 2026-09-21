@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ASSETS, vid, img } from '../../utils/cloudinary';
-import './Home.css';
 
 interface Props {
   onLogin: () => void;
@@ -39,13 +38,13 @@ const VideoCard = ({ publicId, title, description, poster }: VideoCardProps) => 
 
 export const USE_CASE_VIDEOS = [
   { id: 'Okay_now_for_the_next_scene',    title: 'Family Protection',        desc: 'How SafetyLink protects your household', poster: 'Gemini_Generated_Image_virgVirg99' },
-  { id: 'Government_use_case_senario',    title: 'Government Use Case',      desc: 'Municipal and public safety deployment', poster: 'Gemini_Generated_Image_59psss59psss59ps' },
-  { id: 'Neighbourhood_watch_security_c', title: 'Neighbourhood Watch',      desc: 'Community security network in action', poster: 'Gemini_Generated_Image_waguavwagu' },
+  { id: 'Government_use_case_scenario',   title: 'Government Use Case',      desc: 'Municipal and public safety deployment', poster: 'Gemini_Generated_Image_59pss65p' },
+  { id: 'Neighbourhood_watch_security_c', title: 'Neighbourhood Watch',      desc: 'Community security network in action', poster: 'copilot_image_178696579200' },
   { id: 'drone_dispatch_tracking_crimin', title: 'Drone Dispatch',           desc: 'Aerial response to active incidents', poster: 'Gemini_Generated_Image_chze56oh0' },
-  { id: 'Show_the_uses_in_school_and_wo', title: 'Schools & Workplaces',     desc: 'Protecting learners and employees', poster: 'Gemini_Generated_Image_283x3m28' },
+  { id: 'Show_the_uses_in_school_and_wo', title: 'Schools & Workplaces',     desc: 'Protecting learners and employees', poster: 'Gemini_Generated_Image_4keue49e' },
   { id: 'Old_people_scenario_alone_at_h', title: 'Elderly at Home',          desc: 'Watch-Me Timer proactive protection', poster: 'Gemini_Generated_Image_virgVirg99' },
   { id: 'SafetyLink_vision_when_ble_is',  title: 'BLE iTAG in Action',       desc: 'How the keyfob triggers an alert', poster: 'Polish_20260818_020279883' },
-  { id: 'Now_let_s_show_how_kids_would',  title: 'Children & Schools',       desc: 'Smart school safety deployment', poster: 'Gemini_Generated_Image_virgVirg99' },
+  { id: 'Now_let_s_show_how_kids_would',  title: 'Children & Schools',       desc: 'Smart school safety deployment', poster: 'Gemini_Generated_Image_59pss65p' },
   { id: 'K_s_south_Africa_so_multirac',   title: 'Multilingual SA',          desc: 'All 11 South African languages', poster: 'Gemini_Generated_Image_virgVirg99' },
   { id: 'Why',                            title: 'Why SafetyLink?',          desc: 'The story behind the platform', poster: 'copilot_image_178370354D283' },
   { id: 'Pitch_deck',                     title: 'Investor Pitch',           desc: 'SafetyLink business overview', poster: 'Gemini_Generated_Image_s8bRy8s8b' },
@@ -64,12 +63,12 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
   const [activeSector, setActiveSector] = useState(0);
 
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"\'Inter\',system-ui,sans-serif", minHeight:'100vh' }}>
       
       {/* ── HEADER ── */}
       <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
+          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
             Every sector.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>One platform.</span>
           </h1>
@@ -82,7 +81,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       {/* ── VIDEOS ── */}
       <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEE IT IN ACTION</div>
+          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEE IT IN ACTION</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Watch SafetyLink Work.</h2>
           
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px' }}>
@@ -102,7 +101,7 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       {/* ── SECTORS ── */}
       <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// DEPLOYMENT SECTORS</div>
+          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// DEPLOYMENT SECTORS</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Where We Deploy.</h2>
           
           <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'32px' }}>

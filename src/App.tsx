@@ -194,7 +194,8 @@ const App: React.FC = () => {
     checkAppUpdates,
     updateInfo,
     setUpdateInfo,
-    globalTheme
+    globalTheme,
+    setGlobalTheme
   } = useAppStore();
 
   useEffect(() => {
@@ -554,13 +555,23 @@ const App: React.FC = () => {
       )}
 
       {/* Header bar */}
-      <header className="bg-slate-900/60 backdrop-blur-md border-b border-slate-900 py-3 px-5 flex justify-between items-center shadow-md relative z-30">
+      <header className={`${
+        globalTheme === 'light'
+          ? 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
+          : 'bg-slate-900/60 border-slate-900 text-slate-100'
+      } backdrop-blur-md border-b py-2.5 sm:py-3 px-3 sm:px-5 flex justify-between items-center shadow-md relative z-30 transition-colors`}>
         {/* Left Side: Hamburger trigger and Brand title */}
-        <div className="flex items-center gap-3.5">
+        <div className="flex items-center gap-3">
           {activeTab === 'home' ? (
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="p-2.5 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner"
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all shadow-inner flex items-center justify-center cursor-pointer ${
+                globalTheme === 'light'
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white'
+              }`}
+              title="Open Navigation Menu"
+              aria-label="Open menu drawer"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -569,7 +580,13 @@ const App: React.FC = () => {
           ) : (
             <button
               onClick={() => setActiveTab('home')}
-              className="p-2.5 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner flex items-center gap-1"
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all shadow-inner flex items-center gap-1 cursor-pointer ${
+                globalTheme === 'light'
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white'
+              }`}
+              title="Return to Home"
+              aria-label="Back to home"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -578,23 +595,31 @@ const App: React.FC = () => {
           )}
           
           <div className="flex items-center gap-2.5">
-            <LogoSetPart part="badge" size={40} rounded="xl" />
+            <LogoSetPart part="badge" size={38} rounded="xl" />
             <div className="text-left">
-              <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
+              <h1 className={`text-sm font-black tracking-wider uppercase font-mono leading-none flex items-center gap-1 ${
+                globalTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
+              }`}>
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
               </h1>
-              <p className="text-[7px] text-slate-500 font-mono uppercase tracking-widest mt-0.5">Secure Active Node</p>
+              <p className={`text-[7px] font-mono uppercase tracking-widest mt-0.5 ${
+                globalTheme === 'light' ? 'text-slate-500' : 'text-slate-500'
+              }`}>Secure Active Node</p>
             </div>
           </div>
         </div>
 
         {/* Right Side: Language & Account */}
-        <div className="flex items-center gap-2.5">
-          <div className="relative mr-1 group">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="relative mr-0.5 group">
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="appearance-none bg-slate-950/60 hover:bg-slate-900 border border-slate-800 text-slate-300 text-[9.5px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none focus:border-slate-600 transition-colors uppercase tracking-wider cursor-pointer"
+              className={`appearance-none text-[9.5px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none transition-colors uppercase tracking-wider cursor-pointer border ${
+                globalTheme === 'light'
+                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 focus:border-slate-400'
+                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-800 text-slate-300 focus:border-slate-600'
+              }`}
             >
               <option value="en">🌐 English</option>
               <option value="zu">🌐 Zulu</option>
@@ -615,28 +640,67 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="text-right hidden sm:block">
-            <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>
+          <div className="text-right hidden md:block">
+            <span className={`text-[10px] font-black block leading-none ${
+              globalTheme === 'light' ? 'text-slate-900' : 'text-slate-200'
+            }`}>{currentUser.fullName}</span>
             <span className="text-[7.5px] font-mono text-slate-500 uppercase mt-0.5 block leading-none">@{currentUser.username}</span>
           </div>
 
           {/* Active View Indicator Badge */}
-          <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase bg-slate-950 px-2.5 py-1 rounded-full border ${
-            activeTab === 'home' ? 'text-red-400 border-red-500/10' :
-            activeTab === 'deck' ? 'text-cyan-400 border-cyan-500/10' :
-            activeTab === 'vault' ? 'text-emerald-400 border-emerald-500/10' :
-            activeTab === 'contacts' ? 'text-blue-400 border-blue-500/10' :
-            activeTab === 'ble' ? 'text-emerald-400 border-emerald-500/10' :
-            activeTab === 'map' ? 'text-amber-400 border-amber-500/10' :
-            activeTab === 'subsystems' ? 'text-indigo-400 border-indigo-500/10' :
-            'text-purple-400 border-purple-500/10'
+          <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border hidden sm:inline-block ${
+            globalTheme === 'light' ? 'bg-slate-100' : 'bg-slate-950'
+          } ${
+            activeTab === 'home' ? 'text-red-400 border-red-500/20' :
+            activeTab === 'deck' ? 'text-cyan-500 border-cyan-500/20' :
+            activeTab === 'vault' ? 'text-emerald-500 border-emerald-500/20' :
+            activeTab === 'contacts' ? 'text-blue-500 border-blue-500/20' :
+            activeTab === 'ble' ? 'text-emerald-500 border-emerald-500/20' :
+            activeTab === 'map' ? 'text-amber-500 border-amber-500/20' :
+            activeTab === 'subsystems' ? 'text-indigo-500 border-indigo-500/20' :
+            'text-purple-500 border-purple-500/20'
           }`}>
             {t(`tab.${activeTab}`)}
           </span>
 
+          {/* Theme Toggle (Sun / Moon) */}
+          <button
+            id="app-theme-toggle-btn"
+            onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
+            className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shadow-sm shrink-0 ${
+              globalTheme === 'dark'
+                ? 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-amber-400 hover:border-amber-500/50 hover:bg-slate-850'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
+            }`}
+            title={globalTheme === 'dark' ? "Switch to Light Theme" : "Switch to Tactical Dark Theme"}
+            aria-label="Toggle visual theme"
+          >
+            {globalTheme === 'dark' ? (
+              <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
+
           <button
             onClick={() => useAppStore.getState().logout()}
-            className="text-[9px] font-mono text-slate-400 hover:text-red-400 bg-slate-950/80 hover:bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
+            className={`text-[9px] font-mono border px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+              globalTheme === 'light'
+                ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-red-600'
+                : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-400 hover:text-red-400'
+            }`}
             title="Sign Out to Website"
           >
             Sign Out
