@@ -49,6 +49,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+(window as any).__sl_mounted = true;
 
 // Deep links init after render
 try {
