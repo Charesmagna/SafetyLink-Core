@@ -538,7 +538,43 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
           <p style={{ fontSize: '14px', color: isLight ? '#64748b' : '#94a3b8', lineHeight: 1.6, marginBottom: '24px' }}>
             We deploy complete physical and digital safety meshes for gated residential estates, corporate headquarters, schools, and armed patrol fleets with custom SLAs and API telemetry integrations.
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <a
+              href="tel:0816738186"
+              style={{
+                background: isLight ? '#ffffff' : 'rgba(255,255,255,0.06)',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(0,230,118,0.3)',
+                color: isLight ? '#0f172a' : '#00e676',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              📞 Tel. 081 673 8186
+            </a>
+            <a
+              href="tel:+27680079911"
+              style={{
+                background: isLight ? '#ffffff' : 'rgba(255,255,255,0.06)',
+                border: isLight ? '1px solid #cbd5e1' : '1px solid rgba(14,165,233,0.3)',
+                color: isLight ? '#0f172a' : '#0ea5e9',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              📲 Cel. +27 68 007 9911
+            </a>
             <a
               href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+SafetyLink+I+need+custom+enterprise+pricing"
               target="_blank"
@@ -553,7 +589,7 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
                 textDecoration: 'none',
               }}
             >
-              💬 Speak with Enterprise Specialist (+27 68 009 911)
+              💬 Enterprise WhatsApp (+27 68 007 9911)
             </a>
             <a
               href="mailto:info@safetylink.online"

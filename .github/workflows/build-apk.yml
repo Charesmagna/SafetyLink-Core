@@ -36,7 +36,7 @@ jobs:
       run: npm run build
 
     - name: Sync Capacitor
-      run: npm run cap:sync
+      run: npx cap sync android
 
     - name: Force Java 17 in all generated gradle files
       run: |

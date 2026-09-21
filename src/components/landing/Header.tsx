@@ -475,8 +475,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                   onClick={() => setWhatsappMenuOpen(prev => !prev)}
                   onMouseEnter={() => setWhatsappMenuOpen(true)}
                   className="soc-btn wa"
-                  title="WhatsApp (+27 68 009 911)"
-                  aria-label="Connect on WhatsApp"
+                  title="Direct Contacts: Tel. 081 673 8186 & Cel. +27 68 007 9911"
+                  aria-label="Direct Contacts and WhatsApp"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -504,8 +504,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                       right: 0,
                       top: '100%',
                       marginTop: '6px',
-                      width: '270px',
-                      padding: '10px',
+                      width: '280px',
+                      padding: '12px',
                       borderRadius: '12px',
                       background: isLight ? '#ffffff' : '#0f172a',
                       border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
@@ -513,9 +513,48 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                       zIndex: 1050,
                     }}
                   >
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', paddingBottom: '6px', borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b', marginBottom: '6px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>WhatsApp Directory</span>
-                      <span style={{ color: '#64748b' }}>+27 68 009 911</span>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.08em', paddingBottom: '8px', borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b', marginBottom: '8px' }}>
+                      Official Emergency Lines
+                    </div>
+
+                    {/* Direct Voice & Cell Lines */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px', paddingBottom: '8px', borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #1e293b' }}>
+                      <a
+                        href="tel:0816738186"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          textDecoration: 'none',
+                          background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.04)',
+                          color: isLight ? '#0f172a' : '#f8fafc',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <span>📞 Tel:</span>
+                        <span style={{ fontFamily: 'monospace', color: '#15803d', fontSize: '12px' }}>081 673 8186</span>
+                      </a>
+                      <a
+                        href="tel:+27680079911"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '6px 8px',
+                          borderRadius: '6px',
+                          textDecoration: 'none',
+                          background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.04)',
+                          color: isLight ? '#0f172a' : '#f8fafc',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <span>📲 Cel:</span>
+                        <span style={{ fontFamily: 'monospace', color: '#0ea5e9', fontSize: '12px' }}>+27 68 007 9911</span>
+                      </a>
                     </div>
 
                     <a
@@ -781,6 +820,51 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             </button>
           )}
 
+          <div style={{ padding: '10px 20px', display: 'flex', gap: '8px', borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a' }}>
+            <a
+              href="tel:0816738186"
+              style={{
+                flex: 1,
+                background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)',
+                border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.1)',
+                color: isLight ? '#0f172a' : '#f8fafc',
+                fontWeight: 700,
+                textAlign: 'center',
+                textDecoration: 'none',
+                fontSize: '12px',
+                padding: '10px 6px',
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+              }}
+            >
+              <span style={{ fontSize: '10px', color: '#64748b' }}>VOICE DISPATCH</span>
+              <span>📞 081 673 8186</span>
+            </a>
+            <a
+              href="tel:+27680079911"
+              style={{
+                flex: 1,
+                background: isLight ? '#f1f5f9' : 'rgba(255,255,255,0.06)',
+                border: isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.1)',
+                color: isLight ? '#0f172a' : '#f8fafc',
+                fontWeight: 700,
+                textAlign: 'center',
+                textDecoration: 'none',
+                fontSize: '12px',
+                padding: '10px 6px',
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+              }}
+            >
+              <span style={{ fontSize: '10px', color: '#64748b' }}>CELL LINE</span>
+              <span>📲 +27 68 007 9911</span>
+            </a>
+          </div>
+
           <a
             href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
             target="_blank"
@@ -795,7 +879,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               padding: '12px 20px',
             }}
           >
-            💬 Contact Us on WhatsApp (+27 68 009 911)
+            💬 Contact Us on WhatsApp (+27 68 007 9911)
           </a>
 
           <div
