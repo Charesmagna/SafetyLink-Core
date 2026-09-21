@@ -1220,17 +1220,20 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         <div className="glass-panel rounded-2xl px-5 py-4 max-w-md mx-auto space-y-2.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono">Need Help? Contact SafetyLink</p>
           <div className="flex flex-col gap-2">
-            <a href="mailto:support@safetylink.online" className="flex items-center justify-center gap-2 text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors">
-              <span>✉️</span> support@safetylink.online
-            </a>
             <a href="mailto:info@safetylink.online" className="flex items-center justify-center gap-2 text-[10px] text-blue-400 hover:text-blue-300 font-mono transition-colors">
               <span>✉️</span> info@safetylink.online
             </a>
             <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
-              <span>💬</span> Message SafetyLink on WhatsApp
+              <span>💬</span> Chat on WhatsApp (+27 68 009 911)
             </a>
             <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
-              <span>📢</span> Follow SafetyLink Channel on WhatsApp
+              <span>📢</span> Follow Official WhatsApp Channel
+            </a>
+            <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
+              <span>👥</span> Join WhatsApp Community Group
+            </a>
+            <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-sky-400 hover:text-sky-300 font-mono transition-colors">
+              <span>📘</span> Follow Us on Facebook
             </a>
           </div>
         </div>

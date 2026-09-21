@@ -25,6 +25,7 @@ const T_LANG: Record<string, { h1a: string; h1b: string; sub: string }> = {
 
 export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home' }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [whatsappMenuOpen, setWhatsappMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileView, setMobileView] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en');
@@ -324,21 +325,115 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                 </svg>
               </a>
-              <a
-                href="https://wa.me/message/YIEA73M7H3P5M1"
-                target="_blank"
-                rel="noreferrer"
-                className={`w-7 h-7 rounded-[7px] flex items-center justify-center text-inherit no-underline transition-colors shrink-0 ${
-                  globalTheme === 'light'
-                    ? 'bg-slate-100 border border-slate-300 hover:bg-slate-200'
-                    : 'bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#dcfce7]'
-                }`}
-                title="WhatsApp Direct"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-              </a>
+              {/* Directionable WhatsApp Hub */}
+              <div className="relative">
+                <button
+                  onClick={() => setWhatsappMenuOpen(prev => !prev)}
+                  onMouseEnter={() => setWhatsappMenuOpen(true)}
+                  className={`w-7 h-7 rounded-[7px] flex items-center justify-center transition-colors shrink-0 cursor-pointer ${
+                    whatsappMenuOpen
+                      ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-sm'
+                      : globalTheme === 'light'
+                      ? 'bg-slate-100 border border-slate-300 hover:bg-slate-200'
+                      : 'bg-[#f8fafc] border border-[#e2e8f0] hover:bg-[#dcfce7]'
+                  }`}
+                  title="Connect on WhatsApp (Direct Support, Channel & Community)"
+                  aria-label="Open WhatsApp Channels Menu"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#25d366">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                </button>
+
+                {whatsappMenuOpen && (
+                  <div
+                    onMouseLeave={() => setWhatsappMenuOpen(false)}
+                    className={`absolute right-0 top-full mt-2 w-72 p-2.5 rounded-2xl shadow-2xl border z-[1050] animate-in fade-in zoom-in-95 duration-150 ${
+                      globalTheme === 'light'
+                        ? 'bg-white border-slate-200 text-slate-800'
+                        : 'bg-slate-900 border-slate-700/80 text-slate-100 shadow-[0_10px_35px_rgba(0,0,0,0.6)]'
+                    }`}
+                  >
+                    <div className="px-2 py-1.5 border-b border-slate-700/30 mb-1.5 flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 font-mono">
+                        WhatsApp Channels
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-400">
+                        +27 68 009 911
+                      </span>
+                    </div>
+
+                    <a
+                      href="https://wa.me/message/YIEA73M7H3P5M1"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
+                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-sm">
+                        💬
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-emerald-400 flex items-center justify-between">
+                          <span>Chat on WhatsApp</span>
+                          <span className="text-[9px] font-mono text-emerald-500/80">Support</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
+                          Direct chat with dispatch & team (+27 68 009 911)
+                        </p>
+                      </div>
+                    </a>
+
+                    <a
+                      href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
+                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center shrink-0 text-sm">
+                        📢
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-teal-400 flex items-center justify-between">
+                          <span>Official WA Channel</span>
+                          <span className="text-[9px] font-mono text-teal-500/80">Follow</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
+                          Live platform advisories & emergency broadcasts
+                        </p>
+                      </div>
+                    </a>
+
+                    <a
+                      href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setWhatsappMenuOpen(false)}
+                      className={`flex items-start gap-2.5 p-2 rounded-xl transition-all no-underline ${
+                        globalTheme === 'light' ? 'hover:bg-slate-100' : 'hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center shrink-0 text-sm">
+                        👥
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-green-400 flex items-center justify-between">
+                          <span>Community Group</span>
+                          <span className="text-[9px] font-mono text-green-500/80">Join</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 m-0 leading-tight">
+                          Estate, neighbourhood & mesh responder community
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Theme Toggle (Moon / Sun) - Always Prominently Visible */}
@@ -555,31 +650,42 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#15803d] hover:bg-[#166534] text-white font-[700] text-center text-[13px] py-3 rounded-xl block no-underline transition-colors shadow-sm"
+              className="bg-[#15803d] hover:bg-[#166534] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
             >
-              Contact Us on WhatsApp
+              <span>💬</span>
+              <span>Chat on WhatsApp (+27 68 009 911)</span>
+            </a>
+            <a
+              href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s"
+              target="_blank"
+              rel="noreferrer"
+              className="bg-[#0f766e] hover:bg-[#115e59] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
+            >
+              <span>📢</span>
+              <span>Follow WhatsApp Official Channel</span>
             </a>
             <a
               href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5"
               target="_blank"
               rel="noreferrer"
-              className="bg-[#25d366] hover:bg-[#20ba59] text-white font-[700] text-center text-[13px] py-3 rounded-xl block no-underline transition-colors shadow-sm"
+              className="bg-[#25d366] hover:bg-[#20ba59] text-white font-[700] text-center text-[13px] py-3 rounded-xl flex items-center justify-center gap-2 no-underline transition-colors shadow-sm"
             >
-              👥 Join WhatsApp Community Group
+              <span>👥</span>
+              <span>Join WhatsApp Community Group</span>
             </a>
           </div>
 
           <div className={`flex flex-wrap gap-4 py-3 px-5 items-center text-[12px] ${
             globalTheme === 'light' ? 'bg-slate-100 text-slate-600' : 'bg-slate-900 text-slate-400'
           }`}>
-            <a href="mailto:info@safetylink.online" className="no-underline hover:underline">
-              ✉️ info@safetylink.online
+            <a href="mailto:info@safetylink.online" className="no-underline hover:underline flex items-center gap-1">
+              <span>✉️</span> info@safetylink.online
             </a>
-            <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noreferrer" className="text-[#0284c7] no-underline font-semibold hover:underline">
-              📘 Facebook
+            <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noreferrer" className="text-[#0284c7] no-underline font-semibold hover:underline flex items-center gap-1">
+              <span>📘</span> Facebook
             </a>
-            <a href="https://youtu.be/L4gykMYDYjk" target="_blank" rel="noreferrer" className="text-[#ef4444] no-underline font-semibold hover:underline">
-              ▶️ Video Demo
+            <a href="https://youtu.be/L4gykMYDYjk" target="_blank" rel="noreferrer" className="text-[#ef4444] no-underline font-semibold hover:underline flex items-center gap-1">
+              <span>▶️</span> Video Demo
             </a>
           </div>
         </div>

@@ -82,9 +82,11 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
               </a>
 
               <div className="pt-3 border-t border-slate-800 space-y-2">
-                <div className="flex justify-center gap-4 text-center">
-                  <a href="mailto:support@safetylink.online" className="text-[10px] text-blue-400 hover:text-blue-300 font-mono">support@safetylink.online</a>
-                  <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp</a>
+                <div className="flex flex-wrap justify-center gap-3 text-center">
+                  <a href="mailto:info@safetylink.online" className="text-[10px] text-blue-400 hover:text-blue-300 font-mono">✉️ info@safetylink.online</a>
+                  <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp Support</a>
+                  <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">📢 WA Channel</a>
+                  <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noreferrer" className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono">👥 WA Group</a>
                 </div>
               </div>
             </div>
