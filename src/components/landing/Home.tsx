@@ -426,9 +426,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, marginBottom:'16px' }}>Ready to protect<br/>your community?</h2>
         <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>
         <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap', alignItems:'center' }}>
+          <a href="tel:0816738186"
+            style={{ background:'rgba(255,255,255,0.06)', color:'#00e676', border:'1px solid rgba(0,230,118,0.3)', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            📞 TEL. 081 673 8186
+          </a>
+          <a href="tel:+27680079911"
+            style={{ background:'rgba(255,255,255,0.06)', color:'#0ea5e9', border:'1px solid rgba(14,165,233,0.3)', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            📲 CEL. +27 68 007 9911
+          </a>
           <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer"
             style={{ background:'#25d366', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            💬 CHAT ON WHATSAPP (+27 68 009 911)
+            💬 CHAT ON WHATSAPP (+27 68 007 9911)
           </a>
           <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noreferrer"
             style={{ background:'#128c7e', color:'#fff', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
