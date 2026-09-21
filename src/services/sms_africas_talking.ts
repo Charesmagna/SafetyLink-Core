@@ -26,7 +26,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'User-Agent': 'SafetyLink-Emergency/1.0 (support@safetylink.online)' } }
+      { headers: { 'User-Agent': 'SafetyLink-Emergency/1.0 (info@safetylink.online)' } }
     );
     if (!res.ok) throw new Error('Nominatim error');
     const data = await res.json();

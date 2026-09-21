@@ -81,10 +81,13 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
             <button key={n.id} onClick={() => navigate(n.id)} className="hover:text-slate-300 transition-colors uppercase tracking-wider">{n.label}</button>
           ))}
         </div>
-        <div className="flex justify-center gap-6 text-xs">
-          <a href="mailto:support@safetylink.online" className="text-blue-400 hover:text-blue-300 font-mono">support@safetylink.online</a>
+        <div className="flex flex-wrap justify-center gap-4 text-xs">
+          <a href="mailto:info@safetylink.online" className="text-blue-400 hover:text-blue-300 font-mono">✉️ info@safetylink.online</a>
           <button onClick={() => navigate('privacy')} className="text-slate-400 hover:text-slate-300 font-mono">Privacy Policy</button>
-          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp</a>
+          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp Support (+27 68 009 911)</a>
+          <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">📢 Channel</a>
+          <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">👥 Community Group</a>
+          <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 font-mono">📘 Facebook</a>
         </div>
         <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">© TM Media Solutions · Reg 2018/500191/07 · safetylink.online</p>
       </footer>

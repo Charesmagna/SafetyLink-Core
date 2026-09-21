@@ -365,18 +365,26 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET STARTED</div>
         <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, marginBottom:'16px' }}>Ready to protect<br/>your community?</h2>
         <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>
-        <div style={{ display:'flex', gap:'16px', justifyContent:'center', flexWrap:'wrap' }}>
+        <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap', alignItems:'center' }}>
           <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer"
-            style={{ background:'#25d366', color:'#fff', padding:'14px 28px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.1em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            💬 WHATSAPP US
+            style={{ background:'#25d366', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            💬 CHAT ON WHATSAPP (+27 68 009 911)
+          </a>
+          <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noreferrer"
+            style={{ background:'#128c7e', color:'#fff', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            📢 FOLLOW CHANNEL
+          </a>
+          <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noreferrer"
+            style={{ background:'#075e54', color:'#fff', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
+            👥 JOIN COMMUNITY
           </a>
           <button onClick={onRegisterOrg}
-            style={{ background:'#e8321e', color:'#fff', padding:'14px 28px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>
+            style={{ background:'#e8321e', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', border:'none', cursor:'pointer' }}>
             START 14-DAY FREE TRIAL →
           </button>
-          <a href="mailto:support@safetylink.online"
-            style={{ color:'#8892a4', padding:'14px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', fontWeight:600, fontSize:'12px', textDecoration:'none' }}>
-            support@safetylink.online
+          <a href="mailto:info@safetylink.online"
+            style={{ color:'#8892a4', padding:'12px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', fontWeight:600, fontSize:'12px', textDecoration:'none' }}>
+            ✉️ info@safetylink.online
           </a>
         </div>
       </section>
