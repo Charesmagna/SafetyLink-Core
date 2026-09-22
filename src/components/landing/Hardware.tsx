@@ -1,32 +1,33 @@
 import { ASSETS } from '../../utils/cloudinary';
+import { R2_MEDIA } from '../../utils/r2Assets';
 // @ts-nocheck
 import React, { useState } from 'react';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
 const DEVICES = [
-  { tag:'PRIMARY', name:'SafetyLink iTAG Keyfob', price:'R149', sub:'CR2032 battery · IP65 · BLE 4.0+', img: ASSETS.itagAll, color:'#00e676', features:['BLE 4.0+ universal compatibility','IP65 water and dust resistance','6–12 month CR2032 battery life','38×27×8mm · 7g · wearable','Zero-config vendor-agnostic pairing','Works with SafetyLink in any pocket'] },
-  { tag:'ENTERPRISE', name:'Teltonika GH5200', price:'R1,999', sub:'GSM/LTE + GPS + BLE · SIM-based', img: ASSETS.itagAll, color:'#e8321e', features:['Independent SIM-based operation','Two-way voice call built-in','GPS accurate to 3 metres','5-day standby battery','Deployed across SA security firms','No Android dependency required'] },
-  { tag:'FIXED SITE', name:'Shelly Button 1 (WiFi)', price:'R380', sub:'WiFi direct · Webhook · IP54', img: ASSETS.itagAll, color:'#0ea5e9', features:['Direct WiFi webhook to SafetyLink','No phone pairing required','Wall or desk mountable','Long-press, double-tap, hold modes','Ideal for reception desks and offices','IP54 rated for outdoor mounting'] },
-  { tag:'IoT LAYER', name:'Tuya Smart Smoke Detector', price:'R280', sub:'WiFi · MQTT · Instant alert', img: ASSETS.itagAll, color:'#f5a623', features:['Triggers SafetyLink dispatch on alarm','MQTT → Cloudflare Worker pipeline','10-year battery sealed unit','Works during load-shedding via BLE mesh','Integrates with estate dashboard','Can trigger siren + WhatsApp simultaneously'] },
+  { tag:'PRIMARY', name:'SafetyLink iTAG Keyfob', price:'R149', sub:'CR2032 battery · IP65 · BLE 4.0+', img: R2_MEDIA.hardware.itagFinderProduct, color:'#00e676', features:['BLE 4.0+ universal compatibility','IP65 water and dust resistance','6–12 month CR2032 battery life','38×27×8mm · 7g · wearable','Zero-config vendor-agnostic pairing','Works with SafetyLink in any pocket'] },
+  { tag:'ENTERPRISE', name:'SafetyLink Field Beacon / Tracker', price:'R1,999', sub:'GSM/LTE + GPS + BLE · SIM-based', img: R2_MEDIA.hardware.fieldBeaconAntenna, color:'#e8321e', features:['Independent SIM-based operation','Two-way voice call built-in','GPS accurate to 3 metres','5-day standby battery','Deployed across SA security firms','No Android dependency required'] },
+  { tag:'FIXED SITE', name:'Shelly Tactical Button (WiFi/Desk)', price:'R380', sub:'WiFi direct · Webhook · IP54', img: R2_MEDIA.hardware.hardwareAssembly, color:'#0ea5e9', features:['Direct WiFi webhook to SafetyLink','No phone pairing required','Wall or desk mountable','Long-press, double-tap, hold modes','Ideal for reception desks and offices','IP54 rated for outdoor mounting'] },
+  { tag:'AUTONOMOUS', name:'LimX Dynamics Patrol & IoT Node', price:'Enterprise', sub:'Autonomous Robotic Patrol & BLE Mesh', img: R2_MEDIA.hardware.limxDynamicsRobot, color:'#f5a623', features:['Autonomous perimeter patrolling','BLE mesh repeater & locator','Dynamic responder telemetry link','Thermal & optic distress scanning','Seamless integration with Command Deck','Real-time incident verification'] },
 ];
 
 const STEPS = [
-  { n:'01', title:'Insert Battery', desc:'Rotate the button cap to OPEN. Insert CR2032 with + facing up. Close and rotate to LOCK. LED flashes once to confirm power.', img: ASSETS.itagBattery },
-  { n:'02', title:'Pair to SafetyLink', desc:'Open SafetyLink app → DEVICES → ADD DEVICE. Press iTAG button once. Device appears as "Native iTAG Keyfob". Tap to pair. RSSI displays once connected.' },
-  { n:'03', title:'Test Your Connection', desc:'From the main SOS screen, confirm status shows CONNECTED. Press TEST 5S to verify alert chain without triggering a live response.' },
-  { n:'04', title:'Configure Button Actions', desc:'Single press: locate phone. Double press: SOS trigger. Long press: emergency escalation. Recommended SOS delay: 1.5 seconds.' },
-  { n:'05', title:'Auto-Reconnect', desc:'If iTAG shows RECONNECT status, tap RECONNECT or press the button once. Auto-reconnect fires every 20 seconds via keepalive ping.' },
+  { n:'01', title:'Insert Battery', desc:'Rotate the button cap to OPEN. Insert CR2032 with + facing up. Close and rotate to LOCK. LED flashes once to confirm power.', img: R2_MEDIA.hardware.itagTeardown },
+  { n:'02', title:'Pair to SafetyLink', desc:'Open SafetyLink app → DEVICES → ADD DEVICE. Press iTAG button once. Device appears as "Native iTAG Keyfob". Tap to pair. RSSI displays once connected.', img: R2_MEDIA.hardware.itagKeyring },
+  { n:'03', title:'Test Your Connection', desc:'From the main SOS screen, confirm status shows CONNECTED. Press TEST 5S to verify alert chain without triggering a live response.', img: R2_MEDIA.hardware.itagMacro },
+  { n:'04', title:'Configure Button Actions', desc:'Single press: locate phone. Double press: SOS trigger. Long press: emergency escalation. Recommended SOS delay: 1.5 seconds.', img: R2_MEDIA.hardware.hardwarePack },
+  { n:'05', title:'Auto-Reconnect & Keepalive', desc:'If iTAG shows RECONNECT status, tap RECONNECT or press the button once. Auto-reconnect fires every 20 seconds via keepalive ping.', img: R2_MEDIA.hardware.bleTransmitter },
 ];
 
 export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
   const [active, setActive] = useState(0);
 
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px 60px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HARDWARE ECOSYSTEM</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
@@ -39,7 +40,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       </section>
 
       {/* ── DEVICE SELECTOR ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// COMPATIBLE DEVICES</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Pick Your Device.</h2>
@@ -102,7 +103,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       </section>
 
       {/* ── SETUP STEPS ── */}
-      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'start' }}>
           <div>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SETUP GUIDE</div>
@@ -113,7 +114,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
             {STEPS.map((s, i) => (
-              <div key={i} style={{ background:'#111820', padding:'20px 24px', display:'flex', alignItems:'flex-start', gap:'20px' }}>
+              <div key={i} style={{ background:'rgba(17,24,32,0.65)', backdropFilter:'blur(8px)', padding:'20px 24px', display:'flex', alignItems:'flex-start', gap:'20px' }}>
                 <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'#e8321e', fontWeight:700, flexShrink:0, width:'28px' }}>{s.n}</span>
                 <div>
                   <div style={{ fontSize:'13px', fontWeight:700, marginBottom:'4px' }}>{s.title}</div>
@@ -127,7 +128,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       </section>
 
       {/* ── SPECS TABLE ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// TECHNICAL SPECS</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Device Comparison.</h2>

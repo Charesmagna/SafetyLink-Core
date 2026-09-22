@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ASSETS, vid, img } from '../../utils/cloudinary';
+import { R2_MEDIA } from '../../utils/r2Assets';
 
 interface Props {
   onLogin: () => void;
@@ -51,12 +52,12 @@ export const USE_CASE_VIDEOS = [
 ];
 
 const SECTORS = [
-  { emoji:'🏘️', tag:'RESIDENTIAL', title:'Gated Estates & Complexes', desc:'Real-time panic alerts, visitor tracking, perimeter alerts and armed response dispatch. Every resident protected — even with R0 airtime.', features:['BLE keyfob panic triggers','WhatsApp + SMS dispatch','Armed response coordination','Live GIS map for security booth'] },
-  { emoji:'🏢', tag:'ENTERPRISE', title:'Corporates & Campuses', desc:'Lone-worker protection, duress code activation, multi-floor responder routing and AES-256-GCM evidence capture.', features:['Silent duress code SOS','Multi-floor responder routing','Cryptographic evidence vault','API integration with HR systems'] },
-  { emoji:'🏫', tag:'EDUCATION', title:'Schools & Universities', desc:'Pupil tracking, parent notification chains, lockdown protocol dispatch and dedicated security staff escalation.', features:['Learner iTag wristbands','Parent SMS + WhatsApp alerts','Lockdown mode activation','Integration with school security'] },
-  { emoji:'🏥', tag:'HEALTHCARE', title:'Clinics & Hospitals', desc:'Staff duress alerts, patient elopement detection and AI voice dispatch for code-blue events in medical facilities.', features:['Clinical staff duress buttons','Patient elopement alerts','Code-blue dispatch chain','POPIA-compliant evidence logs'] },
-  { emoji:'🚛', tag:'LOGISTICS', title:'Transport & Field Ops', desc:'Driver SOS with GPS coordinates, route deviation alerts, cargo protection and real-time fleet situational awareness.', features:['Driver GPS panic trigger','Route deviation detection','Fleet command dashboard','Multi-driver dispatch coordination'] },
-  { emoji:'🏛️', tag:'MUNICIPAL', title:'Municipalities & SAPS', desc:'Community safety networks, neighborhood watch coordination, B-BBEE Level 1 compliance advantage for government procurement.', features:['Community mesh network','Neighborhood watch dispatch','SAPS coordination API','B-BBEE Level 1 certified'] },
+  { emoji:'🏘️', tag:'RESIDENTIAL', title:'Gated Estates & Complexes', desc:'Real-time panic alerts, visitor tracking, perimeter alerts and armed response dispatch. Every resident protected — even with R0 airtime.', img: R2_MEDIA.usecases.estateCommunity, features:['BLE keyfob panic triggers','WhatsApp + SMS dispatch','Armed response coordination','Live GIS map for security booth'] },
+  { emoji:'🏢', tag:'ENTERPRISE', title:'Corporates & Campuses', desc:'Lone-worker protection, duress code activation, multi-floor responder routing and AES-256-GCM evidence capture.', img: R2_MEDIA.usecases.corporateCampus, features:['Silent duress code SOS','Multi-floor responder routing','Cryptographic evidence vault','API integration with HR systems'] },
+  { emoji:'🏫', tag:'EDUCATION', title:'Schools & Universities', desc:'Pupil tracking, parent notification chains, lockdown protocol dispatch and dedicated security staff escalation.', img: R2_MEDIA.usecases.schoolUniversity, features:['Learner iTag wristbands','Parent SMS + WhatsApp alerts','Lockdown mode activation','Integration with school security'] },
+  { emoji:'🏥', tag:'HEALTHCARE', title:'Clinics & Hospitals', desc:'Staff duress alerts, patient elopement detection and AI voice dispatch for code-blue events in medical facilities.', img: R2_MEDIA.usecases.hospitalHealthcare, features:['Clinical staff duress buttons','Patient elopement alerts','Code-blue dispatch chain','POPIA-compliant evidence logs'] },
+  { emoji:'🚛', tag:'LOGISTICS', title:'Transport & Field Ops', desc:'Driver SOS with GPS coordinates, route deviation alerts, cargo protection and real-time fleet situational awareness.', img: R2_MEDIA.usecases.transportLogistics, features:['Driver GPS panic trigger','Route deviation detection','Fleet command dashboard','Multi-driver dispatch coordination'] },
+  { emoji:'🏛️', tag:'MUNICIPAL', title:'Municipalities & SAPS', desc:'Community safety networks, neighborhood watch coordination, B-BBEE Level 1 compliance advantage for government procurement.', img: R2_MEDIA.usecases.municipalEmergency, features:['Community mesh network','Neighborhood watch dispatch','SAPS coordination API','B-BBEE Level 1 certified'] },
 ];
 
 export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
@@ -116,8 +117,11 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
             ))}
           </div>
 
-          <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(232,50,30,.2)', borderRadius:'16px', padding:'36px', display:'grid', gridTemplateColumns:'1fr', gap:'40px', alignItems:'start' }}>
+          <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(232,50,30,.2)', borderRadius:'16px', padding:'36px', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))', gap:'40px', alignItems:'center' }}>
             <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(232,50,30,0.1)', border: '1px solid rgba(232,50,30,0.3)', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', color: '#ff6b6b', fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", marginBottom: '16px' }}>
+                {SECTORS[activeSector].emoji} {SECTORS[activeSector].tag} PROTOCOL
+              </div>
               <div style={{ fontSize:'24px', fontWeight:900, marginBottom:'12px', color:'#fff' }}>{SECTORS[activeSector].title}</div>
               <div style={{ fontSize:'14px', color:'#94a3b8', lineHeight:1.7, marginBottom:'24px' }}>{SECTORS[activeSector].desc}</div>
               <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:'12px' }}>
@@ -128,6 +132,18 @@ export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
                   </li>
                 ))}
               </ul>
+            </div>
+            <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#020617', maxHeight: '340px' }}>
+              <img 
+                src={SECTORS[activeSector].img} 
+                alt={SECTORS[activeSector].title} 
+                style={{ width: '100%', height: '340px', objectFit: 'cover', display: 'block' }} 
+              />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(2,6,23,0.95) 0%, transparent 100%)', padding: '16px 20px' }}>
+                <span style={{ fontSize: '11px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
+                  TACTICAL DISPATCH REFERENCE · {SECTORS[activeSector].tag}
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,7 @@
 import { ASSETS } from '../../utils/cloudinary';
+import { R2_MEDIA } from '../../utils/r2Assets';
 import { useEditorialStore } from '../../utils/editorialStore';
+import { R2MediaShowcase } from './R2MediaShowcase';
 
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
@@ -241,7 +243,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── STATS BAR ──────────────────────────────────────────── */}
-      <section style={{ borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', background:'#111820' }}>
+      <section style={{ borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(17,24,32,0.65)', backdropFilter:'blur(12px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
           {[
             { val:'< 3s', lbl:'Dispatch Latency' },
@@ -258,7 +260,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── ESCALATION CHAIN ───────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'#0d1117' }}>
+      <section style={{ padding:'88px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// 03 OFFLINE-FIRST</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Queue locally.<br/>Fire on reconnect.</h2>
@@ -286,8 +288,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </div>
 
             {/* Live audit log */}
-            <div style={{ background:'rgba(0,0,0,.2)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(0,0,0,.25)' }}>
+            <div style={{ background:'rgba(0,0,0,.35)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(0,0,0,.3)' }}>
                 <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', display:'inline-block', animation:'blink 1.2s infinite' }}/>
                 <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.1em' }}>INCIDENT AUDIT LOG</span>
                 <span style={{ marginLeft:'auto', fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#00e676' }}>ACTIVE</span>
@@ -308,7 +310,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── SECTORS ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'#070a0f', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'88px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'48px' }}>Every sector.<br/>One platform.</h2>
@@ -321,9 +323,9 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               { tag:'HEALTHCARE', title:'CLINICS & HOSPITALS', desc:'Staff duress alerts, patient elopement detection and code-blue dispatch for healthcare facilities.' },
               { tag:'LOGISTICS', title:'TRANSPORT & FIELD OPS', desc:'Driver SOS, route deviation alerts, cargo protection and real-time fleet situational awareness.' },
             ].map((s, i) => (
-              <div key={i} style={{ background:'#0d1117', padding:'28px', cursor:'default', transition:'background .2s' }}
-                onMouseOver={e => e.currentTarget.style.background = 'rgba(232,50,30,.05)'}
-                onMouseOut={e => e.currentTarget.style.background = '#0d1117'}>
+              <div key={i} style={{ background:'rgba(13,17,23,0.7)', backdropFilter:'blur(8px)', padding:'28px', cursor:'default', transition:'background .2s' }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(232,50,30,.12)'}
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(13,17,23,0.7)'}>
                 <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'8.5px', letterSpacing:'.16em', color:'#8892a4', marginBottom:'10px', textTransform:'uppercase' }}>{s.tag}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.02em' }}>{s.title}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55 }}>{s.desc}</div>
@@ -334,33 +336,130 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── QUICK NAV CARDS ────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderTop:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)', position:'relative', overflow:'hidden' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center', position:'relative', zIndex:2 }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// EXPLORE MORE</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, marginBottom:'48px' }}>Everything you need to know</h2>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', gap:'16px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'20px' }}>
             {[
-              { emoji:'📱', label:'Platform', sub:'How it works', page:'platform' },
-              { emoji:'📡', label:'Hardware', sub:'BLE & devices', page:'hardware' },
-              { emoji:'🎯', label:'Use Cases', sub:'Who needs it', page:'usecases' },
-              { emoji:'💎', label:'Pricing', sub:'Plans & costs', page:'pricing' },
-              { emoji:'🏢', label:'Enterprise', sub:'For organisations', page:'enterprise' },
+              { 
+                emoji:'📱', 
+                label:'Platform', 
+                sub:'How it works & architecture', 
+                page:'platform', 
+                bg: R2_MEDIA.platform.heroBackground,
+                badge: 'ARCHITECTURE'
+              },
+              { 
+                emoji:'📡', 
+                label:'Hardware', 
+                sub:'BLE tags & sensors', 
+                page:'hardware', 
+                bg: R2_MEDIA.hardware.itagFinderProduct,
+                badge: 'BLUETOOTH 5.0'
+              },
+              { 
+                emoji:'🎯', 
+                label:'Use Cases', 
+                sub:'Estates, fleets & teams', 
+                page:'usecases', 
+                bg: R2_MEDIA.usecases.estateCommunity,
+                badge: 'FIELD READY'
+              },
+              { 
+                emoji:'💎', 
+                label:'Pricing', 
+                sub:'Transparent tiers', 
+                page:'pricing', 
+                bg: R2_MEDIA.architecture.securityEcosystem,
+                badge: 'ZAR PRICING'
+              },
+              { 
+                emoji:'🏢', 
+                label:'Enterprise', 
+                sub:'For large organisations', 
+                page:'enterprise', 
+                bg: R2_MEDIA.architecture.universalResilience,
+                badge: 'MULTI-TENANT'
+              },
             ].map(c => (
-              <button key={c.page} onClick={() => navigate?.(c.page)}
-                style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'16px', padding:'24px 16px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:'8px', transition:'all .2s' }}
-                onMouseOver={e => { e.currentTarget.style.background='rgba(232,50,30,.06)'; e.currentTarget.style.borderColor='rgba(232,50,30,.3)'; }}
-                onMouseOut={e => { e.currentTarget.style.background='rgba(255,255,255,.03)'; e.currentTarget.style.borderColor='rgba(255,255,255,.07)'; }}>
-                <span style={{ fontSize:'2rem' }}>{c.emoji}</span>
-                <span style={{ fontWeight:800, fontSize:'13px', color:'#f0f4f8', textTransform:'uppercase', letterSpacing:'.05em' }}>{c.label}</span>
-                <span style={{ fontSize:'11px', color:'#8892a4' }}>{c.sub}</span>
+              <button 
+                key={c.page} 
+                onClick={() => navigate?.(c.page)}
+                style={{ 
+                  position: 'relative',
+                  background: 'rgba(255,255,255,.03)', 
+                  border: '1px solid rgba(255,255,255,.08)', 
+                  borderRadius: '16px', 
+                  padding: '24px 18px', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  gap: '12px', 
+                  overflow: 'hidden',
+                  transition: 'all .25s ease',
+                  textAlign: 'center',
+                  minHeight: '230px',
+                  justifyContent: 'space-between',
+                }}
+                onMouseOver={e => { 
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.borderColor = 'rgba(0,230,118,.4)';
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.6)';
+                }}
+                onMouseOut={e => { 
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                {/* Visual Backdrop Overlay with R2 Image */}
+                <div 
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundImage: `linear-gradient(to bottom, rgba(13,17,23,0.78), rgba(13,17,23,0.95)), url("${c.bg}")`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    opacity: 0.65,
+                    zIndex: 0,
+                    transition: 'opacity .3s',
+                  }}
+                />
+
+                <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.8rem', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '6px' }}>{c.emoji}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 800, color: '#00e676', background: 'rgba(0,230,118,0.12)', border: '1px solid rgba(0,230,118,0.25)', padding: '3px 8px', borderRadius: '4px' }}>
+                    {c.badge}
+                  </span>
+                </div>
+
+                <div style={{ position: 'relative', zIndex: 1, width: '100%', marginTop: 'auto' }}>
+                  <div style={{ fontWeight: 900, fontSize: '15px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '4px' }}>
+                    {c.label}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>
+                    {c.sub}
+                  </div>
+                </div>
+
+                <div style={{ position: 'relative', zIndex: 1, width: '100%', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#00e676', fontFamily: "'JetBrains Mono',monospace", letterSpacing: '.05em' }}>
+                    OPEN VIEW →
+                  </span>
+                </div>
               </button>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ── CLOUDFLARE R2 MEDIA & TECHNICAL BLUEPRINTS ───────────── */}
+      <R2MediaShowcase />
+
       {/* ── DOWNLOAD ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'#070a0f', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'88px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET SAFETYLINK</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Available on every<br/>platform.</h2>
@@ -371,9 +470,9 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               {
                 icon: '📱',
                 label: `Android APK (${releaseVersion})`,
-                sub: 'Signed release APK with BLE hardware integration. Android 8.0+.',
-                href: apkDownloadUrl,
-                btn: `Download APK (${releaseVersion})`,
+                sub: 'Signed release APK with background monitoring & BLE keyfob integration.',
+                href: apkDownloadUrl || `https://github.com/Charesmagna/SafetyLink-Core/releases/download/${releaseVersion}/SafetyLink-${releaseVersion}-Signed.apk`,
+                btn: `Download Official APK (${releaseVersion})`,
                 c: '#00e676',
                 cr: '0,230,118',
                 img: ASSETS.appLogin,
@@ -401,7 +500,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 download: false,
               },
             ].map((d, i) => (
-              <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
+              <div key={i} style={{ background:'rgba(255,255,255,.05)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,.08)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
                 {d.img && <img src={d.img} alt={d.label} style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} />}<div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, textTransform:'uppercase', letterSpacing:'.02em' }}>{d.label}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55, flex:1 }}>{d.sub}</div>
@@ -417,11 +516,42 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               </div>
             ))}
           </div>
+
+          <div style={{ marginTop:'32px', textAlign:'center' }}>
+            <a
+              href="#download"
+              onClick={(e) => {
+                if (navigate) {
+                  e.preventDefault();
+                  navigate('download');
+                }
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 24px',
+                background: 'rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(6px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                color: '#f0f4f8',
+                fontSize: '12px',
+                fontWeight: 700,
+                fontFamily: "'JetBrains Mono',monospace",
+                letterSpacing: '.06em',
+                textDecoration: 'none',
+                transition: 'all .2s',
+              }}
+            >
+              <span>📦</span> VIEW ALL PREVIOUS RELEASES & PACKAGES IN DOWNLOAD HUB →
+            </a>
+          </div>
         </div>
       </section>
 
       {/* ── CTA BAND ────────────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderTop:'1px solid rgba(255,255,255,.07)', textAlign:'center' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.68)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)', textAlign:'center' }}>
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET STARTED</div>
         <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, marginBottom:'16px' }}>Ready to protect<br/>your community?</h2>
         <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>

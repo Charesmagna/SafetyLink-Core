@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ASSETS } from '../utils/cloudinary';
+import { R2_MEDIA } from '../utils/r2Assets';
 import { Header } from './landing/Header';
 import { Home } from './landing/Home';
 import { Hardware } from './landing/Hardware';
@@ -9,8 +10,12 @@ import { UseCases } from './landing/UseCases';
 import { Enterprise } from './landing/Enterprise';
 import PrivacyPolicy from '../pages/PrivacyPolicy';
 import SafetyWareStore from './SafetyWareStore';
+import { DownloadPage } from './landing/DownloadPage';
+import { ContinuousTopologyOverview } from './landing/ContinuousTopologyOverview';
+import { UpdateBanner } from './UpdateBanner';
+import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 
-type Page = 'home' | 'hardware' | 'store' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
+type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
 
 interface LandingPageProps {
   onLogin?: () => void;
@@ -23,6 +28,7 @@ const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
   { id: 'platform',   label: 'Platform',    emoji: '📱' },
   { id: 'hardware',   label: 'Hardware',    emoji: '📡' },
   { id: 'store',      label: 'Store',       emoji: '🛒' },
+  { id: 'download',   label: 'Download',    emoji: '⬇️' },
   { id: 'usecases',   label: 'Use Cases',   emoji: '🎯' },
   { id: 'pricing',    label: 'Pricing',     emoji: '💎' },
   { id: 'enterprise', label: 'Enterprise',  emoji: '🏢' },
@@ -31,6 +37,16 @@ const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
 export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingPageProps) {
   const [page, setPage] = useState<Page>('home');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+
+  // Check for updates on mount (will only render banner in APK)
+  useEffect(() => {
+    checkForUpdate().then((info) => {
+      if (info && info.available) {
+        setUpdateInfo(info);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Sync with browser hash for direct links
   useEffect(() => {
@@ -48,7 +64,9 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   const sharedProps = { onLogin: onLogin || (() => {}), onRegisterOrg: onRegisterOrg || (() => {}), onRegisterUser: onRegisterUser || (() => {}), navigate };
 
   return (
-    <div className="min-h-screen bg-slate-950/70 text-white font-sans relative backdrop-blur-[1px]">
+    <div className="min-h-screen bg-transparent text-white font-sans relative">
+      {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
+      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
 
       {/* ── Top Nav ── */}
       <Header
@@ -63,6 +81,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         {page === 'home'       && <Home       {...sharedProps} />}
         {page === 'hardware'   && <Hardware   {...sharedProps} />}
         {page === 'store'      && <SafetyWareStore />}
+        {page === 'download'   && <DownloadPage {...sharedProps} />}
         {page === 'pricing'    && <Pricing    {...sharedProps} />}
         {page === 'platform'   && <Platform   {...sharedProps} />}
         {page === 'usecases'   && <UseCases   {...sharedProps} />}
@@ -71,9 +90,10 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         {page === 'payment-success' && <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}><h1 style={{ fontSize: '32px', color: '#10b981', marginBottom: '16px' }}>Payment Successful!</h1><p style={{ color: '#94a3b8', marginBottom: '24px' }}>Your subscription has been activated.</p><button onClick={() => navigate('home')} style={{ padding: '12px 24px', background: '#0f172a', color: 'white', borderRadius: '8px' }}>Return to Home</button></div>}
       </div>
 
-      <div style={{ padding: '0 20px', maxWidth: '1200px', margin: '60px auto 0' }}>
-        <img src={ASSETS.banner} alt="SafetyLink Global Protection Network" style={{ width: '100%', borderRadius: '16px', border: '1px solid #1e293b' }} />
-      </div>
+      {/* ── CONTINUOUS TOPOLOGY OVERVIEW (PAGE-ADAPTIVE) ── */}
+      <section style={{ padding: '0 20px', maxWidth: '1240px', margin: '70px auto 0' }}>
+        <ContinuousTopologyOverview activePage={page} />
+      </section>
       {/* ── Footer ── */}
       <footer className="border-t border-slate-800 px-6 py-8 text-center space-y-3 mt-12">
         <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500 font-mono">
