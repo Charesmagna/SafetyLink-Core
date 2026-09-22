@@ -266,7 +266,17 @@ const App: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Show cinematic 3D motion logo splash on initial app load per session
+    if (typeof window !== 'undefined') {
+      const shown = sessionStorage.getItem('sl_splash_shown');
+      if (!shown) {
+        sessionStorage.setItem('sl_splash_shown', 'true');
+        return true;
+      }
+    }
+    return false;
+  });
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   useEffect(() => {
     // Hide native splash screen once React has mounted and our custom cinematic splash is ready

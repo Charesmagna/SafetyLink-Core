@@ -8,22 +8,23 @@
 
 export const Brand = {
   // Primary logo — use in: web nav, EXE header, APK settings screen
-  primaryLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308`,
+  primaryLogo: `/logos/New SafetyLink Official Logo.svg`,
+  fallbackLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260620_014530309`,
 
   // Umbrella logo (TM Media Solutions) — use in: web footer, legal pages
-  umbrellaLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308`,
+  umbrellaLogo: `/logos/New SafetyLink Official Logo.svg`,
 
   // 3D animation — use in: web hero background, APK splash screen  
-  animation3d: `https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310213/Now_I_need_the_d_animation_lo.mp4`,
+  animation3d: `/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4`,
 
   // App launcher icon — APK home screen icon
-  launcherIcon: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308`,
+  launcherIcon: `/Icons/icon-512.png`,
 
   // Notification icon — Android status bar icon during panic
-  notificationIcon: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308`,
+  notificationIcon: `/Icons/icon-512.png`,
 
   // Admin panel logo — EXE header, web dashboard header
-  adminLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308`,
+  adminLogo: `/logos/New SafetyLink Official Logo.svg`,
 
   // Architecture diagrams — web "How it Works" and "Tech" sections
   architectureDiagram: `https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309945/Gemini_Generated_Image_59psss59psss59ps.jpg`,

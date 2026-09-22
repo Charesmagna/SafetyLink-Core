@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React, { useState, useRef } from 'react';
 import { ASSETS } from '../../utils/cloudinary';
+import { R2_MEDIA } from '../../utils/r2Assets';
 
 
 import './Home.css';
@@ -117,9 +118,19 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               </div>
             ))}
           </div>
-            <div>
-              <img src={ASSETS.dispatch} alt="Dispatch Interface" style={{ width: '100%', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }} />
-              <img src={ASSETS.tactical} alt="Voice Dispatch Visual" style={{ width: '100%', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', marginTop: '20px' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(0,230,118,0.25)' }}>
+                <img src={R2_MEDIA.architecture.responseArchitecture} alt="Safety Response Architecture" style={{ width: '100%', height: 'auto', display: 'block', background: '#020617' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '12px 16px' }}>
+                  <span style={{ fontSize: '11px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>R2 BLUEPRINT: EMERGENCY RESPONSE ARCHITECTURE</span>
+                </div>
+              </div>
+              <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <img src={R2_MEDIA.platform.commandDeckDark} alt="SafetyLink Real-time Command Deck" style={{ width: '100%', height: 'auto', display: 'block', background: '#020617' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '12px 16px' }}>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>TACTICAL COMMAND TELEMETRY DECK</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -38,10 +38,12 @@ export const AndroidWidgetSimulator: React.FC = () => {
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-2">
             <img
-              src="https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png"
+              src="/logos/New SafetyLink Official Logo.svg"
               alt="SafetyLink"
-              className="w-6 h-6 rounded-full object-cover"
-              style={{ mixBlendMode: 'luminosity', filter: 'brightness(1.3)' }}
+              className="w-6 h-6 object-contain filter drop-shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = '/media/new_logos/logo_hq.png';
+              }}
             />
             <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest font-mono">SafetyLink</span>
           </div>

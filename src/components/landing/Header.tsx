@@ -96,8 +96,10 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
           left: 0,
           right: 0,
           zIndex: 1000,
-          background: isLight ? 'rgba(255, 255, 255, 0.97)' : 'rgba(2, 6, 23, 0.96)',
-          borderBottom: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b',
+          background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(2, 6, 23, 0.75)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: isLight ? '1px solid rgba(226, 232, 240, 0.5)' : '1px solid rgba(30, 41, 59, 0.5)',
           transition: 'box-shadow .3s, background .3s',
           boxShadow: scrolled
             ? (isLight ? '0 4px 24px rgba(0,0,0,.08)' : '0 4px 24px rgba(0,0,0,.5)')
@@ -131,9 +133,9 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             }}
           >
             <img
-              src="https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260818_074430308"
+              src="/logos/New SafetyLink Official Logo.svg"
               alt="SafetyLink"
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => {
                 const imgEl = e.currentTarget as HTMLImageElement;
                 if (!imgEl.src.includes('Polish_20260620')) {
@@ -259,18 +261,35 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               Pricing
             </a>
             <a
-              href="#download"
+              href="#store"
               onClick={(e) => handleLinkClick(e, 'store')}
-              className={activePage === 'store' || activePage === 'download' ? 'active' : ''}
+              className={activePage === 'store' ? 'active' : ''}
               style={{
                 fontSize: '12px',
                 fontWeight: 500,
-                color: (activePage === 'store' || activePage === 'download') ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                color: activePage === 'store' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
                 textDecoration: 'none',
                 transition: 'color .2s',
                 whiteSpace: 'nowrap',
-                borderBottom: (activePage === 'store' || activePage === 'download') ? '2px solid #15803d' : 'none',
-                paddingBottom: (activePage === 'store' || activePage === 'download') ? '2px' : '0',
+                borderBottom: activePage === 'store' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'store' ? '2px' : '0',
+              }}
+            >
+              Store
+            </a>
+            <a
+              href="#download"
+              onClick={(e) => handleLinkClick(e, 'download')}
+              className={activePage === 'download' ? 'active' : ''}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: activePage === 'download' ? '#15803d' : (isLight ? '#64748b' : '#94a3b8'),
+                textDecoration: 'none',
+                transition: 'color .2s',
+                whiteSpace: 'nowrap',
+                borderBottom: activePage === 'download' ? '2px solid #15803d' : 'none',
+                paddingBottom: activePage === 'download' ? '2px' : '0',
               }}
             >
               Download
@@ -787,7 +806,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             Pricing
           </a>
           <a
-            href="#download"
+            href="#store"
             onClick={(e) => handleLinkClick(e, 'store')}
             style={{
               color: isLight ? '#1e293b' : '#f8fafc',
@@ -798,7 +817,21 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
             }}
           >
-            Download
+            SafetyWare Store
+          </a>
+          <a
+            href="#download"
+            onClick={(e) => handleLinkClick(e, 'download')}
+            style={{
+              color: isLight ? '#1e293b' : '#f8fafc',
+              fontWeight: 500,
+              textDecoration: 'none',
+              fontSize: '14px',
+              padding: '12px 20px',
+              borderBottom: isLight ? '1px solid #f1f5f9' : '1px solid #0f172a',
+            }}
+          >
+            Download Hub
           </a>
 
           {onLogin && (

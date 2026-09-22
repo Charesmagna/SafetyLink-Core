@@ -314,7 +314,7 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
   return (
     <div
       style={{
-        background: isLight ? '#f8fafc' : '#070a0f',
+        background: isLight ? 'rgba(248, 250, 252, 0.85)' : 'transparent',
         color: isLight ? '#0f172a' : '#f8fafc',
         minHeight: '100vh',
         paddingTop: '60px',
@@ -335,7 +335,7 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
         </p>
 
         {/* Tab switcher */}
-        <div style={{ display: 'inline-flex', padding: '4px', background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.06)', borderRadius: '12px', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'inline-flex', padding: '4px', background: isLight ? '#e2e8f0' : 'rgba(255,255,255,0.08)', backdropFilter:'blur(8px)', borderRadius: '12px', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
           {[
             { id: 'all', label: 'All Solutions' },
             { id: 'individual', label: 'Individuals & Families' },
@@ -371,7 +371,8 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
               <div
                 key={plan.id}
                 style={{
-                  background: isLight ? '#ffffff' : 'rgba(255,255,255,0.03)',
+                  background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(13,17,23,0.65)',
+                  backdropFilter: 'blur(12px)',
                   border: plan.highlighted
                     ? '2px solid #15803d'
                     : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)'),
@@ -478,7 +479,8 @@ export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: str
               <div
                 key={item.id}
                 style={{
-                  background: isLight ? '#ffffff' : 'rgba(255,255,255,0.03)',
+                  background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(13,17,23,0.65)',
+                  backdropFilter: 'blur(12px)',
                   border: item.highlighted
                     ? '2px solid #15803d'
                     : (isLight ? '1px solid #e2e8f0' : '1px solid rgba(255,255,255,0.08)'),

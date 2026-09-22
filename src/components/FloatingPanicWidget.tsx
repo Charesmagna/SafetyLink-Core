@@ -93,9 +93,16 @@ export const FloatingPanicWidget: React.FC = () => {
             : "bg-slate-900/90 border-slate-700/50"
         }`}
       >
-        {/* Logo on the left */}
-        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-slate-700 bg-black flex items-center justify-center">
-          <SLShieldLogo />
+        {/* Logo on the left - seamlessly integrated without stark black background */}
+        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-emerald-500/30 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-1 shadow-inner">
+          <img 
+            src="/logos/New SafetyLink Official Logo.svg" 
+            alt="SafetyLink Logo" 
+            className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" 
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = '/media/new_logos/logo_hq.png';
+            }}
+          />
         </div>
 
         {/* Status Icons */}

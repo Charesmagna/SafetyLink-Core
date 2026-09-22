@@ -20,6 +20,7 @@ function getPanicQueue() {
 console.log("STARTING SERVER SCRIPT PID:", process.pid);
 import { createIncident, processPanicAlert } from "./src/services/panic-alert";
 import { ussdRouter } from "./src/routes/ussd";
+import { r2Router } from "./src/routes/r2-media";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import Pusher from "pusher";
 import * as stytch from "stytch";
@@ -263,6 +264,9 @@ app.use(cors({
 
   // Version endpoint for light/OTA in-app update checks
   app.get("/api/version", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     try {
       const versionFile = path.join(process.cwd(), "public", "version.json");
       if (fs.existsSync(versionFile)) {
@@ -273,10 +277,10 @@ app.use(cors({
       console.warn("Error reading version.json:", e);
     }
     res.json({
-      version: "1.1.896",
-      buildTime: "2026-09-18T16:10:38Z",
-      releaseName: "SafetyLink Core v1.1.896",
-      apkUrl: "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.896/SafetyLink-v1.1.896-Signed.apk",
+      version: "1.1.912",
+      buildTime: "2026-09-21T21:15:00Z",
+      releaseName: "SafetyLink Core v1.1.912",
+      apkUrl: "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.912/SafetyLink-v1.1.912-Signed.apk",
       liveWebUrl: "https://safetylink.online",
       isLiveUpdateAvailable: true
     });
@@ -578,6 +582,7 @@ Rules:
 
   // Modular Provider Routes
   app.use("/ussd", ussdRouter);
+  app.use("/api/r2", r2Router);
 
 
   // Initialize Gemini

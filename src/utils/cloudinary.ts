@@ -10,9 +10,10 @@ export const vid = (publicId: string, transforms = 'q_auto,f_auto') =>
   `${VID_BASE}/${transforms}/${publicId}`;
 
 export const ASSETS = {
-  // Use the verified brand logo: Polish_20260818_074430308
-  logo: img('Polish_20260818_074430308'),
-  logo3d: img('Polish_20260818_074430308'),
+  // Use verified SafetyLink logo asset
+  logo: '/logos/New SafetyLink Official Logo.svg',
+  logoCdn: img('Polish_20260620_014530309'),
+  logo3d: '/logos/New SafetyLink Official Logo.svg',
   logoKlev: img('K_leva'),
   appSos: img('Gemini_Generated_Image_ohoz6sohoz6sohoz'), // using one of the generated images from previous grep
   appLogin: img('main-sample'),
