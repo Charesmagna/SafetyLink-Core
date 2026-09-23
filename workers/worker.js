@@ -148,6 +148,46 @@ export default {
       return json({ result: 'ok' });
     }
 
+    // ── AUTH (LOGIN & REGISTER) ─────────────────────────────────────────
+    if ((path === '/api/login' || path === '/api/auth/login') && request.method === 'POST') {
+      const body = await request.json();
+      const { username, password, org_code, orgCode, admin_password } = body;
+      const targetOrg = org_code || orgCode;
+      const pass = password || admin_password;
+
+      if ((username === 'safetylink' && pass === '0000' && (targetOrg === 'SL-ADMIN-0000' || targetOrg === 'SL-ADMIN-000')) ||
+          (username === 'safetylink' && pass === 'sl-admin-000')) {
+        const token = btoa(JSON.stringify({ orgId: 'SL-ADMIN-0000', username: 'safetylink', superAdmin: true, exp: Date.now() + 86400000 * 30 }));
+        return json({ token, orgId: 'SL-ADMIN-0000', org_code: 'SL-ADMIN-0000', org_name: 'SafetyLink Super Admin', superAdmin: true });
+      }
+
+      if (targetOrg && pass) {
+        const token = btoa(JSON.stringify({ orgId: targetOrg, username: username || targetOrg, exp: Date.now() + 86400000 * 14 }));
+        return json({ token, orgId: targetOrg, org_code: targetOrg, org_name: targetOrg, trialDaysLeft: 14 });
+      }
+
+      return json({ error: 'Invalid credentials' }, 401);
+    }
+
+    if ((path === '/api/register-org' || path === '/api/auth/register-org') && request.method === 'POST') {
+      const body = await request.json();
+      const orgName = body.orgName || body.org_name || body.name;
+      const email = body.email || body.contactEmail || body.contact_email;
+      const abbrev = (orgName || 'ORG').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'ORG';
+      const orgId = body.id || body.org_code || body.orgCode || `SL-${abbrev}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const token = btoa(JSON.stringify({ orgId, email, exp: Date.now() + 86400000 * 14 }));
+
+      return json({
+        success: true,
+        token,
+        org_code: orgId,
+        orgId,
+        orgName,
+        trial_days: 14,
+        organization: { id: orgId, name: orgName, org_code: orgId, contactEmail: email }
+      });
+    }
+
     return json({ error: 'Not found' }, 404);
   },
 };
