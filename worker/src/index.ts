@@ -225,45 +225,61 @@ app.get('/api/init-db', async (c) => {
 });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
-app.post('/api/auth/register-org', async (c) => {
-  const { email, password, orgName, contactName } = await c.req.json<any>();
+async function handleRegisterOrg(c: any) {
+  const body = await c.req.json<any>();
+  const email = body.email || body.contactEmail;
+  const password = body.password;
+  const orgName = body.orgName || body.name;
+  const contactName = body.contactName;
+
   if (!email || !password || !orgName || !contactName) return c.json({ error: 'All fields required' }, 400);
   const abbrev = orgName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'ORG';
-  const orgId = `SL-${abbrev}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const orgId = body.id || `SL-${abbrev}-${Math.floor(1000 + Math.random() * 9000)}`;
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   try {
     await c.env.DB!.prepare(
       'INSERT INTO organisations (id, name, contact_name, contact_email, password_hash, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(orgId, orgName, contactName, email.toLowerCase(), hash, Date.now()).run();
-    return c.json({ token: makeToken({ orgId, email }), orgId, orgName, email });
+    return c.json({ token: makeToken({ orgId, email }), orgId, orgName, email, id: orgId, name: orgName, contactName, contactEmail: email });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Email already registered' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
   }
-});
+}
 
-app.post('/api/auth/register-user', async (c) => {
-  const { username, password, email, phone, orgCode } = await c.req.json<any>();
+app.post('/api/auth/register-org', handleRegisterOrg);
+app.post('/api/register-org', handleRegisterOrg); // alias for older client code
+
+async function handleRegisterUser(c: any) {
+  const body = await c.req.json<any>();
+  const { username, password, email, phone, orgCode } = body;
   if (!username || !password) return c.json({ error: 'Username and password required' }, 400);
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
-  const id = crypto.randomUUID();
+  const id = body.id || crypto.randomUUID();
   try {
     await c.env.DB!.prepare(
       'INSERT INTO users (id, org_id, username, email, role, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(id, orgCode || null, username, email || null, 'User', Date.now()).run();
-    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username }), userId: id, username });
+    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username }), userId: id, username, id });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
   }
-});
+}
 
-app.post('/api/auth/login', async (c) => {
-  const { username, password, orgCode } = await c.req.json<any>();
+app.post('/api/auth/register-user', handleRegisterUser);
+app.post('/api/register-user', handleRegisterUser); // alias for older client code
+
+async function handleLogin(c: any) {
+  const body = await c.req.json<any>();
+  const username = body.username;
+  const password = body.password;
+  const orgCode = body.orgCode || body.org_code || '';
+
   if (!username || !password) return c.json({ error: 'Credentials required' }, 400);
   // SuperAdmin shortcut
-  if (username === 'safetylink' && password === '0000' && orgCode === 'SL-ADMIN-0000') {
-    return c.json({ token: makeToken({ orgId: 'SL-ADMIN-0000', username }), orgId: 'SL-ADMIN-0000' });
+  if (username === 'safetylink' && password === '0000' && orgCode.toUpperCase() === 'SL-ADMIN-0000') {
+    return c.json({ token: makeToken({ orgId: 'SL-ADMIN-0000', username }), orgId: 'SL-ADMIN-0000', superAdmin: true });
   }
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const user = await c.env.DB!.prepare(
@@ -280,7 +296,10 @@ app.post('/api/auth/login', async (c) => {
   }
   if (user.org_id && await checkTrialExpired(c.env.DB, user.org_id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
   return c.json({ token: makeToken({ userId: user.id, orgId: user.org_id, username: user.username }), userId: user.id, orgId: user.org_id });
-});
+}
+
+app.post('/api/auth/login', handleLogin);
+app.post('/api/login', handleLogin); // alias for older client code
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
