@@ -87,7 +87,7 @@ export const Settings: React.FC = () => {
           alt="SafetyLink Official Logo" 
           className="h-12 object-contain drop-shadow-xl" 
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Polish_20260620_014530309.jpg';
+            (e.currentTarget as HTMLImageElement).src = '/media/new_logos/logo_hq_3.png';
           }}
         />
       </div>

@@ -1,175 +1,41 @@
-import SituationalAwareness from './components/SituationalAwareness';
-import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
-import { Capacitor } from '@capacitor/core';
-import { SplashScreen } from "@capacitor/splash-screen";
-import { App as CapacitorApp } from '@capacitor/app';
-import React, { useEffect, useState, lazy, Suspense } from 'react';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import React, { useEffect, useState } from 'react';
 import { PanicButton } from './components/PanicButton';
-import { initFirebaseSync } from './services/FirebaseSyncService';
 import { DispatchChain } from './components/DispatchChain';
+import { BLEScanner } from './components/BLEScanner';
+import { OfflineMap } from './components/OfflineMap';
+import { Settings } from './components/Settings';
 import { StatusIndicator } from './components/StatusIndicator';
-import { GeolocationService, OfflineService } from './services/BaseService';
+import { LocationDisplay } from './components/LocationDisplay';
+import { GeolocationService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
 import { AuthScreen } from './components/AuthScreen';
-import { GlobalBackground } from "./components/GlobalBackground";
-import { SplashReveal } from "./components/SplashReveal";
-import { LandingPage } from './components/LandingPage';
-import { DnsSetupGuide } from './components/DnsSetupGuide';
-import { ResponderDashboard } from './components/ResponderDashboard';
-import { TrialBanner } from './components/TrialBanner';
+import { OrgDashboard } from './components/OrgDashboard';
+import { AdminPanel } from './components/AdminPanel';
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
-import { LizzyPopup } from './components/LizzyPopup';
-import { LogoSetPart } from './components/LogoSetPart';
+import { SplashReveal } from './components/SplashReveal';
+import { AppTour } from './components/AppTour';
+import { AIHub } from './components/AIHub';
+import { MediaHub } from './components/MediaHub';
+import { AndroidWidgetSimulator } from './components/AndroidWidgetSimulator';
 import { translate, SA_LANGUAGES } from './utils/translations';
+import { KlevaBot } from './components/KlevaBot';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
-import { SosCountdownOverlay } from './components/SosCountdownOverlay';
-import { useEmergencyListener } from './hooks/useEmergencyListener';
-import { useTacticalSensors } from './hooks/useTacticalSensors';
-import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { PermissionGateOverlay } from './components/PermissionGateOverlay';
+import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
+import { SimulatedDesktop } from './components/SimulatedDesktop';
+import { AdvancedSubsystems } from './components/AdvancedSubsystems';
+import { DecoyCalculator } from './components/DecoyCalculator';
+import { ConfidentialVault } from './components/ConfidentialVault';
 import { motion, AnimatePresence } from 'motion/react';
-import { ASSETS } from './utils/cloudinary';
-import { UpdateBanner } from './components/UpdateBanner';
 
-const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
-const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
-const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
-const OfflineMap = lazy(() => import('./components/OfflineMap').then(m => ({ default: m.OfflineMap })));
-const Settings = lazy(() => import('./components/Settings').then(m => ({ default: m.Settings })));
-const WorkspaceIntegrations = lazy(() => import('./components/WorkspaceIntegrations'));
-const Profile = lazy(() => import('./components/Profile').then(m => ({ default: m.Profile })));
-const LocationDisplay = lazy(() => import('./components/LocationDisplay').then(m => ({ default: m.LocationDisplay })));
-const OrgDashboard = lazy(() => import('./components/OrgDashboard').then(m => ({ default: m.OrgDashboard })));
-const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const AppTour = lazy(() => import('./components/AppTour').then(m => ({ default: m.AppTour })));
-const AIHub = lazy(() => import('./components/AIHub').then(m => ({ default: m.AIHub })));
-const MediaHub = lazy(() => import('./components/MediaHub').then(m => ({ default: m.MediaHub })));
-const AndroidWidgetSimulator = lazy(() => import('./components/AndroidWidgetSimulator').then(m => ({ default: m.AndroidWidgetSimulator })));
-const KlevaBot = lazy(() => import('./components/KlevaBot').then(m => ({ default: m.KlevaBot })));
-const GlobalRadarBackground = lazy(() => import('./components/GlobalRadarBackground').then(m => ({ default: m.GlobalRadarBackground })));
-const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').then(m => ({ default: m.AdvancedSubsystems })));
-const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
-const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
-const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
+import slide1 from './assets/images/safetylink_officer_phone_1783207722148.jpg';
+import slide2 from './assets/images/safetylink_team_tablet_1783207733837.jpg';
+import slide3 from './assets/images/regenerated_image_1783360733591.jpg';
 
-const slide1 = ASSETS.logo;
-const slide2 = ASSETS.logo;
-const slide3 = ASSETS.promoGraphic;
-const slLogoMain = ASSETS.logo;
-const slLogoSet = ASSETS.logo;
-const newBg1 = ASSETS.promoGraphic;
-const newLogo1 = ASSETS.logo;
-const klevaLogo = ASSETS.logoKlev;
-const polishLogo = ASSETS.logo;
-
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence';
-
-const TrialLockOverlay = () => {
-  const { logout } = useAppStore();
-  return (
-    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6">
-      <div className="max-w-md w-full bg-red-950/40 border-2 border-red-500/50 rounded-2xl p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]">
-        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-black mb-4 tracking-tight">System Locked</h1>
-        <p className="text-slate-300 text-lg mb-8 leading-relaxed">
-          Your 14-day SafetyLink trial has concluded. The system has automatically locked your account's access.
-        </p>
-        <div className="bg-black/40 p-4 rounded-xl text-sm text-slate-400 font-mono mb-8">
-          ERROR CODE: TRIAL_EXPIRED
-        </div>
-        <a href="mailto:info@safetylink.online" className="inline-block bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-8 rounded-xl transition-colors w-full mb-4">
-          Contact Sales to Unlock
-        </a>
-        <button onClick={logout} className="text-slate-500 text-sm font-bold hover:text-white underline">Sign Out</button>
-      </div>
-    </div>
-  );
-};
-
-
-const TrialReminderModal = () => {
-  const { currentUser, currentOrg, showTrialReminder, setShowTrialReminder } = useAppStore();
-  
-  if (!showTrialReminder) return null;
-  
-  const target = currentOrg || currentUser;
-  if (!target || target.subscriptionStatus !== 'trial') return null;
-
-  const daysPassed = Math.floor((Date.now() - (target.createdAt || Date.now())) / (1000 * 60 * 60 * 24));
-  const daysLeft = Math.max(0, 14 - daysPassed);
-
-  return (
-    <div className="fixed inset-0 z-[999999] flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-sm p-6">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-amber-300" />
-        <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </div>
-        <h2 className="text-2xl font-black text-white mb-2">Free Trial Active</h2>
-        <p className="text-slate-400 mb-6 text-sm">
-          You are currently using the SafetyLink Free Trial. Upgrade to premium for unlimited access to all features.
-        </p>
-        
-        <div className="bg-slate-950 rounded-2xl p-4 mb-8 border border-slate-800">
-          <div className="text-4xl font-black text-amber-400 mb-1">{daysLeft}</div>
-          <div className="text-xs text-slate-500 uppercase tracking-widest font-bold">Days Remaining</div>
-        </div>
-
-        <button 
-          onClick={() => setShowTrialReminder(false)}
-          className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl transition-all"
-        >
-          Continue to Dashboard
-        </button>
-      </div>
-    </div>
-  );
-};
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems';
 
 const App: React.FC = () => {
-  // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
-  // Check if running in a desktop EXE (Electron) environment
-  const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
-  // Only show landing page initially on actual web browsers
-  const [showLanding, setShowLanding] = useState(Capacitor.getPlatform() === 'web' && !isDesktopExe && window.location.pathname === '/');
-  const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG' | 'REGISTER_USER'>('LOGIN');
-  const [trialExpired, setTrialExpired] = useState(false);
-
-
-
-  const [isSosActive, setIsSosActive] = useState(false);
-
-  // The custom hook catches the Native Kotlin BLE Broadcast
-  const {   } = useTacticalSensors();
-  useEmergencyListener(() => {
-    setIsSosActive(true); // Wakes up the React overlay
-  });
-
-  const handleTrueCancel = () => {
-    console.log("SOS Canceled cleanly.");
-    setIsSosActive(false);
-  };
-
-  const handleDuressTrigger = () => {
-    console.warn("DURESS PROTOCOL ACTIVATED");
-    setIsSosActive(false); // Make it look like it was canceled to the attacker
-    useAppStore.getState().addAuditLog('SYSTEM', 'SEVERE', 'Duress Protocol Activated', 'Duress PIN used. Silent escalation.');
-  };
-
-  const handleFinalDispatch = () => {
-    console.error("TIMER EXPIRED. DISPATCHING PAYLOAD.");
-    setIsSosActive(false); // Close the overlay
-    useAppStore.getState().triggerPanic('Emergency SOS: Timer expired via BLE/Hardware button.');
-  };
   const { 
     activeSOSState, 
     currentUser, 
@@ -178,85 +44,17 @@ const App: React.FC = () => {
     logout,
     customTools,
     userLocation,
-    language, setLanguage,
-    setCommerceModalOpen,
+    language,
     toasts,
     removeToast,
     isBackgroundServiceRunning,
     backgroundServiceTick,
     bleDevices,
+    isAppMinimized,
+    setMinimized,
     decoyActive,
-    isFloatingWidgetDeployed,
-    setFloatingWidgetDeployed,
-    demoMode,
-    localOfflineQueue,
-    syncOfflineQueue,
-    checkAppUpdates,
-    updateInfo,
-    setUpdateInfo,
-    globalTheme,
-    setGlobalTheme
+    demoMode
   } = useAppStore();
-
-  useEffect(() => {
-    checkAppUpdates();
-    const updateInterval = setInterval(() => {
-      checkAppUpdates();
-    }, 15 * 60 * 1000);
-
-    const handleFocus = () => {
-      checkAppUpdates();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    initFirebaseSync();
-    
-    // Initialize real-time mesh node sync if firestore sync is active
-    let cleanupSync: any = null;
-    const { firestoreSync, currentUser } = useAppStore.getState();
-    if (firestoreSync && currentUser) {
-      cleanupSync = useAppStore.getState().initMeshSync();
-    }
-    
-    // Watch for toggle changes
-    const unsub = useAppStore.subscribe((state, prevState) => {
-       if ((state.firestoreSync !== prevState.firestoreSync || state.currentUser?.id !== prevState.currentUser?.id) && state.firestoreSync && state.currentUser) {
-          if (cleanupSync) cleanupSync();
-          cleanupSync = state.initMeshSync();
-       } else if (!state.firestoreSync && cleanupSync) {
-          cleanupSync();
-          cleanupSync = null;
-       }
-    });
-    
-    const checkTrial = () => {
-      const target = currentOrg || currentUser;
-      if (target && target.subscriptionStatus === 'trial') {
-        const daysPassed = Math.floor((Date.now() - (target.createdAt || Date.now())) / (1000 * 60 * 60 * 24));
-        if (daysPassed >= 14) {
-          setTrialExpired(true);
-        } else {
-          setTrialExpired(false);
-        }
-      } else if (target && target.subscriptionStatus === 'locked') {
-        setTrialExpired(true);
-      } else {
-        setTrialExpired(false);
-      }
-    };
-    checkTrial();
-    
-    // Fallback original event listener
-    const handleTrialExpired = () => setTrialExpired(true);
-    window.addEventListener('trial_expired', handleTrialExpired);
-    return () => { 
-      clearInterval(updateInterval);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('trial_expired', handleTrialExpired);
-      if (cleanupSync) cleanupSync(); 
-      unsub(); 
-    };
-  }, [currentUser, currentOrg]);
   
   const t = (key: string) => {
     if (key === 'tab.deck') return 'Control Deck';
@@ -265,41 +63,11 @@ const App: React.FC = () => {
   };
   
   const [activeTab, setActiveTab] = useState<TabId>('home');
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [showSplash, setShowSplash] = useState(() => {
-    // Show cinematic 3D motion logo splash on initial app load per session
-    if (typeof window !== 'undefined') {
-      const shown = sessionStorage.getItem('sl_splash_shown');
-      if (!shown) {
-        sessionStorage.setItem('sl_splash_shown', 'true');
-        return true;
-      }
-    }
-    return false;
-  });
-  const [showDnsGuide, setShowDnsGuide] = useState(false);
-  useEffect(() => {
-    // Hide native splash screen once React has mounted and our custom cinematic splash is ready
-    if (Capacitor.isNativePlatform()) {
-      SplashScreen.hide().catch(console.warn);
-      // Fallback timeout ensuring no lingering splash overlay on native
-      const t = setTimeout(() => {
-        SplashScreen.hide().catch(() => {});
-      }, 800);
-      return () => clearTimeout(t);
-    }
-  }, []);
-  
+  const [showSplash, setShowSplash] = useState<boolean>(true);
   const [showTour, setShowTour] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
   const backgroundSlides = [
-    newBg1,
-    newLogo1,
-    klevaLogo,
-    polishLogo,
-    slLogoMain,
-    slLogoSet,
     slide3,
     slide1,
     slide2
@@ -311,13 +79,12 @@ const App: React.FC = () => {
     const interval = setInterval(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % backgroundSlides.length);
     }, 4500);
-    
-  return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, [isDrawerOpen]);
 
   useEffect(() => {
-    const skipTour = localStorage.getItem('sl_skip_tour');
     if (currentUser) {
+      const skipTour = localStorage.getItem('sl_skip_tour');
       if (skipTour !== 'true') {
         setShowTour(true);
       }
@@ -327,99 +94,42 @@ const App: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    let urlOpenListener: Promise<{ remove: () => void }> | null = null;
-    let backButtonListenerPromise: Promise<{ remove: () => void }> | null = null;
-
-    if (Capacitor.isNativePlatform()) {
-      urlOpenListener = CapacitorApp.addListener('appUrlOpen', data => {
-        console.log('App opened with URL:', data);
-        try {
-          const url = new URL(data.url);
-          if (url.searchParams.has('ref')) {
-            const refCode = url.searchParams.get('ref');
-            if (refCode) localStorage.setItem('sl_pending_referral', refCode);
-          }
-        } catch (e) {
-          console.warn('Failed to parse incoming deep link url:', e);
-        }
-      });
-
-      try {
-        backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
-          // 4. Block Back Button during SOS
-          if (isSosActive) {
-            console.warn("Back button blocked: SOS Countdown is active.");
-            return;
-          }
-          if (isDrawerOpen) {
-            setIsDrawerOpen(false);
-          } else if (activeTab !== 'home') {
-            setActiveTab('home');
-          } else {
-            if (true) {
-              setShowExitConfirm(true);
-            }
-          }
-        });
-      } catch (e) {
-        console.warn("backButton not supported", e);
+    // Automatically minimize and lock the mini app in the system notification panel when the user exits/blurs the screen/switches tasks
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && useAppStore.getState().currentUser) {
+        setMinimized(true);
+        useAppStore.getState().addToast("SafetyLink minimized to persistent notifications panel.", "info");
+        useAppStore.getState().addAuditLog(
+          'SYSTEM',
+          'INFO',
+          'App Switched to Background',
+          'User switched apps or tasks. Pinned notification mini-app locked in system shade.'
+        );
       }
-    }
+    };
+
+    const handleWindowBlur = () => {
+      setTimeout(() => {
+        if (!document.hasFocus() && useAppStore.getState().currentUser && !useAppStore.getState().isAppMinimized) {
+          setMinimized(true);
+          useAppStore.getState().addToast("SafetyLink locked on background notification panel.", "info");
+        }
+      }, 500);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
 
     return () => {
-      if (urlOpenListener) urlOpenListener.then(listener => listener.remove());
-      if (backButtonListenerPromise) {
-        backButtonListenerPromise.then(listener => listener.remove());
-      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
     };
-  }, [isDrawerOpen, activeTab, isSosActive]);
- 
-   useEffect(() => {
+  }, [setMinimized]);
+
+  useEffect(() => {
+    // Bootstrap tracking and simulated BLE hardware listeners on mount
     const geoService = GeolocationService.getInstance();
-    OfflineService.getInstance(); // Initialize offline listeners
-    
-    const setupSurvivalListener = async () => {
-      const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
-      if (bridge) {
-        bridge.addListener('onSurvivalMode', (info: any) => {
-          useAppStore.getState().setSurvivalMode(info.isSurvival);
-          if (info.isSurvival) {
-            console.error("CRITICAL: BATTERY SURVIVAL MODE ACTIVATED. UI SUSPENDED.");
-          }
-        });
-      }
-    };
-    setupSurvivalListener();
-
-    // FCM Push Notification Setup
-    const registerPush = async () => {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          let permStatus = await PushNotifications.checkPermissions();
-          if (permStatus.receive === 'prompt') {
-            permStatus = await PushNotifications.requestPermissions();
-          }
-          if (permStatus.receive === 'granted') {
-            await PushNotifications.register();
-            PushNotifications.addListener('registration', (token) => {
-              console.log('FCM Token:', token.value);
-              if (currentUser) {
-                useAppStore.getState().updateUserProfile(currentUser.id, { fcmToken: token.value } as any);
-              }
-            });
-            PushNotifications.addListener('registrationError', (error) => {
-              console.error('FCM Registration error: ', error.error);
-            });
-          }
-        }
-      } catch (e) {
-        console.warn('FCM Registration skipped (not native or error):', e);
-      }
-    };
-    registerPush();
-
     geoService.startTracking();
-    //  (); // Disabled to prevent false auto-alerts as requested
 
     const handleCustomWearableEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -434,9 +144,6 @@ const App: React.FC = () => {
       window.removeEventListener('wearable-panic-trigger', handleCustomWearableEvent);
     };
   }, []);
-
-
-
 
   useEffect(() => {
     const handleSwitchTab = (e: Event) => {
@@ -456,7 +163,7 @@ const App: React.FC = () => {
       if (isBackgroundServiceRunning) {
         incrementBackgroundServiceTick();
       }
-    }, 30000); // OPTIMIZED: Reduced heartbeat frequency to save battery
+    }, 4000);
     return () => clearInterval(tickInterval);
   }, [isBackgroundServiceRunning]);
 
@@ -477,82 +184,38 @@ const App: React.FC = () => {
   }, [isBackgroundServiceRunning, backgroundServiceTick, activeSOSState, userLocation, bleDevices]);
 
   // Show 5-second 3D logo splash reveal before rendering AuthScreen or Dashboards
+  if (showSplash) {
+    return <SplashReveal onComplete={() => setShowSplash(false)} />;
+  }
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
     if (decoyActive) {
-      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
+      return <DecoyCalculator />;
     }
 
     if (superAdminActive) {
-      return <ErrorBoundary tabName="Admin"><Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Admin...</div>}><AdminPanel /></Suspense></ErrorBoundary>;
+      return <AdminPanel />;
     }
 
-    if (currentUser && currentUser.orgCode && currentUser.role === 'Responder') {
-      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Responder Console...</div>}><ResponderDashboard /></Suspense>;
-    }
-
-    if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
-      return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
+    if (currentOrg) {
+      return <OrgDashboard />;
     }
 
     if (!currentUser) {
-      if (showLanding) {
-        return <LandingPage 
-          onLogin={() => {
-            setAuthInitialView('LOGIN');
-            setShowLanding(false);
-            
-            
-          }} 
-          onRegisterOrg={() => {
-            setAuthInitialView('REGISTER_ORG');
-            setShowLanding(false);
-            
-            
-          }} 
-          onRegisterUser={() => {
-            setAuthInitialView('REGISTER_USER');
-            setShowLanding(false);
-            
-            
-          }}
-        />;
-      }
-      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
+      return <AuthScreen />;
     }
 
-
+    if (isAppMinimized) {
+      return <SimulatedDesktop />;
+    }
 
     return (
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
 
-      
-      {showExitConfirm && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto">
-              <span className="text-2xl">🚪</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-slate-100 uppercase tracking-wider font-mono">Exit SafetyLink?</h2>
-              <p className="text-xs text-slate-400 mt-2">Background tracking and emergency listeners will be suspended if you exit.</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setShowExitConfirm(false)} className="flex-1 py-3 rounded-xl border border-slate-700 font-bold uppercase tracking-wider text-xs">
-                Cancel
-              </button>
-              <button onClick={() => CapacitorApp.exitApp()} className="flex-1 py-3 rounded-xl bg-red-600 font-bold uppercase tracking-wider text-xs shadow-lg shadow-red-500/20">
-                Exit App
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* App Tour Overlay */}
       {showTour && (
-        <Suspense fallback={<div className="hidden"></div>}><AppTour
+        <AppTour
           onClose={(neverShowAgain) => {
             if (neverShowAgain) {
               localStorage.setItem('sl_skip_tour', 'true');
@@ -560,7 +223,6 @@ const App: React.FC = () => {
             setShowTour(false);
           }}
         />
-        </Suspense>
       )}
 
       {/* Top Banner Alert during SOS Distress Broadcast */}
@@ -576,251 +238,92 @@ const App: React.FC = () => {
       )}
 
       {/* Header bar */}
-      <header className={`${
-        globalTheme === 'light'
-          ? 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
-          : 'bg-slate-900/60 border-slate-900 text-slate-100'
-      } backdrop-blur-md border-b py-2.5 sm:py-3 px-3 sm:px-5 flex justify-between items-center shadow-md relative z-30 transition-colors`}>
+      <header className="bg-slate-900/60 backdrop-blur-md border-b border-slate-900 py-3 px-5 flex justify-between items-center shadow-md relative z-30">
         {/* Left Side: Hamburger trigger and Brand title */}
-        <div className="flex items-center gap-3">
-          {activeTab === 'home' ? (
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className={`p-2 sm:p-2.5 rounded-xl border transition-all shadow-inner flex items-center justify-center cursor-pointer ${
-                globalTheme === 'light'
-                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white'
-              }`}
-              title="Open Navigation Menu"
-              aria-label="Open menu drawer"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              onClick={() => setActiveTab('home')}
-              className={`p-2 sm:p-2.5 rounded-xl border transition-all shadow-inner flex items-center gap-1 cursor-pointer ${
-                globalTheme === 'light'
-                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white'
-              }`}
-              title="Return to Home"
-              aria-label="Back to home"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
+        <div className="flex items-center gap-3.5">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2.5 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           
           <div className="flex items-center gap-2.5">
-            <LogoSetPart part="badge" size={38} rounded="xl" />
+            <SafetyLinkLogo size={68} />
             <div className="text-left">
-              <h1 className={`text-sm font-black tracking-wider uppercase font-mono leading-none flex items-center gap-1 ${
-                globalTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
-              }`}>
+              <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none flex items-center gap-1">
                 SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
               </h1>
-              <p className={`text-[7px] font-mono uppercase tracking-widest mt-0.5 ${
-                globalTheme === 'light' ? 'text-slate-500' : 'text-slate-500'
-              }`}>Secure Active Node</p>
+              <p className="text-[7px] text-slate-500 font-mono uppercase tracking-widest mt-0.5">Secure Active Node</p>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Language & Account */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <div className="relative mr-0.5 group">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className={`appearance-none text-[9.5px] font-bold py-1.5 pl-2 pr-6 rounded-lg focus:outline-none transition-colors uppercase tracking-wider cursor-pointer border ${
-                globalTheme === 'light'
-                  ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 focus:border-slate-400'
-                  : 'bg-slate-950/60 hover:bg-slate-900 border-slate-800 text-slate-300 focus:border-slate-600'
-              }`}
-            >
-              <option value="en">🌐 English</option>
-              <option value="zu">🌐 Zulu</option>
-              <option value="af">🌐 Afrikaans</option>
-              <option value="xh">🌐 Xhosa</option>
-              <option value="st">🌐 Sesotho</option>
-              <option value="tn">🌐 Setswana</option>
-              <option value="ts">🌐 Tsonga</option>
-              <option value="ss">🌐 Swati</option>
-              <option value="ve">🌐 Venda</option>
-              <option value="nr">🌐 Ndebele</option>
-              <option value="nso">🌐 Sepedi</option>
-            </select>
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-slate-300 transition-colors">
-              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+        {/* Right Side: Account status & Active view flag */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setMinimized(true)}
+            title="Exit App to Mobile Desktop"
+            className="p-2 bg-slate-950/60 hover:bg-slate-900 border border-slate-850 hover:border-slate-800 text-slate-300 hover:text-white rounded-xl transition-all shadow-inner flex items-center justify-center gap-1 text-[10px] font-bold font-mono uppercase"
+          >
+            <span>📳</span>
+            <span className="hidden sm:inline text-[8px] text-slate-400">Exit App</span>
+          </button>
 
-          <div className="text-right hidden md:block">
-            <span className={`text-[10px] font-black block leading-none ${
-              globalTheme === 'light' ? 'text-slate-900' : 'text-slate-200'
-            }`}>{currentUser.fullName}</span>
+          <div className="h-4.5 w-[1px] bg-slate-850" />
+
+          <div className="text-right">
+            <span className="text-[10px] font-black text-slate-200 block leading-none">{currentUser.fullName}</span>
             <span className="text-[7.5px] font-mono text-slate-500 uppercase mt-0.5 block leading-none">@{currentUser.username}</span>
           </div>
 
+          <div className="h-4.5 w-[1px] bg-slate-850" />
+
           {/* Active View Indicator Badge */}
-          <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border hidden sm:inline-block ${
-            globalTheme === 'light' ? 'bg-slate-100' : 'bg-slate-950'
-          } ${
-            activeTab === 'home' ? 'text-red-400 border-red-500/20' :
-            activeTab === 'deck' ? 'text-cyan-500 border-cyan-500/20' :
-            activeTab === 'vault' ? 'text-emerald-500 border-emerald-500/20' :
-            activeTab === 'contacts' ? 'text-blue-500 border-blue-500/20' :
-            activeTab === 'ble' ? 'text-emerald-500 border-emerald-500/20' :
-            activeTab === 'map' ? 'text-amber-500 border-amber-500/20' :
-            activeTab === 'subsystems' ? 'text-indigo-500 border-indigo-500/20' :
-            'text-purple-500 border-purple-500/20'
+          <span className={`text-[8.5px] font-mono font-bold tracking-wider uppercase bg-slate-950 px-2.5 py-1 rounded-full border ${
+            activeTab === 'home' ? 'text-red-400 border-red-500/10' :
+            activeTab === 'deck' ? 'text-cyan-400 border-cyan-500/10' :
+            activeTab === 'vault' ? 'text-emerald-400 border-emerald-500/10' :
+            activeTab === 'contacts' ? 'text-blue-400 border-blue-500/10' :
+            activeTab === 'ble' ? 'text-emerald-400 border-emerald-500/10' :
+            activeTab === 'map' ? 'text-amber-400 border-amber-500/10' :
+            activeTab === 'subsystems' ? 'text-indigo-400 border-indigo-500/10' :
+            'text-purple-400 border-purple-500/10'
           }`}>
             {t(`tab.${activeTab}`)}
           </span>
-
-          {/* Theme Toggle (Sun / Moon) */}
-          <button
-            id="app-theme-toggle-btn"
-            onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
-            className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center shadow-sm shrink-0 ${
-              globalTheme === 'dark'
-                ? 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-amber-400 hover:border-amber-500/50 hover:bg-slate-850'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-indigo-600 hover:border-indigo-400 hover:text-indigo-700'
-            }`}
-            title={globalTheme === 'dark' ? "Switch to Light Theme" : "Switch to Tactical Dark Theme"}
-            aria-label="Toggle visual theme"
-          >
-            {globalTheme === 'dark' ? (
-              <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="5" />
-                <line x1="12" y1="1" x2="12" y2="3" />
-                <line x1="12" y1="21" x2="12" y2="23" />
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                <line x1="1" y1="12" x2="3" y2="12" />
-                <line x1="21" y1="12" x2="23" y2="12" />
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-              </svg>
-            )}
-          </button>
-
-          <button
-            onClick={() => useAppStore.getState().logout()}
-            className={`text-[9px] font-mono border px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
-              globalTheme === 'light'
-                ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-red-600'
-                : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-slate-400 hover:text-red-400'
-            }`}
-            title="Sign Out to Website"
-          >
-            Sign Out
-          </button>
         </div>
       </header>
 
-      {/* Main Workspace content */}
-      <main className={`flex-1 min-h-0 pb-12 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        <div className={`max-w-md mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
+      {/* Main Workspace content - scrollable */}
+      <main className="flex-1 overflow-y-auto min-h-0 pb-12">
+        <div className="max-w-md mx-auto p-4 space-y-5">
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
-            <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
-              {/* TOP: Logo */}
-              <div className="shrink-0 pt-1">
-                <SafetyLinkLogo size={72} showText={true} />
+            <div className="space-y-6 animate-fadeIn text-center flex flex-col items-center justify-center py-4">
+              {/* SafetyLink Reassurance Header Card */}
+              <div className="w-full bg-slate-900/40 border border-slate-900 rounded-3xl p-5 flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-slate-800/60 flex items-center justify-center text-xl shrink-0">
+                  🛡️
+                </div>
+                <div className="space-y-1 text-left">
+                  <h2 className="text-sm font-bold text-slate-100">{t('home.reassurance_title')}, {currentUser.fullName}!</h2>
+                  {currentUser.orgCode && (
+                    <span className="inline-block text-[8px] font-mono font-black text-blue-400 border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 rounded-full uppercase tracking-wider mb-1">
+                      Linked Org ID: {currentUser.orgCode}
+                    </span>
+                  )}
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {t('home.reassurance_subtitle')}
+                  </p>
+                </div>
               </div>
 
-              {/* OFFLINE QUEUE INDICATOR */}
-              {localOfflineQueue && localOfflineQueue.length > 0 && (
-                <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between mb-1 mt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📡</span>
-                    <div className="text-left">
-                      <p className="text-[10px] font-bold text-amber-400">OFFLINE SYNC PENDING</p>
-                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} {localOfflineQueue.length === 1 ? 'event' : 'events'} waiting for network.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
-                      RETRY
-                    </button>
-                    <button onClick={() => useAppStore.setState({ localOfflineQueue: [] })} className="text-[8px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">
-                      CLEAR
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* MIDDLE: SOS Button fills remaining space */}
-              <div className="flex-1 w-full flex items-center justify-center">
+              {/* Central Core Panic Trigger Button */}
+              <div className="w-full flex items-center justify-center py-6">
                 <PanicButton />
-              </div>
-
-              {/* BOTTOM: iTAG status + reassurance */}
-              <div className="shrink-0 w-full space-y-2 pb-1">
-                {bleDevices.length > 0 && (
-                  <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-3 py-2 flex items-center gap-2 flex-wrap">
-                    {bleDevices.slice(0, 2).map((d: any) => (
-                      <div key={d.macAddress} className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${d.connectionState === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : d.connectionState === 'CONNECTING' ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
-                        <span className="text-[9px] font-mono text-slate-400 truncate">{d.friendlyName}</span>
-                        <span className="text-[8px] font-mono text-slate-600 shrink-0">{d.rssi}dBm</span>
-                        {d.connectionState === 'DISCONNECTED' && (
-                          <button
-                            onClick={() => useAppStore.getState().connectBleDevice(d.macAddress)}
-                            className="text-[7px] font-bold text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-lg hover:bg-blue-500/10 transition-all shrink-0"
-                          >
-                            RECONNECT
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="w-full bg-slate-900/40 border border-slate-900 rounded-2xl px-3 py-2.5 flex items-center gap-3">
-                  <span className="text-lg shrink-0">🛡️</span>
-                  <div className="text-left min-w-0">
-                    <p className="text-[10px] font-bold text-slate-200 leading-none">{t('home.reassurance_title')}, {currentUser.fullName?.split(' ')[0]}!</p>
-                    {currentUser.orgCode && (
-                      <span className="text-[7px] font-mono text-blue-400 uppercase tracking-wider">{currentUser.orgCode}</span>
-                    )}
-                    <p className="text-[8.5px] text-slate-500 leading-snug mt-0.5">{t('home.reassurance_subtitle')}</p>
-                  </div>
-                </div>
-                
-                {/* QUICK ACTION SHORTCUTS */}
-                <div className="w-full grid grid-cols-5 gap-1.5 mt-2">
-                  <button onClick={() => setActiveTab('ble')} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800 transition-colors shadow-sm">
-                    <span className="text-base leading-none">📡</span>
-                    <span className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest text-center leading-tight">Devices</span>
-                  </button>
-                  <button onClick={() => setActiveTab('map')} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800 transition-colors shadow-sm">
-                    <span className="text-base leading-none">🗺️</span>
-                    <span className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest text-center leading-tight">Map</span>
-                  </button>
-                  <button onClick={() => setCommerceModalOpen(true)} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800 transition-colors shadow-sm">
-                    <span className="text-base leading-none">🛒</span>
-                    <span className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest text-center leading-tight">Store</span>
-                  </button>
-                  <button onClick={() => setActiveTab('contacts')} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800 transition-colors shadow-sm">
-                    <span className="text-base leading-none">👥</span>
-                    <span className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest text-center leading-tight">Alerts</span>
-                  </button>
-                  <button onClick={() => setActiveTab('vault')} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800 transition-colors shadow-sm">
-                    <span className="text-base leading-none">🗄️</span>
-                    <span className="text-[7.5px] font-bold text-slate-300 uppercase tracking-widest text-center leading-tight">Vault</span>
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -828,19 +331,19 @@ const App: React.FC = () => {
           {activeTab === 'deck' && (
             <div className="space-y-5 animate-fadeIn">
               {/* Location telemetry display */}
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Location...</div>}><LocationDisplay /></Suspense>
+              <LocationDisplay />
 
               {/* Status metrics bar */}
               <StatusIndicator />
 
               {/* Coordinated AI Hub: K'leva.info */}
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading AI Hub...</div>}><AIHub /></Suspense>
+              <AIHub />
 
               {/* Informational Media & Resources Hub (TM Media Solutions) */}
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Media...</div>}><MediaHub /></Suspense>
+              <MediaHub />
 
               {/* Interactive Home Screen SOS Widget */}
-              {demoMode && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Simulator...</div>}><AndroidWidgetSimulator /></Suspense>}
+              <AndroidWidgetSimulator />
 
               {/* Dynamic Pushed Tools & Settings */}
               {(() => {
@@ -859,8 +362,8 @@ const App: React.FC = () => {
 
                     <div className="space-y-3">
                       {visibleTools.map((t) => {
-                        const lat = userLocation?.lat || 0;
-                        const lng = userLocation?.lng || 0;
+                        const lat = userLocation?.lat || -26.191200;
+                        const lng = userLocation?.lng || 28.026400;
                         const formattedVal = t.targetValue
                           .replace('{LAT}', lat.toFixed(6))
                           .replace('{LNG}', lng.toFixed(6));
@@ -909,11 +412,9 @@ const App: React.FC = () => {
           )}
 
           {activeTab === 'vault' && (
-            <ErrorBoundary tabName="Vault">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Vault...</div>}>
-                <div className="animate-fadeIn"><ConfidentialVault /></div>
-              </Suspense>
-            </ErrorBoundary>
+            <div className="animate-fadeIn">
+              <ConfidentialVault />
+            </div>
           )}
 
           {activeTab === 'contacts' && (
@@ -924,50 +425,27 @@ const App: React.FC = () => {
 
           {activeTab === 'ble' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Scanner...</div>}><BLEScanner /></Suspense>
+              <BLEScanner />
             </div>
           )}
 
           {activeTab === 'map' && (
-            <ErrorBoundary tabName="Map">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Map...</div>}>
-                <div className="animate-fadeIn"><OfflineMap /></div>
-              </Suspense>
-            </ErrorBoundary>
+            <div className="animate-fadeIn">
+              <OfflineMap />
+            </div>
           )}
 
-          {activeTab === 'profile' && (
-            <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Profile...</div>}><Profile /></Suspense>
-          )}
           {activeTab === 'settings' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Settings...</div>}><Settings /></Suspense>
+              <Settings />
             </div>
           )}
 
-          
-          
-            {activeTab === 'intelligence' && (
-              <div className="animate-fadeIn p-4 overflow-y-auto h-full">
-                <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Intelligence...</div>}><SituationalAwareness /></Suspense>
-              </div>
-            )}
-            {activeTab === 'subsystems' && (
+          {activeTab === 'subsystems' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Subsystems...</div>}><AdvancedSubsystems /></Suspense>
+              <AdvancedSubsystems />
             </div>
           )}
-          {activeTab === 'store' && (
-            <div className="animate-fadeIn h-full overflow-y-auto">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Store...</div>}><SafetyWareStore /></Suspense>
-            </div>
-          )}
-          {activeTab === 'workspace' && (
-            <div className="animate-fadeIn p-4 overflow-y-auto h-full">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Workspace...</div>}><WorkspaceIntegrations /></Suspense>
-            </div>
-          )}
-
         </div>
       </main>
 
@@ -990,7 +468,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
+              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/80 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
@@ -1022,7 +500,7 @@ const App: React.FC = () => {
                 {/* Header inside drawer */}
                 <div className="flex items-center justify-between border-b border-slate-900 pb-4">
                   <div className="flex items-center gap-2.5">
-                    <LogoSetPart part="main" size={32} rounded="xl" />
+                    <SafetyLinkLogo size={32} />
                     <div className="text-left">
                       <h2 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono leading-none">
                         SafetyLink Core
@@ -1041,16 +519,15 @@ const App: React.FC = () => {
                 </div>
 
                 {/* User Info inside drawer */}
-                <button onClick={() => { setActiveTab('profile'); setIsDrawerOpen(false); }} className="w-full p-3 bg-slate-900/40 border border-slate-900 rounded-2xl text-left flex items-center gap-3 hover:bg-slate-900/80 transition-colors cursor-pointer">
+                <div className="p-3 bg-slate-900/40 border border-slate-900 rounded-2xl text-left flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-slate-800/80 border border-slate-750 flex items-center justify-center text-base shadow-inner">
                     👤
                   </div>
-                  <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="space-y-0.5 min-w-0">
                     <div className="text-xs font-black text-slate-200 truncate">{currentUser.fullName}</div>
                     <div className="text-[8.5px] font-mono text-slate-500 uppercase truncate">@{currentUser.username}</div>
                   </div>
-                  <div className="text-[10px] text-slate-500">✎</div>
-                </button>
+                </div>
 
                 {/* Navigation Options */}
                 <div className="space-y-1.5 text-left">
@@ -1149,18 +626,6 @@ const App: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => { setActiveTab('store'); setIsDrawerOpen(false); }}
-                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
-                      activeTab === 'store'
-                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
-                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
-                    }`}
-                  >
-                    <span className="text-sm shrink-0">🛒</span>
-                    <span className="text-sm font-medium">SafetyWare Store</span>
-                  </button>
-
-                  <button
                     onClick={() => { setActiveTab('settings'); setIsDrawerOpen(false); }}
                     className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
                       activeTab === 'settings'
@@ -1176,13 +641,17 @@ const App: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => { setShowDnsGuide(true); setIsDrawerOpen(false); }}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200"
+                    onClick={() => { setActiveTab('subsystems'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'subsystems'
+                        ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
                   >
-                    <span className="text-sm shrink-0">🔑</span>
+                    <span className="text-sm shrink-0">💻</span>
                     <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">DNS Shield</p>
-                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Configure device DNS protection</p>
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.subsystems')}</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Hardware & Chaos Simulator</p>
                     </div>
                   </button>
                 </div>
@@ -1229,43 +698,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              
-              {/* Floating Widget Toggle */}
-              <div className="space-y-2 text-left border-t border-slate-900 pt-4 relative z-10">
-                <div className="flex items-center justify-between bg-slate-950 border border-slate-900 px-3 py-2.5 rounded-xl">
-                  <div className="flex flex-col">
-                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-wider font-mono block">
-                      🛡️ FLOATING WIDGET
-                    </span>
-                    <span className="text-[7.5px] text-slate-500 font-mono mt-0.5">Persistent safety toggle</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const newState = !isFloatingWidgetDeployed;
-                      setFloatingWidgetDeployed(newState);
-                      try {
-                        import('@capacitor/core').then(({ Capacitor }) => {
-                          const bridge = (Capacitor.Plugins as any).SafetyLinkBridge;
-                          if (bridge) bridge.toggleFloatingWidget({ enable: newState });
-                        });
-                      } catch (e) {
-                        console.warn(e);
-                      }
-                    }}
-                    className={`w-10 h-5 rounded-full relative transition-colors ${isFloatingWidgetDeployed ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                  >
-                    <span className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-all ${isFloatingWidgetDeployed ? 'right-0.5' : 'left-0.5'}`} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Mobile App Download */}
-              <div className="pt-4 border-t border-slate-900 mt-2 relative z-10">
-                <a href="https://drive.google.com/file/d/1MrWZROWqlS00lGSEJ0gNIemjjBknqpMf/view?usp=drivesdk" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-500/30 text-[9px] font-mono font-black text-emerald-400 hover:text-emerald-300 rounded-xl uppercase tracking-wider transition-all">
-                  📱 DOWNLOAD ANDROID APK (120M)
-                </a>
-              </div>
-
               {/* Drawer footer with partnership info & Sign Out */}
               <div className="space-y-4 pt-4 border-t border-slate-900 mt-6 relative z-10">
                 <div className="space-y-1 text-left opacity-70">
@@ -1275,6 +707,13 @@ const App: React.FC = () => {
                     <p>⚡ K'LEVA.I SIMPLICITY</p>
                   </div>
                 </div>
+
+                <button
+                  onClick={() => { setMinimized(true); setIsDrawerOpen(false); }}
+                  className="w-full py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[9px] font-mono font-black text-slate-300 hover:text-white rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>📳 EXIT CONSOLE TO BACKGROUND</span>
+                </button>
 
                 <button
                   onClick={() => { logout(); setIsDrawerOpen(false); }}
@@ -1292,58 +731,38 @@ const App: React.FC = () => {
   };
 
   const getThemeClass = () => {
-    let base = 'theme-personal';
-    if (activeTab === 'deck') {
-      base = currentUser?.orgCode ? 'theme-responder' : 'theme-personal';
+    if (superAdminActive) return 'theme-admin';
+    if (currentOrg) return 'theme-org';
+    if (currentUser) {
+      return currentUser.orgCode ? 'theme-responder' : 'theme-personal';
     }
-    return globalTheme === 'light' ? `${base} theme-light` : base;
+    return 'theme-personal';
   };
 
   return (
-    <div className={`min-h-screen w-full bg-transparent text-slate-100 flex flex-col font-sans select-none ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
-      <GlobalBackground />
-      {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
-      {trialExpired && <TrialLockOverlay />}
-      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
-      <TrialReminderModal />
-
+    <div className={`h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden relative ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       {/* High fidelity cyber background lighting elements */}
+      <div className="police-wash pointer-events-none" />
       
-      
-      
+      <div className="flare-line-container pointer-events-none">
+        <div className="flare-line flare-line-1" />
+        <div className="flare-line flare-line-2" />
+      </div>
 
-      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
-      {/* Background Video */}
-      {(activeTab === 'home' && !currentOrg) && (
-        <>
-          
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-4 py-2 rounded-2xl text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10 text-center flex flex-col leading-relaxed">
-            <span>EXPERIMENTAL LIVE MODE • SIMULATED</span><span>BROADCAST LINKS</span>
-          </div>
-        </>
+      {demoMode && (
+        <div className="demo-simulated-overlay select-none pointer-events-none">
+          <span>EXPERIMENTAL LIVE MODE • SIMULATED BROADCAST LINKS</span>
+        </div>
       )}
 
       {/* Persistent System Status Bar & Background Notification Tray */}
+      <BackgroundNotificationPanel />
 
-      {/* High-Priority Emergency Overlay */}
-      <TrialBanner />
-      <ForcedCountdownOverlay />
-      <SosCountdownOverlay 
-        isActive={isSosActive}
-        onTrueCancel={handleTrueCancel}
-        onDuressTrigger={handleDuressTrigger}
-        onDispatchSOS={handleFinalDispatch}
-      />
-
-      {/* Critical Wearable Device Alert Sentinel Overlay */}
-      <DeviceAlertOverlay />
-      <LizzyPopup />
-      {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
+      {/* Permissions Gate Requester */}
+      <PermissionGateOverlay />
 
       {/* Primary Dynamic App Screen Container */}
-      <div className="flex-1 relative flex flex-col z-10">
-        {renderMainBody()}
-      </div>
+      {renderMainBody()}
 
       {/* Unified Non-overlapping Toast Stack */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2.5 w-full max-w-xs px-4 pointer-events-none">
@@ -1388,14 +807,11 @@ const App: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Floating Lizzy - K'lev.ai South African Safety Assistant Bot */}
-      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Bot...</div>}><KlevaBot /></Suspense>
+      {/* Floating K'lev.ai South African Safety Assistant Bot */}
+      <KlevaBot />
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />
-
-      {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
-      <FirstLaunchDisclaimer />
 
     </div>
   );

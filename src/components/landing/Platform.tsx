@@ -12,7 +12,32 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoSrc, setVideoSrc] = useState('');
   const [activePanel, setActivePanel] = useState<number | null>(1);
+  const [platformRotation, setPlatformRotation] = useState(0);
   const tourIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setPlatformRotation(r => r + 1), 7000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const blueprintPool = [
+    { src: R2_MEDIA.architecture.responseArchitecture, title: 'R2 BLUEPRINT: EMERGENCY RESPONSE ARCHITECTURE' },
+    { src: R2_MEDIA.architecture.systemAnatomy, title: 'R2 SCHEMATIC: SYSTEM ANATOMY & RELAY MATRIX' },
+    { src: R2_MEDIA.architecture.responseOverview, title: 'R2 OVERVIEW: PLATFORM TOPOLOGY & GUARD DISPATCH' },
+    { src: R2_MEDIA.architecture.meshPlatformOverview, title: 'R2 ARCHITECTURE: DECENTRALIZED MESH RELAY' },
+    { src: R2_MEDIA.architecture.universalResilience, title: 'R2 MATRIX: UNIVERSAL RESILIENCE BENCHMARK' }
+  ];
+
+  const telemetryPool = [
+    { src: R2_MEDIA.platform.commandDeckDark, title: 'TACTICAL COMMAND TELEMETRY DECK' },
+    { src: R2_MEDIA.platform.networkGrid, title: 'SPATIAL NETWORK & TRIANGULATION' },
+    { src: R2_MEDIA.platform.dispatchControl, title: 'CENTRAL INCIDENT CONTROL ROOM' },
+    { src: R2_MEDIA.platform.telemetryDesk, title: 'REAL-TIME DISPATCH TELEMETRY DESK' },
+    { src: R2_MEDIA.platform.mobileTelemetry, title: 'FIELD OPERATOR MOBILE TELEMETRY' }
+  ];
+
+  const activeBlueprint = blueprintPool[platformRotation % blueprintPool.length];
+  const activeTelemetry = telemetryPool[platformRotation % telemetryPool.length];
 
   const stopTour = () => { if (tourIntervalRef.current) { clearInterval(tourIntervalRef.current); tourIntervalRef.current = null; } };
   const openPanel = (n: number) => { setActivePanel(n); stopTour(); };
@@ -20,7 +45,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const startTour = () => { stopTour(); let n = 1; tourIntervalRef.current = setInterval(() => { n = n >= 4 ? 1 : n + 1; setActivePanel(n); }, 3000); };
 
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {showVideoModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.92)', zIndex:999999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
@@ -30,7 +55,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       )}
 
       {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px 60px', background:'rgba(7,10,15,0.25)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HOW IT WORKS</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
@@ -43,7 +68,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
 
       {/* ── OFFLINE ARCHITECTURE ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.3)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// THE OPERATING PHILOSOPHY</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'48px' }}>Offline, On Purpose.</h2>
@@ -53,7 +78,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               { icon:'🔗', title:'Encrypted Local Mesh', desc:'When towers go down during load-shedding, SafetyLink devices relay alerts peer-to-peer over BLE until a signal is found.' },
               { icon:'🔐', title:'Immutable Evidence', desc:'Incident data and audio recordings write to local AES-256-GCM encrypted storage before cloud broadcast — nothing is lost offline.' },
             ].map((f, i) => (
-              <div key={i} style={{ background:'#111820', padding:'32px' }}>
+              <div key={i} style={{ background:'rgba(17,24,32,0.45)', backdropFilter:'blur(6px)', padding:'32px' }}>
                 <div style={{ fontSize:'2rem', marginBottom:'16px' }}>{f.icon}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.02em' }}>{f.title}</div>
                 <div style={{ fontSize:'13px', color:'#8892a4', lineHeight:1.6 }}>{f.desc}</div>
@@ -64,7 +89,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
 
       {/* ── CLICK SEQUENCE ENGINE ── */}
-      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(7,10,15,0.25)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// ZERO FALSE ALARMS</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'16px' }}>The 1-2-3 Click Sequence Engine.</h2>
@@ -94,7 +119,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
 
       {/* ── SEQUENTIAL DISPATCH ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.3)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEQUENTIAL DISPATCH FIRING ORDER</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'48px' }}>The Zero-Fail<br/>Guarantee.</h2>
@@ -108,7 +133,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               { step:'05', title:'Twilio Voice + SMS + WhatsApp', desc:'Cellular bridge active — bypasses data congestion via native SMS layer.', color:'#25d366' },
               { step:'06', title:'VAPI AI Follow-Up + Lizzy Check-In', desc:'AI agent calls all contacts in sequence. Lizzy wellness check at 45s post-dispatch.', color:'#00e676' },
             ].map((s, i) => (
-              <div key={i} style={{ background:'#111820', padding:'20px 28px', display:'flex', alignItems:'center', gap:'24px' }}>
+              <div key={i} style={{ background:'rgba(17,24,32,0.45)', backdropFilter:'blur(6px)', padding:'20px 28px', display:'flex', alignItems:'center', gap:'24px' }}>
                 <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', color:s.color, fontWeight:700, flexShrink:0, width:'24px' }}>{s.step}</span>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:'14px', fontWeight:700, marginBottom:'4px' }}>{s.title}</div>
@@ -120,15 +145,31 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
           </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(0,230,118,0.25)' }}>
-                <img src={R2_MEDIA.architecture.responseArchitecture} alt="Safety Response Architecture" style={{ width: '100%', height: 'auto', display: 'block', background: '#020617' }} />
+                <img 
+                  src={activeBlueprint.src} 
+                  alt={activeBlueprint.title} 
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg';
+                  }}
+                  style={{ width: '100%', height: 'auto', display: 'block', background: '#020617', transition: 'all 0.6s ease' }} 
+                />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '12px 16px' }}>
-                  <span style={{ fontSize: '11px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>R2 BLUEPRINT: EMERGENCY RESPONSE ARCHITECTURE</span>
+                  <span style={{ fontSize: '11px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{activeBlueprint.title}</span>
                 </div>
               </div>
               <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <img src={R2_MEDIA.platform.commandDeckDark} alt="SafetyLink Real-time Command Deck" style={{ width: '100%', height: 'auto', display: 'block', background: '#020617' }} />
+                <img 
+                  src={activeTelemetry.src} 
+                  alt={activeTelemetry.title} 
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg';
+                  }}
+                  style={{ width: '100%', height: 'auto', display: 'block', background: '#020617', transition: 'all 0.6s ease' }} 
+                />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', padding: '12px 16px' }}>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>TACTICAL COMMAND TELEMETRY DECK</span>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{activeTelemetry.title}</span>
                 </div>
               </div>
             </div>
@@ -137,7 +178,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
       
       {/* ── GHOST ENGINE ── */}
-      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(7,10,15,0.25)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// NATIVE SURVIVAL</div>
           <h2 style={{ fontSize:'clamp(28px,4vw,48px)', fontWeight:900, marginBottom:'16px' }}>The Ghost Engine.</h2>
@@ -161,9 +202,17 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
 
       {/* ── IoT INTEGRATION ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.3)', backdropFilter:'blur(8px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', marginBottom: '60px' }}>
-          <img src={ASSETS.mapDark} alt="SafetyLink Incident Heatmap" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
+          <img 
+            src={ASSETS.mapDark} 
+            alt="SafetyLink Incident Heatmap" 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg';
+            }}
+            style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} 
+          />
         </div>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GLOBAL COMMAND CENTER</div>

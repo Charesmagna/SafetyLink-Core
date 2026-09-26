@@ -1,158 +1,217 @@
-import { SLShieldLogo } from "./SLShieldLogo";
-import React, { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
-import { useAppStore } from "../utils/store";
-import { Wifi, WifiOff, Bluetooth, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore } from '../utils/store';
 
 export const FloatingPanicWidget: React.FC = () => {
   const {
-    activeSOSState,
-    bleDevices,
-    isSurvivalMode,
-    startMultiStagePanic,
-    panicCountdown,
     isFloatingWidgetDeployed,
-    setFloatingWidgetDeployed,
+    floatingWidgetSize,
+    setFloatingWidgetSize,
+    panicCountdown,
+    activeSOSState,
+    startMultiStagePanic,
+    cancelSOS,
+    addToast,
+    silenceAlerts,
+    setSilenceAlerts,
+    decoyActive,
+    setDecoyActive
   } = useAppStore();
 
-  const isSOSActive = activeSOSState !== "IDLE";
-  const bluetoothConnected = bleDevices.some(
-    (d) => d.connectionState === "CONNECTED"
-  );
-  const isCountdownActive = panicCountdown !== null;
-  const isOfflineMode = false; // Mocking offline mode since it doesn't exist in AppStore
+  const [showControls, setShowControls] = useState(false);
+  const [opacity, setOpacity] = useState(1);
+  
+  const widgetRef = useRef<HTMLDivElement>(null);
 
-  const [position, setPosition] = useState({ x: 10, y: 100 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragRef = useRef<HTMLDivElement>(null);
-  const offset = useRef({ x: 0, y: 0 });
-
+  // Auto-close control slider after 10 seconds of inactivity to allow enough time for toggles
   useEffect(() => {
-    // If survival mode activated, auto-deploy the widget
-    if (isSurvivalMode && !isFloatingWidgetDeployed) {
-      setFloatingWidgetDeployed(true);
+    if (showControls) {
+      const timer = setTimeout(() => setShowControls(false), 10000);
+      return () => clearTimeout(timer);
     }
-  }, [isSurvivalMode, isFloatingWidgetDeployed, setFloatingWidgetDeployed]);
+  }, [showControls, floatingWidgetSize, opacity, silenceAlerts, decoyActive]);
 
   if (!isFloatingWidgetDeployed) return null;
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation();
-    if (dragRef.current) {
-      const rect = dragRef.current.getBoundingClientRect();
-      offset.current = {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
-      setIsDragging(true);
-      dragRef.current.setPointerCapture(e.pointerId);
-    }
-  };
+  const isSOSActive = activeSOSState !== 'IDLE';
+  const isCountdownActive = panicCountdown !== null;
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - offset.current.x,
-        y: e.clientY - offset.current.y,
-      });
+  // Handle single tap or double tap
+  let lastTap = 0;
+  const handleTap = (e: React.MouseEvent) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    
+    // Simulate tactile haptic vibration feedback
+    if (navigator.vibrate) {
+      navigator.vibrate(now - lastTap < DOUBLE_TAP_DELAY ? [40, 20, 40] : 15);
     }
-  };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (isDragging) {
-      setIsDragging(false);
-      if (dragRef.current) {
-        dragRef.current.releasePointerCapture(e.pointerId);
-      }
+    if (now - lastTap < DOUBLE_TAP_DELAY) {
+      // Double tap -> Toggle sizing controls
+      setShowControls(!showControls);
+      e.stopPropagation();
+    } else {
+      // Single tap -> Trigger / Cancel SOS
+      setTimeout(() => {
+        const doubleTapped = Date.now() - lastTap < DOUBLE_TAP_DELAY;
+        if (!doubleTapped) {
+          if (isCountdownActive || isSOSActive) {
+            cancelSOS();
+            addToast("SOS Distress sequence aborted via floating shortcut.", "warn");
+          } else {
+            startMultiStagePanic("Emergency distress activated via movable Home Screen floating panic widget.", 10);
+            addToast("SOS Countdown initiated! You have 10 seconds to abort.", "warn");
+          }
+        }
+      }, DOUBLE_TAP_DELAY);
     }
+    lastTap = now;
   };
 
   return (
-    <div
-      className="fixed z-[99999] pointer-events-auto"
-      style={{
-        left: `${Math.max(0, Math.min(window.innerWidth - 250, position.x))}px`,
-        top: `${Math.max(0, Math.min(window.innerHeight - 60, position.y))}px`,
-        touchAction: "none",
-      }}
-    >
+    <div className="fixed inset-0 pointer-events-none z-[9999]">
       <motion.div
-        ref={dragRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        className={`flex items-center gap-3 p-2 rounded-full shadow-2xl backdrop-blur-xl border ${
-          isSOSActive
-            ? "bg-red-950/80 border-red-500/50"
-            : isCountdownActive
-            ? "bg-amber-950/80 border-amber-500/50"
-            : "bg-slate-900/90 border-slate-700/50"
-        }`}
+        ref={widgetRef}
+        drag
+        dragMomentum={false}
+        dragElastic={0.1}
+        initial={{ x: window.innerWidth - floatingWidgetSize - 32, y: window.innerHeight - floatingWidgetSize - 120 }}
+        style={{
+          width: floatingWidgetSize,
+          height: floatingWidgetSize,
+          opacity: opacity,
+        }}
+        className="absolute pointer-events-auto cursor-grab active:cursor-grabbing select-none"
+        onClick={handleTap}
       >
-        {/* Logo on the left - seamlessly integrated without stark black background */}
-        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-emerald-500/30 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-1 shadow-inner">
-          <img 
-            src="/logos/New SafetyLink Official Logo.svg" 
-            alt="SafetyLink Logo" 
-            className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" 
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = '/media/new_logos/logo_hq.png';
-            }}
-          />
-        </div>
-
-        {/* Status Icons */}
-        <div className="flex items-center gap-2 px-1">
-          {/* Connectivity Status */}
-          {isOfflineMode ? (
-            <WifiOff className="w-5 h-5 text-amber-500/80" strokeWidth={2.5} />
+        {/* Breathing ambient indicator rings */}
+        <AnimatePresence>
+          {(isCountdownActive || isSOSActive) ? (
+            <div className="absolute inset-0 rounded-full bg-red-600/30 animate-ping" />
           ) : (
-            <Wifi className="w-5 h-5 text-emerald-400/80" strokeWidth={2.5} />
+            <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-pulse" />
           )}
+        </AnimatePresence>
 
-          {/* Bluetooth Status */}
-          <Bluetooth
-            className={`w-5 h-5 ${
-              bluetoothConnected ? "text-blue-400" : "text-slate-500"
-            } ${!bluetoothConnected && "opacity-50"}`}
-            strokeWidth={2.5}
-          />
-
-          {/* Auto-Reconnect */}
-          <button
-            onClick={() => console.log("Reconnecting...")}
-            className="active:scale-90 transition-transform"
+        <div className="absolute inset-0 rounded-full bg-slate-950/45 border-2 border-slate-900/30 backdrop-blur-md flex items-center justify-center p-0.5 shadow-2xl">
+          {/* Main button layout */}
+          <div
+            className={`w-full h-full rounded-full flex flex-col items-center justify-center relative overflow-hidden transition-all duration-350 ${
+              isSOSActive
+                ? 'bg-red-600 border border-red-500 text-white'
+                : isCountdownActive
+                ? 'bg-amber-500 border border-amber-400 text-black animate-pulse'
+                : 'bg-emerald-500 border border-emerald-400 text-white'
+            }`}
           >
-            <RefreshCw className="w-5 h-5 text-slate-300" strokeWidth={2.5} />
-          </button>
+            {/* Countdown timer overlay */}
+            {isCountdownActive && (
+              <div className="absolute inset-0 bg-slate-950/75 flex flex-col items-center justify-center font-mono font-black text-amber-400">
+                <span className="text-[10px] uppercase tracking-wider scale-75 opacity-75">SOS</span>
+                <span className="text-lg leading-none">{panicCountdown}</span>
+              </div>
+            )}
+
+            {/* Active SOS display */}
+            {isSOSActive && !isCountdownActive && (
+              <div className="absolute inset-0 bg-red-700 flex flex-col items-center justify-center font-bold text-white text-[9px] uppercase tracking-wider animate-pulse">
+                <span>ACTIVE</span>
+                <span>SOS</span>
+              </div>
+            )}
+
+            {/* Default logo with subtle rotation */}
+            {!isCountdownActive && !isSOSActive && (
+              <img
+                src="/Polish_20260620_014530309.jpg"
+                onError={(e) => {
+                  // Fallback if custom logo fails to load
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
+                alt="SL"
+                referrerPolicy="no-referrer"
+                className="w-10 h-10 rounded-full object-cover pointer-events-none drop-shadow-md select-none transition-transform hover:scale-105"
+              />
+            )}
+          </div>
         </div>
 
-        {/* SOS Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (!isSOSActive && !isCountdownActive) {
-              startMultiStagePanic("Manual trigger from strip widget", 0);
-            }
-          }}
-          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-lg ${
-            isSOSActive
-              ? "bg-red-600 animate-pulse text-white"
-              : isCountdownActive
-              ? "bg-amber-500 animate-pulse text-black font-black text-sm"
-              : "bg-red-500 hover:bg-red-400 text-white active:scale-95"
-          }`}
-        >
-          {isCountdownActive ? (
-            <span>{panicCountdown}</span>
-          ) : (
-            <span className="font-black text-[10px] tracking-tighter">SOS</span>
+        {/* Floating slider helper tooltip */}
+        <AnimatePresence>
+          {showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-full left-1/2 -translate-x-1/2 mt-3 p-3 bg-slate-950/95 border border-slate-800 rounded-2xl shadow-2xl flex flex-col gap-2.5 w-48 text-left z-50 pointer-events-auto backdrop-blur-xl"
+            >
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
+                  <span>WIDGET SIZE: {floatingWidgetSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="48"
+                  max="140"
+                  value={floatingWidgetSize}
+                  onChange={(e) => setFloatingWidgetSize(Number(e.target.value))}
+                  className="w-full accent-emerald-400 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between items-center text-[9px] font-mono font-black text-slate-400">
+                  <span>OPACITY: {Math.round(opacity * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.2"
+                  max="1.0"
+                  step="0.1"
+                  value={opacity}
+                  onChange={(e) => setOpacity(Number(e.target.value))}
+                  className="w-full accent-emerald-400 bg-slate-800 h-1 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono font-black pt-1 border-t border-slate-900">
+                <span className="text-slate-400">SILENT SOS:</span>
+                <button
+                  onClick={() => {
+                    setSilenceAlerts(!silenceAlerts);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-black border uppercase ${
+                    silenceAlerts ? 'bg-amber-500/20 border-amber-500/30 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                  }`}
+                >
+                  {silenceAlerts ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono font-black pb-1">
+                <span className="text-slate-400">DECOY MODE:</span>
+                <button
+                  onClick={() => {
+                    setDecoyActive(!decoyActive);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                  }}
+                  className={`px-1.5 py-0.5 rounded text-[8px] font-black border uppercase ${
+                    decoyActive ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                  }`}
+                >
+                  {decoyActive ? 'ACTIVE' : 'DISABLED'}
+                </button>
+              </div>
+
+              <div className="text-[8px] text-center text-slate-500 font-mono italic leading-none">
+                Double-tap shortcut to hide options
+              </div>
+            </motion.div>
           )}
-        </button>
+        </AnimatePresence>
       </motion.div>
     </div>
   );

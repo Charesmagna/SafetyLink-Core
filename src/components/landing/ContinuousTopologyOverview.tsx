@@ -179,12 +179,12 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
 
   return (
     <div 
-      className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl transition-all duration-300"
+      className="bg-slate-950/35 border border-slate-800/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl transition-all duration-300"
       onMouseEnter={() => setIsAutoCycling(false)}
       onMouseLeave={() => setIsAutoCycling(true)}
     >
       {/* Background Subtle Grid Texture */}
-      <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-30 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-20 pointer-events-none" />
 
       {/* Header Info */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 relative z-10">
@@ -203,7 +203,7 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
 
         {/* Tab & Cycle Selectors */}
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center bg-slate-950/60 backdrop-blur-md p-1 rounded-xl border border-slate-800/80">
             {diagrams.map((d, idx) => (
               <button
                 key={d.id}
@@ -222,7 +222,7 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
           <div className="flex items-center gap-1">
             <button
               onClick={() => setSelectedIndex((prev) => (prev - 1 + diagrams.length) % diagrams.length)}
-              className="p-2 rounded-lg bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              className="p-2 rounded-lg bg-slate-800/60 backdrop-blur-md text-slate-300 hover:bg-slate-700/80 hover:text-white transition-colors"
               title="Previous diagram"
               aria-label="Previous diagram"
             >
@@ -230,7 +230,7 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
             </button>
             <button
               onClick={() => setSelectedIndex((prev) => (prev + 1) % diagrams.length)}
-              className="p-2 rounded-lg bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              className="p-2 rounded-lg bg-slate-800/60 backdrop-blur-md text-slate-300 hover:bg-slate-700/80 hover:text-white transition-colors"
               title="Next diagram"
               aria-label="Next diagram"
             >
@@ -241,18 +241,22 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
       </div>
 
       {/* Main Interactive Diagram Viewer */}
-      <div className="relative rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 group">
+      <div className="relative rounded-2xl overflow-hidden border border-slate-700/40 bg-slate-950/40 backdrop-blur-md group">
         <div className="relative min-h-[320px] max-h-[580px] flex items-center justify-center overflow-hidden">
           <img
             key={current.imageSrc}
             src={current.imageSrc}
             alt={current.title}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg';
+            }}
             className="w-full h-auto max-h-[580px] object-contain transition-transform duration-700 group-hover:scale-[1.01]"
           />
         </div>
 
         {/* Technical Spec Strip overlay */}
-        <div className="bg-slate-950/95 border-t border-slate-800/80 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-slate-950/65 backdrop-blur-md border-t border-slate-800/80 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs flex-1">
             {current.technicalDetails.map((detail, i) => (
               <div key={i} className="flex items-start gap-1.5 text-slate-300 font-mono">

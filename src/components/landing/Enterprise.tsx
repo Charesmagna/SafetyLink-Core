@@ -6,12 +6,20 @@ interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg
 
 export function Enterprise({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HEADER ── */}
-      <section style={{ position:'relative', padding:'80px 40px 60px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
-        <img src={ASSETS.dashboardDark} alt="SafetyLink Enterprise" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.15 }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.7) 0%, rgba(13,17,23,0.95) 100%)' }} />
+      <section style={{ position:'relative', padding:'80px 40px 60px', background:'rgba(7,10,15,0.25)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+        <img 
+          src={ASSETS.dashboardDark} 
+          alt="SafetyLink Enterprise" 
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.style.display = 'none';
+          }}
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.15 }} 
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.3) 0%, rgba(13,17,23,0.5) 100%)' }} />
         <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// B2B ENTERPRISE</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
@@ -24,7 +32,7 @@ export function Enterprise({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       </section>
 
       {/* ── B-BBEE BADGE ── */}
-      <section style={{ padding:'60px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'60px 40px', background:'rgba(13,17,23,0.3)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
           <div>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// PROCUREMENT ADVANTAGE</div>

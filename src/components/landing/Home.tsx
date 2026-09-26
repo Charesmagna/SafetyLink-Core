@@ -32,16 +32,53 @@ const LOG_EVENTS = [
   { t:'07:47:02', ch:'ACK',       c:'#00e676', cr:'0,230,118',  tag:'RESOLVED',  ev:'Responder confirmed on scene' },
 ];
 
+const R2_EXPLORE_POOLS: Record<string, string[]> = {
+  platform: [
+    R2_MEDIA.platform.heroBackground,
+    R2_MEDIA.platform.commandDeckDark,
+    R2_MEDIA.platform.networkGrid,
+    R2_MEDIA.architecture.responseOverview,
+    R2_MEDIA.architecture.systemAnatomy
+  ],
+  hardware: [
+    R2_MEDIA.hardware.itagFinderProduct,
+    R2_MEDIA.hardware.itagTeardown,
+    R2_MEDIA.hardware.limxDynamicsRobot,
+    R2_MEDIA.hardware.hardwareAssembly,
+    R2_MEDIA.hardware.ruggedBeacon
+  ],
+  usecases: [
+    R2_MEDIA.usecases.estateCommunity,
+    R2_MEDIA.usecases.corporateCampus,
+    R2_MEDIA.usecases.hospitalHealthcare,
+    R2_MEDIA.usecases.transportLogistics,
+    R2_MEDIA.usecases.nightPatrolOfficer
+  ],
+  pricing: [
+    R2_MEDIA.architecture.securityEcosystem,
+    R2_MEDIA.architecture.universalResilience,
+    R2_MEDIA.architecture.meshPlatformOverview,
+    R2_MEDIA.platform.dispatchControl
+  ],
+  enterprise: [
+    R2_MEDIA.architecture.universalResilience,
+    R2_MEDIA.architecture.systemAnatomy,
+    R2_MEDIA.platform.commandDeckDark,
+    R2_MEDIA.usecases.loneWorkerIndustrial
+  ]
+};
+
 export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeProps) {
   const { web } = useEditorialStore();
   const [language, setLanguage] = useState('en');
   const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
   const [tick, setTick] = useState(0);
+  const [rotationTick, setRotationTick] = useState(0);
   const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.906/SafetyLink-v1.1.906-Signed.apk');
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [releaseVersion, setReleaseVersion] = useState('v1.1.906');
-  const logRef = useRef(null);
-  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const [heroClipMuted, setHeroClipMuted] = useState(true);
+  const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
 
   // Dynamically resolve latest release APK & EXE from GitHub releases
   useEffect(() => {
@@ -93,34 +130,29 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     return () => clearInterval(iv);
   }, []);
 
+  // Continuous R2 Media dynamic rotation tick (7.5s interval)
+  useEffect(() => {
+    const iv = setInterval(() => setRotationTick(t => t + 1), 7500);
+    return () => clearInterval(iv);
+  }, []);
+
   return (
-    <div style={{ background:'rgba(7,10,15,0.72)', backdropFilter:'blur(2px)', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
       <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: 'transparent' }}>
-        <div style={{ position:'absolute', inset:0, overflow:'hidden', zIndex:0 }}>
-  <video
-    autoPlay muted loop playsInline
-    style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.25 }}
-  >
-    <source
-      src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/Now_I_need_the_d_animation_lo.mp4"
-      type="video/mp4"
-    />
-  </video>
-</div>
-        {/* Overlay gradient to blend bottom edge and text readability */}
-        <img src={ASSETS.logo3d} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80%', opacity: 0.06, objectFit: 'contain', zIndex: 0 }} alt="Watermark" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.7) 0%, rgba(13,17,23,0.9) 100%)', zIndex: 0 }} />
+        {/* Subtle Brand Watermark & Ambient Radial Grid */}
+        <img src={ASSETS.logo3d} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '70%', opacity: 0.04, objectFit: 'contain', zIndex: 0, pointerEvents: 'none' }} alt="Watermark" />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.04), transparent 60%)', zIndex: 0, pointerEvents: 'none' }} />
         {/* Scanline */}
         <div style={{ position:'absolute', inset:0, opacity:0.03, pointerEvents:'none', overflow:'hidden', zIndex:1 }}>
           <div style={{ position:'absolute', left:0, right:0, height:'2px', background:'linear-gradient(transparent,rgba(232,50,30,.8),transparent)', animation:'scanline 8s linear infinite' }}/>
         </div>
 
         {/* Counter bar */}
-        <div style={{ position:'absolute', top:'70px', left:0, right:0, display:'flex', justifyContent:'space-between', padding:'0 40px', fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', color:'rgba(136,146,164,.3)', letterSpacing:'.1em', zIndex:2, pointerEvents:'none' }}>
+        <div style={{ position:'absolute', top:'70px', left:0, right:0, display:'flex', justifyContent:'space-between', padding:'0 40px', fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', color:'rgba(136,146,164,.4)', letterSpacing:'.1em', zIndex:2, pointerEvents:'none' }}>
           <span>{String(tick).padStart(8,'0')}</span>
-          <span style={{ color:'rgba(232,50,30,.5)' }}>SAFETYLINK CORE</span>
+          <span style={{ color:'rgba(232,50,30,.7)' }}>SAFETYLINK CORE</span>
           <span>00:00:{String(tick%60).padStart(2,'0')}.00</span>
         </div>
 
@@ -182,14 +214,112 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </div>
           </div>
 
-          {/* Live feed log */}
+          {/* Live Hero Clip & Telemetry Panel */}
           <div style={{ position: 'relative' }}>
+            <div style={{
+              background: 'rgba(5, 8, 15, 0.72)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '18px',
+              overflow: 'hidden',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(232, 50, 30, 0.15)',
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff3b2f', boxShadow: '0 0 8px #ff3b2f', display: 'inline-block', animation: 'blink 1.2s infinite' }} />
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 800, color: '#f8fafc', letterSpacing: '.1em' }}>
+                    LIVE SYSTEM SIMULATION
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHeroClipMuted(m => !m)}
+                  style={{
+                    background: heroClipMuted ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.2)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    color: heroClipMuted ? '#94a3b8' : '#10b981',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    fontSize: '10px',
+                    fontFamily: "'JetBrains Mono',monospace",
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title={heroClipMuted ? 'Unmute video' : 'Mute video'}
+                >
+                  {heroClipMuted ? '🔇 MUTED' : '🔊 AUDIO'}
+                </button>
+              </div>
+
+              {/* Embedded Video Clip */}
+              <div style={{ position: 'relative', width: '100%', height: '190px', background: '#000', overflow: 'hidden' }}>
+                <video
+                  autoPlay
+                  loop
+                  muted={heroClipMuted}
+                  playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                >
+                  <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
+                  <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
+                  <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+                  <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
+                </video>
+
+                {/* Video HUD Overlays */}
+                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(0,230,118,0.4)', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 800, color: '#00e676' }}>
+                  LATENCY &lt; 0.3s
+                </div>
+                <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#e2e8f0', letterSpacing: '.06em' }}>
+                  ◆ BLE ➔ VOIP ➔ SMS ➔ MAP
+                </div>
+              </div>
+
+              {/* Caption */}
+              <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#ffffff', marginBottom: '3px' }}>
+                  Emergency Escalation Pipelines
+                </div>
+                <div style={{ fontSize: '11px', color: '#8892a4', lineHeight: 1.4 }}>
+                  Automatic distress routing across responders, family rings, and command centers.
+                </div>
+              </div>
+
+              {/* Live Event Stream snippet */}
+              <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.4)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#64748b', letterSpacing: '.08em' }}>TELEMETRY STREAM</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '8.5px', color: '#00e676' }}>ONLINE</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {logRows.slice(-3).map((r, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', padding: '3px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
+                      <span style={{ color: r.c, fontWeight: 700 }}>{r.ch}</span>
+                      <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>{r.ev}</span>
+                      <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px' }}>{r.t.split(':').slice(1).join(':')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── OPERATIONAL STATUS TICKER ──────────────────────────── */}
-      <div style={{ background:'rgba(13,17,23,0.75)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'16px 40px', display:'flex', alignItems:'center', gap:'32px', overflow:'hidden' }}>
+      <div style={{ background:'rgba(2,6,23,0.25)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'16px 40px', display:'flex', alignItems:'center', gap:'32px', overflow:'hidden' }}>
         <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', letterSpacing:'.16em', color:'#e8321e', flexShrink:0, display:'flex', alignItems:'center', gap:'6px' }}>
           <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', animation:'blink 1.2s infinite', display:'inline-block' }}/>OPERATIONAL STATUS
         </span>
@@ -204,7 +334,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </div>
 
       {/* ── ARMOURING COMMUNITIES ──────────────────────────────── */}
-      <section style={{ padding:'100px 40px', background:'rgba(7,10,15,0.78)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'100px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
           <div>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SOUTH AFRICAN PLATFORM</div>
@@ -219,8 +349,40 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               <button onClick={() => navigate?.('platform')} style={{ color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', fontSize:'12px', cursor:'pointer', fontWeight:600 }}>LEARN MORE</button>
             </div>
             <div style={{ position: 'relative', marginTop: '40px', maxWidth: '400px' }}>
-              <img src={ASSETS.appLogin} alt="SafetyLink App SOS" style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} />
-              <img src={ASSETS.itagAll} alt="SafetyLink iTAG" style={{ position: 'absolute', bottom: '-20px', left: '-40px', width: '160px', borderRadius: '12px', transform: 'rotate(-15deg)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }} />
+              <img 
+                src="/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg" 
+                alt="SafetyLink App SOS" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = ASSETS.appLogin || '/panic-button-smooth.png';
+                }}
+                style={{ 
+                  width: '100%', 
+                  borderRadius: '16px', 
+                  border: '1px solid rgba(16,185,129,0.3)',
+                  boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 25px rgba(16,185,129,0.15)',
+                  display: 'block'
+                }} 
+              />
+              <img 
+                src="/multi-buttons-smooth.png" 
+                alt="SafetyLink iTAG" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/panic-button-smooth.png';
+                }}
+                style={{ 
+                  position: 'absolute', 
+                  bottom: '-25px', 
+                  left: '-35px', 
+                  width: '160px', 
+                  borderRadius: '12px', 
+                  transform: 'rotate(-12deg)', 
+                  boxShadow: '0 20px 40px rgba(0,0,0,0.75), 0 0 20px rgba(0,230,118,0.25)',
+                  border: '1px solid rgba(0,230,118,0.3)',
+                  display: 'block'
+                }} 
+              />
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
@@ -243,7 +405,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── STATS BAR ──────────────────────────────────────────── */}
-      <section style={{ borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(17,24,32,0.65)', backdropFilter:'blur(12px)' }}>
+      <section style={{ borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(2,6,23,0.18)', backdropFilter:'blur(2px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
           {[
             { val:'< 3s', lbl:'Dispatch Latency' },
@@ -260,7 +422,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── ESCALATION CHAIN ───────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)' }}>
+      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// 03 OFFLINE-FIRST</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Queue locally.<br/>Fire on reconnect.</h2>
@@ -310,7 +472,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── SECTORS ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'48px' }}>Every sector.<br/>One platform.</h2>
@@ -323,9 +485,9 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               { tag:'HEALTHCARE', title:'CLINICS & HOSPITALS', desc:'Staff duress alerts, patient elopement detection and code-blue dispatch for healthcare facilities.' },
               { tag:'LOGISTICS', title:'TRANSPORT & FIELD OPS', desc:'Driver SOS, route deviation alerts, cargo protection and real-time fleet situational awareness.' },
             ].map((s, i) => (
-              <div key={i} style={{ background:'rgba(13,17,23,0.7)', backdropFilter:'blur(8px)', padding:'28px', cursor:'default', transition:'background .2s' }}
+              <div key={i} style={{ background:'rgba(13,17,23,0.35)', backdropFilter:'blur(8px)', padding:'28px', cursor:'default', transition:'background .2s' }}
                 onMouseOver={e => e.currentTarget.style.background = 'rgba(232,50,30,.12)'}
-                onMouseOut={e => e.currentTarget.style.background = 'rgba(13,17,23,0.7)'}>
+                onMouseOut={e => e.currentTarget.style.background = 'rgba(13,17,23,0.35)'}>
                 <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'8.5px', letterSpacing:'.16em', color:'#8892a4', marginBottom:'10px', textTransform:'uppercase' }}>{s.tag}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.02em' }}>{s.title}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55 }}>{s.desc}</div>
@@ -336,7 +498,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── QUICK NAV CARDS ────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)', position:'relative', overflow:'hidden' }}>
+      <section style={{ padding:'80px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)', position:'relative', overflow:'hidden' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center', position:'relative', zIndex:2 }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// EXPLORE MORE</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, marginBottom:'48px' }}>Everything you need to know</h2>
@@ -414,19 +576,25 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                {/* Visual Backdrop Overlay with R2 Image */}
-                <div 
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundImage: `linear-gradient(to bottom, rgba(13,17,23,0.78), rgba(13,17,23,0.95)), url("${c.bg}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    opacity: 0.65,
-                    zIndex: 0,
-                    transition: 'opacity .3s',
-                  }}
-                />
+                {/* Visual Backdrop Overlay with Continuous Rotating R2 Image */}
+                {(() => {
+                  const pool = R2_EXPLORE_POOLS[c.page] || [c.bg];
+                  const activeBg = pool[rotationTick % pool.length];
+                  return (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundImage: `linear-gradient(to bottom, rgba(13,17,23,0.78), rgba(13,17,23,0.95)), url("${activeBg}")`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.7,
+                        zIndex: 0,
+                        transition: 'all 0.8s ease-in-out',
+                      }}
+                    />
+                  );
+                })()}
 
                 <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '1.8rem', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '6px' }}>{c.emoji}</span>
@@ -459,7 +627,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       <R2MediaShowcase />
 
       {/* ── DOWNLOAD ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET SAFETYLINK</div>
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Available on every<br/>platform.</h2>
@@ -500,8 +668,19 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 download: false,
               },
             ].map((d, i) => (
-              <div key={i} style={{ background:'rgba(255,255,255,.05)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,.08)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
-                {d.img && <img src={d.img} alt={d.label} style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} />}<div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
+              <div key={i} style={{ background:'rgba(255,255,255,.05)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,.08)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
+                {d.img && (
+                  <img 
+                    src={d.img} 
+                    alt={d.label} 
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} 
+                  />
+                )}
+                <div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
                 <div style={{ fontSize:'16px', fontWeight:800, textTransform:'uppercase', letterSpacing:'.02em' }}>{d.label}</div>
                 <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55, flex:1 }}>{d.sub}</div>
                 <a
@@ -551,7 +730,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── CTA BAND ────────────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.68)', backdropFilter:'blur(12px)', borderTop:'1px solid rgba(255,255,255,.07)', textAlign:'center' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(2,6,23,0.22)', backdropFilter:'blur(3px)', borderTop:'1px solid rgba(255,255,255,.07)', textAlign:'center' }}>
         <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET STARTED</div>
         <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, marginBottom:'16px' }}>Ready to protect<br/>your community?</h2>
         <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>

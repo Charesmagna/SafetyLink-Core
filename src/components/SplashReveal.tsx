@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { R2_MEDIA_VAULT } from '../utils/continuousMediaEngine';
+import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 interface SplashRevealProps {
   onComplete: () => void;
@@ -8,83 +9,94 @@ interface SplashRevealProps {
 export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
   const [fadingOut, setFadingOut] = useState<boolean>(false);
   const [videoError, setVideoError] = useState(false);
-  const completedRef = useRef(false);
-
-  // Use the verified 3D Motion Logo from R2 with local fallback
-  const motionLogo = R2_MEDIA_VAULT.find((m) => m.id === 'logo-3d-anim');
-  const videoSrc = motionLogo?.src || '/splash-video.mp4';
+  const completed = useRef(false);
+  const isNative = Capacitor.isNativePlatform();
 
   const handleComplete = () => {
-    if (completedRef.current) return;
-    completedRef.current = true;
+    if (completed.current) return;
+    completed.current = true;
     setFadingOut(true);
+
+    if (isNative) {
+      SplashScreen.hide({ fadeOutDuration: 200 }).catch(() => {});
+    }
+
     setTimeout(() => {
       onComplete();
-    }, 400);
+    }, isNative ? 200 : 350);
   };
 
-  // Safe timeout to prevent indefinite blocking
   useEffect(() => {
+    if (isNative) {
+      SplashScreen.hide({ fadeOutDuration: 200 }).catch(() => {});
+    }
+
+    // Fast-exit watchdog timer: 1.4s on native APK, 2.5s on web/desktop
+    const maxDuration = isNative ? 1400 : 2500;
     const timer = setTimeout(() => {
       handleComplete();
-    }, 4800);
-    return () => clearTimeout(timer);
-  }, []);
+    }, maxDuration);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isNative]);
 
   return (
-    <div 
-      id="splash-reveal-container" 
+    <div
+      id="splash-reveal-container"
       onClick={handleComplete}
-      className={`fixed inset-0 w-screen h-screen bg-[#000000] flex flex-col items-center justify-center z-[99999] overflow-hidden select-none cursor-pointer transition-opacity duration-500 ease-out m-0 p-0 border-none ${
+      onTouchStart={handleComplete}
+      className={`fixed inset-0 bg-[#020408] flex flex-col items-center justify-center z-[99999] overflow-hidden select-none cursor-pointer transition-opacity duration-300 ease-out ${
         fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
-      style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, border: 'none', background: '#000000' }}
     >
-      {/* 3D Motion Logo Video */}
+      {/* 3D Motion Logo Video / Animated Brand Shield */}
       {!videoError ? (
-        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-black overflow-hidden m-0 p-0 border-none">
+        <div className="relative w-full max-w-xl max-h-[70vh] aspect-video z-10 flex items-center justify-center p-4">
           <video
             autoPlay
             muted
             playsInline
             onEnded={handleComplete}
             onError={() => {
-              console.warn('[SplashReveal] Video playback fallback triggered');
               setVideoError(true);
-              setTimeout(handleComplete, 2200);
+              setTimeout(handleComplete, 600);
             }}
-            className="w-full h-full object-cover m-0 p-0 border-none"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="w-full h-full object-contain"
           >
-            <source src={videoSrc} type="video/mp4" />
+            <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
             <source src="/splash-video.mp4" type="video/mp4" />
           </video>
         </div>
       ) : (
-        /* Motion Brand Fallback if video is blocked */
-        <div className="relative z-10 flex flex-col items-center justify-center gap-6 animate-pulse">
-          <div className="relative w-28 h-28 flex items-center justify-center">
+        /* Instant High-Contrast Brand Fallback */
+        <div className="relative z-10 flex flex-col items-center justify-center gap-5 animate-pulse">
+          <div className="relative w-24 h-24 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-ping" />
             <img
               src="/logos/New SafetyLink Official Logo.svg"
               alt="SafetyLink"
-              className="w-24 h-24 object-contain relative z-10 drop-shadow-[0_0_25px_rgba(16,185,129,0.8)]"
+              className="w-20 h-20 object-contain relative z-10 drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]"
             />
           </div>
           <div className="flex flex-col items-center gap-1 text-center">
-            <span className="font-extrabold text-white text-lg tracking-wider font-mono">SAFETYLINK CORE</span>
-            <span className="text-xs text-emerald-400 font-mono tracking-widest uppercase">Sequential Emergency Network</span>
+            <span className="font-extrabold text-white text-base tracking-wider font-mono">SAFETYLINK CORE</span>
+            <span className="text-[10px] text-emerald-400 font-mono tracking-widest uppercase">Sequential Emergency Network</span>
           </div>
         </div>
       )}
 
-      {/* Atmospheric bottom telemetry marker */}
+      {/* Cybernetic ambient grid */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.03)_0%,rgba(2,4,8,0.96)_100%)] pointer-events-none z-0" />
+
+      {/* Bottom telemetry label */}
       <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-1 font-mono text-[9px] text-slate-400/80 tracking-[0.25em] uppercase font-bold z-20 pointer-events-none">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
           <span>AUTONOMOUS MESH GATEWAY</span>
         </div>
-        <span className="text-[8px] text-emerald-400/70 tracking-widest mt-0.5">TAP TO ENTER DIRECTLY</span>
+        <span className="text-[8px] text-emerald-400/70 tracking-widest mt-0.5">TAP ANYWHERE TO ENTER</span>
       </div>
     </div>
   );

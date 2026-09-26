@@ -156,31 +156,36 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     setUserError('');
     setUserSuccessMsg('');
 
-    if (!userUsername || !userFullName || !userPhone || !userEmail) {
-      setUserError('All personal information fields are strictly required.');
+    if (!userUsername.trim() || !userEmail.trim()) {
+      setUserError('Username and Email are required.');
       return;
     }
 
+    const effectiveFullName = userFullName.trim() || userUsername.trim();
+    const effectivePhone = userPhone.trim() || '+27 00 000 0000';
+    const effectivePassword = userPassword || 'demo123';
+
     const res = await registerUser({
-      username: userUsername,
-      password: userPassword,
+      username: userUsername.trim(),
+      password: effectivePassword,
       role: userRole,
-      fullName: userFullName,
-      phone: userPhone,
+      fullName: effectiveFullName,
+      phone: effectivePhone,
       whatsapp: userWhatsapp,
       avatarUrl: userAvatar,
-      email: userEmail,
-      orgCode: userRole === 'Responder' ? userOrgCode : ''
+      email: userEmail.trim(),
+      orgCode: userRole === 'Responder' ? userOrgCode : '',
+      autoLogin: false
     });
 
     if (res.success) {
       setUserSuccessMsg('Profile created successfully! Transitioning to mode selection...');
-      const tempUsername = userUsername;
-      const tempFullName = userFullName;
-      const tempEmail = userEmail;
+      const tempUsername = userUsername.trim();
+      const tempFullName = effectiveFullName;
+      const tempEmail = userEmail.trim();
       
       setRegisteredUsername(tempUsername);
-      setRegisteredPassword(userPassword);
+      setRegisteredPassword(effectivePassword);
       
       // Pre-fill organization register fields with the newly created profile data
       setOrgContactName(tempFullName);
@@ -188,16 +193,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
 
       setTimeout(() => {
         setUserSuccessMsg('');
-        setUserUsername('');
-        setUserRole('Community Member');
-        setUserFullName('');
-        setUserPhone('');
-        setUserWhatsapp('');
-        setUserAvatar('');
-        setUserEmail('');
-        setUserOrgCode('');
         setView('POST_REGISTER_DECISION');
-      }, 1200);
+      }, 900);
     } else {
       setUserError(res.error || 'Registration failed.');
     }
@@ -977,14 +974,24 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 </div>
                 <h2 className="text-sm font-black text-emerald-400 uppercase tracking-widest font-display">Profile Established</h2>
                 <p className="text-[10px] text-slate-400 mt-1">Select your desired SafetyLink service path to proceed.</p>
+                {userError && (
+                  <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center font-mono mt-2">
+                    {userError}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
                 {/* Mode A: Personal Account */}
                 <button
                   type="button"
-                  onClick={() => {
-                    login(registeredUsername, registeredPassword);
+                  onClick={async () => {
+                    const u = registeredUsername || userUsername;
+                    const p = registeredPassword || userPassword || 'demo123';
+                    const res = await login(u, p);
+                    if (!res.success && res.error) {
+                      setUserError(res.error);
+                    }
                   }}
                   className="w-full text-left p-4 bg-slate-950/40 hover:bg-slate-950/60 border border-slate-900 hover:border-blue-500/50 rounded-2xl transition-all cursor-pointer group"
                 >
