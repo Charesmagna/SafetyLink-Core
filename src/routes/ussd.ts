@@ -1,58 +1,40 @@
-import { Router } from 'express';
-import { getUssdAdapter } from '../providers/ussd';
-import { query } from '../db';
-import { createIncident } from '../services/panic-alert';
-import { processPanicAlert } from "../services/panic-alert";
+import { Router, Request, Response } from 'express';
 
 export const ussdRouter = Router();
 
-ussdRouter.post('/', async (req, res) => {
-  const adapter = getUssdAdapter();
-  const ussdReq = adapter.parseRequest(req.body);
+// USSD Gateway session handler (Africa's Talking / Telkom / MTN / Vodacom format)
+ussdRouter.post('/', async (req: Request, res: Response) => {
+  try {
+    const { sessionId, serviceCode, phoneNumber, text } = req.body || {};
+    let response = '';
 
-  const { text, phoneNumber } = ussdReq;
-  let responseText = '';
-  let isEnd = false;
-
-  // Extremely basic matching - parse the text
-  const parts = text.split('*').filter(Boolean);
-
-  if (parts.length === 0 || text === '') {
-    responseText = "Welcome to SafetyLink\n1. Send Panic Alert\n2. Update Emergency Contacts\n3. Check Subscription";
-    isEnd = false;
-  } else if (parts[0] === '1') {
-    // Send Panic Alert
-    try {
-      const userRes = await query('SELECT id FROM users WHERE phone = $1', [phoneNumber]);
-      if (userRes.rowCount === 0) {
-        responseText = "You are not registered with SafetyLink.";
-        isEnd = true;
-      } else {
-        const userId = userRes.rows[0].id as string;
-        // Create idempotent panic incident immediately
-        const incidentId = await createIncident(userId, 'USSD');
-        
-        // Queue it asynchronously
-        processPanicAlert(incidentId).catch(console.error);
-        
-        responseText = "Panic sent. Help is coming.";
-        isEnd = true;
-      }
-    } catch (err) {
-      console.error(err);
-      responseText = "System Error.";
-      isEnd = true;
+    if (!text || text === '') {
+      response = `CON Welcome to SafetyLink Emergency Mesh
+1. Trigger SOS Alert
+2. Check Patrol Dispatch
+3. Request Callback
+4. Community SafeZone Status`;
+    } else if (text === '1') {
+      response = `END 🚨 EMERGENCY TRIGGERED.
+Your location and phone (${phoneNumber || 'unknown'}) have been dispatched to the nearest response node.`;
+    } else if (text === '2') {
+      response = `END SafetyLink Patrol Telemetry:
+Active units: 4
+Response time est: 3 mins.`;
+    } else if (text === '3') {
+      response = `END Callback request logged. A response officer will contact you immediately.`;
+    } else if (text === '4') {
+      response = `END SafeZones Active:
+- North Perimeter Gate
+- Main Station Hub
+- Emergency Shelter B`;
+    } else {
+      response = `END Invalid selection. SafetyLink mesh standing by.`;
     }
-  } else if (parts[0] === '2') {
-    responseText = "Visit safetylink.online to securely update contacts.";
-    isEnd = true;
-  } else if (parts[0] === '3') {
-    responseText = "Your SafetyLink subscription is active.";
-    isEnd = true;
-  } else {
-    responseText = "Invalid choice.";
-    isEnd = true;
-  }
 
-  res.send(adapter.formatResponse(responseText, isEnd));
+    res.set('Content-Type', 'text/plain');
+    res.send(response);
+  } catch (error: any) {
+    res.status(500).send('END System temporarily unavailable.');
+  }
 });

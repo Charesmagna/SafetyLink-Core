@@ -115,16 +115,38 @@ const SafetyWareStore: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map(product => (
-              <div key={product.slug} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all flex flex-col h-full">
-                {/* Visual Placeholder (Replaces messy images with clean tech icons) */}
+              <div key={product.slug} className="group bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-slate-700 transition-all flex flex-col h-full shadow-lg">
+                {/* Real Hardware Image with Category Icon Fallback */}
                 <div className="aspect-video bg-slate-950 flex items-center justify-center relative overflow-hidden group-hover:bg-slate-900 transition-colors">
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  {CATEGORY_ICONS[product.category] ? (
-                    React.cloneElement(CATEGORY_ICONS[product.category] as React.ReactElement, { className: 'w-16 h-16 text-slate-800 group-hover:text-slate-700 transition-colors' })
-                  ) : (
-                    <ShoppingCart className="w-16 h-16 text-slate-800" />
-                  )}
-                  <div className="absolute top-3 right-3 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2 py-1 rounded border border-emerald-500/20">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none" />
+                  
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = parent.querySelector('.fallback-icon');
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+
+                  <div className={`fallback-icon w-full h-full items-center justify-center ${product.imageUrl ? 'hidden' : 'flex'}`}>
+                    {CATEGORY_ICONS[product.category] ? (
+                      React.cloneElement(CATEGORY_ICONS[product.category] as React.ReactElement, { className: 'w-16 h-16 text-slate-800 group-hover:text-slate-700 transition-colors' })
+                    ) : (
+                      <ShoppingCart className="w-16 h-16 text-slate-800" />
+                    )}
+                  </div>
+
+                  <div className="absolute top-3 right-3 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded border border-emerald-500/20 backdrop-blur-sm z-20 font-mono">
                     IN STOCK
                   </div>
                 </div>

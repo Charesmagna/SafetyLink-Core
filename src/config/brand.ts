@@ -9,7 +9,7 @@
 export const Brand = {
   // Primary logo — use in: web nav, EXE header, APK settings screen
   primaryLogo: `/logos/New SafetyLink Official Logo.svg`,
-  fallbackLogo: `https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260620_014530309`,
+  fallbackLogo: `/media/new_logos/logo_hq.png`,
 
   // Umbrella logo (TM Media Solutions) — use in: web footer, legal pages
   umbrellaLogo: `/logos/New SafetyLink Official Logo.svg`,

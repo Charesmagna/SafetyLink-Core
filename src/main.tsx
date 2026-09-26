@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
 import OneSignal from 'react-onesignal'
 import { Capacitor } from '@capacitor/core'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { useAppStore } from './utils/store'
 import './styles/index.css'
 
@@ -50,6 +51,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 (window as any).__sl_mounted = true;
+if (Capacitor.isNativePlatform()) {
+  SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
+}
 
 // Deep links init after render
 try {
@@ -67,7 +71,7 @@ import('./services/FleetService').then(({ startFleetTelemetry }) => {
 import('./services/UpdateService').then(({ checkForUpdate }) => {
   checkForUpdate().then(info => {
     if (info.available) {
-      useAppStore.getState().setUpdateInfo(info);
+      useAppStore.getState().setUpdateInfo(info as any);
     }
   }).catch(() => {});
 }).catch(() => {});

@@ -1,4 +1,3 @@
-import { ASSETS } from '../../utils/cloudinary';
 import { R2_MEDIA } from '../../utils/r2Assets';
 // @ts-nocheck
 import React, { useState } from 'react';
@@ -22,12 +21,46 @@ const STEPS = [
 
 export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
   const [active, setActive] = useState(0);
+  const [hwRotationTick, setHwRotationTick] = useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setHwRotationTick((t) => t + 1), 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const deviceImagePools: Record<number, string[]> = {
+    0: [
+      R2_MEDIA.hardware.itagFinderProduct,
+      R2_MEDIA.hardware.itagKeyring,
+      R2_MEDIA.hardware.itagMacro,
+      R2_MEDIA.hardware.itagTeardown,
+      '/multi-buttons-smooth.png',
+    ],
+    1: [
+      R2_MEDIA.hardware.fieldBeaconAntenna,
+      R2_MEDIA.hardware.fieldDeviceClose,
+      R2_MEDIA.hardware.ruggedBeacon,
+    ],
+    2: [
+      R2_MEDIA.hardware.hardwareAssembly,
+      R2_MEDIA.hardware.wearableTrigger,
+      R2_MEDIA.hardware.microBeacon,
+    ],
+    3: [
+      R2_MEDIA.hardware.limxDynamicsRobot,
+      R2_MEDIA.hardware.hardwarePack,
+      R2_MEDIA.hardware.deviceProfile,
+    ],
+  };
+
+  const currentPool = deviceImagePools[active] || [DEVICES[active].img];
+  const activeDeviceImg = currentPool[hwRotationTick % currentPool.length];
 
   return (
     <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px 60px', background:'transparent', backdropFilter:'blur(2px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HARDWARE ECOSYSTEM</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
@@ -40,7 +73,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       </section>
 
       {/* ── DEVICE SELECTOR ── */}
-      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(2,6,23,0.18)', backdropFilter:'blur(3px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// COMPATIBLE DEVICES</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Pick Your Device.</h2>
@@ -65,7 +98,15 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
               <h3 style={{ fontSize:'clamp(20px,3vw,32px)', fontWeight:900, marginBottom:'8px' }}>{DEVICES[active].name}</h3>
               <div style={{ fontSize:'clamp(24px,3vw,40px)', fontWeight:900, color:DEVICES[active].color, marginBottom:'8px' }}>{DEVICES[active].price}</div>
               <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'#8892a4', marginBottom:'28px' }}>{DEVICES[active].sub}</div>
-              <img src={DEVICES[active].img} alt={DEVICES[active].name} style={{ width:'100%', maxHeight:'260px', objectFit:'contain', borderRadius:'12px', background:'rgba(255,255,255,.04)' }} />
+              <img 
+                src={activeDeviceImg} 
+                alt={DEVICES[active].name} 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/panic-button-smooth.png';
+                }}
+                style={{ width:'100%', maxHeight:'260px', objectFit:'contain', borderRadius:'12px', background:'rgba(255,255,255,.04)', transition: 'all 0.5s ease' }} 
+              />
             </div>
             <div>
               <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.14em', marginBottom:'16px', textTransform:'uppercase' }}>What's Included</div>
@@ -86,24 +127,54 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
         </div>
       </section>
 
-      {/* ── BLE DEMO VIDEO ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      {/* ── HARDWARE VIDEO SHOWCASE ── */}
+      <section style={{ padding:'80px 40px', background:'transparent', backdropFilter:'blur(2px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HOW IT WORKS</div>
-          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>BLE Vision Demo</h2>
-          <div style={{ borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(255,255,255,.1)' }}>
-            <video
-              src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is"
-              poster="https://res.cloudinary.com/qcp4fx2v/image/upload/q_auto,f_auto/Polish_20260818_020279883"
-              controls preload="none" playsInline
-              style={{ width:'100%', display:'block' }}
-            />
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// FIELD DEMONSTRATIONS & HARDWARE TEARDOWN</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'36px' }}>Hardware in Action</h2>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', textAlign: 'left' }}>
+            {/* Video 1: BLE Vision Demo */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
+                <video
+                  src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is"
+                  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/q_auto,f_auto/Polish_20260818_020279883"
+                  controls preload="none" playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#00e676', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>BLE BEACON FIELD TEST</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Real-World BLE Detection & Proximity</h3>
+                <p style={{ fontSize: '12px', color: '#8892a4', lineHeight: 1.6 }}>Live vision test demonstrating Bluetooth keyfob discovery, instant RSSI ranging, and background signal relay.</p>
+              </div>
+            </div>
+
+            {/* Video 2: Hardware Lineup & Schematics */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
+              <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
+                <video
+                  controls preload="none" playsInline
+                  poster={R2_MEDIA.hardware.itagTeardown}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                >
+                  <source src="/api/r2/stream/Safetylink/SafetyLink_s_New_Emergency_Hardware_Lineup.mp4" type="video/mp4" />
+                  <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
+                </video>
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#0ea5e9', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>OFFICIAL R2 HARDWARE SHOWCASE</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>SafetyLink Emergency Hardware Lineup</h3>
+                <p style={{ fontSize: '12px', color: '#8892a4', lineHeight: 1.6 }}>Deep dive into wearable distress buttons, rugged estate muster pillars, and automated multi-carrier fallback sensors.</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── SETUP STEPS ── */}
-      <section style={{ padding:'80px 40px', background:'rgba(7,10,15,0.65)', backdropFilter:'blur(12px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px', background:'transparent', backdropFilter:'blur(2px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'start' }}>
           <div>
             <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SETUP GUIDE</div>
@@ -114,12 +185,22 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'1px', background:'rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
             {STEPS.map((s, i) => (
-              <div key={i} style={{ background:'rgba(17,24,32,0.65)', backdropFilter:'blur(8px)', padding:'20px 24px', display:'flex', alignItems:'flex-start', gap:'20px' }}>
+              <div key={i} style={{ background:'rgba(17,24,32,0.45)', backdropFilter:'blur(6px)', padding:'20px 24px', display:'flex', alignItems:'flex-start', gap:'20px' }}>
                 <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'#e8321e', fontWeight:700, flexShrink:0, width:'28px' }}>{s.n}</span>
                 <div>
                   <div style={{ fontSize:'13px', fontWeight:700, marginBottom:'4px' }}>{s.title}</div>
                   <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.5 }}>{s.desc}</div>
-                  {s.img && <img src={s.img} alt={s.title} style={{ marginTop:'12px', width:'100%', borderRadius:'8px', border:'1px solid rgba(255,255,255,.05)' }} />}
+                  {s.img && (
+                    <img 
+                      src={s.img} 
+                      alt={s.title} 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      style={{ marginTop:'12px', width:'100%', borderRadius:'8px', border:'1px solid rgba(255,255,255,.05)' }} 
+                    />
+                  )}
                 </div>
               </div>
             ))}
@@ -128,7 +209,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       </section>
 
       {/* ── SPECS TABLE ── */}
-      <section style={{ padding:'80px 40px', background:'rgba(13,17,23,0.65)', backdropFilter:'blur(12px)' }}>
+      <section style={{ padding:'80px 40px', background:'rgba(2,6,23,0.18)', backdropFilter:'blur(3px)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// TECHNICAL SPECS</div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Device Comparison.</h2>

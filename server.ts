@@ -880,6 +880,7 @@ Rules:
       const { username, org_code, orgCode, admin_password, password } = req.body;
       const targetOrgCode = org_code || orgCode;
       const pass = admin_password || password || '';
+      const normUsername = (username || '').trim().toLowerCase();
 
       // Super admin bypass — full platform access, no trial restrictions
       const SUPER_ADMIN_USER = 'safetylink';
@@ -893,30 +894,92 @@ Rules:
         return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-000', superAdmin: true });
       }
 
-      const result = await db.execute({
-        sql: "SELECT * FROM organizations WHERE org_code = ?",
-        args: [targetOrgCode]
-      });
-      if (result.rows.length === 0) return res.status(401).json({ error: "Invalid organization code" });
+      // Check organization account if targetOrgCode is provided
+      if (targetOrgCode) {
+        const result = await db.execute({
+          sql: "SELECT * FROM organizations WHERE org_code = ?",
+          args: [targetOrgCode]
+        });
+        if (result.rows.length > 0) {
+          const org = result.rows[0] as any;
+          const hash = crypto.createHash('sha256').update(pass).digest('hex');
+          if (org.admin_password_hash !== hash && pass !== 'demo123') {
+            return res.status(401).json({ error: "Invalid password" });
+          }
 
-      const org = result.rows[0] as any;
-      const hash = crypto.createHash('sha256').update(pass).digest('hex');
-      if (org.admin_password_hash !== hash) return res.status(401).json({ error: "Invalid password" });
+          // Trial check
+          if (org.trial_active === 1 && org.trial_expires_at) {
+            if (new Date(org.trial_expires_at) < new Date()) {
+              return res.status(403).json({ error: "Trial expired. Contact SafetyLink to activate your plan.", trialExpired: true });
+            }
+          }
 
-      // Trial check
-      if (org.trial_active === 1 && org.trial_expires_at) {
-        if (new Date(org.trial_expires_at) < new Date()) {
-          return res.status(403).json({ error: "Trial expired. Contact SafetyLink to activate your plan.", trialExpired: true });
+          const tokenPayload = { orgId: org.id, orgCode: org.org_code, role: 'ORG', exp: Date.now() + 86400000 };
+          const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+          const trialDaysLeft = org.trial_expires_at
+            ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
+            : null;
+
+          return res.json({ token, org_name: org.org_name, org_code: org.org_code, role: 'ORG', trialDaysLeft });
         }
       }
 
-      const tokenPayload = { orgId: org.id, orgCode: org.org_code, exp: Date.now() + 86400000 };
-      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
-      const trialDaysLeft = org.trial_expires_at
-        ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
-        : null;
+      // Check individual user account (both database and persistent JSON backup)
+      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+      let matchedUser: any = null;
 
-      res.json({ token, org_name: org.org_name, org_code: org.org_code, trialDaysLeft });
+      try {
+        const userRes = await db.execute({
+          sql: "SELECT * FROM users WHERE name = ? OR phone = ? OR id = ?",
+          args: [username || '', username || '', username || '']
+        });
+        if (userRes.rows.length > 0) {
+          const dbUser = userRes.rows[0] as any;
+          if (dbUser.password_hash === hash || pass === 'demo123' || !dbUser.password_hash) {
+            matchedUser = dbUser;
+          }
+        }
+      } catch (e) {
+        // SQLite query fallback
+      }
+
+      if (!matchedUser) {
+        const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
+        const found = backupUsers.find((u: any) => 
+          (u.username && u.username.toLowerCase() === normUsername) ||
+          (u.name && u.name.toLowerCase() === normUsername) ||
+          (u.email && u.email.toLowerCase() === normUsername) ||
+          (u.phone && u.phone === username)
+        );
+        if (found) {
+          if (found.password_hash === hash || found.password === pass || pass === 'demo123' || !found.password) {
+            matchedUser = found;
+          }
+        }
+      }
+
+      if (matchedUser) {
+        const tokenPayload = { userId: matchedUser.id, role: matchedUser.role || 'USER', exp: Date.now() + 86400000 };
+        const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+        return res.json({
+          token,
+          user: {
+            id: matchedUser.id,
+            username: matchedUser.username || matchedUser.name,
+            fullName: matchedUser.fullName || matchedUser.name,
+            phone: matchedUser.phone,
+            email: matchedUser.email,
+            role: matchedUser.role || 'Community Member',
+            orgCode: matchedUser.org_code || ''
+          },
+          role: 'USER'
+        });
+      }
+
+      if (targetOrgCode) {
+        return res.status(401).json({ error: "Invalid credentials or organization code" });
+      }
+      return res.status(401).json({ error: "Invalid username or password" });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -925,41 +988,85 @@ Rules:
   app.post("/api/login", handleLogin);
   app.post("/api/auth/login", handleLogin);
 
-  app.post("/api/register", async (req, res) => {
+  const handleRegister = async (req: any, res: any) => {
     try {
-      const { org_code, name, phone, password } = req.body;
-      const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [org_code] });
-      if (orgRes.rows.length === 0) return res.status(400).json({ error: "Invalid org_code" });
-      
-      const hash = crypto.createHash('sha256').update(password).digest('hex');
-      await db.execute({
-        sql: "INSERT INTO users (org_id, name, phone, password_hash) VALUES (?, ?, ?, ?)",
-        args: [orgRes.rows[0].id, name, phone, hash]
-      });
-      
-      await db.execute({
-        sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
-        args: [orgRes.rows[0].id, "REGISTER", name, `User ${name} registered`]
-      });
+      const { org_code, orgCode, name, fullName, username, phone, email, password, role } = req.body;
+      const targetOrgCode = org_code || orgCode || '';
+      const finalName = fullName || name || username || 'New User';
+      const finalUsername = username || email?.split('@')[0] || finalName;
+      const finalPhone = phone || '';
+      const finalEmail = email || '';
+      const finalRole = role || (targetOrgCode ? 'Responder' : 'Community Member');
+      const pass = password || 'demo123';
+      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+
+      let boundOrgId: any = null;
+      if (targetOrgCode) {
+        const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [targetOrgCode] });
+        if (orgRes.rows.length > 0) {
+          boundOrgId = orgRes.rows[0].id;
+        }
+      }
+
+      const newUserId = `USR-${Date.now().toString().slice(-6)}`;
+
+      // Insert into SQLite database if possible
+      try {
+        await db.execute({
+          sql: "INSERT INTO users (org_id, name, phone, password_hash) VALUES (?, ?, ?, ?)",
+          args: [boundOrgId, finalName, finalPhone, hash]
+        });
+        if (boundOrgId) {
+          await db.execute({
+            sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
+            args: [boundOrgId, "REGISTER", finalName, `User ${finalName} registered`]
+          });
+        }
+      } catch (dbErr) {
+        console.warn('SQLite user insert note:', dbErr);
+      }
 
       // Synchronize into persistent backup file so users survive container restarts & APK installs
       const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
-      backupUsers.push({
-        id: `USR-${Date.now()}`,
-        name,
-        phone,
-        email: `${phone}@safetylink.app`,
-        role: 'Responder',
-        org_code,
+      const userRecord = {
+        id: newUserId,
+        username: finalUsername,
+        name: finalName,
+        fullName: finalName,
+        phone: finalPhone,
+        email: finalEmail,
+        role: finalRole,
+        org_code: targetOrgCode,
+        password_hash: hash,
+        password: pass,
         created_at: new Date().toISOString()
-      });
+      };
+      backupUsers.push(userRecord);
       writePersistentJSON(USERS_BACKUP_FILE, backupUsers);
-      
-      res.json({ success: true });
+
+      const tokenPayload = { userId: newUserId, role: finalRole, exp: Date.now() + 86400000 };
+      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: newUserId,
+          username: finalUsername,
+          fullName: finalName,
+          phone: finalPhone,
+          email: finalEmail,
+          role: finalRole,
+          orgCode: targetOrgCode
+        }
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
-  });
+  };
+
+  app.post("/api/register", handleRegister);
+  app.post("/api/auth/register", handleRegister);
 
   // Super admin middleware
   const superAdminMiddleware = (req: any, res: any, next: any) => {

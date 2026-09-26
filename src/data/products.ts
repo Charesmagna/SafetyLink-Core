@@ -15,6 +15,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 150,
     description: 'Entry-level BLE panic button for the SafetyLink Mesh. Instantly pairs with your mobile app for discreet one-press distress signaling.',
+    imageUrl: '/api/r2/stream/Safetylink/HST-01-Anti-Lost-Finder-PRODUCT.jpg',
     affiliateUrl: 'https://safetylink.online/#hardware'
   },
   {
@@ -23,6 +24,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Security Cameras',
     price: 579,
     description: 'Industrial-grade IP66 weatherproof dome camera. 2K QHD resolution with full-color night vision and AI human detection. Perfect for NVR integration.',
+    imageUrl: '/Polish_20260727_023640262.jpg',
     affiliateUrl: 'https://temu.to/k/el0b3xc6t0f'
   },
   {
@@ -31,6 +33,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Security Cameras',
     price: 606,
     description: 'Wireless outdoor PTZ with dual lens. Auto-tracking, full-color night vision, and two-way audio. IP65 rated.',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_040700.jpg',
     affiliateUrl: 'https://temu.to/k/ekgzj2xr5ta'
   },
   {
@@ -39,6 +42,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Security Cameras',
     price: 1147,
     description: 'Ultra HD 8MP camera for warehouse & factory surveillance. H.265 compression, full-color night vision, POE compatible.',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_040734.jpg',
     affiliateUrl: 'https://temu.to/k/elzcawnjmc4'
   },
   {
@@ -47,6 +51,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Security Cameras',
     price: 229,
     description: 'Cost-effective visual deterrent. Solar-powered flashing red LED. Simulated surveillance system for indoor/outdoor use.',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_010544.jpg',
     affiliateUrl: 'https://temu.to/k/e0ctlyiljv9'
   },
   {
@@ -55,6 +60,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Access Control',
     price: 321,
     description: 'Keyless entry lock with touch keypad and IC Card/RFID support. Ideal for lockers, wardrobes, and office cabinets.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260906_205848313.jpg',
     affiliateUrl: 'https://temu.to/k/e6txf0k7l5g'
   },
   {
@@ -63,6 +69,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Access Control',
     price: 410,
     description: 'Waterproof combination lock box. Large capacity for spare house keys. Durable outdoor construction.',
+    imageUrl: '/api/r2/stream/Safetylink/31ThUsPRrzL._AC_.jpg',
     affiliateUrl: 'https://temu.to/k/ezdhmk0ra6i'
   },
   {
@@ -71,6 +78,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Access Control',
     price: 221,
     description: 'Invisible installation (no drill). Supports NFC phone unlocking and card swiping. Secures desks and bedside tables.',
+    imageUrl: '/api/r2/stream/Safetylink/31DP9Fqk0wL._AC_.jpg',
     affiliateUrl: 'https://temu.to/k/e4i99xflv5z'
   },
   {
@@ -79,6 +87,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 404,
     description: 'Durable, wear-resistant cargo pants with multi-pocket design. All-season professional style for responders.',
+    imageUrl: '/Polish_20260907_043403519.jpg',
     affiliateUrl: 'https://temu.to/k/eu1emsrx8vt'
   },
   {
@@ -87,6 +96,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 729,
     description: 'All-season ankle support boots. Shock absorption and anti-slip sole suitable for outdoor operations.',
+    imageUrl: '/Polish_20260819_020134421.jpg',
     affiliateUrl: 'https://temu.to/k/ee990l2ymxu'
   },
   {
@@ -95,6 +105,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 480,
     description: 'Breathable lightweight utility vest. Adjustable Molle system for carrying comms and gear.',
+    imageUrl: '/Polish_20260819_020219883.jpg',
     affiliateUrl: 'https://temu.to/k/eeqt64qkh4x'
   },
   {
@@ -103,6 +114,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 215,
     description: 'Portable metal detector with adjustable sensitivity. Includes battery. Essential for access control checkpoints.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260907_010722614.jpg',
     affiliateUrl: 'https://temu.to/k/e4idrvtembu'
   },
   {
@@ -111,6 +123,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 302,
     description: '9-pocket reflective safety vest. ANSI/ISEA compliant for night-time patrols and emergency response.',
+    imageUrl: '/multi-buttons-smooth.png',
     affiliateUrl: 'https://temu.to/k/ewqmqljcya7'
   },
   {
@@ -119,6 +132,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Vehicle Security',
     price: 967,
     description: 'Center console LCD car DVR. 170° wide angle, WDR night vision, and 24h parking monitor.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260819_023658467.jpg',
     affiliateUrl: 'https://temu.to/k/eizle52sdxr'
   },
   {
@@ -127,6 +141,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Vehicle Security',
     price: 684,
     description: 'Keyless entry system with one-button start, remote engine start/stop, and central locking integration.',
+    imageUrl: '/panic-button-smooth.png',
     affiliateUrl: 'https://temu.to/k/e10mpbfygg3'
   },
   {
@@ -135,6 +150,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Vehicle Security',
     price: 3485,
     description: 'HD1080P DVR 7" IPS Monitor. Rechargeable solar magnetic camera, 3-minute installation for trailers/trucks.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260907_043403519.jpg',
     affiliateUrl: 'https://temu.to/k/ea8cwd0thjs'
   },
   {
@@ -143,6 +159,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 385,
     description: 'Portable USB solar charger with controller. Lightweight aluminum construction for off-grid operations.',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_010612.jpg',
     affiliateUrl: 'https://temu.to/k/edmjjxtxx8f'
   },
   {
@@ -151,6 +168,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 160,
     description: '12V/24V compatible smart charge controller for managing backup battery banks.',
+    imageUrl: '/buttons-only.jpg',
     affiliateUrl: 'https://temu.to/k/ek7ktzoz8br'
   },
   {
@@ -159,6 +177,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 356,
     description: '129dB outdoor security alert. Red/Blue strobe lights and motion detection. Weatherproof design.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260819_014832026.jpg',
     affiliateUrl: 'https://temu.to/k/eihyzcvoerz'
   },
   {
@@ -167,6 +186,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 335,
     description: 'Infrared motion detector integrated with remote controller. Versatile home/office perimeter security.',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260819_020007723.jpg',
     affiliateUrl: 'https://temu.to/k/e442a2s83in'
   },
   {
@@ -175,6 +195,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 140,
     description: 'Independent photoelectric sensor detector. High sensitivity sound and light alarm for early warning.',
+    imageUrl: '/panic-button.png',
     affiliateUrl: 'https://temu.to/k/eouhn5zuwkm'
   }
 ];

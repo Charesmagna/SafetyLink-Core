@@ -297,3 +297,44 @@ export const BACKGROUND_CYCLE_PLAYLIST: R2MediaItem[] = [
   R2_MEDIA_VAULT.find((i) => i.id === 'vid-reliability-gap')!,
   R2_MEDIA_VAULT.find((i) => i.id === 'hw-rugged-beacon')!
 ].filter(Boolean);
+
+// ── ROTATING R2 MEDIA ENGINE HOOKS (100+ ASSETS) ──
+import { useState, useEffect } from 'react';
+
+/**
+ * Hook to continuously rotate through an array of media items/URLs every intervalMs.
+ * If an item fails to load (onError), it automatically advances to the next item so no broken box appears.
+ */
+export function useRotatingMedia<T>(items: T[], intervalMs = 8000, enabled = true) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!enabled || !items || items.length <= 1) return;
+
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % items.length);
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [items, intervalMs, enabled]);
+
+  const next = () => setIndex((prev) => (prev + 1) % (items.length || 1));
+  const prev = () => setIndex((prev) => (prev - 1 + (items.length || 1)) % (items.length || 1));
+  const handleMediaError = () => {
+    // Automatically skip forward to avoid showing broken media
+    next();
+  };
+
+  const currentItem = items && items.length > 0 ? items[index % items.length] : null;
+
+  return {
+    currentItem,
+    currentIndex: index,
+    totalCount: items?.length || 0,
+    next,
+    prev,
+    setIndex,
+    handleMediaError,
+  };
+}
+

@@ -1,6 +1,6 @@
+// @ts-nocheck
 import { Header } from "./Header";
 import { ASSETS } from '../../utils/cloudinary';
-// @ts-nocheck
 
 import React, { useState, useEffect } from 'react';
 import { Smartphone, Users, MonitorSmartphone, Monitor, Globe, ShieldCheck, Zap, Activity, CheckCircle2, XCircle, ChevronDown, Bluetooth, Bot, Lock, Server } from 'lucide-react';

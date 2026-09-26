@@ -10,28 +10,28 @@ export const vid = (publicId: string, transforms = 'q_auto,f_auto') =>
   `${VID_BASE}/${transforms}/${publicId}`;
 
 export const ASSETS = {
-  // Use verified SafetyLink logo asset
+  // Use verified transparent SafetyLink logo asset
   logo: '/logos/New SafetyLink Official Logo.svg',
-  logoCdn: img('Polish_20260620_014530309'),
+  logoCdn: '/media/new_logos/logo_hq.png',
   logo3d: '/logos/New SafetyLink Official Logo.svg',
-  logoKlev: img('K_leva'),
-  appSos: img('Gemini_Generated_Image_ohoz6sohoz6sohoz'), // using one of the generated images from previous grep
-  appLogin: img('main-sample'),
-  itagAll: img('image_1786374730511'),
-  itagSingle: img('image_1786374730511'),
-  itagBattery: img('image_1786374730511'),
-  dispatch: img('Gemini_Generated_Image_59psss59psss59ps'),
-  family: img('Gemini_Generated_Image_48euet48euet48eu'),
-  tactical: img('Gemini_Generated_Image_td9rg6td9rg6td9r'),
-  drone: img('Gemini_Generated_Image_283s3m283s3m283s'),
-  controlRoom: img('Gemini_Generated_Image_waguavwaguavwagu'),
-  banner: img('sl_ui_template'),
-  businessCard: img('sl_ui_template'),
-  dashboardDark: img('Gemini_Generated_Image_s8bl6ps8bl6ps8bl'),
-  estateTactical: img('Gemini_Generated_Image_td9rg6td9rg6td9r'),
-  estatePhoto: img('1785107409613'),
-  promoGraphic: img('sl_ui_template'),
-  mapDark: img('sl_ui_template'),
+  logoKlev: '/media/new_logo/Kleva.svg',
+  appSos: '/panic-button-smooth.png',
+  appLogin: '/Polish_20260727_010938698.jpg',
+  itagAll: '/multi-buttons-smooth.png',
+  itagSingle: '/panic-button.png',
+  itagBattery: '/buttons-only.jpg',
+  dispatch: '/Polish_20260819_020134421.jpg',
+  family: '/Polish_20260819_020007723.jpg',
+  tactical: '/Polish_20260907_043403519.jpg',
+  drone: '/Polish_20260819_020219883.jpg',
+  controlRoom: '/Polish_20260727_023640262.jpg',
+  banner: '/Polish_20260620_014530309.jpg',
+  businessCard: '/Polish_20260620_014530309.jpg',
+  dashboardDark: '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg',
+  estateTactical: '/Polish_20260907_043403519.jpg',
+  estatePhoto: '/Polish_20260819_020134421-1.jpg',
+  promoGraphic: '/Polish_20260620_014530309.jpg',
+  mapDark: '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg',
 };
 
 export const USE_CASE_VIDEOS = [

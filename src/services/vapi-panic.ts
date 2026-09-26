@@ -2,7 +2,7 @@
 // SafetyLink — VAPI Inbound Panic Handler
 // Fires the full alert chain the moment a call comes in
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import twilio from 'twilio';
 import axios from 'axios';
 import { v2 as cloudinary } from 'cloudinary';
@@ -26,7 +26,7 @@ cloudinary.config({
 });
 
 // Avoid crash if Redis env vars are missing
-let redis, ratelimit;
+let redis: any, ratelimit: any;
 try {
   redis = Redis.fromEnv();
   ratelimit = new Ratelimit({
@@ -39,7 +39,7 @@ try {
 }
 
 // ── EMERGENCY CONTACTS LOOKUP ──────────────────────────────────────────────
-async function getContactsForNumber(phoneNumber: string) {
+async function getContactsForNumber(_phoneNumber: string) {
   return [
     { name: 'SafetyLink Command', phone: process.env.COMMAND_CENTER_NUMBER || '+27680079911' },
   ];
@@ -190,7 +190,7 @@ async function fireAllAlerts({ callerNumber, callerName, location, trigger, cont
 }
 
 // ── VAPI WEBHOOK ENDPOINT ──────────────────────────────────────────────────
-router.post('/vapi/webhook', async (req, res) => {
+router.post('/vapi/webhook', async (req: Request, res: Response) => {
   const { message } = req.body;
   if (!message) return res.json({ result: 'ok' });
 
@@ -301,7 +301,7 @@ router.post('/vapi/webhook', async (req, res) => {
   return res.json({ result: 'ok' });
 });
 
-router.post('/api/panic', async (req, res) => {
+router.post('/api/panic', async (req: Request, res: Response) => {
   const {
     userId, name, lat, lon, trigger,
     contacts: reqContacts, photoBase64,
@@ -341,8 +341,8 @@ router.post('/api/panic', async (req, res) => {
   res.json({ status: 'alerts_fired', timestamp: new Date().toISOString() });
 });
 
-router.post('/ussd', async (req, res) => {
-  const { sessionId, phoneNumber, text } = req.body;
+router.post('/ussd', async (req: Request, res: Response) => {
+  const { sessionId: _sessionId, phoneNumber, text } = req.body;
 
   let response = '';
 

@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-const logoPolish = 'https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787313194/Safety_Link_Logo_Black_1.png';
+const logoPolish = '/Polish_20260620_014530309.jpg';
 
 export class LocalNotificationService {
   private static isNative = Capacitor.isNativePlatform();
@@ -22,10 +22,6 @@ export class LocalNotificationService {
       return false;
     }
   }
-
-  
-  private static lastTitle = '';
-  private static lastBody = '';
 
   public static async updateStatusNotification(
     isRunning: boolean,
@@ -50,13 +46,6 @@ export class LocalNotificationService {
       title = "🛡️ SafetyLink Active Connection";
       body = `Continuous Link Active • ${devicesStr} • Location: [${locationStr}]`;
     }
-
-    // Optimization: Only push if the content actually changed to save battery
-    if (this.lastTitle === title && this.lastBody === body) {
-      return;
-    }
-    this.lastTitle = title;
-    this.lastBody = body;
 
     // 1. Browser HTML5 Notifications API
     if (typeof window !== 'undefined' && 'Notification' in window) {
