@@ -1,0 +1,16 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="#05070a">
+
+    <ImageView android:id="@+id/ble_status"
+        android:layout_width="24dp" android:layout_height="24dp"
+        android:src="@drawable/ic_ble_connected" />
+
+    <ImageButton android:id="@+id/panic_btn"
+        android:layout_width="48dp" android:layout_height="48dp"
+        android:background="@drawable/circle_panic_button"
+        android:src="@drawable/ic_sos_white" />
+</LinearLayout>

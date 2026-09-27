@@ -6,60 +6,104 @@ export interface EmergencyDispatchPlugin {
   openWhatsApp(options: { phone: string; message: string }): Promise<{ opened: boolean; requiresManualSend: boolean; error?: string }>;
 }
 
+export interface SafetyLinkEmergencyPlugin {
+  trigger(options: {
+    description?: string;
+    phone?: string;
+    latitude?: number;
+    longitude?: number;
+    organizationId?: string;
+    userId?: string;
+  }): Promise<{ status: string; countdownSeconds: number }>;
+  cancel(): Promise<{ status: string }>;
+  getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
+  enforceHardwareWake(): Promise<void>;
+  checkOverlayPermission(): Promise<{ granted: boolean }>;
+  requestOverlayPermission(): Promise<void>;
+  addListener(eventName: 'onPanicStatusChange', listenerFunc: (data: { source: string; countdownSeconds: number; status: string }) => void): Promise<any>;
+}
+
 const NativeEmergencyDispatch = registerPlugin<EmergencyDispatchPlugin>('EmergencyDispatch');
+export const SafetyLinkEmergency = registerPlugin<SafetyLinkEmergencyPlugin>('SafetyLinkEmergency');
 
 export interface DispatchResult {
   success: boolean;
   simulated: boolean;
   error?: string;
+  status?: string;
 }
 
 /**
  * NativeDispatchService
  *
- * Thin wrapper so the rest of the app can call one consistent API whether
- * it's running in the native Android shell (real SMS/calls/WhatsApp) or in
- * a browser preview during development (safely simulated, no native bridge
- * exists there).
+ * Canonical unified bridge routing emergency calls to the native Android emergency engine
+ * (PanicService / EmergencyDispatchPlugin) when running on device, or providing explicit
+ * simulation feedback when running in pure web browsers.
  */
 export class NativeDispatchService {
   private static isNative = Capacitor.isNativePlatform();
 
+  static async triggerNativeEmergency(payload: {
+    description: string;
+    phone?: string;
+    latitude?: number;
+    longitude?: number;
+    organizationId?: string;
+    userId?: string;
+  }): Promise<{ status: string; countdownSeconds: number }> {
+    if (!this.isNative) {
+      console.log('[NativeDispatch:web-sim] Triggering simulated emergency countdown:', payload);
+      return { status: 'COUNTDOWN', countdownSeconds: 10 };
+    }
+    try {
+      return await SafetyLinkEmergency.trigger(payload);
+    } catch (e) {
+      console.error('[NativeDispatch] SafetyLinkEmergency.trigger failed:', e);
+      throw e;
+    }
+  }
+
+  static async cancelNativeEmergency(): Promise<{ status: string }> {
+    if (!this.isNative) {
+      console.log('[NativeDispatch:web-sim] Emergency cancelled');
+      return { status: 'CANCELLED' };
+    }
+    try {
+      return await SafetyLinkEmergency.cancel();
+    } catch (e) {
+      console.error('[NativeDispatch] SafetyLinkEmergency.cancel failed:', e);
+      throw e;
+    }
+  }
+
   static async sendSms(phone: string, message: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would SMS ${phone}: "${message}"`);
-      return { success: true, simulated: true };
+      return { success: true, simulated: true, status: 'SENT' };
     }
     try {
       const res = await NativeEmergencyDispatch.sendSms({ phone, message });
-      return { success: res.sent, simulated: false, error: res.error };
+      return { success: res.sent, simulated: false, error: res.error, status: res.sent ? 'SENT' : 'FAILED' };
     } catch (e) {
       console.error('[NativeDispatch] sendSms failed', e);
-      return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e) };
+      return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
     }
   }
 
   static async placeCall(phone: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would call ${phone}`);
-      return { success: true, simulated: true };
+      return { success: true, simulated: true, status: 'INITIATED' };
     }
     try {
       const res = await NativeEmergencyDispatch.placeCall({ phone });
-      return { success: res.dialed, simulated: false, error: res.error };
+      return { success: res.dialed, simulated: false, error: res.error, status: res.dialed ? 'INITIATED' : 'FAILED' };
     } catch (e) {
       console.error('[NativeDispatch] placeCall failed', e);
-      return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e) };
+      return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
     }
   }
 
-  /**
-   * Opens WhatsApp with the message ready to go. This cannot be made fully
-   * silent -- the user still taps Send inside WhatsApp. See
-   * EmergencyDispatchPlugin.java for why (no consent-free WhatsApp send API
-   * exists for third-party apps without WhatsApp Business Cloud API or an
-   * accessibility-service auto-tapper, which this app deliberately does not use).
-   */
   static async openWhatsApp(phone: string, message: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would open WhatsApp to ${phone}: "${message}"`);
@@ -82,10 +126,17 @@ export class NativeDispatchService {
         console.warn('Vibration rejected by environment:', e);
       }
     }
-    console.log("[NativeDispatch] High-intensity distress haptics / vibration sequence engaged.");
+    console.log("[NativeDispatch] High-intensity distress haptics sequence engaged.");
   }
 
   static async forceUnlockAndWake(): Promise<void> {
+    if (this.isNative) {
+      try {
+        await SafetyLinkEmergency.enforceHardwareWake();
+      } catch (e) {
+        console.warn('[NativeDispatch] enforceHardwareWake failed', e);
+      }
+    }
     console.log("[NativeDispatch] Android background force-unlock and keyguard-bypass routine triggered.");
   }
 }
