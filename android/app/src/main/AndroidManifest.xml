@@ -9,6 +9,7 @@
         android:theme="@style/AppTheme"
         android:debuggable="false"
         android:extractNativeLibs="false">
+
         <service
             android:name=".DnsVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
@@ -58,8 +59,9 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Canonical SafetyLink Emergency Panic Engine Service -->
         <service
-            android:name="com.safetylink.app.services.PanicService"
+            android:name=".PanicService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -67,25 +69,73 @@
                 android:value="Emergency Alert Engine"
             />
         </service>
+
+        <!-- Background Persistent Sentinel & KeepAlive Service -->
         <service
-            android:name="com.safetylink.app.services.EmergencyService"
+            android:name=".SafelinkForegroundService"
             android:exported="false"
-            android:foregroundServiceType="location"
-        />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Background BLE and Emergency Sentinel"
+            />
+        </service>
+
+        <!-- Device Boot & QuickBoot Auto-Recovery Receiver -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- AppWidget Quick Panic Provider -->
+        <receiver
+            android:name=".PanicWidgetProvider"
+            android:label="SafetyLink Quick SOS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/panic_widget_info" />
+        </receiver>
+
+        <!-- AppWidget Mesh Status Provider -->
+        <receiver
+            android:name=".StatusWidgetProvider"
+            android:label="SafetyLink Mesh Status"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/status_widget_info" />
+        </receiver>
+
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
-
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 </manifest>
