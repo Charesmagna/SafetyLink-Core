@@ -21,7 +21,13 @@ export const Settings: React.FC = () => {
     silenceAlerts,
     setSilenceAlerts,
     globalTheme,
-    setGlobalTheme
+    setGlobalTheme,
+    decoyActive,
+    setDecoyActive,
+    decoyCode,
+    setDecoyCode,
+    decoyDistressCode,
+    setDecoyDistressCode
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
@@ -179,6 +185,47 @@ export const Settings: React.FC = () => {
             </label>
           </div>
           <p className="text-[8px] text-slate-500 mt-1">Mutes all sirens during panic activation.</p>
+
+          <div className="flex justify-between items-center border-t border-slate-800/50 pt-3">
+            <div>
+              <h5 className="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                <span>🧮</span> Decoy Mode (Calculator Disguise)
+              </h5>
+              <p className="text-[8px] text-slate-500 mt-0.5">
+                Launches an operational calculator to mask SafetyLink under duress.
+              </p>
+            </div>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <span className={`text-[8px] font-bold ${decoyActive ? "text-emerald-400" : "text-slate-600"}`}>
+                {decoyActive ? "ARMED" : "OFF"}
+              </span>
+              <input 
+                type="checkbox" 
+                checked={decoyActive} 
+                onChange={e => {
+                  setDecoyActive(e.target.checked);
+                  useAppStore.getState().addToast(
+                    e.target.checked 
+                      ? 'Calculator disguise armed. Enter ' + (decoyCode || '1911') + '= to unlock.' 
+                      : 'Calculator disguise disarmed.', 
+                    'info'
+                  );
+                }}
+                className="accent-emerald-500 w-4 h-4 cursor-pointer" 
+              />
+            </label>
+          </div>
+          {decoyActive && (
+            <div className="p-2.5 bg-emerald-950/20 border border-emerald-900/30 rounded-xl space-y-1.5">
+              <div className="flex justify-between text-[8px] font-mono text-emerald-400">
+                <span>Unlock Passcode: <strong>{decoyCode || '1911'}=</strong></span>
+                <span>Silent SOS Code: <strong>{decoyDistressCode || '9111'}=</strong></span>
+              </div>
+              <p className="text-[7.5px] text-slate-400">
+                To return to SafetyLink at any time, type your passcode into the calculator and press <strong>=</strong>.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

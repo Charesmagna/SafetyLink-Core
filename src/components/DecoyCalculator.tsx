@@ -109,15 +109,30 @@ export const DecoyCalculator: React.FC = () => {
               <p className="text-[8px] font-mono text-slate-600">Standard Desk Disguise Utility</p>
             </div>
           </div>
-          <button 
-            onClick={() => {
-              logout();
-              addToast('Calculator session terminated.', 'info');
-            }} 
-            className="text-[9px] font-mono px-2 py-1 bg-slate-900/60 hover:bg-slate-850 rounded text-slate-500 hover:text-slate-300 border border-slate-900"
-          >
-            Shutdown
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={() => {
+                useAppStore.setState({ decoyActive: false });
+                addToast('Returned to SafetyLink Portal.', 'info');
+              }} 
+              className="text-[9px] font-mono px-2.5 py-1 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-400 hover:text-emerald-300 rounded border border-emerald-800/40 transition-colors"
+              title="Exit disguise"
+            >
+              Exit Disguise
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                useAppStore.setState({ decoyActive: false });
+                logout();
+                addToast('Calculator session terminated.', 'info');
+              }} 
+              className="text-[9px] font-mono px-2 py-1 bg-slate-900/60 hover:bg-slate-850 rounded text-slate-500 hover:text-slate-300 border border-slate-900 transition-colors"
+            >
+              Shutdown
+            </button>
+          </div>
         </div>
 
         {/* Display Screen */}
