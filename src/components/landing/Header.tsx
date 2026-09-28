@@ -992,7 +992,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
           background: ${isLight ? '#f8fafc' : '#0f172a'};
         }
 
-        @media(max-width: 960px) {
+        @media(max-width: 1180px) {
           .nav-links {
             display: none !important;
           }
@@ -1000,12 +1000,21 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             display: block !important;
           }
         }
+        @media(max-width: 768px) {
+          .soc-btn.fb, .soc-btn.ph {
+            display: none !important;
+          }
+          .nav-cta {
+            display: none !important;
+          }
+        }
         @media(max-width: 600px) {
           .view-toggle-text {
             display: none !important;
           }
           .nav-brand-text {
-            display: none !important;
+            display: inline-block !important;
+            font-size: 15px !important;
           }
         }
       `}</style>

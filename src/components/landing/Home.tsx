@@ -270,10 +270,15 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                   loop
                   muted={heroClipMuted}
                   playsInline
+                  controls={false}
+                  preload="auto"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 >
-                  <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
+                  <source src="/api/r2/stream/Safetylink/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
+                  <source src="/api/r2/stream/Safetylink/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
+                  <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
                   <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
+                  <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
                   <source src="/media/videos/hero_background.mp4" type="video/mp4" />
                   <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
                 </video>
