@@ -141,9 +141,37 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
       <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: 'transparent' }}>
-        {/* Subtle Brand Watermark & Ambient Radial Grid */}
-        <img src={ASSETS.logo3d} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '70%', opacity: 0.04, objectFit: 'contain', zIndex: 0, pointerEvents: 'none' }} alt="Watermark" />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.04), transparent 60%)', zIndex: 0, pointerEvents: 'none' }} />
+        {/* Hero Background Video Layer */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              minWidth: '100%',
+              minHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'cover',
+              opacity: 0.28,
+              filter: 'brightness(0.85) contrast(1.15)',
+            }}
+          >
+            <source src="/splash-video.mp4" type="video/mp4" />
+            <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+            <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
+            <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+          </video>
+          {/* High-tech Vignette & Radial Darkening Overlays */}
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(2,6,23,0.3) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,6,23,0.6) 0%, transparent 20%, transparent 80%, #020617 100%)' }} />
+        </div>
         {/* Scanline */}
         <div style={{ position:'absolute', inset:0, opacity:0.03, pointerEvents:'none', overflow:'hidden', zIndex:1 }}>
           <div style={{ position:'absolute', left:0, right:0, height:'2px', background:'linear-gradient(transparent,rgba(232,50,30,.8),transparent)', animation:'scanline 8s linear infinite' }}/>
@@ -274,13 +302,11 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                   preload="auto"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 >
-                  <source src="/api/r2/stream/Safetylink/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
-                  <source src="/api/r2/stream/Safetylink/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
-                  <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
-                  <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
-                  <source src="/media/videos/How_Emergency_Escalation_Pipelines_Work.mp4" type="video/mp4" />
+                  <source src="/splash-video.mp4" type="video/mp4" />
                   <source src="/media/videos/hero_background.mp4" type="video/mp4" />
                   <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
+                  <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
+                  <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
                 </video>
 
                 {/* Video HUD Overlays */}
