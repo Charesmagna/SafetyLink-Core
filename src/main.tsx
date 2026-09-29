@@ -1,3 +1,10 @@
+// Migration: Clear any legacy cached sl_decoy_active
+try {
+  if (localStorage.getItem('sl_decoy_migrated_v2') !== 'true') {
+    localStorage.removeItem('sl_decoy_active');
+    localStorage.setItem('sl_decoy_migrated_v2', 'true');
+  }
+} catch {}
 import { setupDeepLinks } from './utils/DeepLinkHandler';
 import React from 'react'
 import ReactDOM from 'react-dom/client'

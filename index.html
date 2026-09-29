@@ -39,6 +39,15 @@
         animation: sl-pulse 1.8s ease-in-out infinite;
       }
     </style>
+        <script data-cfasync="false">
+      // Storage Migration: Ensure decoy calculator is disabled by default for all existing browser caches
+      try {
+        if (localStorage.getItem('sl_decoy_migrated_v2') !== 'true') {
+          localStorage.removeItem('sl_decoy_active');
+          localStorage.setItem('sl_decoy_migrated_v2', 'true');
+        }
+      } catch (e) {}
+    </script>
     <script data-cfasync="false">
       // Self-healing: Unregister broken/stale Service Workers if URL has ?fresh or on critical load error
       if ('serviceWorker' in navigator) {
