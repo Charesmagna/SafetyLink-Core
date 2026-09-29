@@ -64,7 +64,45 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   const sharedProps = { onLogin: onLogin || (() => {}), onRegisterOrg: onRegisterOrg || (() => {}), onRegisterUser: onRegisterUser || (() => {}), navigate };
 
   return (
-    <div className="min-h-screen bg-transparent text-white font-sans relative">
+    <div className="min-h-screen bg-[#020617] text-white font-sans relative overflow-x-hidden">
+      {/* ── Ambient Website-Wide Video Backdrop ── */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 overflow-hidden" 
+        aria-hidden="true"
+        style={{ opacity: 0.18 }}
+      >
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            minWidth: '100%',
+            minHeight: '100%',
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'cover',
+            filter: 'contrast(1.2) brightness(0.75)',
+          }}
+        >
+          <source src="/splash-video.mp4" type="video/mp4" />
+          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+          <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
+          <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
+        </video>
+        <div 
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at center, rgba(2,6,23,0.35) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)',
+          }} 
+        />
+      </div>
       {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
 
