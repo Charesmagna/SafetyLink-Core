@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../utils/store';
+import { BatteryIndicator } from '../common/BatteryIndicator';
 
 interface HeaderProps {
   onLogin?: () => void;
@@ -398,6 +399,9 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 <span id="view-label" className="view-toggle-text">{!mobileView ? 'Desktop' : 'Mobile'}</span>
               </button>
             )}
+
+            {/* Hardware Real-time Battery Indicator */}
+            <BatteryIndicator theme={isLight ? 'light' : 'dark'} />
 
             {/* Theme Toggle (Moon / Sun) */}
             <button

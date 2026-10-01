@@ -1,6 +1,8 @@
 package com.aistudio.safetylink.vqnztp;
 
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
@@ -137,6 +139,44 @@ public class SafetyLinkBridgePlugin extends Plugin {
             }
         }
         call.resolve();
+    }
+
+    @PluginMethod
+    public void getDeviceBattery(PluginCall call) {
+        try {
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus = getContext().registerReceiver(null, ifilter);
+
+            int level = -1;
+            int scale = -1;
+            int status = -1;
+            boolean isCharging = false;
+            float batteryPct = -1;
+
+            if (batteryStatus != null) {
+                level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                             status == BatteryManager.BATTERY_STATUS_FULL;
+
+                if (level >= 0 && scale > 0) {
+                    batteryPct = (level * 100f) / (float) scale;
+                }
+            }
+
+            JSObject ret = new JSObject();
+            ret.put("level", batteryPct >= 0 ? Math.round(batteryPct) : 100);
+            ret.put("isCharging", isCharging);
+            ret.put("status", status);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to read device battery status: " + e.getMessage(), e);
+            JSObject fallback = new JSObject();
+            fallback.put("level", 100);
+            fallback.put("isCharging", false);
+            call.resolve(fallback);
+        }
     }
 
     public void emitPanicEvent(String source, int countdownSeconds, String status) {
