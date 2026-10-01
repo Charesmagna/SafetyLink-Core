@@ -35,6 +35,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
+import { BatteryIndicator } from './components/common/BatteryIndicator';
 
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
@@ -690,6 +691,9 @@ const App: React.FC = () => {
           }`}>
             {t(`tab.${activeTab}`)}
           </span>
+
+          {/* Hardware Real-time Battery Indicator */}
+          <BatteryIndicator theme={globalTheme} />
 
           {/* Theme Toggle (Sun / Moon) */}
           <button

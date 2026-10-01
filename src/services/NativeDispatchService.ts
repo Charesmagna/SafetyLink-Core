@@ -17,6 +17,7 @@ export interface SafetyLinkEmergencyPlugin {
   }): Promise<{ status: string; countdownSeconds: number }>;
   cancel(): Promise<{ status: string }>;
   getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
+  getDeviceBattery(): Promise<{ level: number; isCharging: boolean; chargingTime?: number; dischargingTime?: number }>;
   enforceHardwareWake(): Promise<void>;
   checkOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
@@ -25,6 +26,14 @@ export interface SafetyLinkEmergencyPlugin {
 
 const NativeEmergencyDispatch = registerPlugin<EmergencyDispatchPlugin>('EmergencyDispatch');
 export const SafetyLinkEmergency = registerPlugin<SafetyLinkEmergencyPlugin>('SafetyLinkEmergency');
+
+export interface DeviceBatteryStatus {
+  level: number;
+  isCharging: boolean;
+  chargingTime?: number;
+  dischargingTime?: number;
+  isSupported: boolean;
+}
 
 export interface DispatchResult {
   success: boolean;
@@ -139,4 +148,94 @@ export class NativeDispatchService {
     }
     console.log("[NativeDispatch] Android background force-unlock and keyguard-bypass routine triggered.");
   }
+
+  /**
+   * Retrieves real-time device battery percentage and charging state via native
+   * Android BatteryManager or the standard Web Battery Status API.
+   */
+  static async getDeviceBattery(): Promise<DeviceBatteryStatus> {
+    if (this.isNative) {
+      try {
+        const res = await SafetyLinkEmergency.getDeviceBattery();
+        return {
+          level: Math.round(res.level),
+          isCharging: !!res.isCharging,
+          chargingTime: res.chargingTime,
+          dischargingTime: res.dischargingTime,
+          isSupported: true,
+        };
+      } catch (err) {
+        console.warn('[NativeDispatch] Native getDeviceBattery failed, falling back to Web API:', err);
+      }
+    }
+
+    // Web / PWA Battery Status API fallback
+    try {
+      if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+        const battery: any = await (navigator as any).getBattery();
+        return {
+          level: Math.round(battery.level * 100),
+          isCharging: !!battery.charging,
+          chargingTime: battery.chargingTime,
+          dischargingTime: battery.dischargingTime,
+          isSupported: true,
+        };
+      }
+    } catch (e) {
+      console.warn('[NativeDispatch] navigator.getBattery unavailable:', e);
+    }
+
+    // Default safe fallback if battery API unavailable in environment
+    return {
+      level: 95,
+      isCharging: false,
+      isSupported: false,
+    };
+  }
+
+  /**
+   * Subscribes to real-time charge and battery level changes.
+   * Returns an unsubscribe function.
+   */
+  static subscribeBatteryUpdates(callback: (status: DeviceBatteryStatus) => void): () => void {
+    let active = true;
+
+    // Check if web battery events are available
+    if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+      (navigator as any).getBattery().then((battery: any) => {
+        if (!active) return;
+        const handler = () => {
+          if (!active) return;
+          callback({
+            level: Math.round(battery.level * 100),
+            isCharging: !!battery.charging,
+            chargingTime: battery.chargingTime,
+            dischargingTime: battery.dischargingTime,
+            isSupported: true,
+          });
+        };
+
+        battery.addEventListener('levelchange', handler);
+        battery.addEventListener('chargingchange', handler);
+
+        // Send initial reading
+        handler();
+      }).catch(() => {});
+    }
+
+    // Periodic poll for native bridge (every 15s) to guarantee fresh telemetry
+    const interval = setInterval(async () => {
+      if (!active) return;
+      try {
+        const status = await this.getDeviceBattery();
+        callback(status);
+      } catch {}
+    }, 15000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }
 }
+
