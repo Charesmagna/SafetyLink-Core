@@ -11,10 +11,13 @@ export const vid = (publicId: string, transforms = 'q_auto,f_auto') =>
 
 export const ASSETS = {
   // Use verified transparent SafetyLink logo asset
-  logo: '/logos/New SafetyLink Official Logo.svg',
-  logoCdn: '/media/new_logos/logo_hq.png',
-  logo3d: '/logos/New SafetyLink Official Logo.svg',
-  logoKlev: '/media/new_logo/Kleva.svg',
+  logo: '/logos/Safety_Link_Logo_Transparent.png',
+  logoSvg: '/logos/New SafetyLink Official Logo.svg',
+  logoTransparent: '/logos/Safety_Link_Logo_Transparent.png',
+  logoDark: '/logos/Safety_Link_Logo_Black.png',
+  logoCdn: '/logos/Safety_Link_Logo_Transparent.png',
+  logo3d: '/logos/Safety_Link_Logo_Transparent.png',
+  logoKlev: '/media/kleva_logo/Kleva.svg',
   appSos: '/panic-button-smooth.png',
   appLogin: '/Polish_20260727_010938698.jpg',
   itagAll: '/multi-buttons-smooth.png',
@@ -25,12 +28,12 @@ export const ASSETS = {
   tactical: '/Polish_20260907_043403519.jpg',
   drone: '/Polish_20260819_020219883.jpg',
   controlRoom: '/Polish_20260727_023640262.jpg',
-  banner: '/Polish_20260620_014530309.jpg',
-  businessCard: '/Polish_20260620_014530309.jpg',
+  banner: '/api/r2/stream/Safetylink/Emergency_Response_Platform_Architecture_Overview.png',
+  businessCard: '/logos/Safety_Link_Logo_Transparent.png',
   dashboardDark: '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg',
   estateTactical: '/Polish_20260907_043403519.jpg',
   estatePhoto: '/Polish_20260819_020134421-1.jpg',
-  promoGraphic: '/Polish_20260620_014530309.jpg',
+  promoGraphic: '/api/r2/stream/Safetylink/Emergency_Mesh_Platform_Overview.png',
   mapDark: '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg',
 };
 

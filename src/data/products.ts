@@ -10,6 +10,15 @@ export interface Product {
 
 export const STORE_PRODUCTS: Product[] = [
   {
+    slug: 'altitude-tracker-key-tag-tech2051',
+    name: 'Altitude Tracker Key Tag (TECH-2051) - Brandability',
+    category: 'Power & Sensors',
+    price: 89,
+    description: 'South African certified Bluetooth key tag tracker with 1-colour pad printing support. Ultra-compact 17x7mm branding zone, long-life replaceable cell, and instant one-touch pairing with SafetyLink mobile emergency mesh.',
+    imageUrl: '/api/r2/stream/Safetylink/HST-01-Anti-Lost-Finder-PRODUCT.jpg',
+    affiliateUrl: 'https://www.brandability.co.za/buy/altitude-tracker-key-tag?utm_source=safetylink&utm_medium=store&utm_campaign=safetyware'
+  },
+  {
     slug: 'itag-hst-01',
     name: 'SafetyLink iTAG BLE Panic Button (HST-01)',
     category: 'Power & Sensors',

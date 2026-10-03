@@ -39,7 +39,7 @@ const SafetyWareStore: React.FC = () => {
       }
     } catch (err) {
       console.error("Stock check failed:", err);
-      window.open(`https://wa.me/message/YIEA73M7H3P5M1, product ${product.name} check failed. I need assistance.`, '_blank');
+      window.open(`https://wa.me/27680079911?text=${encodeURIComponent(`Hi SafetyLink, I am looking to purchase "${product.name}" (R${product.price}). Please assist with direct checkout.`)}`, '_blank');
     } finally {
       setCheckingStock(null);
     }

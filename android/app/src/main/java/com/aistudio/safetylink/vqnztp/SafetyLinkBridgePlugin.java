@@ -37,6 +37,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
         double lng = call.getDouble("longitude", 0.0);
         String orgId = call.getString("organizationId", "SL-ORG-DEFAULT");
         String userId = call.getString("userId", "UNKNOWN");
+        boolean directDispatch = Boolean.TRUE.equals(call.getBoolean("directDispatch", false));
 
         try {
             Intent intent = new Intent(getContext(), PanicService.class);
@@ -47,6 +48,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
             intent.putExtra("longitude", lng);
             intent.putExtra("orgId", orgId);
             intent.putExtra("triggeredBy", userId);
+            intent.putExtra("directDispatch", directDispatch);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 getContext().startForegroundService(intent);
@@ -55,12 +57,64 @@ public class SafetyLinkBridgePlugin extends Plugin {
             }
 
             JSObject ret = new JSObject();
-            ret.put("status", "TRIGGERED");
-            ret.put("countdownSeconds", 10);
+            ret.put("status", directDispatch ? "DISPATCHING" : "TRIGGERED");
+            ret.put("countdownSeconds", directDispatch ? 0 : 10);
             call.resolve(ret);
         } catch (Exception e) {
             Log.e(TAG, "Failed to trigger PanicService: " + e.getMessage(), e);
             call.reject("Failed to trigger PanicService: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void openAccessibilitySettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            JSObject ret = new JSObject();
+            ret.put("opened", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to open accessibility settings: " + e.getMessage(), e);
+            call.reject("Could not open accessibility settings: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void requestBatteryOptimizationExemption(PluginCall call) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.os.PowerManager pm = (android.os.PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(getContext().getPackageName())) {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    intent.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(intent);
+                }
+            }
+            JSObject ret = new JSObject();
+            ret.put("requested", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to request battery optimization: " + e.getMessage(), e);
+            call.reject("Could not request battery optimization: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(android.net.Uri.parse("package:" + getContext().getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            JSObject ret = new JSObject();
+            ret.put("opened", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to open app settings: " + e.getMessage(), e);
+            call.reject("Could not open app settings: " + e.getMessage());
         }
     }
 

@@ -134,13 +134,13 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             }}
           >
             <img
-              src="/logos/New SafetyLink Official Logo.svg"
+              src="/logos/Safety_Link_Logo_Transparent.png"
               alt="SafetyLink"
               style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => {
                 const imgEl = e.currentTarget as HTMLImageElement;
-                if (!imgEl.src.includes('Polish_20260620')) {
-                  imgEl.src = 'https://res.cloudinary.com/qcp4fx2v/image/upload/Polish_20260620_014530309';
+                if (!imgEl.src.includes('New SafetyLink Official Logo')) {
+                  imgEl.src = '/logos/New SafetyLink Official Logo.svg';
                 }
               }}
             />

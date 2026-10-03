@@ -373,6 +373,8 @@ public class ITagPlugin extends Plugin {
                     acquireWakeLock();
 
                     if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                        // Request high connection priority to prevent OS dropping connection after inactivity
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
                         gatt.discoverServices();
                     }
 
@@ -436,6 +438,9 @@ public class ITagPlugin extends Plugin {
 
                     Log.i(TAG, "Button pressed on: " + devAddress + ", byte value: " + byteVal);
 
+                    // Golden Rule: Direct Native Emergency Dispatch on physical press
+                    triggerNativePanicDirectly("iTAG Hardware Button Trigger (" + devAddress + ")");
+
                     JSObject eventObj = new JSObject();
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
@@ -454,6 +459,9 @@ public class ITagPlugin extends Plugin {
 
                     Log.i(TAG, "Button pressed (API 33+) on: " + devAddress + ", byte value: " + byteVal);
 
+                    // Golden Rule: Direct Native Emergency Dispatch on physical press
+                    triggerNativePanicDirectly("iTAG Hardware Button Trigger (" + devAddress + ")");
+
                     JSObject eventObj = new JSObject();
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
@@ -463,9 +471,27 @@ public class ITagPlugin extends Plugin {
         };
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            device.connectGatt(getContext(), false, gattCallback, BluetoothDevice.TRANSPORT_LE);
+            // Use autoConnect: true for continuous background connection retention
+            device.connectGatt(getContext(), true, gattCallback, BluetoothDevice.TRANSPORT_LE);
         } else {
-            device.connectGatt(getContext(), false, gattCallback);
+            device.connectGatt(getContext(), true, gattCallback);
+        }
+    }
+
+    private void triggerNativePanicDirectly(String sourceDescription) {
+        try {
+            Intent panicIntent = new Intent(getContext(), PanicService.class);
+            panicIntent.setAction(PanicService.ACTION_TRIGGER_PANIC);
+            panicIntent.putExtra("description", sourceDescription);
+            panicIntent.putExtra("triggeredBy", "ITAG_PHYSICAL_HARDWARE");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getContext().startForegroundService(panicIntent);
+            } else {
+                getContext().startService(panicIntent);
+            }
+            Log.i(TAG, "PanicService foreground emergency pipeline initiated via physical iTAG press");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to launch PanicService natively: " + e.getMessage(), e);
         }
     }
 

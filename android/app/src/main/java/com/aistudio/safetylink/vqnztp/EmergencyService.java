@@ -24,7 +24,8 @@ import java.util.concurrent.Executors;
  */
 public final class EmergencyService {
     private static final String TAG = "EmergencyService";
-    private static final String BACKEND_BASE_URL = "http://10.0.2.2:3000";
+    private static final String BACKEND_BASE_URL = "https://safetylink.online";
+    private static final String BACKEND_FALLBACK_URL = "http://10.0.2.2:3000";
     private static volatile EmergencyService instance;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -68,17 +69,49 @@ public final class EmergencyService {
             // 1. Native SMS Dispatch
             String smsStatus = sendNativeSms(context, toNumber, body, incidentId);
 
-            // 2. Direct Backend Incident Sync
+            // 2. Native Emergency Telephony Call
+            String callStatus = placeNativeCall(context, toNumber);
+
+            // 3. Direct Backend Incident Sync (Cloud + local fallback)
             boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
             String syncStatus = backendOk ? "SYNCED" : "PENDING";
 
-            boolean overallSuccess = "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || backendOk;
-            DispatchResult result = new DispatchResult(overallSuccess, smsStatus, "INITIATED", syncStatus);
+            boolean overallSuccess = "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || "INITIATED".equals(callStatus) || backendOk;
+            DispatchResult result = new DispatchResult(overallSuccess, smsStatus, callStatus, syncStatus);
 
             if (callback != null) {
                 callback.onResult(result);
             }
         });
+    }
+
+    public String placeNativeCall(Context context, String toNumber) {
+        if (toNumber == null || toNumber.trim().isEmpty()) {
+            return "SKIPPED";
+        }
+        try {
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + toNumber.trim()));
+            callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(callIntent);
+            Log.i(TAG, "Native ACTION_CALL placed to: " + toNumber);
+            return "INITIATED";
+        } catch (SecurityException se) {
+            Log.w(TAG, "CALL_PHONE permission not granted, falling back to ACTION_DIAL");
+            try {
+                Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+                dialIntent.setData(Uri.parse("tel:" + toNumber.trim()));
+                dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(dialIntent);
+                return "INITIATED";
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to launch dialer fallback: " + e.getMessage());
+                return "FAILED";
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Call dispatch error: " + e.getMessage());
+            return "FAILED";
+        }
     }
 
     public String sendNativeSms(Context context, String toNumber, String body, String incidentId) {
@@ -124,37 +157,43 @@ public final class EmergencyService {
 
     private boolean logIncidentToBackend(String incidentId, double lat, double lng,
                                          String description, String orgId, String triggeredBy) {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(BACKEND_BASE_URL + "/api/incidents");
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.setDoOutput(true);
-            conn.setRequestProperty("Content-Type", "application/json");
+        String[] targets = new String[]{ BACKEND_BASE_URL, BACKEND_FALLBACK_URL };
+        for (String baseUrl : targets) {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(baseUrl + "/api/incidents");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setConnectTimeout(4000);
+                conn.setReadTimeout(4000);
+                conn.setDoOutput(true);
+                conn.setRequestProperty("Content-Type", "application/json");
 
-            JSONObject payload = new JSONObject();
-            payload.put("id", incidentId);
-            payload.put("latitude", lat);
-            payload.put("longitude", lng);
-            payload.put("description", description);
-            payload.put("org_id", orgId);
-            payload.put("triggered_by", triggeredBy);
-            payload.put("status", "DISPATCHED");
-            payload.put("severity", "CRITICAL");
+                JSONObject payload = new JSONObject();
+                payload.put("id", incidentId);
+                payload.put("latitude", lat);
+                payload.put("longitude", lng);
+                payload.put("description", description);
+                payload.put("org_id", orgId);
+                payload.put("triggered_by", triggeredBy);
+                payload.put("status", "DISPATCHED");
+                payload.put("severity", "CRITICAL");
 
-            String jsonStr = payload.toString();
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(jsonStr.getBytes(StandardCharsets.UTF_8));
+                String jsonStr = payload.toString();
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(jsonStr.getBytes(StandardCharsets.UTF_8));
+                }
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    Log.i(TAG, "Successfully logged incident " + incidentId + " to backend: " + baseUrl);
+                    return true;
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Backend sync connection error for " + baseUrl + ": " + e.getMessage());
+            } finally {
+                if (conn != null) conn.disconnect();
             }
-            int code = conn.getResponseCode();
-            return code >= 200 && code < 300;
-        } catch (Exception e) {
-            Log.w(TAG, "Backend sync connection error: " + e.getMessage());
-            return false;
-        } finally {
-            if (conn != null) conn.disconnect();
         }
+        return false;
     }
 }

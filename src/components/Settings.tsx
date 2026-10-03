@@ -89,11 +89,11 @@ export const Settings: React.FC = () => {
       <div className="absolute inset-0 digital-grid opacity-10 pointer-events-none" />
       <div className="flex justify-center mb-6 mt-2 relative z-10">
         <img 
-          src="/logos/New SafetyLink Official Logo.svg" 
+          src="/logos/Safety_Link_Logo_Transparent.png" 
           alt="SafetyLink Official Logo" 
-          className="h-12 object-contain drop-shadow-xl" 
+          className="h-14 object-contain drop-shadow-xl" 
           onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = '/media/new_logos/logo_hq_3.png';
+            (e.currentTarget as HTMLImageElement).src = '/logos/New SafetyLink Official Logo.svg';
           }}
         />
       </div>
@@ -536,6 +536,107 @@ export const Settings: React.FC = () => {
               </span>
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Android Device Control & Accessibility Sentinel */}
+      <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
+        <div className="flex justify-between items-center">
+          <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
+            🛡️ DEVICE CONTROL & ACCESSIBILITY
+          </h4>
+          <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            ACTIVE SENTINEL
+          </span>
+        </div>
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
+            Grant SafetyLink Android accessibility, hardware button interception (volume panic triggers), and background battery saver exemption.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={async () => {
+                if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.SafetyLinkEmergency?.openAccessibilitySettings) {
+                  await (window as any).Capacitor.Plugins.SafetyLinkEmergency.openAccessibilitySettings();
+                } else {
+                  useAppStore.getState().addToast('Accessibility settings is available in the Android APK.', 'info');
+                }
+              }}
+              className="py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>🔑 Accessibility Settings</span>
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.SafetyLinkEmergency?.requestBatteryOptimizationExemption) {
+                  await (window as any).Capacitor.Plugins.SafetyLinkEmergency.requestBatteryOptimizationExemption();
+                } else {
+                  useAppStore.getState().addToast('Battery exemption is available in the Android APK.', 'info');
+                }
+              }}
+              className="py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>⚡ Exempt Battery Killer</span>
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.SafetyLinkEmergency?.openAppSettings) {
+                  await (window as any).Capacitor.Plugins.SafetyLinkEmergency.openAppSettings();
+                } else {
+                  useAppStore.getState().addToast('App permissions manager is available in the Android APK.', 'info');
+                }
+              }}
+              className="py-2.5 px-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>⚙️ App Permissions</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem('sl_permissions_configured_v2');
+                window.location.reload();
+              }}
+              className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
+            >
+              <span>🔄 Run Setup Wizard</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Cloudflare Private DNS Configuration */}
+      <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
+        <div className="flex justify-between items-center">
+          <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
+            🌐 CLOUDFLARE PRIVATE DNS SHIELD
+          </h4>
+          <span className="text-[9px] font-mono font-bold text-sky-400 bg-sky-950/30 px-2 py-0.5 rounded-full border border-sky-500/20">
+            TLS PORT 853
+          </span>
+        </div>
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div>
+              <span className="text-[8px] text-slate-500 uppercase tracking-widest block font-bold">Private DNS Provider Hostname</span>
+              <span className="text-xs font-bold text-emerald-400 font-mono">dns.safetylink.online</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText('dns.safetylink.online');
+                useAppStore.getState().addToast('Copied dns.safetylink.online to clipboard', 'success');
+              }}
+              className="py-1 px-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-[10px] font-bold"
+            >
+              Copy
+            </button>
+          </div>
+          <p className="text-[9.5px] text-slate-400 font-sans leading-relaxed">
+            Android Settings → Network & Internet → Private DNS → select "Private DNS provider hostname" and enter <strong className="text-slate-200">dns.safetylink.online</strong>.
+          </p>
         </div>
       </div>
 

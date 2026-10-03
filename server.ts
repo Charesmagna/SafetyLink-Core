@@ -52,9 +52,9 @@ function getFirestoreDb() {
 
 
 // --- Environment Variables (from GitHub Secrets via CI) ---
-const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER || '+16055695774';
 const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY;
 const PUSHER_APP_ID       = process.env.PUSHER_APP_ID;
 const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET;
@@ -63,6 +63,15 @@ const JWT_SECRET          = process.env.JWT_SECRET;
 const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL;
 const BLAND_API_KEY       = process.env.BLAND_API_KEY;
 const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY;
+
+// Emergency Providers
+const VAPI_PRIVATE_KEY       = process.env.VAPI_PRIVATE_KEY || '43fcd7b7-b329-49f2-a9dc-09e366d38aaa';
+const VAPI_PHONE_NUMBER_ID   = process.env.VAPI_PHONE_NUMBER_ID || 'ef00ad6f-92e3-49cb-b54c-fa2b8a8f44d0';
+const VAPI_ASSISTANT_ID      = process.env.VAPI_ASSISTANT_ID || '9c9313eb-8593-4c49-b993-09eef7e8d540';
+const AT_API_KEY             = process.env.AT_API_KEY || process.env.USSD_API_KEY || 'atsk_70185519dcb73c623d397526470199068eb47cc409ac454f59ae7cd45da0a2aa811c0bcb';
+const AT_USERNAME            = process.env.AT_USERNAME || 'SafetyLink';
+const RESPONSE_CENTRE_NUMBER = process.env.RESPONSE_CENTRE_NUMBER || '+27739441222';
+const TEST_DESTINATION_NUMBER= process.env.TEST_DESTINATION_NUMBER || '+27680079911';
 
 // --- Database & Auth Initialization ---
 
@@ -1256,128 +1265,196 @@ Rules:
 
   app.post("/api/panic", async (req, res) => {
     try {
-      const { org_code, phone, latitude, longitude } = req.body;
-      const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [org_code] });
-      if (orgRes.rows.length === 0) return res.status(400).json({ error: "Invalid org_code" });
-      const orgId = orgRes.rows[0].id;
+      const { 
+        org_code, 
+        phone, 
+        latitude, 
+        longitude, 
+        callerName, 
+        callerNumber, 
+        emergencyContacts, 
+        description 
+      } = req.body;
 
-      const userRes = await db.execute({ sql: "SELECT id, name FROM users WHERE org_id = ? AND phone = ?", args: [orgId, phone] });
-      if (userRes.rows.length === 0) return res.status(400).json({ error: "Invalid user" });
-      const user = userRes.rows[0];
+      const effectivePhone = phone || callerNumber || TEST_DESTINATION_NUMBER;
+      const effectiveName = callerName || "SafetyLink Active User";
+      const effectiveOrgCode = org_code || "INDIVIDUAL";
 
-      await db.execute({
-        sql: "INSERT INTO panic_alerts (user_id, latitude, longitude) VALUES (?, ?, ?)",
-        args: [user.id, latitude, longitude]
-      });
-      
-      await db.execute({
-        sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
-        args: [orgId, "PANIC", user.name, `Panic alert triggered by ${user.name}`]
-      });
-
-      // Broadcast real-time panic event via Pusher
+      // 1. Audit / Log in Database (Tolerant: never block emergency dispatch if DB record fails)
+      let orgId = 1;
+      let userId = 1;
       try {
-        await getPusher().trigger(`org-${org_code}`, "panic_alert", {
-          user_id: user.id,
-          name: user.name,
+        const orgRes = await db.execute({ sql: "SELECT id FROM organizations WHERE org_code = ?", args: [effectiveOrgCode] });
+        if (orgRes.rows.length > 0) {
+          orgId = orgRes.rows[0].id as number;
+        }
+        const userRes = await db.execute({ sql: "SELECT id, name FROM users WHERE phone = ? LIMIT 1", args: [effectivePhone] });
+        if (userRes.rows.length > 0) {
+          userId = userRes.rows[0].id as number;
+        }
+
+        await db.execute({
+          sql: "INSERT INTO panic_alerts (user_id, latitude, longitude) VALUES (?, ?, ?)",
+          args: [userId, latitude || 0.0, longitude || 0.0]
+        });
+        
+        await db.execute({
+          sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
+          args: [orgId, "PANIC", effectiveName, description || `Panic alert triggered by ${effectiveName}`]
+        });
+      } catch (dbErr: any) {
+        console.warn("[Panic Alert] DB log non-fatal note:", dbErr.message);
+      }
+
+      // 2. Realtime Pusher Broadcast
+      try {
+        await getPusher().trigger(`org-${effectiveOrgCode}`, "panic_alert", {
+          user_id: userId,
+          name: effectiveName,
+          phone: effectivePhone,
           latitude,
           longitude,
+          description: description || "Immediate Emergency",
           timestamp: new Date().toISOString()
         });
-      } catch (err) {
-        console.error("Pusher broadcast failed:", err);
+      } catch (err: any) {
+        console.warn("Pusher broadcast note:", err.message);
       }
-      
-      // Twilio SMS + Voice dispatch to org emergency contacts
-      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-        try {
-          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-          const userName = (userRes.rows[0] as any).name || phone;
 
-          // Reverse geocode for address
-          let address = `${latitude?.toFixed(4)}, ${longitude?.toFixed(4)}`;
-          try {
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
-            const geoData = await geo.json() as any;
-            if (geoData?.display_name) address = geoData.display_name.split(',').slice(0,3).join(',');
-          } catch {}
+      // 3. Compile Recipients List (User contacts + Command Center + Test Number)
+      const targetNumbers = new Set<string>();
+      if (effectivePhone) targetNumbers.add(effectivePhone);
+      targetNumbers.add(RESPONSE_CENTRE_NUMBER);
+      targetNumbers.add(TEST_DESTINATION_NUMBER);
 
-          // Get org emergency contacts
-          const contactsRes = await db.execute({
-            sql: 'SELECT phone FROM users WHERE org_id = ? AND phone != ? LIMIT 5',
-            args: [orgId, phone]
-          });
-
-          const smsBody = `🚨 SAFETYLINK SOS: ${userName} needs help! Location: ${address} | Map: https://maps.google.com/?q=${latitude},${longitude}`;
-          const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">This message will repeat.</Say><Say voice="alice">Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.</Say></Response>`;
-
-          for (const contact of contactsRes.rows as any[]) {
-            if (!contact.phone) continue;
-            // SMS
-            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: contact.phone })
-              .catch(e => console.error('Twilio SMS failed:', e.message));
-            
-            // Voice call
-            twilioClient.calls.create({
-              twiml: twimlVoice,
-              from: TWILIO_PHONE_NUMBER,
-              to: contact.phone
-            }).catch(e => console.error('Twilio call failed:', e.message));
-            
-            // --- BLAND AI AUTOMATED DISPATCH ---
-            if (BLAND_API_KEY) {
-              const blandData = {
-                "phone_number": contact.phone,
-                "voice": "45bfac80-786f-409e-acd0-6c424603a12e",
-                "wait_for_greeting": false,
-                "record": true,
-                "answered_by_enabled": true,
-                "noise_cancellation": false,
-                "interruption_threshold": 500,
-                "block_interruptions": false,
-                "max_duration": 12,
-                "model": "base",
-                "language": "babel-en",
-                "background_track": "none",
-                "endpoint": "https://api.bland.ai",
-                "voicemail_action": "hangup",
-                "prompt": `Emergency alert from SafetyLink. ${userName} has triggered a panic button at ${address}. Please respond immediately.`
-              };
-              
-              fetch('https://api.bland.ai/v1/calls', {
-                method: 'POST',
-                headers: { 'Authorization': BLAND_API_KEY, 'Content-Type': 'application/json' },
-                body: JSON.stringify(blandData)
-              }).catch(e => console.error('Bland AI dispatch failed:', e.message));
-            }
-          }
-          
-          // --- PIPEDREAM WEBHOOK DEPLOYMENT/TRIGGER ---
-          if (process.env.PIPEDREAM_API_KEY) {
-             const pipedreamPayload = {
-                "org_id": "o_GOIjor7",
-                "project_id": "proj_p2sPmV3",
-                "steps": [],
-                "triggers": [],
-                "settings": {
-                  "name": "SafetyLink Alert Workflow",
-                  "auto_deploy": true
-                }
-             };
-             fetch('https://api.pipedream.com/v1/workflows?template_id=tch_2EfnyV', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${process.env.PIPEDREAM_API_KEY}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(pipedreamPayload)
-             }).catch(e => console.error('Pipedream trigger failed:', e.message));
-          }
-        } catch (twilioErr: any) {
-          console.error('Twilio dispatch error:', twilioErr.message);
+      if (Array.isArray(emergencyContacts)) {
+        for (const c of emergencyContacts) {
+          if (c && c.phone) targetNumbers.add(c.phone);
         }
       }
 
-      res.json({ success: true });
+      // Reverse geocode
+      let address = `${Number(latitude || 0).toFixed(4)}, ${Number(longitude || 0).toFixed(4)}`;
+      try {
+        if (latitude && longitude) {
+          const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`, {
+            headers: { 'User-Agent': 'SafetyLink-Emergency-Engine/2.0 (info@safetylink.online)' }
+          });
+          const geoData = await geo.json() as any;
+          if (geoData?.display_name) address = geoData.display_name.split(',').slice(0, 3).join(',');
+        }
+      } catch {}
+
+      const mapLink = (latitude && longitude) ? `https://maps.google.com/?q=${latitude},${longitude}` : `Location Pending`;
+      const smsBody = `🚨 SAFETYLINK SOS: ${effectiveName} (${effectivePhone}) needs urgent help! Location: ${address} | Map: ${mapLink}`;
+      const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${effectiveName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">Repeating. Emergency alert from SafetyLink. ${effectiveName} needs urgent help.</Say></Response>`;
+
+      console.log(`[Universal Dispatch] Firing emergency alert to ${targetNumbers.size} recipients.`);
+
+      // 4. DISPATCH: Africa's Talking SMS (Zero-fail direct South African cellular route)
+      if (AT_API_KEY) {
+        for (const num of targetNumbers) {
+          try {
+            const atParams = new URLSearchParams({
+              username: AT_USERNAME,
+              to: num,
+              message: smsBody,
+            });
+            fetch('https://api.africastalking.com/version1/messaging', {
+              method: 'POST',
+              headers: {
+                'apiKey': AT_API_KEY,
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+              },
+              body: atParams.toString()
+            }).then(r => r.json()).then(d => console.log(`[AfricaTalking SMS] Result for ${num}:`, d)).catch(e => console.warn(`[AfricaTalking SMS error]`, e.message));
+          } catch (e: any) {
+            console.warn(`[AfricaTalking error]`, e.message);
+          }
+        }
+      }
+
+      // 5. DISPATCH: Twilio SMS & Calls
+      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+        try {
+          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          for (const num of targetNumbers) {
+            // SMS
+            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: num })
+              .catch(e => console.warn('[Twilio SMS error]:', e.message));
+            
+            // Voice
+            twilioClient.calls.create({ twiml: twimlVoice, from: TWILIO_PHONE_NUMBER, to: num })
+              .catch(e => console.warn('[Twilio Voice error]:', e.message));
+
+            // WhatsApp
+            twilioClient.messages.create({ 
+              body: smsBody, 
+              from: `whatsapp:${TWILIO_PHONE_NUMBER}`, 
+              to: `whatsapp:${num}` 
+            }).catch(e => console.warn('[Twilio WhatsApp error]:', e.message));
+          }
+        } catch (twErr: any) {
+          console.warn("[Twilio Engine Error]:", twErr.message);
+        }
+      }
+
+      // 6. DISPATCH: VAPI AI Outbound Emergency Phone Call (Intelligent Voice Verification)
+      if (VAPI_PRIVATE_KEY && VAPI_PHONE_NUMBER_ID) {
+        for (const num of targetNumbers) {
+          try {
+            fetch('https://api.vapi.ai/call', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                phoneNumberId: VAPI_PHONE_NUMBER_ID,
+                customer: { number: num },
+                assistantId: VAPI_ASSISTANT_ID,
+                assistantOverrides: {
+                  firstMessage: `This is the SafetyLink Emergency AI. A panic alert was triggered by ${effectiveName}. Location is: ${address}. Please confirm response status.`,
+                }
+              })
+            }).catch(e => console.warn('[VAPI Call error]:', e.message));
+          } catch (e: any) {
+            console.warn('[VAPI error]:', e.message);
+          }
+        }
+      }
+
+      // 7. DISPATCH: Bland AI Emergency Call
+      if (BLAND_API_KEY) {
+        for (const num of targetNumbers) {
+          const blandData = {
+            "phone_number": num,
+            "voice": "45bfac80-786f-409e-acd0-6c424603a12e",
+            "wait_for_greeting": false,
+            "record": true,
+            "max_duration": 12,
+            "model": "base",
+            "language": "babel-en",
+            "prompt": `Emergency alert from SafetyLink. ${effectiveName} has triggered a distress alarm at ${address}. Please respond immediately.`
+          };
+          fetch('https://api.bland.ai/v1/calls', {
+            method: 'POST',
+            headers: { 'Authorization': BLAND_API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify(blandData)
+          }).catch(e => console.warn('[Bland AI error]:', e.message));
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        status: "DISPATCHED",
+        recipientsContacted: targetNumbers.size,
+        address 
+      });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error("[Panic Route Critical Exception]", e);
+      res.status(500).json({ error: e.message || "Failed to process emergency" });
     }
   });
 
@@ -1821,16 +1898,90 @@ Rules:
     }
   });
 
+  // --- WIRELESS LOGIC SMS & WAKEUP INTEGRATION ---
+  app.post("/api/wirelesslogic/send-sms", async (req, res) => {
+    try {
+      const { ident, message, identType = 'imsi', messageId = String(Date.now()) } = req.body;
+      const apiClient = process.env.WIRELESS_LOGIC_API_CLIENT || '01f46dd3620634a326deb2f25d8aa51e56d5133b3cb7f83d594b213c6a251901-020259-1735689599';
+      const apiKey = process.env.WIRELESS_LOGIC_API_KEY || '51b5e6c4c54e5daa6c44cca277ed0b51fc742670088ceefdafc29c7f8d397b21';
+
+      const wlRes = await fetch("https://simpro4.wirelesslogic.com/api/sms/send/json", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-client": apiClient,
+          "x-api-key": apiKey
+        },
+        body: JSON.stringify({
+          ident,
+          identtype: identType,
+          message,
+          messageid: messageId
+        })
+      });
+
+      const data = await wlRes.json().catch(() => ({ status: false, status_message: "Invalid response from Wireless Logic" }));
+      res.json(data);
+    } catch (err: any) {
+      console.error("Wireless Logic Error:", err);
+      res.status(500).json({ status: false, error: err.message });
+    }
+  });
+
+  // Wireless Logic Delivery Receipt Webhook
+  app.post("/api/webhooks/wirelesslogic/receipt", express.json(), (req, res) => {
+    try {
+      const { messageid, status } = req.body;
+      console.log(`[WirelessLogic Receipt] Message ${messageid} delivery status: ${status}`);
+      res.json({ status: true, statusmessage: "" });
+    } catch (e: any) {
+      res.status(500).json({ status: false, statusmessage: e.message });
+    }
+  });
+
+  // --- WORKOS ENTERPRISE SSO INITIATION & CALLBACK ---
+  app.get("/api/auth/workos/authorize", (req, res) => {
+    const clientId = process.env.WORKOS_CLIENT_ID || 'client_01M23S8M5TP0TR20ZM1E9GCHDT';
+    const provider = req.query.provider || 'GoogleOAuth';
+    const redirectUri = `${req.headers.origin || 'https://safetylink.online'}/api/auth/workos/callback`;
+    const authUrl = `https://api.workos.com/sso/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri as string)}&response_type=code&provider=${provider}`;
+    res.redirect(authUrl);
+  });
+
+  app.get("/api/auth/workos/callback", async (req, res) => {
+    const { code } = req.query;
+    if (!code) return res.redirect('/?error=workos_no_code');
+    res.redirect('/#sso-authenticated');
+  });
+
+  // --- APILAYER COUNTRYLAYER PROXY (FOR SA & SADC REGIONAL TELEMETRY) ---
+  app.get("/api/geo/countries", async (_req, res) => {
+    try {
+      const accessKey = process.env.APILAYER_ACCESS_KEY || '36d4e8507f1e55f9724f130b0fae4a4d';
+      const alRes = await fetch(`https://api.apilayer.net/countrylayer/v2/all?access_key=${accessKey}&filters=name;capital;currencies;callingCodes`);
+      const data = await alRes.json().catch(() => []);
+      res.json({ success: true, data });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post("/api/check-stock/:slug", async (req, res) => {
     try {
       const slug = req.params.slug;
       const { url } = req.body;
-      const isOutOfStock = Math.random() < 0.1;
+      const isOutOfStock = Math.random() < 0.05; // High availability
       
       if (isOutOfStock) {
-        res.json({ redirectUrl: `https://wa.me/27739441222?text=Hi, I am looking for the ${slug} but it shows out of stock. Can I backorder it?` });
+        res.json({ 
+          inStock: false,
+          redirectUrl: `https://wa.me/27680079911?text=${encodeURIComponent(`Hi SafetyLink, I am looking to order "${slug}" but it shows low stock. Please assist with immediate order/backorder.`)}` 
+        });
       } else {
-        res.json({ redirectUrl: url || 'https://temu.to/k/fallback' });
+        res.json({ 
+          inStock: true,
+          redirectUrl: url || 'https://www.brandability.co.za/buy/altitude-tracker-key-tag?utm_source=safetylink' 
+        });
       }
     } catch (e) {
       console.error("Stock Check Error:", e);

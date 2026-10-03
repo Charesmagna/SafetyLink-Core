@@ -28,6 +28,7 @@ import { BackgroundNotificationPanel } from './components/BackgroundNotification
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
+import { PermissionsOnboardingModal } from './components/PermissionsOnboardingModal';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
 import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
@@ -485,6 +486,26 @@ const App: React.FC = () => {
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
+    if (!currentUser) {
+      if (showLanding) {
+        return <LandingPage 
+          onLogin={() => {
+            setAuthInitialView('LOGIN');
+            setShowLanding(false);
+          }} 
+          onRegisterOrg={() => {
+            setAuthInitialView('REGISTER_ORG');
+            setShowLanding(false);
+          }} 
+          onRegisterUser={() => {
+            setAuthInitialView('REGISTER_USER');
+            setShowLanding(false);
+          }}
+        />;
+      }
+      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
+    }
+
     if (isAppMinimized) {
       return <SimulatedDesktop />;
     }
@@ -502,32 +523,6 @@ const App: React.FC = () => {
 
     if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
-    }
-
-    if (!currentUser) {
-      if (showLanding) {
-        return <LandingPage 
-          onLogin={() => {
-            setAuthInitialView('LOGIN');
-            setShowLanding(false);
-            
-            
-          }} 
-          onRegisterOrg={() => {
-            setAuthInitialView('REGISTER_ORG');
-            setShowLanding(false);
-            
-            
-          }} 
-          onRegisterUser={() => {
-            setAuthInitialView('REGISTER_USER');
-            setShowLanding(false);
-            
-            
-          }}
-        />;
-      }
-      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
 
@@ -1338,9 +1333,9 @@ const App: React.FC = () => {
 
       {/* Persistent System Status Bar & Background Notification Tray */}
 
-      {/* High-Priority Emergency Overlay */}
+      {/* Unified High-Priority Emergency Overlay */}
       <TrialBanner />
-      <ForcedCountdownOverlay />
+      {!isSosActive && <ForcedCountdownOverlay />}
       <SosCountdownOverlay 
         isActive={isSosActive}
         onTrueCancel={handleTrueCancel}
@@ -1350,6 +1345,7 @@ const App: React.FC = () => {
 
       {/* Critical Wearable Device Alert Sentinel Overlay */}
       <DeviceAlertOverlay />
+      <PermissionsOnboardingModal />
       <LizzyPopup />
       {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
 

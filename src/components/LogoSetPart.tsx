@@ -20,13 +20,13 @@ export const LogoSetPart: React.FC<LogoSetPartProps> = ({
       style={{ width: size, height: size }}
     >
       <img
-        src="/logos/New SafetyLink Official Logo.svg"
+        src="/logos/Safety_Link_Logo_Transparent.png"
         alt="SafetyLink Brand Logo"
         onError={(e) => {
           e.currentTarget.onerror = null;
-          e.currentTarget.src = '/panic-button-smooth.png';
+          e.currentTarget.src = '/logos/New SafetyLink Official Logo.svg';
         }}
-        className="w-full h-full object-contain p-1"
+        className="w-full h-full object-contain p-0.5"
       />
     </div>
   );
