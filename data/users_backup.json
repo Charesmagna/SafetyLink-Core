@@ -1,0 +1,15 @@
+[
+  {
+    "id": "USR-709717",
+    "username": "test_individual_user",
+    "name": "Test Individual",
+    "fullName": "Test Individual",
+    "phone": "+27681234567",
+    "email": "test@individual.com",
+    "role": "Community Member",
+    "org_code": "",
+    "password_hash": "b55c8792d1ce458e279308835f8a97b580263503e76e1998e279703e35ad0c2e",
+    "password": "testpassword123",
+    "created_at": "2026-09-24T15:28:29.719Z"
+  }
+]
