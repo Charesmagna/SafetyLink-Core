@@ -91,7 +91,13 @@ public class PanicService extends Service {
                 if (intent.hasExtra("orgId")) pendingOrgId = intent.getStringExtra("orgId");
                 if (intent.hasExtra("triggeredBy")) pendingTriggeredBy = intent.getStringExtra("triggeredBy");
 
-                startPanicSequence();
+                boolean directDispatch = intent.getBooleanExtra("directDispatch", false);
+                if (directDispatch) {
+                    Log.i(TAG, "Direct dispatch requested — executing emergency dispatch immediately without secondary countdown");
+                    triggerFinalSOS();
+                } else {
+                    startPanicSequence();
+                }
             } else if (ACTION_CANCEL_PANIC.equals(action)) {
                 cancelPanicSequence();
             }
@@ -335,6 +341,7 @@ public class PanicService extends Service {
                 .setContentText(message)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setOngoing(true)
+                .setOnlyAlertOnce(true)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
         if (openPending != null) {

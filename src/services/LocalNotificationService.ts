@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-const logoPolish = '/Polish_20260620_014530309.jpg';
+const logoPolish = '/logos/Safety_Link_Logo_Transparent.png';
 
 export class LocalNotificationService {
   private static isNative = Capacitor.isNativePlatform();

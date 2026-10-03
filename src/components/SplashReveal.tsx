@@ -76,6 +76,9 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
             <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl animate-ping" />
             <img
               src="/logos/New SafetyLink Official Logo.svg"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = '/logos/Safety_Link_Logo_Transparent.png';
+              }}
               alt="SafetyLink"
               className="w-20 h-20 object-contain relative z-10 drop-shadow-[0_0_20px_rgba(16,185,129,0.8)]"
             />

@@ -625,7 +625,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Decoy Mode & Vault Initial States
-  decoyActive: getStoredJSON<boolean>('sl_decoy_active', false),
+  decoyActive: false,
   decoyCode: getStoredJSON<string>('sl_decoy_code', '1911'),
   decoyDistressCode: getStoredJSON<string>('sl_decoy_distress_code', '9111'),
   vaultPassword: getStoredJSON<string>('sl_vault_password_hash', ''), // PBKDF2 verifier hash only
@@ -1618,7 +1618,10 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        try {
            const nativeEmergency = (window as any).SafetyLinkEmergency || (window as any).Capacitor?.Plugins?.SafetyLinkEmergency;
            if (nativeEmergency?.trigger) {
-             await nativeEmergency.trigger({ description: description || 'Distress Signal' });
+             await nativeEmergency.trigger({ 
+               description: description || 'Distress Signal',
+               directDispatch: true 
+             });
            }
            set({ activeSOSState: 'DISPATCHED' });
            get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
@@ -1645,34 +1648,47 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     set({ activeSOSState: 'ESCALATING' });
 
-    try {
-        const response = await fetch('https://safetylink.online/api/panic', {
+    const emergencyPayload = { 
+      userId: get().currentUser?.id || 'SL-U-DEMO',
+      org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
+      orgId: get().currentOrg?.id || null,
+      latitude: loc.lat,
+      longitude: loc.lng,
+      phone: get().currentUser?.phone || '+27680079911',
+      callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
+      callerNumber: get().currentUser?.phone || '+27680079911',
+      emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
+      description: description || 'Emergency Distress Signal',
+      isDrill: false
+    };
+
+    let dispatchSuccess = false;
+    const endpoints = ['/api/panic', 'https://safetylink.online/api/panic'];
+
+    for (const url of endpoints) {
+      try {
+        const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            userId: get().currentUser?.id || 'SL-U-DEMO',
-            orgId: get().currentOrg?.id || null,
-            lat: loc.lat,
-            lng: loc.lng,
-            callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
-            callerNumber: get().currentUser?.phone || '',
-            emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
-            description,
-            isDrill: false
-          }) 
+          body: JSON.stringify(emergencyPayload)
         });
-        
         if (response.ok) {
-           set({ activeSOSState: 'DISPATCHED' });
-        } else {
-           set({ activeSOSState: 'RESOLVED' });
-           get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);
-           get().addToast('Network offline. Panic enqueued locally.', 'warn');
+          dispatchSuccess = true;
+          break;
         }
-    } catch (e) {
-        set({ activeSOSState: 'RESOLVED' });
-        get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);
-        get().addToast('Network offline. Panic enqueued locally.', 'warn');
+      } catch (err) {
+        console.warn(`[Panic Alert] Attempt failed for ${url}:`, err);
+      }
+    }
+
+    if (dispatchSuccess) {
+      set({ activeSOSState: 'DISPATCHED' });
+      get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
+      get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
+    } else {
+      set({ activeSOSState: 'RESOLVED' });
+      get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);
+      get().addToast('Network unavailable. Panic enqueued in local offline queue.', 'warn');
     }
   },
 

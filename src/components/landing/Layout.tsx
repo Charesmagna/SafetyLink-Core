@@ -26,7 +26,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
       <footer id="contact" className="bg-[#0f172a] border-t-[12px] border-[#15803d] pt-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <img src={ASSETS.logo} alt="SafetyLink Logo" className="h-24 w-auto mx-auto mb-8 opacity-80 mix-blend-lighten" />
+            <img src={ASSETS.logo} alt="SafetyLink Logo" className="h-20 w-auto mx-auto mb-8 object-contain drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]" />
             <h3 className="text-2xl font-black text-white tracking-[0.06em] uppercase mb-12">ONE APP. TOTAL PEACE OF MIND.</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               <div className="flex flex-col items-center gap-4 text-center">

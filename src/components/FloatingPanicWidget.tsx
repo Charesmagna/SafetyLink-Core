@@ -124,14 +124,14 @@ export const FloatingPanicWidget: React.FC = () => {
             {/* Default logo with subtle rotation */}
             {!isCountdownActive && !isSOSActive && (
               <img
-                src="/Polish_20260620_014530309.jpg"
+                src="/logos/Safety_Link_Logo_Transparent.png"
                 onError={(e) => {
                   // Fallback if custom logo fails to load
                   (e.target as HTMLImageElement).src = '/logo.png';
                 }}
                 alt="SL"
                 referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-full object-cover pointer-events-none drop-shadow-md select-none transition-transform hover:scale-105"
+                className="w-10 h-10 object-contain pointer-events-none drop-shadow-md select-none transition-transform hover:scale-105"
               />
             )}
           </div>
