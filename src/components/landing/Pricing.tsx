@@ -211,7 +211,17 @@ const HARDWARE_PRODUCTS = [
   },
 ];
 
-export function Pricing({ onNavigate, onRegisterOrg }: { onNavigate?: (page: string) => void; onRegisterOrg?: () => void }) {
+export function Pricing({
+  onNavigate,
+  onRegisterOrg,
+  onLogin,
+  onRegisterUser
+}: {
+  onNavigate?: (page: string) => void;
+  onRegisterOrg?: () => void;
+  onLogin?: () => void;
+  onRegisterUser?: () => void;
+}) {
   const [categoryTab, setCategoryTab] = useState<'all' | 'individual' | 'security' | 'hardware'>('all');
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);

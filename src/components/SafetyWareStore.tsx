@@ -140,7 +140,7 @@ const SafetyWareStore: React.FC = () => {
 
                   <div className={`fallback-icon w-full h-full items-center justify-center ${product.imageUrl ? 'hidden' : 'flex'}`}>
                     {CATEGORY_ICONS[product.category] ? (
-                      React.cloneElement(CATEGORY_ICONS[product.category] as React.ReactElement, { className: 'w-16 h-16 text-slate-800 group-hover:text-slate-700 transition-colors' })
+                      React.cloneElement(CATEGORY_ICONS[product.category] as React.ReactElement<any>, { className: 'w-16 h-16 text-slate-800 group-hover:text-slate-700 transition-colors' })
                     ) : (
                       <ShoppingCart className="w-16 h-16 text-slate-800" />
                     )}

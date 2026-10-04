@@ -43,7 +43,7 @@ export function createPanicQueue(): DispatchQueue {
       });
     }
 
-    queueInstance = new Queue('panicQueue', {
+    const bullQueue = new Queue('panicQueue', {
       connection: redisConnection,
       defaultJobOptions: {
         removeOnComplete: 50,
@@ -53,11 +53,12 @@ export function createPanicQueue(): DispatchQueue {
       },
     });
 
-    queueInstance.on('error', (err: any) => {
+    (bullQueue as any).on('error', (err: any) => {
       console.warn('[dispatch-queue] Queue error (continuing in fallback mode):', err?.message || err);
       queueInstance = createFallbackQueue();
     });
 
+    queueInstance = bullQueue as unknown as DispatchQueue;
     return queueInstance;
   } catch (error: any) {
     console.warn('[dispatch-queue] Failed to initialize BullMQ:', error?.message || error);
