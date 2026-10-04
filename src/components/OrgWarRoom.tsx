@@ -4,7 +4,8 @@ import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps
 import { useAppStore } from '../utils/store';
 
 export const OrgWarRoom = () => {
-  const { meshNodes, liveSOSStream, orgUsers } = useAppStore();
+  const { meshNodes, panicEvents } = useAppStore();
+  const liveSOSStream = (panicEvents || []).map((p: any) => ({ id: p.id, lat: p.lat, lng: p.lng, status: p.status }));
   const [messages, setMessages] = useState<string[]>([]);
   
   useEffect(() => {

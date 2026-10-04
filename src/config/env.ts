@@ -31,15 +31,25 @@ export const env = {
   
   // AI & APIs
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   VAPI_PRIVATE_KEY: process.env.VAPI_PRIVATE_KEY || '',
+  VAPI_ASSISTANT_ID: process.env.VAPI_ASSISTANT_ID || '',
+  VAPI_PHONE_NUMBER_ID: process.env.VAPI_PHONE_NUMBER_ID || '',
   BLAND_API_KEY: process.env.BLAND_API_KEY || '',
   
   // Communications
-  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID || '',
+  TWILIO_SID: process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID || '',
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
-  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || '+16055695774',
+  TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER || '+16055695774',
+  TWILIO_NUMBER: process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER || '+16055695774',
   AT_API_KEY: process.env.AT_API_KEY || '',
   AT_USERNAME: process.env.AT_USERNAME || 'SafetyLink',
+  USSD_PROVIDER: process.env.USSD_PROVIDER || 'africastalking',
+  WHATSAPP_PROVIDER: process.env.WHATSAPP_PROVIDER || 'twilio',
+  WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN || '',
+  WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+  ALERTS_ENABLED: process.env.ALERTS_ENABLED !== 'false',
   
   // Payments
   PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || '',

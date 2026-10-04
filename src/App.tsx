@@ -69,7 +69,7 @@ const newLogo1 = ASSETS.logo;
 const klevaLogo = ASSETS.logoKlev;
 const polishLogo = ASSETS.logo;
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();

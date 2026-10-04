@@ -41,7 +41,11 @@ export const PermissionsOnboardingModal: React.FC<Props> = ({ forceOpen = false,
   const handleGrantBasicPermissions = async () => {
     try {
       // 1. Location
-      const locGranted = await GeolocationService.requestPermission();
+      let locGranted = false;
+      try {
+        await GeolocationService.getInstance().startTracking();
+        locGranted = true;
+      } catch (_) {}
       // 2. Notifications
       const notifGranted = await LocalNotificationService.requestPermission();
 

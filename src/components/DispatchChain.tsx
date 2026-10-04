@@ -23,8 +23,8 @@ export const DispatchChain: React.FC = () => {
     setEditingId(contact.id);
     setLabel(contact.label);
     setPhone(contact.phone);
-    setTemplate(contact.template);
-    setChannelType(contact.channelType);
+    setTemplate(contact.template || '');
+    setChannelType(contact.channelType || 'SMS');
     setTriggerTypes(contact.triggerTypes || []);
   };
 

@@ -128,6 +128,8 @@ export const DEFAULT_EMERGENCY_PROFILES: EmergencyProfile[] = [
 export interface Organization {
   id: string;
   name: string;
+  code?: string;
+  orgCode?: string;
   contactName: string;
   contactEmail: string;
   createdAt: number;
@@ -161,9 +163,11 @@ export interface CustomTool {
 export interface Contact {
   id: string;
   label: string;
+  name?: string;
   phone: string;
-  template: string;
-  channelType: 'CALL' | 'SMS' | 'WHATSAPP' | 'GROUP' | 'POLICE';
+  relation?: string;
+  template?: string;
+  channelType?: 'CALL' | 'SMS' | 'WHATSAPP' | 'GROUP' | 'POLICE';
   priority: number;
   triggerTypes?: EmergencyProfileType[];
 }

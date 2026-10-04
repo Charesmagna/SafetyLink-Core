@@ -4,11 +4,13 @@ import slLogoMain from '../assets/safetylink-metallic.svg';
 
 interface CinematicLogoSmashProps {
   onAnimationEnd?: () => void;
+  onComplete?: () => void;
   size?: number;
 }
 
 export const CinematicLogoSmash: React.FC<CinematicLogoSmashProps> = ({ 
-  onAnimationEnd, 
+  onAnimationEnd,
+  onComplete,
   size = 180 
 }) => {
   // Stages: 'vault' | 'transport' | 'smash' | 'final'
@@ -32,6 +34,7 @@ export const CinematicLogoSmash: React.FC<CinematicLogoSmashProps> = ({
     const t3 = setTimeout(() => {
       setStage('final');
       if (onAnimationEnd) onAnimationEnd();
+      if (onComplete) onComplete();
     }, 3500);
 
     return () => {

@@ -42,8 +42,9 @@ class GeolocationCacheService {
         altitude: null,
         altitudeAccuracy: null,
         heading: null,
-        speed: null
-      };
+        speed: null,
+        toJSON: () => ({ ...this.cache })
+      } as GeolocationCoordinates;
     }
 
     // Fetch fresh position

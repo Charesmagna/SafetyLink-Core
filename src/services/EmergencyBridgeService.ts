@@ -6,7 +6,7 @@ import { CapacitorHttp, Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { useAppStore } from '../utils/store';
-import { reverseGeocode } from './sms_africas_talking';
+import { reverseGeocode } from '../utils/geo';
 
 export class EmergencyBridgeService {
   private get AURA_API_URL() {

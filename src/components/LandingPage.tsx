@@ -61,7 +61,13 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const sharedProps = { onLogin: onLogin || (() => {}), onRegisterOrg: onRegisterOrg || (() => {}), onRegisterUser: onRegisterUser || (() => {}), navigate };
+  const sharedProps = {
+    onLogin: onLogin || (() => {}),
+    onRegisterOrg: onRegisterOrg || (() => {}),
+    onRegisterUser: onRegisterUser || (() => {}),
+    navigate: (p: string) => navigate(p as Page),
+    onNavigate: (p: string) => navigate(p as Page),
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] text-white font-sans relative overflow-x-hidden">
