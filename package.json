@@ -25,6 +25,7 @@
     "@capacitor/share": "^6.0.4",
     "@capacitor/splash-screen": "^6.0.4",
     "@capawesome-team/capacitor-android-foreground-service": "^6.2.0",
+    "@capgo/capacitor-native-biometric": "^8.7.0",
     "@google/genai": "^2.16.0",
     "@libsql/client": "^0.17.4",
     "@supabase/supabase-js": "^2.111.0",

@@ -286,10 +286,10 @@ app.use(cors({
       console.warn("Error reading version.json:", e);
     }
     res.json({
-      version: "1.1.912",
-      buildTime: "2026-09-21T21:15:00Z",
-      releaseName: "SafetyLink Core v1.1.912",
-      apkUrl: "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.912/SafetyLink-v1.1.912-Signed.apk",
+      version: "1.1.935",
+      buildTime: "2026-10-01T09:16:48Z",
+      releaseName: "SafetyLink Core v1.1.935",
+      apkUrl: "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.935/SafetyLink-v1.1.935-Signed.apk",
       liveWebUrl: "https://safetylink.online",
       isLiveUpdateAvailable: true
     });
@@ -1626,12 +1626,38 @@ Rules:
       }
   });
 
+  // Dedicated Rate Limiter for Payment Operations (anti-card-testing / anti-brute-force)
+  const paystackLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // Max 10 attempts per 15 min per IP
+    message: { error: 'Too many payment requests from this network. Please wait 15 minutes before trying again.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   // Paystack Initialize Transaction API
-  app.post('/api/paystack/initialize', async (req, res) => {
+  app.post('/api/paystack/initialize', paystackLimiter, async (req, res) => {
     try {
       const { email, amount, planId, orgCode, orgName, metadata } = req.body;
-      if (!email || !amount) {
+      if (!email || amount === undefined || amount === null) {
         return res.status(400).json({ error: 'Email and amount are required' });
+      }
+
+      // 1. Strict RFC email format validation
+      const emailStr = String(email).trim().toLowerCase();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(emailStr) || emailStr.length > 100) {
+        return res.status(400).json({ error: 'A valid email address is required' });
+      }
+
+      // 2. Strict minimum amount validation to prevent card-testing fraud (R49 / 4900 cents minimum)
+      const parsedAmount = Math.round(Number(amount));
+      const MIN_ALLOWED_CENTS = 4900; // ZAR 49.00 minimum plan price
+      if (isNaN(parsedAmount) || parsedAmount < MIN_ALLOWED_CENTS) {
+        console.warn(`[Security Alert] Blocked suspicious sub-minimum transaction attempt of ${parsedAmount} cents from IP ${req.ip} for ${emailStr}`);
+        return res.status(400).json({ 
+          error: 'Minimum authorized transaction on SafetyLink is ZAR 49.00 (4900 cents). Micro-charges are blocked for security.' 
+        });
       }
 
       const reference = `SL-PAY-${Date.now()}-${Math.floor(Math.random() * 100000)}`;

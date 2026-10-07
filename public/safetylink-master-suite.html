@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafetyLink Master Suite — Architecture, Code & Live Subsystems</title>
+  <style>
+    :root {
+      --bg-dark: #030712;
+      --card-bg: #0b1329;
+      --card-border: #1e293b;
+      --red-accent: #ef4444;
+      --cyan-accent: #06b6d4;
+      --emerald-accent: #10b981;
+      --amber-accent: #f59e0b;
+      --indigo-accent: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    body { background-color: var(--bg-dark); color: #f1f5f9; padding: 20px; line-height: 1.5; font-size: 13px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--card-border); padding-bottom: 20px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    h1 { font-size: 20px; font-weight: 900; letter-spacing: 2px; color: #fff; text-transform: uppercase; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 10px; font-weight: 800; text-transform: uppercase; border: 1px solid currentColor; }
+    .badge-red { color: var(--red-accent); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); }
+    .badge-cyan { color: var(--cyan-accent); border-color: rgba(6,182,212,0.3); background: rgba(6,182,212,0.1); }
+    .badge-emerald { color: var(--emerald-accent); border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.1); }
+    .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+    .nav-btn { background: #0f172a; border: 1px solid var(--card-border); color: #94a3b8; padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+    .nav-btn:hover, .nav-btn.active { background: #1e293b; color: #fff; border-color: var(--cyan-accent); }
+    .section-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .grid-2 { display: grid; grid-cols: 1; gap: 20px; }
+    @media (min-width: 768px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: 11px; text-transform: uppercase; cursor: pointer; border: none; transition: 0.15s; }
+    .btn-red { background: var(--red-accent); color: #fff; }
+    .btn-red:hover { background: #dc2626; }
+    .btn-cyan { background: var(--cyan-accent); color: #000; }
+    .btn-cyan:hover { background: #0891b2; }
+    .btn-outline { background: transparent; border: 1px solid var(--card-border); color: #cbd5e1; }
+    .btn-outline:hover { background: #1e293b; color: #fff; }
+    .log-terminal { background: #020617; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; height: 260px; overflow-y: auto; font-size: 11px; color: #94a3b8; }
+    .log-entry { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #0f172a; display: flex; justify-content: space-between; align-items: flex-start; }
+    .code-box { background: #020617; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; font-size: 11px; color: #38bdf8; overflow-x: auto; max-height: 380px; }
+    /* Phone Simulator for Shade */
+    .phone-shade { background: #020617; border: 2px solid #334155; border-radius: 24px; padding: 16px; width: 100%; max-width: 380px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+    .quick-tile { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .quick-tile:hover { background: #1e293b; border-color: #475569; }
+    .quick-tile.active-sos { background: #ef4444; color: #fff; border-color: #f87171; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>🛡️ SafetyLink Core — Golden Architecture</h1>
+        <p style="color: #64748b; font-size: 11px; margin-top: 4px;">Sequential Emergency Alert Network • Native Telephony • Android OS Mini-App • Integrations</p>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <span class="badge badge-red">LIVE ENGINE</span>
+        <span class="badge badge-cyan">CAPACITOR 6.X</span>
+        <span class="badge badge-emerald">OFFLINE FIRST</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="nav-btn active" onclick="switchTab('tab-dispatch')">1. Native Dispatch Logs</button>
+      <button class="nav-btn" onclick="switchTab('tab-shade')">2. Notification Panel Mini-App</button>
+      <button class="nav-btn" onclick="switchTab('tab-widget')">3. Red Circle SOS Widget</button>
+      <button class="nav-btn" onclick="switchTab('tab-floating')">4. Floating SOS Bubble</button>
+      <button class="nav-btn" onclick="switchTab('tab-config')">5. Configurable Dispatch</button>
+      <button class="nav-btn" onclick="switchTab('tab-openplat')">6. Open Platform Hub</button>
+      <button class="nav-btn" onclick="switchTab('tab-clientdb')">7. Client DB & Drive Sync</button>
+    </div>
+
+    <!-- TAB 1: NATIVE DISPATCH LOGS -->
+    <div id="tab-dispatch" class="tab-content">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #f87171;">📡 1. Native Dispatch Pipeline & Execution Logs</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Direct native Android fallback channels: USSD (carrier shortcodes), SMS (SmsManager), and Voice Calls (CALL_PHONE). Each dispatch creates an immutable, timestamped audit log.
+        </p>
+
+        <div class="grid-2">
+          <div>
+            <h4 style="margin-bottom: 8px; font-size: 12px; color: #cbd5e1;">Test Native Telephony Dispatches</h4>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+              <div style="display: flex; gap: 8px;">
+                <input id="inputUssd" type="text" value="*134*911#" style="background: #020617; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; flex: 1; font-size: 11px;" />
+                <button class="btn btn-outline" onclick="triggerSimulatedDispatch('USSD', document.getElementById('inputUssd').value)">Dial USSD</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input id="inputSms" type="text" value="+27839119112" style="background: #020617; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; flex: 1; font-size: 11px;" />
+                <button class="btn btn-red" onclick="triggerSimulatedDispatch('SMS', document.getElementById('inputSms').value)">Send GSM SMS</button>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input id="inputCall" type="text" value="+27829110000" style="background: #020617; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; flex: 1; font-size: 11px;" />
+                <button class="btn btn-cyan" onclick="triggerSimulatedDispatch('VOICE_CALL', document.getElementById('inputCall').value)">Initiate Call</button>
+              </div>
+            </div>
+            <button class="btn btn-outline" onclick="clearDispatchLogsUI()">Clear Dispatch Logs</button>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h4 style="font-size: 12px; color: #cbd5e1;">Real-Time Dispatch Terminal</h4>
+              <span id="logCountBadge" class="badge badge-cyan">3 ENTRIES</span>
+            </div>
+            <div id="dispatchLogList" class="log-terminal">
+              <div class="log-entry">
+                <div>
+                  <span style="color: #f87171; font-weight: bold;">[USSD]</span> ➔ *134*911#
+                  <div style="color: #64748b; font-size: 10px;">Carrier fast-dial handshake established via native radio stack</div>
+                </div>
+                <span class="badge badge-emerald">INITIATED</span>
+              </div>
+              <div class="log-entry">
+                <div>
+                  <span style="color: #38bdf8; font-weight: bold;">[SMS]</span> ➔ +27839119112
+                  <div style="color: #64748b; font-size: 10px;">Distress GPS: -26.1912, 28.0264 transmitted via SmsManager</div>
+                </div>
+                <span class="badge badge-emerald">SENT</span>
+              </div>
+              <div class="log-entry">
+                <div>
+                  <span style="color: #fbbf24; font-weight: bold;">[VOICE_CALL]</span> ➔ +27829110000
+                  <div style="color: #64748b; font-size: 10px;">Tactical response call placed directly through CALL_PHONE intent</div>
+                </div>
+                <span class="badge badge-cyan">INITIATED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: NOTIFICATION PANEL MINI-APP -->
+    <div id="tab-shade" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #38bdf8;">📲 2. Native Android Notification Panel Mini-App</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          When exiting the app, the persistent Android notification pull-down shade hosts this 7-button interactive mini-app. Every action is logged and routed to background daemons.
+        </p>
+
+        <div class="grid-2">
+          <!-- Shade Simulator -->
+          <div class="phone-shade">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 12px; font-size: 10px;">
+              <span style="color: #10b981; font-weight: 800;">🛡️ SAFETYLINK BACKGROUND SERVICE</span>
+              <span style="color: #64748b;">STICKY • TIK #418</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
+              <!-- 1. SOS Button -->
+              <div id="shadeSosBtn" class="quick-tile" style="grid-column: span 2; background: #dc2626; color: #fff;" onclick="handleShadeAction('SOS', '🔴 Emergency SOS broadcast triggered from notification shade!')">
+                <div style="font-size: 16px;">🔴</div>
+                <div>SOS PANIC</div>
+              </div>
+
+              <!-- 2. Watch Me Button -->
+              <div id="shadeWatchBtn" class="quick-tile" style="grid-column: span 2; color: #f59e0b;" onclick="handleShadeAction('WATCH_ME', '⏱ Watch Me timer started for 10 minutes.')">
+                <div style="font-size: 16px;">⏱</div>
+                <div id="shadeWatchLabel">WATCH ME (10m)</div>
+              </div>
+
+              <!-- 3. BLE Status -->
+              <div class="quick-tile" style="color: #60a5fa;" onclick="handleShadeAction('BLE_STATUS', '📶 Queried BLE iTAG beacon: Linked with 92% battery.')">
+                <div style="font-size: 14px;">📶</div>
+                <div>BLE OK</div>
+              </div>
+
+              <!-- 4. Sync -->
+              <div class="quick-tile" style="color: #14b8a6;" onclick="handleShadeAction('SYNC', '🔄 Offline SQLite database synchronized with master server.')">
+                <div style="font-size: 14px;">🔄</div>
+                <div>SYNC</div>
+              </div>
+
+              <!-- 5. Check-In -->
+              <div class="quick-tile" style="color: #10b981;" onclick="handleShadeAction('CHECK_IN', '✅ Safe check-in registered at GPS coordinates [-26.1912, 28.0264].')">
+                <div style="font-size: 14px;">✅</div>
+                <div>CHECK-IN</div>
+              </div>
+
+              <!-- 6. Sound Location -->
+              <div class="quick-tile" style="color: #f59e0b;" onclick="handleShadeAction('SOUND_LOCATION', '📍 Acoustic location beacon tone sounded on phone & paired iTAG.')">
+                <div style="font-size: 14px;">📍</div>
+                <div>SOUND LOC</div>
+              </div>
+
+              <!-- 7. AI Lizzie Voice Chat -->
+              <div class="quick-tile" style="grid-column: span 4; background: #312e81; color: #c7d2fe;" onclick="handleShadeAction('AI_LIZZIE', '🤖 AI Lizzie voice chat modal activated from notification shade.')">
+                <div style="font-size: 14px;">🤖</div>
+                <div>AI LIZZIE VOICE CHAT OVERLAY</div>
+              </div>
+            </div>
+
+            <div style="font-size: 9px; color: #64748b; text-align: center;">
+              Lock Screen Public Visibility • Action Intent Dispatch
+            </div>
+          </div>
+
+          <!-- Mini App Logs -->
+          <div>
+            <h4 style="margin-bottom: 8px; font-size: 12px; color: #cbd5e1;">Notification Mini-App Logs Stream</h4>
+            <div id="shadeLogList" class="log-terminal">
+              <div class="log-entry">
+                <div>
+                  <span style="color: #60a5fa; font-weight: bold;">[BLE_STATUS]</span>
+                  <div style="color: #64748b; font-size: 10px;">iTAG Hardware keyfob connection confirmed. RSSI: -64dBm</div>
+                </div>
+                <span class="badge badge-emerald">OK</span>
+              </div>
+              <div class="log-entry">
+                <div>
+                  <span style="color: #10b981; font-weight: bold;">[CHECK_IN]</span>
+                  <div style="color: #64748b; font-size: 10px;">Periodic security check-in timestamped at Wits Campus node</div>
+                </div>
+                <span class="badge badge-cyan">LOGGED</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: RED CIRCLE SOS WIDGET -->
+    <div id="tab-widget" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #f87171;">🔘 3. Resizable Home Screen SOS Circle Widget</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Adjustable Android AppWidget designed as a bold red circular SOS actuator. Supports scalable diameters (1x1, 2x2, 3x3, 4x4) with a 10-second disarm countdown.
+        </p>
+
+        <div class="grid-2">
+          <!-- Widget Interactive Preview -->
+          <div style="text-align: center; padding: 20px; background: #020617; border-radius: 16px; border: 1px solid #1e293b;">
+            <div style="margin-bottom: 16px;">
+              <label style="font-size: 11px; color: #94a3b8; font-weight: bold; margin-right: 8px;">DIAMETER:</label>
+              <button class="btn btn-outline" onclick="resizeWidgetCircle(75)">1x1 (75px)</button>
+              <button class="btn btn-outline" onclick="resizeWidgetCircle(120)">2x2 (120px)</button>
+              <button class="btn btn-outline" onclick="resizeWidgetCircle(160)">3x3 (160px)</button>
+              <button class="btn btn-outline" onclick="resizeWidgetCircle(200)">4x4 (200px)</button>
+            </div>
+
+            <div style="display: flex; justify-content: center; align-items: center; min-height: 220px;">
+              <button id="widgetCircleBtn" onclick="triggerWidgetSos()" style="width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, #ef4444 0%, #991b1b 100%); border: 4px solid #000; color: #fff; font-size: 24px; font-weight: 900; box-shadow: 0 10px 30px rgba(239,68,68,0.5); cursor: pointer; transition: all 0.2s;">
+                SOS
+              </button>
+            </div>
+            <div id="widgetCountdownLabel" style="font-size: 11px; color: #f87171; font-weight: bold; margin-top: 10px;">TAP BUTTON TO TRIGGER COUNTDOWN</div>
+          </div>
+
+          <!-- Architecture & XML Code -->
+          <div>
+            <h4 style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">AppWidgetProvider Implementation</h4>
+            <div class="code-box">
+&lt;!-- res/layout/widget_panic_circle.xml --&gt;
+&lt;FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"&gt;
+    
+    &lt;ImageButton
+        android:id="@+id/btn_panic_circle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/circle_red_gradient"
+        android:contentDescription="SOS Trigger" /&gt;
+&lt;/FrameLayout&gt;
+
+// Java Receiver: PanicWidgetProvider.java
+public class PanicWidgetProvider extends AppWidgetProvider {
+    @Override
+    public void onReceive(Context ctx, Intent intent) {
+        if ("ACTION_WIDGET_SOS".equals(intent.getAction())) {
+            Intent svc = new Intent(ctx, PanicService.class);
+            svc.setAction("com.aistudio.safetylink.ACTION_TRIGGER_PANIC");
+            ContextCompat.startForegroundService(ctx, svc);
+        }
+    }
+}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: FLOATING SOS BUBBLE -->
+    <div id="tab-floating" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #fbbf24;">🎈 4. Floating SOS Bubble (Chat Heads Style)</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Persists over other Android applications using <code style="color: #38bdf8;">SYSTEM_ALERT_WINDOW</code>. Draggable anywhere, double tap to resize, single tap to trigger SOS.
+        </p>
+
+        <div class="grid-2">
+          <!-- Interactive Floating Demo -->
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 16px; padding: 20px; position: relative; height: 300px; overflow: hidden;">
+            <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">Simulated Android Home Screen & Apps</div>
+            <p style="color: #475569; font-size: 11px;">Drag this red bubble around anywhere in the container:</p>
+
+            <div id="draggableBubble" style="position: absolute; right: 24px; bottom: 30px; width: 64px; height: 64px; border-radius: 50%; background: #ef4444; border: 3px solid #fff; box-shadow: 0 8px 24px rgba(239,68,68,0.6); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 14px; cursor: move; user-select: none;">
+              SOS
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">FloatingWidgetService.java (Core Highlights)</h4>
+            <div class="code-box">
+// WindowManager Application Overlay
+WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+    WindowManager.LayoutParams.WRAP_CONTENT,
+    WindowManager.LayoutParams.WRAP_CONTENT,
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY :
+        WindowManager.LayoutParams.TYPE_PHONE,
+    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | 
+    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED,
+    PixelFormat.TRANSLUCENT
+);
+
+btnSos.setOnClickListener(v -> {
+    Intent intent = new Intent(this, PanicService.class);
+    intent.setAction("ACTION_TRIGGER_PANIC");
+    startForegroundService(intent);
+});</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: CONFIGURABLE DISPATCH -->
+    <div id="tab-config" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #a855f7;">⚙️ 5. Configurable Dispatch Engine</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Empowers users to customize countdown grace period, fullscreen countdown overlays, channel presets, and situational map engines.
+        </p>
+
+        <div class="grid-2">
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">DISPATCH PRESET</label>
+              <select id="configPreset" style="width: 100%; background: #0f172a; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 11px;">
+                <option value="STRICT_OFFLINE">Strict Offline (USSD Dial *134*911# + Local GSM SMS)</option>
+                <option value="VIP_TWILIO_CLOUD" selected>VIP Cloud (Twilio Voice IVR + VAPI AI + Africa's Talking)</option>
+                <option value="SMS_ONLY">SMS Only (Pure Direct GSM + Gateway Broadcast)</option>
+                <option value="CUSTOM">Custom Multi-Channel Sequential Queue</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">COUNTDOWN GRACE PERIOD</label>
+              <select id="configCountdown" style="width: 100%; background: #0f172a; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 11px;">
+                <option value="0">0 Seconds (Instant Execution)</option>
+                <option value="3">3 Seconds</option>
+                <option value="5">5 Seconds</option>
+                <option value="10" selected>10 Seconds (Recommended)</option>
+                <option value="30">30 Seconds</option>
+              </select>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block;">FULLSCREEN COUNTDOWN OVERLAY</span>
+                <span style="font-size: 9px; color: #64748b;">Show high-visibility abort screen during countdown</span>
+              </div>
+              <input type="checkbox" checked style="accent-color: #ef4444; width: 18px; height: 18px;" />
+            </div>
+
+            <div>
+              <label style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">MAP ENGINE PROVIDER</label>
+              <select id="configMap" style="width: 100%; background: #0f172a; border: 1px solid #1e293b; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 11px;">
+                <option value="GOOGLE_MAPS">Google Maps (Hybrid & Live Traffic)</option>
+                <option value="OPENSTREETMAP">OpenStreetMap (Offline GIS Vector Tiles)</option>
+                <option value="MAPBOX">Mapbox Tactical Dark Mode</option>
+                <option value="HYBRID_SATELLITE">High-Resolution Satellite Imagery</option>
+              </select>
+            </div>
+
+            <button class="btn btn-cyan" onclick="alert('Configurable dispatch settings saved to persistent local store!')">Apply Settings</button>
+          </div>
+
+          <div>
+            <h4 style="font-size: 12px; color: #cbd5e1; margin-bottom: 8px;">State Model Definition (TypeScript)</h4>
+            <div class="code-box">
+export interface DispatchSettings {
+  countdownDuration: number;
+  countdownOverlayEnabled: boolean;
+  dispatchPreset: 'STRICT_OFFLINE' | 'VIP_TWILIO_CLOUD' | 'SMS_ONLY' | 'CUSTOM';
+  mapProvider: 'GOOGLE_MAPS' | 'OPENSTREETMAP' | 'MAPBOX' | 'HYBRID_SATELLITE';
+  customChannels?: string[];
+}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: OPEN PLATFORM HUB -->
+    <div id="tab-openplat" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #3b82f6;">🔌 6. Open Platform Integrations Hub</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Self-serve integrations allowing individuals or organizations to plug in custom API keys, webhooks, or hardware PCB serial lines. Auto-detects and deploys directly into the dispatch cascade.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <!-- Card: Twilio -->
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #fff; font-size: 12px;">Twilio Cloud Telco</strong>
+                <span class="badge badge-emerald">DEPLOYED</span>
+              </div>
+              <p style="font-size: 10px; color: #64748b; margin-bottom: 10px;">Voice IVR calls & international SMS gateway</p>
+              <div style="font-size: 10px; color: #94a3b8; margin-bottom: 10px;">From Line: +16055695774</div>
+            </div>
+            <button class="btn btn-outline" onclick="alert('Twilio is connected and ready in active dispatch.')">Configured</button>
+          </div>
+
+          <!-- Card: VAPI -->
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #fff; font-size: 12px;">VAPI Conversational AI</strong>
+                <span class="badge badge-emerald">DEPLOYED</span>
+              </div>
+              <p style="font-size: 10px; color: #64748b; margin-bottom: 10px;">Lizzie autonomous voice triage agent</p>
+              <div style="font-size: 10px; color: #94a3b8; margin-bottom: 10px;">Assistant ID: vapi_live_agent</div>
+            </div>
+            <button class="btn btn-outline" onclick="alert('VAPI Agent ready.')">Configured</button>
+          </div>
+
+          <!-- Card: Africa's Talking -->
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #fff; font-size: 12px;">Africa's Talking USSD</strong>
+                <span class="badge badge-cyan">CONFIGURED</span>
+              </div>
+              <p style="font-size: 10px; color: #64748b; margin-bottom: 10px;">Shortcodes and direct African telco routing</p>
+              <div style="font-size: 10px; color: #94a3b8; margin-bottom: 10px;">Channel: *134*911#</div>
+            </div>
+            <button class="btn btn-cyan" onclick="alert('Deployed to active pipeline!')">Deploy Now</button>
+          </div>
+
+          <!-- Card: Hardware PCB -->
+          <div style="background: #020617; border: 1px solid #1e293b; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #fff; font-size: 12px;">Hardware PCB Serial</strong>
+                <span class="badge badge-emerald">DEPLOYED</span>
+              </div>
+              <p style="font-size: 10px; color: #64748b; margin-bottom: 10px;">Direct UART/GSM serial line connection</p>
+              <div style="font-size: 10px; color: #94a3b8; margin-bottom: 10px;">PCB Serial: SL-PCB-REV4-98124</div>
+            </div>
+            <button class="btn btn-outline" onclick="alert('Serial COM3 link active.')">Linked</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: CLIENT DB & DRIVE SYNC -->
+    <div id="tab-clientdb" class="tab-content" style="display: none;">
+      <div class="section-card">
+        <h3 style="margin-bottom: 12px; color: #10b981;">👥 7. Client Database Server & Google Drive Exporter</h3>
+        <p style="color: #94a3b8; margin-bottom: 16px; font-size: 12px;">
+          Maintains an auto-refreshing roster of all users, hardware tags, roles, and coordinates. Exports and updates a single structured document on Google Drive without creating duplicates.
+        </p>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="badge badge-emerald" id="dbPulseBadge">● AUTO-REFRESH ACTIVE</span>
+            <span style="font-size: 11px; color: #64748b;">Syncing every 15s</span>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-cyan" onclick="syncDriveUI()">📁 Sync to Google Drive</button>
+            <button class="btn btn-outline" onclick="exportCsvUI()">⬇ Download CSV</button>
+          </div>
+        </div>
+
+        <div style="background: #020617; border: 1px solid #1e293b; border-radius: 12px; overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid #1e293b; color: #64748b;">
+                <th style="padding: 10px;">USER</th>
+                <th style="padding: 10px;">PHONE</th>
+                <th style="padding: 10px;">ORGANIZATION</th>
+                <th style="padding: 10px;">BEACON ID</th>
+                <th style="padding: 10px;">BATTERY</th>
+                <th style="padding: 10px;">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #0f172a;">
+                <td style="padding: 10px; color: #fff; font-weight: bold;">Tshilidzi Mukwevho</td>
+                <td style="padding: 10px; color: #94a3b8;">+27680079911</td>
+                <td style="padding: 10px; color: #38bdf8;">Apex Housing Node</td>
+                <td style="padding: 10px; color: #cbd5e1;">TAG-0001</td>
+                <td style="padding: 10px; color: #10b981;">98%</td>
+                <td style="padding: 10px;"><span class="badge badge-emerald">ACTIVE</span></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #0f172a;">
+                <td style="padding: 10px; color: #fff; font-weight: bold;">Sipho Dlamini</td>
+                <td style="padding: 10px; color: #94a3b8;">+27821122334</td>
+                <td style="padding: 10px; color: #38bdf8;">Wits Security Patrol</td>
+                <td style="padding: 10px; color: #cbd5e1;">TAG-9842</td>
+                <td style="padding: 10px; color: #10b981;">86%</td>
+                <td style="padding: 10px;"><span class="badge badge-emerald">ACTIVE</span></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px; color: #fff; font-weight: bold;">Lerato Khumalo</td>
+                <td style="padding: 10px; color: #94a3b8;">+27734455667</td>
+                <td style="padding: 10px; color: #38bdf8;">Braamfontein Safe-Zone</td>
+                <td style="padding: 10px; color: #cbd5e1;">TAG-3310</td>
+                <td style="padding: 10px; color: #fbbf24;">42%</td>
+                <td style="padding: 10px;"><span class="badge badge-cyan">TRIAL</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      const target = document.getElementById(tabId);
+      if (target) target.style.display = 'block';
+      event.target.classList.add('active');
+    }
+
+    // Tab 1: Dispatch Simulations
+    function triggerSimulatedDispatch(channel, target) {
+      const list = document.getElementById('dispatchLogList');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <div>
+          <span style="color: #38bdf8; font-weight: bold;">[${channel}]</span> ➔ ${target}
+          <div style="color: #64748b; font-size: 10px;">${channel} dispatched successfully at ${new Date().toLocaleTimeString()}</div>
+        </div>
+        <span class="badge badge-emerald">SENT</span>
+      `;
+      list.prepend(entry);
+    }
+
+    function clearDispatchLogsUI() {
+      document.getElementById('dispatchLogList').innerHTML = '<div style="color: #64748b; text-align: center; padding: 20px;">No logs recorded.</div>';
+    }
+
+    // Tab 2: Notification Shade Action Handling
+    function handleShadeAction(action, text) {
+      const list = document.getElementById('shadeLogList');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <div>
+          <span style="color: #a855f7; font-weight: bold;">[${action}]</span>
+          <div style="color: #cbd5e1; font-size: 10px;">${text}</div>
+        </div>
+        <span class="badge badge-cyan">ACK</span>
+      `;
+      list.prepend(entry);
+      alert(text);
+    }
+
+    // Tab 3: Resizable Widget
+    function resizeWidgetCircle(size) {
+      const btn = document.getElementById('widgetCircleBtn');
+      btn.style.width = size + 'px';
+      btn.style.height = size + 'px';
+      btn.style.fontSize = (size * 0.2) + 'px';
+    }
+
+    let widgetCountdown = null;
+    function triggerWidgetSos() {
+      if (widgetCountdown !== null) {
+        clearInterval(widgetCountdown);
+        widgetCountdown = null;
+        document.getElementById('widgetCountdownLabel').innerText = 'SOS ABORTED / DISARMED';
+        document.getElementById('widgetCircleBtn').innerText = 'SOS';
+        return;
+      }
+
+      let count = 10;
+      document.getElementById('widgetCircleBtn').innerText = count + 's';
+      document.getElementById('widgetCountdownLabel').innerText = '10S GRACE PERIOD — TAP TO ABORT';
+      
+      widgetCountdown = setInterval(() => {
+        count--;
+        if (count <= 0) {
+          clearInterval(widgetCountdown);
+          widgetCountdown = null;
+          document.getElementById('widgetCircleBtn').innerText = 'SENT';
+          document.getElementById('widgetCountdownLabel').innerText = '🚨 EMERGENCY DISTRESS BROADCASTED VIA SMS & USSD!';
+        } else {
+          document.getElementById('widgetCircleBtn').innerText = count + 's';
+        }
+      }, 1000);
+    }
+
+    // Tab 4: Draggable Bubble
+    const bubble = document.getElementById('draggableBubble');
+    let isDragging = false;
+    bubble.addEventListener('mousedown', () => isDragging = true);
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const rect = bubble.parentElement.getBoundingClientRect();
+      const x = Math.max(10, Math.min(e.clientX - rect.left - 32, rect.width - 74));
+      const y = Math.max(10, Math.min(e.clientY - rect.top - 32, rect.height - 74));
+      bubble.style.left = x + 'px';
+      bubble.style.top = y + 'px';
+      bubble.style.right = 'auto';
+      bubble.style.bottom = 'auto';
+    });
+    bubble.addEventListener('click', () => {
+      alert('Floating SOS Shortcut Triggered! Activating sequential panic.');
+    });
+
+    // Tab 7: Drive and CSV
+    function syncDriveUI() {
+      alert('Synced client roster to Google Drive Document ID: SL_DRIVE_ROSTER_MASTER. Document updated with zero duplicates.');
+    }
+
+    function exportCsvUI() {
+      const csv = 'User,Phone,Org,Beacon,Battery\nTshilidzi Mukwevho,+27680079911,Apex Housing,TAG-0001,98%\nSipho Dlamini,+27821122334,Wits Patrol,TAG-9842,86%\n';
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'SafetyLink_Users_Roster.csv';
+      a.click();
+    }
+  </script>
+</body>
+</html>

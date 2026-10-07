@@ -2,10 +2,25 @@
 // Supports instant light web updates without downloading new APKs,
 // as well as native binary updates when required.
 
+import { Capacitor } from '@capacitor/core';
+
 export const CURRENT_VERSION: string =
   (import.meta as any).env?.VITE_APP_VERSION ||
   localStorage.getItem('sl_active_version') ||
   '1.1.906';
+
+export async function getCurrentAppVersion(): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { App: CapApp } = await import('@capacitor/app');
+      const info = await CapApp.getInfo();
+      if (info?.version) return info.version;
+    } catch (e) {
+      console.warn('[UpdateService] Failed to read native app version:', e);
+    }
+  }
+  return CURRENT_VERSION;
+}
 
 const GITHUB_RELEASES_API = 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest';
 const APK_DOWNLOAD_BASE = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download';
@@ -45,18 +60,23 @@ function xhrGet(url: string): Promise<any> {
 
 export async function checkForUpdate(): Promise<UpdateInfo> {
   try {
-    console.log(`[UpdateService] Checking updates. Current: ${CURRENT_VERSION}`);
+    const currentVersion = await getCurrentAppVersion();
+    console.log(`[UpdateService] Checking updates. Current: ${currentVersion}`);
 
-    // 1. Try checking the fast live version endpoint first (Local Origin or Cloudflare)
+    // 1. Try checking the fast live version endpoint first (/api/version or /version.json)
     try {
       let liveMeta: any = null;
       try {
-        liveMeta = await xhrGet(`/version.json?t=${Date.now()}`);
+        liveMeta = await xhrGet(`/api/version?t=${Date.now()}`);
       } catch {
-        liveMeta = await xhrGet(`${LIVE_VERSION_ENDPOINT}?t=${Date.now()}`);
+        try {
+          liveMeta = await xhrGet(`/version.json?t=${Date.now()}`);
+        } catch {
+          liveMeta = await xhrGet(`${LIVE_VERSION_ENDPOINT}?t=${Date.now()}`);
+        }
       }
 
-      if (liveMeta?.version && isNewerVersion(liveMeta.version, CURRENT_VERSION)) {
+      if (liveMeta?.version && isNewerVersion(liveMeta.version, currentVersion)) {
         console.log(`[UpdateService] Newer live version detected: v${liveMeta.version}`);
         return {
           available: true,
@@ -78,7 +98,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
       return { available: false };
     }
 
-    if (!isNewerVersion(latestVersion, CURRENT_VERSION)) {
+    if (!isNewerVersion(latestVersion, currentVersion)) {
       console.log('[UpdateService] Up to date');
       return { available: false };
     }

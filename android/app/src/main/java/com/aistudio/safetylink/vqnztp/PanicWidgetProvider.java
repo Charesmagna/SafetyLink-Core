@@ -36,12 +36,7 @@ public class PanicWidgetProvider extends AppWidgetProvider {
         boolean sosActive = prefs.getBoolean(KEY_SOS_ACTIVE, false);
 
         // Update status labels
-        views.setTextViewText(R.id.widget_status, sosActive ? "⚠ ALERT ACTIVE" : "TAP TO TRIGGER");
-        views.setTextViewText(R.id.widget_ble_status, bleConnected ? "● iTAG Connected" : "○ No Device");
-
-        // Button colour based on SOS state
-        int btnColor = sosActive ? 0xFF7f1d1d : 0xFFb91c1c;
-        views.setInt(R.id.widget_panic_btn, "setBackgroundColor", btnColor);
+        views.setTextViewText(R.id.widget_status, sosActive ? "ALERT ACTIVE" : "SAFETYLINK");
 
         // Panic trigger intent → PanicService
         Intent panicIntent = new Intent(context, PanicService.class);

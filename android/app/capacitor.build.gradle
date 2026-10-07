@@ -20,6 +20,8 @@ dependencies {
     implementation project(':capacitor-share')
     implementation project(':capacitor-splash-screen')
     implementation project(':capawesome-team-capacitor-android-foreground-service')
+    implementation project(':capgo-capacitor-native-biometric')
+    implementation project(':capacitor-voice-recorder')
 
 }
 

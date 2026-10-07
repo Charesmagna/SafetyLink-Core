@@ -58,6 +58,8 @@ const AdvancedSubsystems = lazy(() => import('./components/AdvancedSubsystems').
 const DecoyCalculator = lazy(() => import('./components/DecoyCalculator').then(m => ({ default: m.DecoyCalculator })));
 const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').then(m => ({ default: m.ConfidentialVault })));
 const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
+const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
+const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
@@ -69,7 +71,7 @@ const newLogo1 = ASSETS.logo;
 const klevaLogo = ASSETS.logoKlev;
 const polishLogo = ASSETS.logo;
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -273,9 +275,13 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(() => {
-    // Show cinematic 3D motion logo splash on initial app load per session
+    // On native APK, native SplashActivity already executed; avoid duplicate web splash stall
+    if (Capacitor.isNativePlatform()) {
+      return false;
+    }
+    // On web, show cinematic splash once per session
     if (typeof window !== 'undefined') {
-      const shown = sessionStorage.getItem('sl_splash_shown');
+      const shown = sessionStorage.getItem('sl_splash_shown') || localStorage.getItem('sl_splash_shown');
       if (!shown) {
         sessionStorage.setItem('sl_splash_shown', 'true');
         return true;
@@ -973,6 +979,16 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Workspace...</div>}><WorkspaceIntegrations /></Suspense>
             </div>
           )}
+          {activeTab === 'integrations' && (
+            <div className="animate-fadeIn p-4 overflow-y-auto h-full">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Integrations Hub...</div>}><OpenPlatformHub /></Suspense>
+            </div>
+          )}
+          {activeTab === 'clients' && (
+            <div className="animate-fadeIn p-4 overflow-y-auto h-full">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Client Database...</div>}><ClientDatabaseModule /></Suspense>
+            </div>
+          )}
 
         </div>
       </main>
@@ -1164,6 +1180,36 @@ const App: React.FC = () => {
                   >
                     <span className="text-sm shrink-0">🛒</span>
                     <span className="text-sm font-medium">SafetyWare Store</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('integrations'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'integrations'
+                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">🔌</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Integrations Hub</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Twilio, VAPI, Africa's Talking, PCB</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('clients'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'clients'
+                        ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">👥</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Client Database & Drive</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Auto-refresh roster & Google Drive sync</p>
+                    </div>
                   </button>
 
                   <button

@@ -22,7 +22,7 @@ public class SafetyKeepAliveWorker extends Worker {
         Context context = getApplicationContext();
 
         try {
-            // Restart SafelinkForegroundService
+            // Restart SafelinkForegroundService (Persistent Sentinel for BLE and GPS)
             Intent serviceIntent = new Intent(context, SafelinkForegroundService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(serviceIntent);
@@ -30,15 +30,7 @@ public class SafetyKeepAliveWorker extends Worker {
                 context.startService(serviceIntent);
             }
 
-            // Restart PanicService
-            Intent panicIntent = new Intent(context, PanicService.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(panicIntent);
-            } else {
-                context.startService(panicIntent);
-            }
-
-            Log.i(TAG, "KeepAlive completed successfully");
+            Log.i(TAG, "KeepAlive completed successfully — sentinel active");
             return Result.success();
         } catch (Exception e) {
             Log.e(TAG, "Error in KeepAlive worker: " + e.getMessage());

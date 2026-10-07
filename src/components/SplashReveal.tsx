@@ -28,11 +28,13 @@ export const SplashReveal: React.FC<SplashRevealProps> = ({ onComplete }) => {
 
   useEffect(() => {
     if (isNative) {
-      SplashScreen.hide({ fadeOutDuration: 200 }).catch(() => {});
+      SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
+      onComplete();
+      return;
     }
 
-    // Fast-exit watchdog timer: 1.4s on native APK, 2.5s on web/desktop
-    const maxDuration = isNative ? 1400 : 2500;
+    // Fast-exit watchdog timer: 2.5s on web/desktop
+    const maxDuration = 2500;
     const timer = setTimeout(() => {
       handleComplete();
     }, maxDuration);

@@ -13,14 +13,23 @@ export const BackgroundNotificationPanel: React.FC = () => {
     activeSOSState,
     triggerPanic,
     addAuditLog,
+    addNotificationPanelLog,
     isAppMinimized,
-    setMinimized
+    setMinimized,
+    startWatchMeTimer,
+    watchMeTimerSeconds,
+    cancelWatchMeTimer,
+    setShowLizzyPopup,
+    syncOfflineQueue,
+    addToast
   } = useAppStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [batteryLevel, setBatteryLevel] = useState(98);
   const [networkLatency, setNetworkLatency] = useState(42);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [soundBeepActive, setSoundBeepActive] = useState(false);
+  const [watchPickerOpen, setWatchPickerOpen] = useState(false);
 
   // Time & Battery drift simulator
   useEffect(() => {
@@ -228,37 +237,198 @@ export const BackgroundNotificationPanel: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Android Style Notification Action Panel */}
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    <button
-                      onClick={async () => {
-                        setIsOpen(false);
-                        await triggerPanic('SOS emergency broadcast activated from persistent Android notification widget.');
-                      }}
-                      disabled={activeSOSState !== 'IDLE'}
-                      className="py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-mono font-black text-[9px] uppercase tracking-wider rounded-xl transition-all border border-red-500/20 shadow-md text-center"
-                    >
-                      🆘 SOS
-                    </button>
+                  {/* Android Style Notification Mini-App Grid (User Golden Spec: 7 Core Quick Actions) */}
+                  <div className="space-y-2 pt-1 border-t border-slate-850">
+                    <div className="flex items-center justify-between text-[8px] font-mono text-slate-400 px-0.5">
+                      <span className="text-slate-400 font-bold tracking-wider">NOTIFICATION MINI-APP ACTIONS</span>
+                      <span className="text-emerald-400">● LIVE PULL-DOWN SHADE</span>
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        addAuditLog('BLE', 'INFO', 'Initiated manual BLE Reconnect sweep from notification widget', 'Scanning GATT characteristics for bound iTAG keyfobs.');
-                      }}
-                      className="py-2.5 bg-slate-950 hover:bg-slate-900 text-blue-400 border border-slate-800 rounded-xl font-mono font-black text-[9px] uppercase tracking-wider transition-all text-center"
-                    >
-                      🔄 Reconnect
-                    </button>
+                    <div className="grid grid-cols-4 gap-1.5 font-mono text-[8.5px]">
+                      {/* 1. 🔴 SOS Button */}
+                      <button
+                        onClick={async () => {
+                          setIsOpen(false);
+                          addNotificationPanelLog({
+                            action: 'SOS',
+                            status: 'TRIGGERED',
+                            details: 'Emergency SOS activated from Android Notification Panel Mini-App.',
+                            coordinates: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined
+                          });
+                          await triggerPanic('SOS emergency broadcast activated from persistent Android notification shade.');
+                        }}
+                        disabled={activeSOSState !== 'IDLE'}
+                        className="py-2.5 col-span-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/30 shadow-lg text-center flex items-center justify-center gap-1.5 active:scale-95"
+                      >
+                        <span className="text-sm">🔴</span>
+                        <span>{activeSOSState !== 'IDLE' ? 'SOS ACTIVE' : 'SOS PANIC'}</span>
+                      </button>
 
-                    <button
-                      onClick={() => {
-                        setMinimized(false);
-                        setIsOpen(false);
-                      }}
-                      className="py-2.5 bg-slate-950 hover:bg-slate-900 text-emerald-400 border border-slate-800 rounded-xl font-mono font-black text-[9px] uppercase tracking-wider transition-all text-center"
-                    >
-                      📱 Open
-                    </button>
+                      {/* 2. ⏱ Watch Me Button */}
+                      <button
+                        onClick={() => {
+                          if (watchMeTimerSeconds !== null) {
+                            cancelWatchMeTimer('0000');
+                            addNotificationPanelLog({
+                              action: 'WATCH_ME',
+                              status: 'COMPLETED',
+                              details: 'Watch Me timer cancelled from Notification Panel.'
+                            });
+                            addToast('Watch Me timer cancelled.', 'info');
+                          } else {
+                            setWatchPickerOpen(!watchPickerOpen);
+                          }
+                        }}
+                        className={`py-2 col-span-2 rounded-xl border font-bold text-center flex items-center justify-center gap-1 transition-all ${
+                          watchMeTimerSeconds !== null 
+                            ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 animate-pulse' 
+                            : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-amber-400'
+                        }`}
+                      >
+                        <span className="text-xs">⏱</span>
+                        <span>
+                          {watchMeTimerSeconds !== null
+                            ? `WATCH: ${Math.floor(watchMeTimerSeconds / 60)}m ${watchMeTimerSeconds % 60}s`
+                            : 'WATCH ME TIME'}
+                        </span>
+                      </button>
+
+                      {/* 3. 📶 BLE / Hardware Status */}
+                      <button
+                        onClick={() => {
+                          addNotificationPanelLog({
+                            action: 'BLE_STATUS',
+                            status: 'ACKNOWLEDGED',
+                            details: `Hardware query from notification panel: ${isBleConnected ? 'Connected to BLE Keyfob' : 'Scanning iTAG'}`
+                          });
+                          addAuditLog('BLE', 'INFO', 'Manual BLE status verified from notification panel mini-app', 'GATT link refreshed.');
+                          addToast(isBleConnected ? 'BLE Beacon Connected & Responsive' : 'BLE in passive scanning mode', 'info');
+                        }}
+                        className="p-2 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-blue-400 flex flex-col items-center justify-center gap-0.5 text-center"
+                      >
+                        <span className="text-xs">📶</span>
+                        <span className="text-[7.5px] font-black uppercase">{isBleConnected ? 'LINKED' : 'BLE STAT'}</span>
+                      </button>
+
+                      {/* 4. 🔄 Sync Button */}
+                      <button
+                        onClick={() => {
+                          syncOfflineQueue(false);
+                          addNotificationPanelLog({
+                            action: 'SYNC',
+                            status: 'COMPLETED',
+                            details: 'Force offline queue and server telemetry synchronization requested.'
+                          });
+                          addToast('SafetyLink offline database synced with server.', 'success');
+                        }}
+                        className="p-2 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-teal-400 flex flex-col items-center justify-center gap-0.5 text-center"
+                      >
+                        <span className="text-xs">🔄</span>
+                        <span className="text-[7.5px] font-black uppercase">SYNC NOW</span>
+                      </button>
+
+                      {/* 5. ✅ Check-in Button */}
+                      <button
+                        onClick={() => {
+                          const coords = userLocation ? `[${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}]` : 'GPS Acquiring';
+                          addNotificationPanelLog({
+                            action: 'CHECK_IN',
+                            status: 'COMPLETED',
+                            details: `User safe check-in at ${coords}`,
+                            coordinates: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined
+                          });
+                          addAuditLog('SECURITY', 'INFO', 'Safe Check-In Ping', `Logged check-in at coordinates ${coords}`);
+                          addToast(`✅ Check-in recorded at ${coords}`, 'success');
+                        }}
+                        className="p-2 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 text-emerald-400 flex flex-col items-center justify-center gap-0.5 text-center"
+                      >
+                        <span className="text-xs">✅</span>
+                        <span className="text-[7.5px] font-black uppercase">CHECK-IN</span>
+                      </button>
+
+                      {/* 6. 📍 Sound Location Button */}
+                      <button
+                        onClick={() => {
+                          setSoundBeepActive(true);
+                          addNotificationPanelLog({
+                            action: 'SOUND_LOCATION',
+                            status: 'DISPATCHED',
+                            details: 'Audible acoustic locator tone triggered on paired hardware and phone speaker.'
+                          });
+                          if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+                          try {
+                            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            osc.type = 'triangle';
+                            osc.frequency.setValueAtTime(880, ctx.currentTime);
+                            osc.connect(ctx.destination);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 1.2);
+                          } catch (e) {
+                            console.warn('Audio play failed', e);
+                          }
+                          addToast('📍 Sound location alarm playing on phone and paired tag', 'warn');
+                          setTimeout(() => setSoundBeepActive(false), 2000);
+                        }}
+                        className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-0.5 text-center transition-all ${
+                          soundBeepActive
+                            ? 'bg-amber-600 text-white border-amber-400 animate-bounce'
+                            : 'bg-slate-950/80 hover:bg-slate-900 border-slate-800 text-amber-400'
+                        }`}
+                      >
+                        <span className="text-xs">📍</span>
+                        <span className="text-[7.5px] font-black uppercase">SOUND LOC</span>
+                      </button>
+
+                      {/* 7. 🤖 AI Lizzie Voice Chat Button */}
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          setShowLizzyPopup(true);
+                          addNotificationPanelLog({
+                            action: 'AI_LIZZIE',
+                            status: 'TRIGGERED',
+                            details: 'Lizzie voice assistant activated via Notification Panel Mini-App.'
+                          });
+                          addToast('Launching AI Lizzie Voice Interface...', 'info');
+                        }}
+                        className="py-2.5 col-span-4 bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 text-indigo-300 rounded-xl font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                      >
+                        <span className="text-sm">🤖</span>
+                        <span>AI LIZZIE VOICE CHAT OVERLAY</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Watch Me Preset Selector Drawer */}
+                    {watchPickerOpen && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                      >
+                        <span className="text-[8px] text-slate-400 font-bold uppercase">ARM WATCH ME:</span>
+                        <div className="flex gap-1.5">
+                          {[5, 10, 15, 30].map(mins => (
+                            <button
+                              key={mins}
+                              onClick={() => {
+                                startWatchMeTimer(mins);
+                                setWatchPickerOpen(false);
+                                addNotificationPanelLog({
+                                  action: 'WATCH_ME',
+                                  status: 'TRIGGERED',
+                                  details: `Watch Me safety timer armed for ${mins} minutes.`
+                                });
+                                addToast(`Watch Me active for ${mins} mins. Auto-panic if unacknowledged.`, 'warn');
+                              }}
+                              className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg text-[8px] font-black"
+                            >
+                              {mins}m
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 

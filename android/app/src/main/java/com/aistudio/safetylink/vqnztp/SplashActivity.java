@@ -23,6 +23,16 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Guard against launching splash again if an instance of the app is already running in background
+        if (!isTaskRoot()) {
+            Intent intent = getIntent();
+            String action = intent.getAction();
+            if (intent.hasCategory(Intent.CATEGORY_LAUNCHER) && action != null && action.equals(Intent.ACTION_MAIN)) {
+                finish();
+                return;
+            }
+        }
+
         // Immersive sticky fullscreen: hide status bar, navigation bar, remove cuts/margins
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -44,6 +54,8 @@ public class SplashActivity extends AppCompatActivity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
         rootLayout.setBackgroundColor(0xFF000000);
+        // Tap to skip splash immediately
+        rootLayout.setOnClickListener(v -> launchMain());
 
         VideoView videoView = new VideoView(this);
         FrameLayout.LayoutParams videoParams = new FrameLayout.LayoutParams(
@@ -90,7 +102,9 @@ public class SplashActivity extends AppCompatActivity {
         if (fallbackHandler != null && fallbackRunnable != null) {
             fallbackHandler.removeCallbacks(fallbackRunnable);
         }
-        startActivity(new Intent(this, MainActivity.class));
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
         finish();
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }

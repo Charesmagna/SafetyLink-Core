@@ -25,6 +25,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
   const isArmed = true;
   const [showNotificationAlert, setShowNotificationAlert] = useState<boolean>(false);
   const [notificationMsg, setNotificationMsg] = useState<string>('');
+  const [widgetCircleSize, setWidgetCircleSize] = useState<number>(112); // Adjustable: 72px, 112px, 150px, 190px
 
   // 10-second disarm timer logic
   useEffect(() => {
@@ -219,22 +220,49 @@ export const AndroidWidgetSimulator: React.FC = () => {
 
       {/* The Widget Body, rendered directly as a clean high-contrast card */}
       <div className="flex flex-col items-center justify-center py-4 space-y-4 relative">
-        {/* High contrast SOS widget button */}
+        {/* Adjustable Size Selector Bar */}
+        <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-1.5 rounded-full border border-slate-800 text-[8.5px] font-mono">
+          <span className="text-slate-400 font-bold uppercase">WIDGET SIZE:</span>
+          {[
+            { label: '1x1 (72px)', size: 72 },
+            { label: '2x2 (112px)', size: 112 },
+            { label: '3x3 (150px)', size: 150 },
+            { label: '4x4 (180px)', size: 180 },
+          ].map(opt => (
+            <button
+              key={opt.size}
+              onClick={() => {
+                setWidgetCircleSize(opt.size);
+                if (navigator.vibrate) navigator.vibrate(15);
+              }}
+              className={`px-2 py-0.5 rounded-full font-bold transition-all ${
+                widgetCircleSize === opt.size
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* High contrast SOS widget button with adjustable red circle diameter */}
         <motion.button
           onClick={handleWidgetTrigger}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="relative w-28 h-28 rounded-full bg-gradient-to-b from-red-600 to-red-800 border-4 border-slate-950 shadow-[0_10px_25px_rgba(220,38,38,0.4)] flex items-center justify-center flex-col gap-1 cursor-pointer group hover:brightness-110 transition-all"
+          style={{ width: `${widgetCircleSize}px`, height: `${widgetCircleSize}px` }}
+          className="relative rounded-full bg-gradient-to-b from-red-600 via-red-700 to-red-900 border-4 border-slate-950 shadow-[0_10px_35px_rgba(220,38,38,0.5)] flex items-center justify-center flex-col gap-1 cursor-pointer group hover:brightness-110 transition-all active:scale-95"
         >
           {/* Glowing pulse rings */}
           {isArmed && (
-            <span className="absolute inset-0 rounded-full border border-red-500/30 animate-ping" />
+            <span className="absolute inset-0 rounded-full border-2 border-red-500/40 animate-ping pointer-events-none" />
           )}
-          <span className="text-2xl font-black font-mono text-white tracking-wide">
+          <span className={`font-black font-mono text-white tracking-wider ${widgetCircleSize <= 72 ? 'text-lg' : widgetCircleSize <= 112 ? 'text-2xl' : 'text-3xl'}`}>
             SOS
           </span>
-          <span className="text-[7px] font-mono font-black text-red-200 uppercase tracking-widest">
-            TAP TO LAUNCH
+          <span className={`font-mono font-black text-red-200 uppercase tracking-widest ${widgetCircleSize <= 72 ? 'text-[5px]' : 'text-[7px]'}`}>
+            TAP TO DISPATCH
           </span>
         </motion.button>
 

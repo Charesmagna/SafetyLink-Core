@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafetyLink Core — Master Architectural Specification & Code Blueprint</title>
+  <style>
+    :root {
+      --bg: #030712;
+      --card-bg: #0b1329;
+      --card-border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.2);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.25);
+      --amber: #f59e0b;
+      --cyan: #06b6d4;
+      --indigo: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .title-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.02em; margin-top: 8px; }
+    .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; margin-bottom: 32px; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--emerald), var(--cyan));
+    }
+    .card.alert-card::before {
+      background: linear-gradient(90deg, var(--red), var(--amber));
+    }
+    .card h2 { font-size: 18px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+    .badge {
+      font-size: 10px; font-family: monospace; padding: 2px 8px;
+      border-radius: 6px; font-weight: 700; text-transform: uppercase;
+    }
+    .badge-native { background: #3b82f6; color: #fff; }
+    .badge-android { background: #10b981; color: #022c22; }
+    .badge-ui { background: #8b5cf6; color: #fff; }
+    .badge-cloud { background: #f59e0b; color: #451a03; }
+    p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    ul { list-style: none; margin-bottom: 16px; }
+    li { font-size: 13px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 8px; }
+    li::before { content: "▹"; color: var(--emerald); font-weight: bold; }
+    pre {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+    code { font-family: inherit; }
+    .notification-mock {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 14px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+    }
+    .notif-app-name { font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 6px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .notif-body-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .notif-btn {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #f1f5f9;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .notif-btn.sos {
+      background: #dc2626;
+      border-color: #ef4444;
+      grid-column: span 3;
+      padding: 12px;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      box-shadow: 0 0 16px rgba(220, 38, 38, 0.4);
+    }
+    .notif-btn:hover { filter: brightness(1.2); }
+    .widget-mock {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 18px 0;
+    }
+    .circle-sos-widget {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ef4444, #991b1b);
+      border: 4px solid #f87171;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), inset 0 2px 6px rgba(255,255,255,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s;
+    }
+    .circle-sos-widget:hover { transform: scale(1.05); }
+    .circle-sos-widget span { font-weight: 900; font-size: 20px; letter-spacing: 0.05em; color: #fff; }
+    .circle-sos-widget small { font-size: 8px; font-weight: 700; color: #fca5a5; letter-spacing: 0.15em; text-transform: uppercase; }
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div class="title-badge">🛡️ SafetyLink Core Golden Reconstruction</div>
+        <h1>Master Architecture Blueprint & Code Reference</h1>
+        <div class="subtitle">Complete implementation design for Native Logging, Notification Mini-App, Resizable Widget, Floating SOS, Open Integrations & Drive Sync</div>
+      </div>
+      <div>
+        <span style="font-family: monospace; font-size: 11px; color: #10b981; background: #064e3b; padding: 6px 12px; border-radius: 8px; border: 1px solid #059669;">Ready for Go-Ahead</span>
+      </div>
+    </header>
+
+    <!-- SECTION 1 & 2 -->
+    <div class="grid">
+      <!-- 1. DISPATCH LOGS -->
+      <div class="card alert-card">
+        <h2>
+          <span>1. Native Dispatch & Channel Logs</span>
+          <span class="badge badge-native">Native P0</span>
+        </h2>
+        <p>Discrete logging for every native fallback dispatch channel (USSD, SMS, Direct Call, Backend Sync):</p>
+        <ul>
+          <li><strong>USSD Dispatch:</strong> Dialed via TelephonyManager/ACTION_CALL (<code>*134*...#</code> or emergency string) with timestamp, response string, and session ID.</li>
+          <li><strong>Multipart SMS:</strong> Dispatched via <code>SmsManager</code> with separate BroadcastReceivers for SENT and DELIVERED states.</li>
+          <li><strong>Voice Call:</strong> Dispatched via <code>ACTION_CALL</code> (falling back to <code>ACTION_DIAL</code> if permission restricted), logged as INITIATED, FAILED, or UNAVAILABLE.</li>
+        </ul>
+        <pre><code>// Canonical Log Entity Model
+data class DispatchLogEntry(
+    val incidentId: String,
+    val channel: String, // "USSD" | "SMS" | "CALL" | "CLOUD"
+    val recipient: String,
+    val payload: String,
+    val status: String,  // QUEUED, SENT, DELIVERED, INITIATED, FAILED
+    val timestamp: Long,
+    val radioCellId: String? = null
+)</code></pre>
+      </div>
+
+      <!-- 2. NOTIFICATION PANEL MINI-APP -->
+      <div class="card">
+        <h2>
+          <span>2. Notification Shade Mini-App</span>
+          <span class="badge badge-android">Android FGS</span>
+        </h2>
+        <p>A permanent custom <code>RemoteViews</code> notification in the Android system shade providing instant tactile access when the phone is locked or outside the app:</p>
+        
+        <div class="notification-mock">
+          <div class="notif-header">
+            <div class="notif-app-name">
+              <span class="status-dot"></span>
+              <span>SAFETYLINK CORE SENTINEL</span>
+            </div>
+            <span>BLE: iTAG CONNECTED (92%)</span>
+          </div>
+
+          <div class="notif-body-grid">
+            <div class="notif-btn sos">🚨 IMMEDIATE SOS (PRESS OR HOLD)</div>
+            <div class="notif-btn">⏱️ Watch Me (30m)</div>
+            <div class="notif-btn">🔄 Sync Queue</div>
+            <div class="notif-btn">✅ Safe Check-In</div>
+            <div class="notif-btn">📍 Buzz iTAG</div>
+            <div class="notif-btn">🤖 AI Lizzy Voice</div>
+            <div class="notif-btn">📡 Mesh Status</div>
+          </div>
+        </div>
+        <pre><code>// RemoteViews layout: R.layout.notification_mini_app
+val views = RemoteViews(packageName, R.layout.notification_mini_app)
+views.setOnClickPendingIntent(R.id.btn_sos, getPanicPendingIntent())
+views.setOnClickPendingIntent(R.id.btn_watch_me, getWatchMePendingIntent())
+views.setOnClickPendingIntent(R.id.btn_sync, getSyncPendingIntent())
+views.setOnClickPendingIntent(R.id.btn_checkin, getCheckinPendingIntent())
+views.setOnClickPendingIntent(R.id.btn_buzz, getBuzzTagPendingIntent())
+views.setOnClickPendingIntent(R.id.btn_lizzy, getLizzyVoicePendingIntent())</code></pre>
+      </div>
+    </div>
+
+    <!-- SECTION 3 & 4 -->
+    <div class="grid">
+      <!-- 3. HOME SCREEN WIDGET -->
+      <div class="card">
+        <h2>
+          <span>3. Resizable Home Screen SOS Circle</span>
+          <span class="badge badge-android">AppWidget</span>
+        </h2>
+        <p>A clean, resizable Android launcher widget with an iconic red SOS circle. Directly triggers <code>PanicService</code> without delay:</p>
+        
+        <div class="widget-mock">
+          <div class="circle-sos-widget">
+            <span>SOS</span>
+            <small>SafetyLink</small>
+          </div>
+        </div>
+
+        <ul>
+          <li>Configured with <code>android:resizeMode="horizontal|vertical"</code> in <code>panic_widget_info.xml</code>.</li>
+          <li>Resizes gracefully from 1x1 icon up to 3x3 prominent central panic circle.</li>
+          <li>Direct <code>PendingIntent.getService(..., PanicService)</code> ensures instantaneous trigger without opening the WebView first.</li>
+        </ul>
+      </div>
+
+      <!-- 4. FLOATING SOS BUBBLE -->
+      <div class="card">
+        <h2>
+          <span>4. System-Wide Floating SOS Bubble</span>
+          <span class="badge badge-android">WindowManager</span>
+        </h2>
+        <p>A floating movable bubble (Chat Head style) that persists over any third-party app or home screen:</p>
+        <ul>
+          <li>Requires <code>SYSTEM_ALERT_WINDOW</code> permission with in-app check and settings redirect.</li>
+          <li>Touch listener handles dragging across screen borders and snapping to edges.</li>
+          <li>Single tap opens 10-second disarm countdown overlay; double-tap executes instant direct dispatch.</li>
+          <li>Toggleable anytime in Settings via <code>useAppStore().setFloatingBubbleEnabled(...)</code>.</li>
+        </ul>
+        <pre><code>// FloatingService.kt
+val params = WindowManager.LayoutParams(
+    WRAP_CONTENT, WRAP_CONTENT,
+    TYPE_APPLICATION_OVERLAY,
+    FLAG_NOT_FOCUSABLE,
+    PixelFormat.TRANSLUCENT
+)
+windowManager.addView(floatingBubbleView, params)</code></pre>
+      </div>
+    </div>
+
+    <!-- SECTION 5 & 6 -->
+    <div class="grid">
+      <!-- 5. CONFIGURABLE DISPATCH LOGIC -->
+      <div class="card">
+        <h2>
+          <span>5. Configurable Dispatch Engine</span>
+          <span class="badge badge-ui">UI / Engine</span>
+        </h2>
+        <p>A user-customizable emergency dispatch rule manager with fine-grained channel presets:</p>
+        <ul>
+          <li><strong>Countdown Presets:</strong> 0s (instant), 3s, 5s, 10s, 30s cancellation windows.</li>
+          <li><strong>Countdown Overlay:</strong> Toggle full-screen system overlay vs discreet notification countdown.</li>
+          <li><strong>Dispatch Presets:</strong>
+            <br>• <em>Strict Offline:</em> USSD code execution + Offline SMS only (no internet dependency).
+            <br>• <em>Hybrid Cloud:</em> Twilio SMS/Voice + VAPI AI dispatch + Backend incident socket.
+            <br>• <em>SMS Only:</em> Carrier-direct cellular broadcast.
+            <br>• <em>Custom:</em> Drag-and-drop channel priority order.
+          </li>
+          <li><strong>Map Layer Selector:</strong> Google Maps Satellite, OpenStreetMap Topo, Radar Heatmap, or Offline Vector tiles.</li>
+        </ul>
+      </div>
+
+      <!-- 6. OPEN PLATFORM INTEGRATIONS HUB -->
+      <div class="card">
+        <h2>
+          <span>6. Open Integrations Hub</span>
+          <span class="badge badge-cloud">Connectors</span>
+        </h2>
+        <p>A self-serve connector ecosystem where individual users or organizations plug in their own API credentials:</p>
+        <ul>
+          <li><strong>Twilio:</strong> Account SID, Auth Token, From Phone Number (Auto-tests balance & validates active voice/SMS capabilities).</li>
+          <li><strong>VAPI / Bland.ai:</strong> Assistant ID & API Key for automated voice phone calls and interactive AI triage.</li>
+          <li><strong>Africa's Talking:</strong> Username & API Key for localized African SMS & USSD gateways.</li>
+          <li><strong>Infobip:</strong> Base URL & API Key for global multi-channel delivery.</li>
+          <li><strong>Cloudinary / S3 / R2:</strong> Custom bucket & credentials for off-device evidence storage.</li>
+          <li><strong>Dynamic Requirements:</strong> Auto-renders required fields (e.g., Sender ID, Line Number, Webhook Secret) and activates immediately upon testing success.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SECTION 7 -->
+    <div class="card">
+      <h2>
+        <span>7. Local Database & Continuous Google Drive Synchronization</span>
+        <span class="badge badge-cloud">Sync / Sheets</span>
+      </h2>
+      <p>Continuous client directory maintenance, offline caching, and automated Google Drive document update loop:</p>
+      <ul>
+        <li><strong>Local User Database:</strong> Stores profile information, emergency contacts, medical passport data, assigned iTAG BLE UUIDs, subscription tier, and GPS coordinates.</li>
+        <li><strong>Continuous Delta Polling:</strong> A background polling worker detects newly registered or updated users and synchronizes records without manual refresh.</li>
+        <li><strong>Google Drive Exporter:</strong> Authenticates via OAuth Client ID to write to a designated Google Sheet / Document. Rather than spawning new documents on every push, it continuously appends and updates the existing document with timestamped roster changes and incident telemetry.</li>
+      </ul>
+      <pre><code>// Google Drive Continuous Sync Workflow
+async function syncRosterToDrive(spreadsheetId: string, users: UserProfile[]) {
+  const values = users.map(u => [
+    u.id, u.fullName, u.phone, u.role, u.orgCode, 
+    u.lastLocation?.lat || 'N/A', u.lastLocation?.lng || 'N/A',
+    new Date(u.lastLocation?.timestamp || Date.now()).toISOString()
+  ]);
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: 'SafetyLink_Roster!A2:H',
+    valueInputOption: 'USER_ENTERED',
+    resource: { values }
+  });
+}</code></pre>
+    </div>
+
+    <footer>
+      SafetyLink Core Sequential Emergency Alert Network • Proprietary Architecture Document • TM Media Solutions
+    </footer>
+  </div>
+</body>
+</html>

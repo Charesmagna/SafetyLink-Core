@@ -1,11 +1,12 @@
 {
   "version": "1.1.935",
-  "buildTime": "2026-10-07T00:00:00Z",
+  "buildTime": "2026-10-01T09:16:48Z",
   "releaseName": "SafetyLink Core v1.1.935",
   "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.935/SafetyLink-v1.1.935-Signed.apk",
   "liveWebUrl": "https://safetylink.online",
   "features": [
-    "Post-splash freeze fix",
-    "Subtle update toast notification"
+    "Automatic Over-The-Air release detection & in-app update prompt banner",
+    "Direct APK & Windows EXE downloads from latest GitHub release",
+    "Hardened emergency dispatch and Paystack gateway fraud protection"
   ]
 }
