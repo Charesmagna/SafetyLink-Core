@@ -29,8 +29,8 @@ export async function openPaystackCheckout({
   onSuccess?: (ref: string) => void;
   onClose?: () => void;
 }) {
-  const plan = planId && planId in PLANS ? PLANS[planId as PlanId] : { amount: amount || 0, name: planName || 'SafetyLink Subscription' };
-  const totalAmount = plan.amount;
+  const plan = planId && planId in PLANS ? PLANS[planId as PlanId] : { amount: Math.max(4900, amount || 4900), name: planName || 'SafetyLink Subscription' };
+  const totalAmount = Math.max(4900, plan.amount);
 
   // 1. Try backend server initialization first (Paystack official authorization URL)
   try {

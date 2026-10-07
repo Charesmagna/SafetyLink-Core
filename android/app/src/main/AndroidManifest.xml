@@ -23,6 +23,7 @@
             android:name=".SplashActivity"
             android:theme="@style/SplashTheme"
             android:screenOrientation="portrait"
+            android:noHistory="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -118,6 +119,40 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/status_widget_info" />
         </receiver>
+
+        <!-- Lock Screen Notification Service -->
+        <service
+            android:name=".LockScreenNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Lock Screen Emergency Banner"
+            />
+        </service>
+
+        <!-- Quick Settings Quick SOS Tile -->
+        <service
+            android:name=".SafetyLinkTileService"
+            android:label="SafetyLink SOS"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Floating SOS Widget Service -->
+        <service
+            android:name=".FloatingWidgetService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating Emergency SOS Overlay"
+            />
+        </service>
 
     </application>
 

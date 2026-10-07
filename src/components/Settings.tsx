@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { Capacitor } from '@capacitor/core';
 import { motion } from 'motion/react';
 import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
+import { biometricService } from '../services/BiometricService';
 
 export const Settings: React.FC = () => {
   const { 
@@ -27,10 +28,58 @@ export const Settings: React.FC = () => {
     decoyCode,
     setDecoyCode,
     decoyDistressCode,
-    setDecoyDistressCode
+    setDecoyDistressCode,
+    isFloatingWidgetDeployed,
+    setFloatingWidgetDeployed,
+    floatingWidgetSize,
+    setFloatingWidgetSize,
+    dispatchSettings,
+    setDispatchSettings,
+    dispatchLogs,
+    clearDispatchLogs,
+    notificationPanelLogs,
+    clearNotificationPanelLogs
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
+
+  // Biometric gate for sensitive security settings
+  const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [biometryType, setBiometryType] = useState('FINGERPRINT');
+  const [isPinSettingsUnlocked, setIsPinSettingsUnlocked] = useState(() => biometricService.isScopeUnlocked('settings'));
+  const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    biometricService.checkAvailability().then(res => {
+      if (active) {
+        setHasBiometrics(res.isAvailable);
+        setBiometryType(res.biometryType);
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
+  const handleUnlockPinSettings = async () => {
+    setIsAuthenticatingPin(true);
+    try {
+      const ok = await biometricService.authenticate({
+        title: 'Security PIN Authentication',
+        subtitle: 'Biometric Security Gate',
+        description: 'Verify your fingerprint or face to view and modify your emergency PINs.',
+        negativeButtonText: 'Cancel'
+      });
+      if (ok) {
+        setIsPinSettingsUnlocked(true);
+        biometricService.grantScopeUnlock('settings');
+        useAppStore.getState().addToast('Biometrics verified. Security PIN settings unlocked.', 'success');
+      } else {
+        useAppStore.getState().addToast('Biometric authentication required to modify security PINs.', 'warn');
+      }
+    } finally {
+      setIsAuthenticatingPin(false);
+    }
+  };
 
   // Profile forms state
 
@@ -161,15 +210,163 @@ export const Settings: React.FC = () => {
           🚨 ALERTS & COUNTDOWN
         </h4>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-4">
-          <div className="space-y-1">
-            <label className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Panic Countdown (Seconds)</label>
-            <input 
-              type="number" 
-              value={sosCountdownDuration} 
-              onChange={e => setSosCountdownDuration(parseInt(e.target.value) || 3)}
-              className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-red-500/50 font-mono"
-            />
-            <p className="text-[8px] text-slate-500 mt-1">Delay before alert is triggered to allow cancellation.</p>
+          {/* Floating SOS Overlay Settings (User Golden Spec) */}
+          <div className="border-t border-slate-800/50 pt-3 space-y-2">
+            <div className="flex justify-between items-center">
+              <div>
+                <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                  <span>🔴</span> Floating SOS Bubble (Chat Heads Style)
+                </h5>
+                <p className="text-[8px] text-slate-500 mt-0.5">
+                  Enables a persistent draggable SOS trigger that floats over all native Android apps.
+                </p>
+              </div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <span className={`text-[8px] font-bold ${isFloatingWidgetDeployed ? "text-red-400" : "text-slate-600"}`}>
+                  {isFloatingWidgetDeployed ? "ACTIVE" : "DISABLED"}
+                </span>
+                <input 
+                  type="checkbox" 
+                  checked={isFloatingWidgetDeployed} 
+                  onChange={e => {
+                    setFloatingWidgetDeployed(e.target.checked);
+                    NativeDispatchService.toggleFloatingWidget(e.target.checked);
+                    useAppStore.getState().addToast(
+                      e.target.checked ? 'Floating SOS button deployed.' : 'Floating SOS button disabled.',
+                      'info'
+                    );
+                  }}
+                  className="accent-red-500 w-4 h-4 cursor-pointer" 
+                />
+              </label>
+            </div>
+            {isFloatingWidgetDeployed && (
+              <div className="flex items-center justify-between p-2 bg-slate-900/60 rounded-xl border border-slate-800 text-[8px]">
+                <span className="text-slate-400 uppercase font-bold">BUBBLE SIZE:</span>
+                <div className="flex gap-1.5">
+                  {[52, 64, 78].map(sz => (
+                    <button
+                      key={sz}
+                      onClick={() => setFloatingWidgetSize(sz)}
+                      className={`px-2 py-0.5 rounded-lg font-bold ${
+                        floatingWidgetSize === sz ? 'bg-red-600 text-white' : 'bg-slate-950 text-slate-400'
+                      }`}
+                    >
+                      {sz}px
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Configurable Dispatch Logic (User Golden Spec) */}
+          <div className="border-t border-slate-800/50 pt-3 space-y-3">
+            <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+              <span>⚡</span> Configurable Dispatch Engine & Presets
+            </h5>
+
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold text-slate-500 uppercase block">Dispatch Channel Preset</label>
+              <select
+                value={dispatchSettings.dispatchPreset}
+                onChange={e => {
+                  const val = e.target.value as any;
+                  setDispatchSettings({ dispatchPreset: val });
+                  useAppStore.getState().addToast(`Dispatch preset switched to ${val.replace('_', ' ')}`, 'info');
+                }}
+                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-red-500/50 font-mono"
+              >
+                <option value="STRICT_OFFLINE">Strict Offline (USSD Dial *134*911# + Local GSM SMS)</option>
+                <option value="VIP_TWILIO_CLOUD">VIP Cloud (Twilio Voice IVR + VAPI AI + Africa's Talking)</option>
+                <option value="SMS_ONLY">SMS Only (Pure Direct GSM + SMS Gateway)</option>
+                <option value="CUSTOM">Custom Multi-Channel Sequential Queue</option>
+              </select>
+            </div>
+
+            <div className="flex justify-between items-center pt-1">
+              <div>
+                <span className="text-[8.5px] font-bold text-slate-400 uppercase block">Fullscreen Countdown Overlay</span>
+                <span className="text-[7.5px] text-slate-500">Show visual countdown modal over UI during grace period.</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={dispatchSettings.countdownOverlayEnabled}
+                onChange={e => setDispatchSettings({ countdownOverlayEnabled: e.target.checked })}
+                className="accent-red-500 w-4 h-4"
+              />
+            </div>
+
+            <div className="space-y-1 pt-1">
+              <label className="text-[8px] font-bold text-slate-500 uppercase block">Situational Map Engine</label>
+              <select
+                value={dispatchSettings.mapProvider}
+                onChange={e => {
+                  const val = e.target.value as any;
+                  setDispatchSettings({ mapProvider: val });
+                  useAppStore.getState().addToast(`Map provider updated to ${val.replace('_', ' ')}`, 'info');
+                }}
+                className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-red-500/50 font-mono"
+              >
+                <option value="GOOGLE_MAPS">Google Maps (Hybrid & Live Traffic)</option>
+                <option value="OPENSTREETMAP">OpenStreetMap (Offline GIS Vector Tiles)</option>
+                <option value="MAPBOX">Mapbox Tactical Dark Mode</option>
+                <option value="HYBRID_SATELLITE">High-Resolution Satellite Imagery</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Dispatch & Mini-App Logs Terminal (User Golden Spec) */}
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+          <div className="flex justify-between items-center">
+            <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+              <span>📜</span> Native Dispatch & Notification Logs
+            </h5>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  clearDispatchLogs();
+                  clearNotificationPanelLogs();
+                  useAppStore.getState().addToast('Dispatch logs cleared', 'info');
+                }}
+                className="text-[7.5px] text-slate-500 hover:text-slate-300 uppercase"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {dispatchLogs.length === 0 && notificationPanelLogs.length === 0 ? (
+              <p className="text-[8px] text-slate-600 text-center py-4">No recent emergency dispatch activity logged.</p>
+            ) : (
+              <>
+                {dispatchLogs.slice(0, 10).map(log => (
+                  <div key={log.id} className="p-2 bg-slate-950 border border-slate-900 rounded-xl text-[8px] space-y-0.5">
+                    <div className="flex justify-between text-slate-400">
+                      <span className="font-bold text-red-400">[{log.channel}] ➔ {log.target}</span>
+                      <span className={`px-1 py-0.2 rounded font-black ${
+                        log.status === 'SENT' || log.status === 'DELIVERED' ? 'text-emerald-400' :
+                        log.status === 'INITIATED' ? 'text-cyan-400' : 'text-amber-400'
+                      }`}>{log.status}</span>
+                    </div>
+                    <p className="text-slate-500">{log.details}</p>
+                    <span className="text-[7px] text-slate-600 block">{new Date(log.timestamp).toLocaleTimeString()} • Unit: {log.unitId}</span>
+                  </div>
+                ))}
+                {notificationPanelLogs.slice(0, 6).map(log => (
+                  <div key={log.id} className="p-2 bg-slate-950/70 border border-slate-900/80 rounded-xl text-[8px] space-y-0.5">
+                    <div className="flex justify-between text-slate-400">
+                      <span className="font-bold text-indigo-400">[MINI-APP] {log.action}</span>
+                      <span className="text-emerald-400 font-bold">{log.status}</span>
+                    </div>
+                    <p className="text-slate-500">{log.details}</p>
+                    <span className="text-[7px] text-slate-600 block">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
           
           <div className="flex justify-between items-center border-t border-slate-800/50 pt-3">
@@ -232,67 +429,108 @@ export const Settings: React.FC = () => {
         {/* Security PINs Section */}
         {currentUser && (
           <div className="space-y-3 border-t border-slate-900/60 pt-4">
-            <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-              🔒 SECURITY PIN SETTINGS
-            </h4>
-            <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
-              <div className="space-y-1">
-                
-                <div className="pt-2 pb-3 border-b border-slate-900/60 mb-2">
-                  <label className="text-[9px] font-bold text-slate-400 block uppercase mb-1">Account Password</label>
-                  <div className="flex gap-2">
-                    <input
-  type="password"
-  placeholder="New Password"
-  value={newPassword}
-  onChange={(e) => setNewPassword(e.target.value)}
-  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
-/>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newPwd = newPassword;
-                        if (!newPwd) return useAppStore.getState().addToast('Password cannot be empty', 'warn');
-                        if (currentUser) {
-                           useAppStore.getState().updateUserPassword(currentUser.id, newPwd);
-                           useAppStore.getState().addToast('Account password updated successfully.', 'success');
-                           setNewPassword('');
-                           (document.getElementById('newAccountPassword') as HTMLInputElement).value = '';
-                        }
-                      }}
-                      className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase px-3 rounded-xl border border-blue-500/20 whitespace-nowrap"
-                    >
-                      Update
-                    </button>
-                  </div>
-                  <p className="text-[8px] text-slate-500 mt-1">Change your login password (active in demo mode).</p>
-                </div>
-                
-                <label className="text-[9px] font-bold text-slate-400 block uppercase">Safe PIN (Cancels Alert)</label>
-                <input
-                  type="password"
-                  value={userPin}
-                  onChange={(e) => useAppStore.getState().setUserPin(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
-                  maxLength={4}
-                  placeholder="e.g. 0000"
-                />
-                <p className="text-[7.5px] text-slate-500 mt-1">Used to safely cancel an accidental panic trigger.</p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[9px] font-bold text-slate-400 block uppercase text-red-500/80">Duress PIN (Silent Escalation)</label>
-                <input
-                  type="password"
-                  value={duressPin}
-                  onChange={(e) => useAppStore.getState().setDuressPin(e.target.value)}
-                  className="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-red-200 focus:outline-none focus:border-red-500/50"
-                  maxLength={4}
-                  placeholder="e.g. 9999"
-                />
-                <p className="text-[7.5px] text-slate-500 mt-1">If forced to cancel by an attacker, enter this to appear like you canceled, but silently escalate to Police.</p>
-              </div>
+            <div className="flex items-center justify-between">
+              <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+                🔒 SECURITY PIN SETTINGS
+              </h4>
+              {hasBiometrics && isPinSettingsUnlocked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPinSettingsUnlocked(false);
+                    biometricService.lockScope('settings');
+                    useAppStore.getState().addToast('Security PIN settings locked.', 'info');
+                  }}
+                  className="text-[8px] font-mono font-bold text-slate-400 hover:text-slate-200 px-2 py-0.5 bg-slate-900 border border-slate-800 rounded-lg uppercase transition-all"
+                >
+                  🔒 Lock
+                </button>
+              )}
             </div>
+
+            {hasBiometrics && !isPinSettingsUnlocked ? (
+              <div className="bg-slate-950/50 border border-slate-800/80 rounded-2xl p-5 text-center space-y-3 font-mono">
+                <div className="w-10 h-10 mx-auto rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-lg">
+                  {biometryType === 'FACE_ID' ? '👤' : '👆'}
+                </div>
+                <div>
+                  <h5 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
+                    Biometric Protection Active
+                  </h5>
+                  <p className="text-[8px] text-slate-500 mt-1 max-w-xs mx-auto">
+                    Authentication is required to view or modify your Safe PIN, Duress PIN, and account credentials.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleUnlockPinSettings}
+                  disabled={isAuthenticatingPin}
+                  className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-[9.5px] font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span>{biometryType === 'FACE_ID' ? '👤' : '👆'}</span>
+                  <span>{isAuthenticatingPin ? 'Verifying...' : `Authenticate with ${biometryType === 'FACE_ID' ? 'Face ID' : 'Biometrics'}`}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="bg-slate-950/30 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+                <div className="space-y-1">
+                  
+                  <div className="pt-2 pb-3 border-b border-slate-900/60 mb-2">
+                    <label className="text-[9px] font-bold text-slate-400 block uppercase mb-1">Account Password</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="New Password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newPwd = newPassword;
+                          if (!newPwd) return useAppStore.getState().addToast('Password cannot be empty', 'warn');
+                          if (currentUser) {
+                             useAppStore.getState().updateUserPassword(currentUser.id, newPwd);
+                             useAppStore.getState().addToast('Account password updated successfully.', 'success');
+                             setNewPassword('');
+                             (document.getElementById('newAccountPassword') as HTMLInputElement).value = '';
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase px-3 rounded-xl border border-blue-500/20 whitespace-nowrap"
+                      >
+                        Update
+                      </button>
+                    </div>
+                    <p className="text-[8px] text-slate-500 mt-1">Change your login password (active in demo mode).</p>
+                  </div>
+                  
+                  <label className="text-[9px] font-bold text-slate-400 block uppercase">Safe PIN (Cancels Alert)</label>
+                  <input
+                    type="password"
+                    value={userPin}
+                    onChange={(e) => useAppStore.getState().setUserPin(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-purple-500/50"
+                    maxLength={4}
+                    placeholder="e.g. 0000"
+                  />
+                  <p className="text-[7.5px] text-slate-500 mt-1">Used to safely cancel an accidental panic trigger.</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 block uppercase text-red-500/80">Duress PIN (Silent Escalation)</label>
+                  <input
+                    type="password"
+                    value={duressPin}
+                    onChange={(e) => useAppStore.getState().setDuressPin(e.target.value)}
+                    className="w-full bg-slate-950 border border-red-900/30 rounded-xl px-3 py-2 text-xs text-red-200 focus:outline-none focus:border-red-500/50"
+                    maxLength={4}
+                    placeholder="e.g. 9999"
+                  />
+                  <p className="text-[7.5px] text-slate-500 mt-1">If forced to cancel by an attacker, enter this to appear like you canceled, but silently escalate to Police.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

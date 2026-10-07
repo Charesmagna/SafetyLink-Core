@@ -219,3 +219,69 @@ export interface AuditLog {
   message: string;
   details?: string;
 }
+
+export interface DispatchLogEntry {
+  id: string;
+  timestamp: number;
+  channel: 'USSD' | 'SMS' | 'VOICE_CALL' | 'WHATSAPP' | 'TWILIO' | 'VAPI' | 'AFRICAS_TALKING' | 'NOTIFICATION_MINI_APP';
+  target: string;
+  status: 'QUEUED' | 'SENT' | 'INITIATED' | 'FAILED' | 'DELIVERED';
+  unitId: string;
+  incidentId?: string;
+  coordinates?: { lat: number; lng: number };
+  details?: string;
+}
+
+export interface NotificationPanelLogEntry {
+  id: string;
+  timestamp: number;
+  action: 'SOS' | 'WATCH_ME' | 'BLE_STATUS' | 'SYNC' | 'CHECK_IN' | 'SOUND_LOCATION' | 'AI_LIZZIE';
+  status: 'TRIGGERED' | 'DISPATCHED' | 'ACKNOWLEDGED' | 'COMPLETED';
+  details: string;
+  coordinates?: { lat: number; lng: number };
+}
+
+export interface DispatchSettings {
+  countdownDuration: number;
+  countdownOverlayEnabled: boolean;
+  dispatchPreset: 'STRICT_OFFLINE' | 'VIP_TWILIO_CLOUD' | 'SMS_ONLY' | 'CUSTOM';
+  mapProvider: 'GOOGLE_MAPS' | 'OPENSTREETMAP' | 'MAPBOX' | 'OFFLINE_GIS_VECTOR' | 'HYBRID_SATELLITE';
+  customChannels?: string[];
+}
+
+export interface PlatformIntegration {
+  id: string;
+  platformId: 'twilio' | 'vapi' | 'africas_talking' | 'infobip' | 'bland_ai' | 'cloudinary' | 'payfast' | 'hardware_pcb' | 'custom_api';
+  name: string;
+  category: 'VOICE_SMS' | 'AI_ASSISTANT' | 'MEDIA' | 'PAYMENT' | 'HARDWARE';
+  status: 'NOT_CONFIGURED' | 'CONFIGURED' | 'DEPLOYED' | 'ERROR';
+  apiKey?: string;
+  apiSecret?: string;
+  accountSid?: string;
+  phoneOrLine?: string;
+  endpointUrl?: string;
+  pcbSerial?: string;
+  senderId?: string;
+  deployedAt?: number;
+  lastPingStatus?: string;
+  configParams?: Record<string, string>;
+}
+
+export interface ClientDatabaseRecord {
+  id: string;
+  fullName: string;
+  username: string;
+  phone: string;
+  email: string;
+  orgId: string;
+  orgName: string;
+  role: string;
+  subscriptionTier: 'active' | 'trial' | 'locked';
+  lastSeen: number;
+  location?: { lat: number; lng: number; address?: string };
+  hardwareBeaconId?: string;
+  batteryLevel?: number;
+  source: 'APP_USER' | 'SERVER_FETCH' | 'ADMIN_INSERT' | 'DRIVE_SYNC';
+  extraFields?: Record<string, any>;
+}
+

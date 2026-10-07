@@ -72,7 +72,7 @@ const PaystackCheckout: React.FC = () => {
     }
     setLoading(plan.name);
 
-    const totalAmount = (plan.once_off * 100) + plan.amount; // amount in cents/kobo
+    const totalAmount = Math.max(4900, (plan.once_off * 100) + plan.amount); // amount in cents/kobo (min R49)
     const ref = `SL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     try {

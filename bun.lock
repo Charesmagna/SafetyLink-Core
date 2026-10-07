@@ -20,6 +20,7 @@
         "@capacitor/share": "^6.0.4",
         "@capacitor/splash-screen": "^6.0.4",
         "@capawesome-team/capacitor-android-foreground-service": "^6.2.0",
+        "@capgo/capacitor-native-biometric": "^8.7.0",
         "@google/genai": "^2.16.0",
         "@libsql/client": "^0.17.4",
         "@supabase/supabase-js": "^2.111.0",
@@ -344,6 +345,8 @@
     "@capacitor/splash-screen": ["@capacitor/splash-screen@6.0.4", "", { "peerDependencies": { "@capacitor/core": "^6.0.0" } }, ""],
 
     "@capawesome-team/capacitor-android-foreground-service": ["@capawesome-team/capacitor-android-foreground-service@6.2.0", "", { "peerDependencies": { "@capacitor/core": "^6.0.0" } }, ""],
+
+    "@capgo/capacitor-native-biometric": ["@capgo/capacitor-native-biometric@8.7.0", "", { "peerDependencies": { "@capacitor/core": ">=8.0.0" } }, "sha512-zEczRhtnY3XuMJfwgDbapGTZ35+5ApfRKNT7WGQ7jXzr7W2zfsi1yhIp1yksKggwGA91ZIO4CDIVIka+onvxhg=="],
 
     "@esbuild/linux-x64": ["@esbuild/linux-x64@0.28.2", "", { "os": "linux", "cpu": "x64" }, ""],
 

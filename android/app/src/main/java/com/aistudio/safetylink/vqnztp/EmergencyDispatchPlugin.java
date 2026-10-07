@@ -52,6 +52,51 @@ public class EmergencyDispatchPlugin extends Plugin {
     private String pendingMessage = null;
 
     @PluginMethod
+    public void sendUssd(PluginCall call) {
+        String code = call.getString("code");
+        if (code == null || code.trim().isEmpty()) {
+            call.reject("code is required for USSD dispatch");
+            return;
+        }
+        try {
+            String encodedHash = Uri.encode("#");
+            String ussdUri = "tel:" + code.trim().replace("#", encodedHash);
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(ussdUri));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+
+            JSObject ret = new JSObject();
+            ret.put("dialed", true);
+            ret.put("code", code);
+            ret.put("channel", "USSD");
+            call.resolve(ret);
+        } catch (SecurityException se) {
+            try {
+                String encodedHash = Uri.encode("#");
+                String ussdUri = "tel:" + code.trim().replace("#", encodedHash);
+                Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse(ussdUri));
+                dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(dialIntent);
+                JSObject ret = new JSObject();
+                ret.put("dialed", true);
+                ret.put("code", code);
+                ret.put("channel", "USSD");
+                call.resolve(ret);
+            } catch (Exception e) {
+                JSObject ret = new JSObject();
+                ret.put("dialed", false);
+                ret.put("error", se.getMessage());
+                call.resolve(ret);
+            }
+        } catch (Exception e) {
+            JSObject ret = new JSObject();
+            ret.put("dialed", false);
+            ret.put("error", e.getMessage());
+            call.resolve(ret);
+        }
+    }
+
+    @PluginMethod
     public void sendSms(PluginCall call) {
         String phone = call.getString("phone");
         String message = call.getString("message");

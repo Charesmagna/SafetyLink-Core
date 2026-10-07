@@ -21,6 +21,7 @@ export interface SafetyLinkEmergencyPlugin {
   enforceHardwareWake(): Promise<void>;
   checkOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
+  toggleFloatingWidget(options: { enable: boolean }): Promise<{ enabled: boolean; needsPermission?: boolean }>;
   addListener(eventName: 'onPanicStatusChange', listenerFunc: (data: { source: string; countdownSeconds: number; status: string }) => void): Promise<any>;
 }
 
@@ -85,16 +86,110 @@ export class NativeDispatchService {
     }
   }
 
+  private static logDispatchEntry(entry: {
+    channel: 'USSD' | 'SMS' | 'VOICE_CALL' | 'WHATSAPP';
+    target: string;
+    status: 'QUEUED' | 'SENT' | 'INITIATED' | 'FAILED' | 'DELIVERED';
+    unitId?: string;
+    details?: string;
+  }) {
+    try {
+      if (typeof window !== 'undefined') {
+        const store = (window as any).__SAFETYLINK_STORE__;
+        if (store?.getState) {
+          const state = store.getState();
+          const unitId = entry.unitId || state.currentUser?.id || 'SL-UNIT-LOCAL';
+          const loc = state.userLocation;
+          state.addDispatchLog({
+            channel: entry.channel,
+            target: entry.target,
+            status: entry.status,
+            unitId,
+            coordinates: loc ? { lat: loc.lat, lng: loc.lng } : undefined,
+            details: entry.details || `${entry.channel} dispatch processed via ${this.isNative ? 'Android Native Telephony' : 'Web Simulation'}.`
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[NativeDispatch] Logging hook exception:', e);
+    }
+  }
+
+  static async sendUssd(code: string): Promise<DispatchResult> {
+    if (!this.isNative) {
+      console.log(`[NativeDispatch:web-sim] Would dial USSD ${code}`);
+      this.logDispatchEntry({
+        channel: 'USSD',
+        target: code,
+        status: 'INITIATED',
+        details: 'Simulated USSD carrier code execution.'
+      });
+      return { success: true, simulated: true, status: 'INITIATED' };
+    }
+    try {
+      const res = await (NativeEmergencyDispatch as any).sendUssd({ code });
+      const status = res.dialed ? 'INITIATED' : 'FAILED';
+      this.logDispatchEntry({
+        channel: 'USSD',
+        target: code,
+        status,
+        details: res.error || (res.dialed ? 'Native USSD dialed via Android telephony.' : 'USSD failed')
+      });
+      return { success: res.dialed, simulated: false, error: res.error, status };
+    } catch (e) {
+      console.error('[NativeDispatch] sendUssd failed', e);
+      this.logDispatchEntry({
+        channel: 'USSD',
+        target: code,
+        status: 'FAILED',
+        details: e instanceof Error ? e.message : String(e)
+      });
+      return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
+    }
+  }
+
+  static async toggleFloatingWidget(enable: boolean): Promise<{ enabled: boolean; needsPermission?: boolean }> {
+    if (!this.isNative) {
+      console.log('[NativeDispatch:web-sim] Toggle floating widget:', enable);
+      return { enabled: enable };
+    }
+    try {
+      return await SafetyLinkEmergency.toggleFloatingWidget({ enable });
+    } catch (e) {
+      console.error('[NativeDispatch] toggleFloatingWidget failed', e);
+      return { enabled: false };
+    }
+  }
+
   static async sendSms(phone: string, message: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would SMS ${phone}: "${message}"`);
+      this.logDispatchEntry({
+        channel: 'SMS',
+        target: phone,
+        status: 'SENT',
+        details: `Simulated SMS broadcast: "${message.slice(0, 50)}..."`
+      });
       return { success: true, simulated: true, status: 'SENT' };
     }
     try {
       const res = await NativeEmergencyDispatch.sendSms({ phone, message });
-      return { success: res.sent, simulated: false, error: res.error, status: res.sent ? 'SENT' : 'FAILED' };
+      const status = res.sent ? 'SENT' : 'FAILED';
+      this.logDispatchEntry({
+        channel: 'SMS',
+        target: phone,
+        status,
+        details: res.error || (res.sent ? 'Native SMS transmitted via Android SmsManager.' : 'SmsManager transmission error')
+      });
+      return { success: res.sent, simulated: false, error: res.error, status };
     } catch (e) {
       console.error('[NativeDispatch] sendSms failed', e);
+      this.logDispatchEntry({
+        channel: 'SMS',
+        target: phone,
+        status: 'FAILED',
+        details: e instanceof Error ? e.message : String(e)
+      });
       return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
     }
   }
@@ -102,13 +197,32 @@ export class NativeDispatchService {
   static async placeCall(phone: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would call ${phone}`);
+      this.logDispatchEntry({
+        channel: 'VOICE_CALL',
+        target: phone,
+        status: 'INITIATED',
+        details: 'Simulated telephony call connection initiated.'
+      });
       return { success: true, simulated: true, status: 'INITIATED' };
     }
     try {
       const res = await NativeEmergencyDispatch.placeCall({ phone });
-      return { success: res.dialed, simulated: false, error: res.error, status: res.dialed ? 'INITIATED' : 'FAILED' };
+      const status = res.dialed ? 'INITIATED' : 'FAILED';
+      this.logDispatchEntry({
+        channel: 'VOICE_CALL',
+        target: phone,
+        status,
+        details: res.error || (res.dialed ? 'Native call dispatched via CALL_PHONE.' : 'Call failed')
+      });
+      return { success: res.dialed, simulated: false, error: res.error, status };
     } catch (e) {
       console.error('[NativeDispatch] placeCall failed', e);
+      this.logDispatchEntry({
+        channel: 'VOICE_CALL',
+        target: phone,
+        status: 'FAILED',
+        details: e instanceof Error ? e.message : String(e)
+      });
       return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
     }
   }
@@ -116,13 +230,32 @@ export class NativeDispatchService {
   static async openWhatsApp(phone: string, message: string): Promise<DispatchResult> {
     if (!this.isNative) {
       console.log(`[NativeDispatch:web-sim] Would open WhatsApp to ${phone}: "${message}"`);
+      this.logDispatchEntry({
+        channel: 'WHATSAPP',
+        target: phone,
+        status: 'SENT',
+        details: `Simulated WhatsApp dispatch: "${message.slice(0, 50)}..."`
+      });
       return { success: true, simulated: true };
     }
     try {
       const res = await NativeEmergencyDispatch.openWhatsApp({ phone, message });
+      const status = res.opened ? 'SENT' : 'FAILED';
+      this.logDispatchEntry({
+        channel: 'WHATSAPP',
+        target: phone,
+        status,
+        details: res.error || (res.opened ? 'WhatsApp intent launched.' : 'WhatsApp failed')
+      });
       return { success: res.opened, simulated: false, error: res.error };
     } catch (e) {
       console.error('[NativeDispatch] openWhatsApp failed', e);
+      this.logDispatchEntry({
+        channel: 'WHATSAPP',
+        target: phone,
+        status: 'FAILED',
+        details: e instanceof Error ? e.message : String(e)
+      });
       return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e) };
     }
   }

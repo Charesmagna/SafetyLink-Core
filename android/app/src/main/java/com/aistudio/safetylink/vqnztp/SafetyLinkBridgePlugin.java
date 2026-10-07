@@ -1,5 +1,6 @@
 package com.aistudio.safetylink.vqnztp;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
@@ -233,11 +234,63 @@ public class SafetyLinkBridgePlugin extends Plugin {
         }
     }
 
+    @PluginMethod
+    public void startBleService(PluginCall call) {
+        try {
+            Intent serviceIntent = new Intent(getContext(), SafelinkForegroundService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getContext().startForegroundService(serviceIntent);
+            } else {
+                getContext().startService(serviceIntent);
+            }
+            JSObject ret = new JSObject();
+            ret.put("started", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start BLE sentinel service: " + e.getMessage(), e);
+            call.reject("Failed to start BLE service: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void toggleFloatingWidget(PluginCall call) {
+        boolean enable = Boolean.TRUE.equals(call.getBoolean("enable", true));
+        try {
+            Intent intent = new Intent(getContext(), FloatingWidgetService.class);
+            if (enable) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(getContext())) {
+                    JSObject ret = new JSObject();
+                    ret.put("enabled", false);
+                    ret.put("needsPermission", true);
+                    call.resolve(ret);
+                    return;
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    getContext().startForegroundService(intent);
+                } else {
+                    getContext().startService(intent);
+                }
+            } else {
+                getContext().stopService(intent);
+            }
+            JSObject ret = new JSObject();
+            ret.put("enabled", enable);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to toggle floating widget: " + e.getMessage(), e);
+            JSObject ret = new JSObject();
+            ret.put("enabled", false);
+            ret.put("error", e.getMessage());
+            call.resolve(ret);
+        }
+    }
+
     public void emitPanicEvent(String source, int countdownSeconds, String status) {
         JSObject ret = new JSObject();
         ret.put("source", source);
         ret.put("countdownSeconds", countdownSeconds);
         ret.put("status", status);
         notifyListeners("onPanicStatusChange", ret);
+        notifyListeners("onPanicEvent", ret);
     }
 }

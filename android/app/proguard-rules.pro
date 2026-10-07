@@ -101,3 +101,14 @@
 -assumenosideeffects class com.aistudio.safetylink.vqnztp.BuildConfig {
     public static final boolean DEBUG;
 }
+
+# --- SafetyLink Specific Native Plugins and Components ---
+-keep class com.aistudio.safetylink.vqnztp.EmergencyDispatchPlugin { *; }
+-keep class com.aistudio.safetylink.vqnztp.SafetyLinkBridgePlugin { *; }
+-keep class com.aistudio.safetylink.vqnztp.ITagPlugin { *; }
+-keep class com.aistudio.safetylink.vqnztp.PanicWidgetProvider { *; }
+-keep class com.aistudio.safetylink.vqnztp.StatusWidgetProvider { *; }
+-keep class com.aistudio.safetylink.vqnztp.FloatingWidgetService { *; }
+-keep class com.aistudio.safetylink.vqnztp.PanicService { *; }
+-keep class com.aistudio.safetylink.vqnztp.EmergencyService { *; }
+

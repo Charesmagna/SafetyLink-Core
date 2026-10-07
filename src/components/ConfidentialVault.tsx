@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { derivePasswordVerifier } from '../utils/crypto';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { encryptFileData, decryptFileData } from '../utils/crypto';
 import GooglePicker from "./GooglePicker";
+import { biometricService } from '../services/BiometricService';
 
 export const ConfidentialVault: React.FC = () => {
   const {
@@ -37,6 +38,49 @@ export const ConfidentialVault: React.FC = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [showForgot, setShowForgot] = useState(false);
   const [forgotAnswerInput, setForgotAnswerInput] = useState('');
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometryType, setBiometryType] = useState<string>('FINGERPRINT');
+  const [isAuthenticatingBiometric, setIsAuthenticatingBiometric] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    biometricService.checkAvailability().then(res => {
+      if (active) {
+        setBiometricAvailable(res.isAvailable);
+        setBiometryType(res.biometryType);
+      }
+    });
+
+    if (biometricService.isScopeUnlocked('vault')) {
+      setIsUnlocked(true);
+    }
+    return () => { active = false; };
+  }, []);
+
+  const handleBiometricUnlock = async () => {
+    setIsAuthenticatingBiometric(true);
+    try {
+      const verified = await biometricService.authenticate({
+        title: 'Unlock Confidential Vault',
+        subtitle: 'Biometric Security Gate',
+        description: 'Verify your fingerprint or face to decrypt sensitive vault contents.',
+        negativeButtonText: 'Use Master Password'
+      });
+
+      if (verified) {
+        setIsUnlocked(true);
+        biometricService.grantScopeUnlock('vault');
+        addToast('Biometrics verified. Vault unlocked.', 'success');
+        addAuditLog('SECURITY', 'INFO', 'Confidential Vault unlocked.', 'Biometric identity verified.');
+      } else {
+        addToast('Biometric authentication unconfirmed or canceled.', 'warn');
+      }
+    } catch (err: any) {
+      addToast(`Biometric error: ${err.message}`, 'error');
+    } finally {
+      setIsAuthenticatingBiometric(false);
+    }
+  };
   
   // Setup fields
   const [setupPassword, setSetupPassword] = useState('');
@@ -314,6 +358,31 @@ export const ConfidentialVault: React.FC = () => {
           </div>
         </div>
 
+        {biometricAvailable && (
+          <div className="space-y-3 pb-1">
+            <button
+              type="button"
+              onClick={handleBiometricUnlock}
+              disabled={isAuthenticatingBiometric}
+              className="w-full py-3 bg-gradient-to-r from-emerald-950/50 via-slate-900 to-emerald-950/50 hover:from-emerald-900/60 hover:to-slate-800 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-lg group active:scale-[0.98]"
+            >
+              <span className="text-lg group-hover:scale-110 transition-transform">
+                {biometryType === 'FACE_ID' ? '👤' : '👆'}
+              </span>
+              <span>
+                {isAuthenticatingBiometric
+                  ? 'Verifying Biometrics...'
+                  : `Scan ${biometryType === 'FACE_ID' ? 'Face ID' : 'Fingerprint'} to Decrypt`}
+              </span>
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="h-[1px] flex-1 bg-slate-900" />
+              <span className="text-[8px] font-mono uppercase tracking-widest text-slate-600">OR USE MASTER PASSWORD</span>
+              <div className="h-[1px] flex-1 bg-slate-900" />
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {!showForgot ? (
             <motion.form
@@ -416,6 +485,7 @@ export const ConfidentialVault: React.FC = () => {
           <button
             onClick={() => {
               setIsUnlocked(false);
+              biometricService.lockScope('vault');
               addToast('Confidential Vault locked successfully.', 'info');
             }}
             className="text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition-all"
