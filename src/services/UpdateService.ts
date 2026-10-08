@@ -9,6 +9,39 @@ export const CURRENT_VERSION: string =
   localStorage.getItem('sl_active_version') ||
   '1.1.906';
 
+export function isAppBinary(): boolean {
+  if (typeof window === 'undefined') return false;
+  // 1. Android APK or iOS Native App
+  if (Capacitor.isNativePlatform()) return true;
+
+  // 2. Desktop EXE via Tauri
+  if (
+    typeof (window as any).__TAURI__ !== 'undefined' ||
+    typeof (window as any).__TAURI_IPC__ !== 'undefined' ||
+    navigator.userAgent.includes('Tauri')
+  ) {
+    return true;
+  }
+
+  // 3. Desktop EXE via Electron
+  if (
+    (typeof (window as any).process !== 'undefined' && Boolean((window as any).process?.versions?.electron)) ||
+    navigator.userAgent.includes('Electron')
+  ) {
+    return true;
+  }
+
+  // 4. Standalone installed app (PWA application shell)
+  if (
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as any).standalone === true
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function getCurrentAppVersion(): Promise<string> {
   if (Capacitor.isNativePlatform()) {
     try {

@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
+import { NativeDispatchService } from '../services/NativeDispatchService';
 
 export const Settings: React.FC = () => {
   const { 
