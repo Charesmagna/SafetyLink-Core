@@ -40,10 +40,12 @@ jobs:
 
     - name: Force Java 17 in all generated gradle files
       run: |
-        echo "=== Patching capacitor.build.gradle to Java 17 ==="
-        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
-        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} \;
-        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        echo "=== Patching capacitor.build.gradle and plugin gradle files to Java 17 ==="
+        find node_modules -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
+        find node_modules -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
         echo "=== Verification ==="
         grep -r "JavaVersion" android/ | grep -v ".git" || echo "No JavaVersion found (all good)"
 
