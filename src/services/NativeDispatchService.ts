@@ -14,6 +14,7 @@ export interface SafetyLinkEmergencyPlugin {
     longitude?: number;
     organizationId?: string;
     userId?: string;
+    directDispatch?: boolean;
   }): Promise<{ status: string; countdownSeconds: number }>;
   cancel(): Promise<{ status: string }>;
   getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
@@ -60,6 +61,7 @@ export class NativeDispatchService {
     longitude?: number;
     organizationId?: string;
     userId?: string;
+    directDispatch?: boolean;
   }): Promise<{ status: string; countdownSeconds: number }> {
     if (!this.isNative) {
       console.log('[NativeDispatch:web-sim] Triggering simulated emergency countdown:', payload);
