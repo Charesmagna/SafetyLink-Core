@@ -33,6 +33,10 @@ subprojects {
         if (project.name == 'capacitor-voice-recorder') {
             project.android {
                 namespace = 'com.tchvu3.capacitorvoicerecorder'
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
             }
         }
     }
