@@ -174,7 +174,7 @@ const App: React.FC = () => {
   const handleFinalDispatch = () => {
     console.error("TIMER EXPIRED. DISPATCHING PAYLOAD.");
     setIsSosActive(false); // Close the overlay
-    useAppStore.getState().triggerPanic('Emergency SOS: Timer expired via BLE/Hardware button.');
+    useAppStore.getState().triggerPanic('Emergency SOS: Timer expired via BLE/Hardware button.', true);
   };
   const { 
     isAppMinimized,

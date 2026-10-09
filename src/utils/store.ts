@@ -128,7 +128,7 @@ interface AppState {
   updateLocation: (lat: number, lng: number, accuracy?: string) => void;
   addAuditLog: (category: AuditLog['category'], severity: AuditLog['severity'], message: string, details?: string) => void;
   clearAuditLogs: () => void;
-  triggerPanic: (description: string) => Promise<void>;
+  triggerPanic: (description: string, countdownElapsed?: boolean) => Promise<void>;
   triggerFromMasterKey: (submittedKey: string) => Promise<boolean>;
   cancelSOS: () => void;
   resolvePanic: (id: string) => void;
@@ -1898,7 +1898,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     return true;
   },
 
-    triggerPanic: async (description?: string) => {
+    triggerPanic: async (description?: string, countdownElapsed?: boolean) => {
     if (get().activeSOSState !== 'IDLE') return;
     
     // Native Execution Path (Golden Build Standard)
@@ -1906,13 +1906,17 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        try {
            const coords = get().userLocation;
            const primaryContact = get().contacts[0];
+           if (!primaryContact?.phone) {
+             get().addToast('No emergency contact saved - SMS/call cannot be sent. Add a contact in Settings.', 'error');
+           }
            const res = await NativeDispatchService.triggerNativeEmergency({ 
              description: description || 'Distress Signal',
              phone: primaryContact?.phone || '',
              latitude: coords?.lat || 0.0,
              longitude: coords?.lng || 0.0,
              organizationId: get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL',
-             userId: get().currentUser?.id || 'UNKNOWN'
+             userId: get().currentUser?.id || 'UNKNOWN',
+             directDispatch: !!countdownElapsed
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
            get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
@@ -1985,7 +1989,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   triggerSOS: (description?: string, durationSec?: number) => {
     const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
     if (duration === 0) {
-      get().triggerPanic(description || 'Emergency Distress Signal');
+      get().triggerPanic(description || 'Emergency Distress Signal', true);
       return;
     }
 
@@ -2001,7 +2005,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       if (currentCountdown <= 1) {
         clearInterval(timerId);
         set({ panicCountdown: null });
-        get().triggerPanic(description || 'Emergency Distress Signal');
+        get().triggerPanic(description || 'Emergency Distress Signal', true);
       } else {
         set({ panicCountdown: currentCountdown - 1 });
       }
@@ -2018,7 +2022,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   startMultiStagePanic: (description, durationSec) => {
     const duration = durationSec !== undefined ? durationSec : get().sosCountdownDuration;
     if (duration === 0) {
-      get().triggerPanic(description);
+      get().triggerPanic(description, true);
       return;
     }
 
@@ -2034,7 +2038,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       if (currentCountdown <= 1) {
         clearInterval(timerId);
         set({ panicCountdown: null });
-        get().triggerPanic(description);
+        get().triggerPanic(description, true);
       } else {
         set({ panicCountdown: currentCountdown - 1 });
       }
