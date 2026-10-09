@@ -24,7 +24,6 @@ import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
@@ -1354,8 +1353,6 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-y-auto ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       <GlobalBackground />
-      {/* Persistent System Status Bar & Background Notification Tray */}
-      <BackgroundNotificationPanel />
       {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
