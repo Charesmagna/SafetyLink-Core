@@ -75,6 +75,9 @@ public final class EmergencyService {
             // 3. Direct Backend Incident Sync (Cloud + local fallback)
             boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
             String syncStatus = backendOk ? "SYNCED" : "PENDING";
+            if (!backendOk) {
+                com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker.queueOfflineIncident(context, incidentId, lat, lng, body, orgId, triggeredBy);
+            }
 
             boolean overallSuccess = "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || "INITIATED".equals(callStatus) || backendOk;
             DispatchResult result = new DispatchResult(overallSuccess, smsStatus, callStatus, syncStatus);
