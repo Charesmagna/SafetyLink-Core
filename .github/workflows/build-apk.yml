@@ -128,6 +128,7 @@ jobs:
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
+        set +e +o pipefail
         ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
           -PKEYSTORE_PASSWORD="SafetyLink2024!" \
