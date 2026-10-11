@@ -254,9 +254,23 @@ public class EmergencyDispatchPlugin extends Plugin {
             if (cleanPhone.startsWith("0") && cleanPhone.length() == 10) {
                 cleanPhone = "27" + cleanPhone.substring(1);
             }
-            Uri uri = Uri.parse("https://wa.me/" + cleanPhone + "?text=" + Uri.encode(message));
-            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            Intent intent;
+            // Check if WhatsApp app is installed for direct intent
+            Intent waIntent = new Intent(Intent.ACTION_VIEW);
+            waIntent.setData(Uri.parse("whatsapp://send?phone=" + cleanPhone + "&text=" + Uri.encode(message)));
+            waIntent.setPackage("com.whatsapp");
+            waIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (getContext().getPackageManager().resolveActivity(waIntent, 0) != null) {
+                intent = waIntent;
+            } else {
+                // Fallback to wa.me link
+                Uri uri = Uri.parse("https://wa.me/" + cleanPhone + "?text=" + Uri.encode(message));
+                intent = new Intent(Intent.ACTION_VIEW, uri);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            }
+
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();

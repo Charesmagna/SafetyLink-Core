@@ -34,6 +34,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
     public void trigger(PluginCall call) {
         String description = call.getString("description", "Software Emergency SOS Trigger");
         String phone = call.getString("phone", "");
+        String phones = call.getString("phones", "");
         double lat = call.getDouble("latitude", 0.0);
         double lng = call.getDouble("longitude", 0.0);
         String orgId = call.getString("organizationId", "SL-ORG-DEFAULT");
@@ -45,6 +46,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
             intent.setAction(PanicService.ACTION_TRIGGER_PANIC);
             intent.putExtra("description", description);
             intent.putExtra("phone", phone);
+            intent.putExtra("phones", phones);
             intent.putExtra("latitude", lat);
             intent.putExtra("longitude", lng);
             intent.putExtra("orgId", orgId);
