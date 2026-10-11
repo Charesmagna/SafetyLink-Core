@@ -123,6 +123,7 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
+      shell: bash
       run: |
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
@@ -133,7 +134,12 @@ jobs:
           -PKEY_ALIAS="safetylink" \
           -PKEY_PASSWORD="SafetyLink2024!" \
           --init-script ../init.gradle \
-          --no-daemon --no-parallel --no-build-cache
+          --no-daemon --no-parallel --no-build-cache 2>&1 | tee /tmp/gradle-release.log
+        GRADLE_RC=${PIPESTATUS[0]}
+        if [ "$GRADLE_RC" -ne 0 ]; then
+          grep -E "error:|What went wrong|Execution failed|\.java:[0-9]+|\.kt:[0-9]+|Caused by" -A3 /tmp/gradle-release.log | head -30 | while IFS= read -r L; do echo "::error::${L:0:300}"; done
+          exit "$GRADLE_RC"
+        fi
         echo "=== Build output files ==="
         find . -name "*.apk" 2>/dev/null || echo "NO APK FOUND"
         find . -name "*.aab" 2>/dev/null || echo "NO AAB FOUND"
