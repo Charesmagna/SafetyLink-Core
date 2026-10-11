@@ -1920,6 +1920,31 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
            get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
+           if (countdownElapsed) {
+             const usr = get().currentUser;
+             const cloudPayload = {
+               userId: usr?.id || 'UNKNOWN',
+               org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
+               orgId: get().currentOrg?.id || null,
+               latitude: coords?.lat || 0,
+               longitude: coords?.lng || 0,
+               phone: usr?.phone || primaryContact?.phone || '',
+               callerName: usr?.fullName || usr?.username || 'SafetyLink User',
+               callerNumber: usr?.phone || '',
+               emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
+               description: description || 'Emergency Distress Signal',
+               isDrill: false
+             };
+             fetch('https://safetylink.online/api/panic', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(cloudPayload)
+             }).then(r => {
+               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status}`);
+             }).catch(err => {
+               get().addAuditLog('SECURITY', 'SEVERE', 'Cloud Dispatch Unreachable', String(err));
+             });
+           }
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');

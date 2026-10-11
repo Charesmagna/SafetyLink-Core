@@ -6,6 +6,7 @@ import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
+import SimAndApiSettings from './SimAndApiSettings';
 
 export const Settings: React.FC = () => {
   const { 
@@ -664,6 +665,8 @@ export const Settings: React.FC = () => {
 
 
       
+      <SimAndApiSettings />
+
       {/* Fleet, Camera, & Drone Integrations */}
       <div className="space-y-4 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
