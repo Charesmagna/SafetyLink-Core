@@ -17,7 +17,6 @@ import android.widget.RemoteViews;
 import androidx.core.app.NotificationCompat;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
-import com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker;
 
 /**
  * SafelinkForegroundService
@@ -81,13 +80,8 @@ public class SafelinkForegroundService extends Service {
                     break;
 
                 case ACTION_MINI_SYNC:
-                    try {
-                        OneTimeWorkRequest syncRequest = new OneTimeWorkRequest.Builder(OfflineSyncWorker.class).build();
-                        WorkManager.getInstance(this).enqueue(syncRequest);
-                        Log.i(TAG, "Enqueued OfflineSyncWorker from notification mini-app");
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to enqueue sync: " + e.getMessage());
-                    }
+                    // OfflineSyncWorker (Kotlin) is not compiled in this build; sync is a no-op until Kotlin is enabled.
+                    Log.i(TAG, "Mini sync requested (no-op)");
                     break;
 
                 case ACTION_MINI_CHECKIN:
