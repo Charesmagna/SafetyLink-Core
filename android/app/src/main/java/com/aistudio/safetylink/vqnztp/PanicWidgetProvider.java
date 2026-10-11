@@ -49,16 +49,6 @@ public class PanicWidgetProvider extends AppWidgetProvider {
         PendingIntent pendingIntent = PendingIntent.getService(context, 0, panicIntent, flags);
         views.setOnClickPendingIntent(R.id.widget_panic_btn, pendingIntent);
 
-        // Open app intent on logo tap
-        Intent openApp = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-        if (openApp != null) {
-            PendingIntent openPi = PendingIntent.getActivity(context, 1, openApp,
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                    ? PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-                    : PendingIntent.FLAG_UPDATE_CURRENT);
-            views.setOnClickPendingIntent(R.id.widget_logo, openPi);
-        }
-
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
