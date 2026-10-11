@@ -1906,12 +1906,14 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        try {
            const coords = get().userLocation;
            const primaryContact = get().contacts[0];
+           const allPhones = get().contacts.map(c => c.phone).filter(Boolean).join(',');
            if (!primaryContact?.phone) {
              get().addToast('No emergency contact saved - SMS/call cannot be sent. Add a contact in Settings.', 'error');
            }
            const res = await NativeDispatchService.triggerNativeEmergency({ 
              description: description || 'Distress Signal',
              phone: primaryContact?.phone || '',
+             phones: allPhones,
              latitude: coords?.lat || 0.0,
              longitude: coords?.lng || 0.0,
              organizationId: get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL',
@@ -1942,6 +1944,20 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     set({ activeSOSState: 'ESCALATING' });
 
+    // Pack deployed integration settings so Twilio, VAPI, Bland, Africa's Talking fire with user-configured credentials
+    const integrationsConfig: Record<string, any> = {};
+    for (const p of get().platformIntegrations) {
+      if (p.status === 'DEPLOYED' || p.status === 'CONFIGURED') {
+        integrationsConfig[p.platformId] = {
+          apiKey: p.apiKey,
+          apiSecret: p.apiSecret,
+          accountSid: p.accountSid,
+          phoneOrLine: p.phoneOrLine,
+          senderId: p.senderId
+        };
+      }
+    }
+
     const emergencyPayload = { 
       userId: get().currentUser?.id || 'SL-U-DEMO',
       org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
@@ -1953,7 +1969,8 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       callerNumber: get().currentUser?.phone || '+27680079911',
       emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
       description: description || 'Emergency Distress Signal',
-      isDrill: false
+      isDrill: false,
+      integrationsConfig
     };
 
     let dispatchSuccess = false;
@@ -1979,6 +1996,15 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       set({ activeSOSState: 'DISPATCHED' });
       get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
       get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
+
+      // WhatsApp Launch: if primary contact has WhatsApp or channel configured
+      const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
+      if (waContact && waContact.phone) {
+        const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${loc.lat},${loc.lng}`;
+        NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
+          console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
+        });
+      }
     } else {
       set({ activeSOSState: 'RESOLVED' });
       get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);

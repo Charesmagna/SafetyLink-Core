@@ -1273,8 +1273,22 @@ Rules:
         callerName, 
         callerNumber, 
         emergencyContacts, 
-        description 
+        description,
+        integrationsConfig
       } = req.body;
+
+      // Extract credentials from deployed integrations config or fallback to process.env
+      const activeTwilioSid = integrationsConfig?.twilio?.accountSid || TWILIO_ACCOUNT_SID;
+      const activeTwilioToken = integrationsConfig?.twilio?.apiSecret || TWILIO_AUTH_TOKEN;
+      const activeTwilioPhone = integrationsConfig?.twilio?.phoneOrLine || TWILIO_PHONE_NUMBER;
+
+      const activeVapiApiKey = integrationsConfig?.vapi?.apiKey || VAPI_PRIVATE_KEY;
+      const activeVapiPhoneId = integrationsConfig?.vapi?.phoneOrLine || VAPI_PHONE_NUMBER_ID;
+
+      const activeBlandApiKey = integrationsConfig?.bland_ai?.apiKey || BLAND_API_KEY;
+
+      const activeAtApiKey = integrationsConfig?.africas_talking?.apiKey || AT_API_KEY;
+      const activeAtUsername = integrationsConfig?.africas_talking?.senderId || AT_USERNAME;
 
       const effectivePhone = phone || callerNumber || TEST_DESTINATION_NUMBER;
       const effectiveName = callerName || "SafetyLink Active User";
@@ -1352,18 +1366,18 @@ Rules:
       console.log(`[Universal Dispatch] Firing emergency alert to ${targetNumbers.size} recipients.`);
 
       // 4. DISPATCH: Africa's Talking SMS (Zero-fail direct South African cellular route)
-      if (AT_API_KEY) {
+      if (activeAtApiKey) {
         for (const num of targetNumbers) {
           try {
             const atParams = new URLSearchParams({
-              username: AT_USERNAME,
+              username: activeAtUsername,
               to: num,
               message: smsBody,
             });
             fetch('https://api.africastalking.com/version1/messaging', {
               method: 'POST',
               headers: {
-                'apiKey': AT_API_KEY,
+                'apiKey': activeAtApiKey,
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Accept': 'application/json'
               },
@@ -1376,22 +1390,22 @@ Rules:
       }
 
       // 5. DISPATCH: Twilio SMS & Calls
-      if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+      if (activeTwilioSid && activeTwilioToken) {
         try {
-          const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+          const twilioClient = twilio(activeTwilioSid, activeTwilioToken);
           for (const num of targetNumbers) {
             // SMS
-            twilioClient.messages.create({ body: smsBody, from: TWILIO_PHONE_NUMBER, to: num })
+            twilioClient.messages.create({ body: smsBody, from: activeTwilioPhone, to: num })
               .catch(e => console.warn('[Twilio SMS error]:', e.message));
             
             // Voice
-            twilioClient.calls.create({ twiml: twimlVoice, from: TWILIO_PHONE_NUMBER, to: num })
+            twilioClient.calls.create({ twiml: twimlVoice, from: activeTwilioPhone, to: num })
               .catch(e => console.warn('[Twilio Voice error]:', e.message));
 
             // WhatsApp
             twilioClient.messages.create({ 
               body: smsBody, 
-              from: `whatsapp:${TWILIO_PHONE_NUMBER}`, 
+              from: `whatsapp:${activeTwilioPhone}`, 
               to: `whatsapp:${num}` 
             }).catch(e => console.warn('[Twilio WhatsApp error]:', e.message));
           }
@@ -1401,17 +1415,17 @@ Rules:
       }
 
       // 6. DISPATCH: VAPI AI Outbound Emergency Phone Call (Intelligent Voice Verification)
-      if (VAPI_PRIVATE_KEY && VAPI_PHONE_NUMBER_ID) {
+      if (activeVapiApiKey && activeVapiPhoneId) {
         for (const num of targetNumbers) {
           try {
             fetch('https://api.vapi.ai/call', {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${VAPI_PRIVATE_KEY}`,
+                'Authorization': `Bearer ${activeVapiApiKey}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                phoneNumberId: VAPI_PHONE_NUMBER_ID,
+                phoneNumberId: activeVapiPhoneId,
                 customer: { number: num },
                 assistantId: VAPI_ASSISTANT_ID,
                 assistantOverrides: {
@@ -1426,7 +1440,7 @@ Rules:
       }
 
       // 7. DISPATCH: Bland AI Emergency Call
-      if (BLAND_API_KEY) {
+      if (activeBlandApiKey) {
         for (const num of targetNumbers) {
           const blandData = {
             "phone_number": num,
@@ -1440,7 +1454,7 @@ Rules:
           };
           fetch('https://api.bland.ai/v1/calls', {
             method: 'POST',
-            headers: { 'Authorization': BLAND_API_KEY, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': activeBlandApiKey, 'Content-Type': 'application/json' },
             body: JSON.stringify(blandData)
           }).catch(e => console.warn('[Bland AI error]:', e.message));
         }

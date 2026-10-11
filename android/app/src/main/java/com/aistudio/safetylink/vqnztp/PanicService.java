@@ -49,6 +49,7 @@ public class PanicService extends Service {
     private PowerManager.WakeLock wakeLock;
 
     private String pendingPhone = "+27816738186";
+    private String pendingPhones = "";
     private String pendingDescription = "Sequential Emergency SOS Trigger";
     private double pendingLat = 0.0;
     private double pendingLng = 0.0;
@@ -85,6 +86,7 @@ public class PanicService extends Service {
 
             if (ACTION_TRIGGER_PANIC.equals(action)) {
                 if (intent.hasExtra("phone")) pendingPhone = intent.getStringExtra("phone");
+                if (intent.hasExtra("phones")) pendingPhones = intent.getStringExtra("phones");
                 if (intent.hasExtra("description")) pendingDescription = intent.getStringExtra("description");
                 if (intent.hasExtra("latitude")) pendingLat = intent.getDoubleExtra("latitude", 0.0);
                 if (intent.hasExtra("longitude")) pendingLng = intent.getDoubleExtra("longitude", 0.0);
@@ -168,6 +170,7 @@ public class PanicService extends Service {
         EmergencyService.getInstance().dispatchEmergency(
                 this,
                 pendingPhone,
+                pendingPhones,
                 pendingDescription,
                 incidentId,
                 pendingLat,
