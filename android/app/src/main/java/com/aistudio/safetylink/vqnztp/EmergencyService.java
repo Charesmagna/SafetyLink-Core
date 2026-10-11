@@ -5,7 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.content.SharedPreferences;
 import android.util.Log;
 import org.json.JSONObject;
 import java.io.OutputStream;
@@ -28,6 +34,69 @@ public final class EmergencyService {
     private static final String BACKEND_FALLBACK_URL = "http://10.0.2.2:3000";
     private static volatile EmergencyService instance;
     private final ExecutorService executor = Executors.newCachedThreadPool();
+
+
+    // ---- Dual-SIM support ----
+    public static final String PREFS = "safetylink_prefs";
+    public static final String PREF_SIM_SUB_ID = "preferred_sim_sub_id";
+
+    public static int getPreferredSubId(Context ctx) {
+        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(PREF_SIM_SUB_ID, -1);
+    }
+
+    public static void setPreferredSubId(Context ctx, int subId) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(PREF_SIM_SUB_ID, subId).apply();
+    }
+
+    @SuppressWarnings("MissingPermission")
+    public static SmsManager smsManagerFor(Context ctx) {
+        int subId = getPreferredSubId(ctx);
+        try {
+            if (subId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    SmsManager base = ctx.getSystemService(SmsManager.class);
+                    if (base != null) return base.createForSubscriptionId(subId);
+                } else {
+                    return SmsManager.getSmsManagerForSubscriptionId(subId);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Preferred SIM SMS manager unavailable, using default: " + e.getMessage());
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return ctx.getSystemService(SmsManager.class);
+        return SmsManager.getDefault();
+    }
+
+    /** Attaches the preferred SIM's PhoneAccountHandle to a call intent. Silent no-op if unavailable. */
+    @SuppressWarnings("MissingPermission")
+    public static void applyPreferredSim(Context ctx, Intent callIntent) {
+        int subId = getPreferredSubId(ctx);
+        if (subId < 0) return;
+        try {
+            PhoneAccountHandle handle = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+                if (tm != null) {
+                    TelephonyManager sim = tm.createForSubscriptionId(subId);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) handle = sim.getPhoneAccountHandle();
+                }
+            }
+            if (handle == null) {
+                SubscriptionManager sm = (SubscriptionManager) ctx.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                TelecomManager tc = (TelecomManager) ctx.getSystemService(Context.TELECOM_SERVICE);
+                SubscriptionInfo info = sm != null ? sm.getActiveSubscriptionInfo(subId) : null;
+                if (info != null && tc != null) {
+                    for (PhoneAccountHandle h : tc.getCallCapablePhoneAccounts()) {
+                        String id = h.getId();
+                        if (id != null && (id.equals(info.getIccId()) || id.equals(String.valueOf(subId)))) { handle = h; break; }
+                    }
+                }
+            }
+            if (handle != null) callIntent.putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+        } catch (Exception e) {
+            Log.w(TAG, "Could not apply preferred SIM to call: " + e.getMessage());
+        }
+    }
 
     private EmergencyService() {}
 
@@ -93,6 +162,7 @@ public final class EmergencyService {
             Intent callIntent = new Intent(Intent.ACTION_CALL);
             callIntent.setData(Uri.parse("tel:" + toNumber.trim()));
             callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            applyPreferredSim(context, callIntent);
             context.startActivity(callIntent);
             Log.i(TAG, "Native ACTION_CALL placed to: " + toNumber);
             return "INITIATED";
@@ -119,12 +189,7 @@ public final class EmergencyService {
             return "UNAVAILABLE";
         }
         try {
-            SmsManager smsManager;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                smsManager = context.getSystemService(SmsManager.class);
-            } else {
-                smsManager = SmsManager.getDefault();
-            }
+            SmsManager smsManager = smsManagerFor(context);
 
             if (smsManager == null) {
                 Log.w(TAG, "SmsManager is not available on this device");

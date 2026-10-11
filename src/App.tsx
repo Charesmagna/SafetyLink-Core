@@ -1012,7 +1012,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
+              className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-slate-950/95 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-[60] overflow-y-auto"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">

@@ -4,6 +4,15 @@ export interface EmergencyDispatchPlugin {
   sendSms(options: { phone: string; message: string }): Promise<{ sent: boolean; error?: string }>;
   placeCall(options: { phone: string }): Promise<{ dialed: boolean; error?: string }>;
   openWhatsApp(options: { phone: string; message: string }): Promise<{ opened: boolean; requiresManualSend: boolean; error?: string }>;
+  getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }>;
+  setPreferredSim(options: { subscriptionId: number }): Promise<{ preferredSubscriptionId: number }>;
+}
+
+export interface SimCardInfo {
+  subscriptionId: number;
+  slot: number;
+  carrier: string;
+  label: string;
 }
 
 export interface SafetyLinkEmergencyPlugin {
@@ -148,6 +157,20 @@ export class NativeDispatchService {
       });
       return { success: false, simulated: false, error: e instanceof Error ? e.message : String(e), status: 'FAILED' };
     }
+  }
+
+  static async getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }> {
+    if (!this.isNative) return { sims: [], preferredSubscriptionId: -1 };
+    try {
+      return await NativeEmergencyDispatch.getSimCards();
+    } catch (e) {
+      return { sims: [], preferredSubscriptionId: -1, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  static async setPreferredSim(subscriptionId: number): Promise<void> {
+    if (!this.isNative) return;
+    await NativeEmergencyDispatch.setPreferredSim({ subscriptionId });
   }
 
   static async toggleFloatingWidget(enable: boolean): Promise<{ enabled: boolean; needsPermission?: boolean }> {
