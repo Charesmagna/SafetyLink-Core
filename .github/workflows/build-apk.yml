@@ -138,7 +138,7 @@ jobs:
           --no-daemon --no-parallel --no-build-cache 2>&1 | tee /tmp/gradle-release.log
         GRADLE_RC=${PIPESTATUS[0]}
         if [ "$GRADLE_RC" -ne 0 ]; then
-          grep -E "error:|What went wrong|Execution failed|\.java:[0-9]+|\.kt:[0-9]+|Caused by" -A3 /tmp/gradle-release.log | head -30 | while IFS= read -r L; do echo "::error::${L:0:300}"; done
+          grep -E "error:|^e: |What went wrong|Execution failed|Caused by|Could not|FAILURE" -A4 /tmp/gradle-release.log | head -30 | while IFS= read -r L; do echo "::error::${L:0:300}"; done
           exit "$GRADLE_RC"
         fi
         echo "=== Build output files ==="
