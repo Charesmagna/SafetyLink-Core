@@ -1,0 +1,41 @@
+name: Add Email DNS Records
+on:
+  workflow_dispatch:
+
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upsert email DNS records in Cloudflare
+        env:
+          CF_DNS_TOKEN: ${{ secrets.CF_DNS_TOKEN }}
+          ZONE_NAME: safetylink.online
+        run: |
+          if [ -z "$CF_DNS_TOKEN" ]; then echo "::error::Add GitHub Secret CF_DNS_TOKEN (Cloudflare token with Zone > DNS > Edit for safetylink.online)"; exit 1; fi
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.parse
+          T = os.environ["CF_DNS_TOKEN"]; Z = os.environ["ZONE_NAME"]
+          RECORDS = [{"type": "CNAME", "name": "_dmarc.safetylink.online", "content": "_dmarc.ibesecurity.com"}, {"type": "CNAME", "name": "tracking.ib61675.safetylink.online", "content": "emailtracking.email-messaging.com"}, {"type": "TXT", "name": "ib-smtp1._domainkey.safetylink.online", "content": "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQClSje6zfjbsHGjfYD/w9RKgey43OdM6b/lFLnOO6UEIxPulTvd/PWV9Qp+UhQrP/jrLYbOxBhK8zJm/EUK00p+UMCXFTt6rUOFsmi/MZUjXHctPOqu+qsQiLNex01V9bsxxGcuE810WTRjjRynwY+gopyW7bgZ5eKbHOTUZ4EplQIDAQAB"}, {"type": "CNAME", "name": "ib61675.safetylink.online", "content": "ib61675_safetylink_online.envelope2.email-messaging.com"}]
+          def api(method, path, body=None):
+              req = urllib.request.Request("https://api.cloudflare.com/client/v4" + path, method=method,
+                  data=json.dumps(body).encode() if body is not None else None,
+                  headers={"Authorization": "Bearer " + T, "Content-Type": "application/json"})
+              try:
+                  return json.load(urllib.request.urlopen(req))
+              except urllib.error.HTTPError as e:
+                  return json.load(e)
+          z = api("GET", "/zones?name=" + Z)
+          if not z.get("success") or not z["result"]:
+              print("::error::Zone lookup failed:", z.get("errors")); raise SystemExit(1)
+          zid = z["result"][0]["id"]; bad = 0
+          for r in RECORDS:
+              q = api("GET", "/zones/%s/dns_records?type=%s&name=%s" % (zid, r["type"], urllib.parse.quote(r["name"])))
+              body = {"type": r["type"], "name": r["name"], "content": r["content"], "ttl": 1}
+              if r["type"] == "CNAME": body["proxied"] = False
+              ex = q.get("result") or []
+              res = api("PUT", "/zones/%s/dns_records/%s" % (zid, ex[0]["id"]), body) if ex else api("POST", "/zones/%s/dns_records" % zid, body)
+              ok = res.get("success")
+              print(("updated " if ex else "created ") + r["type"], r["name"], "OK" if ok else res.get("errors"))
+              bad += 0 if ok else 1
+          raise SystemExit(1 if bad else 0)
+          PY
