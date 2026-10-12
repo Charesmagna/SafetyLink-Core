@@ -22,6 +22,7 @@ export interface Env {
   AT_USERNAME: string;
   // Bland.ai
   BLAND_API_KEY: string;
+  TWILIO_WHATSAPP_FROM?: string;
   // Paystack
   PAYSTACK_SECRET_KEY: string;
   PAYSTACK_PUBLIC_KEY: string;
@@ -107,91 +108,123 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
 }
 
 // ── EMERGENCY DISPATCH ────────────────────────────────────────────────────────
-async function fireAllAlerts(env: Env, { callerNumber, callerName, lat, lng, address }: {
-  callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
-}) {
+type AlertResult = { channel: string; provider: string; to: string; ok: boolean; status?: number; detail?: string };
+
+const normalizePhone = (raw: string): string => {
+  let n = String(raw || '').replace(/[^0-9+]/g, '');
+  if (!n) return '';
+  if (n.startsWith('+')) return n;
+  if (n.startsWith('00')) return '+' + n.slice(2);
+  if (n.startsWith('0') && n.length === 10) return '+27' + n.slice(1);
+  if (n.startsWith('27')) return '+' + n;
+  return '+' + n;
+};
+
+async function fireAllAlerts(
+  env: Env,
+  { callerNumber, callerName, lat, lng, address, extraContacts = [], skipVoiceTo = [], providers = {} }: {
+    callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
+    extraContacts?: string[]; skipVoiceTo?: string[]; providers?: any;
+  }
+): Promise<AlertResult[]> {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
-  const smsBody = `🚨 SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\n📍 ${location}\n${mapsLink}`;
+  const smsBody = `SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\nLocation: ${location}\n${mapsLink}`.slice(0, 600);
 
-  const contacts = [
-    env.RESPONSE_CENTRE_NUMBER || '+27739441222',
-  ];
+  // Per-user keys (entered in app Settings) override server secrets
+  const tw = { sid: providers?.twilio?.sid || env.TWILIO_SID, token: providers?.twilio?.token || env.TWILIO_AUTH_TOKEN, from: providers?.twilio?.from || env.TWILIO_NUMBER, waFrom: providers?.twilio?.waFrom || (env as any).TWILIO_WHATSAPP_FROM || providers?.twilio?.from || env.TWILIO_NUMBER };
+  const vp = { key: providers?.vapi?.key || env.VAPI_PRIVATE_KEY, phoneId: providers?.vapi?.phoneNumberId || env.VAPI_PHONE_NUMBER_ID, assistantId: providers?.vapi?.assistantId || env.VAPI_ASSISTANT_ID };
+  const at = { key: providers?.at?.key || env.AT_API_KEY, username: providers?.at?.username || env.AT_USERNAME };
+  const bl = { key: providers?.bland?.key || env.BLAND_API_KEY };
 
-  const jobs: Promise<any>[] = [];
+  const all = Array.from(new Set([
+    ...extraContacts.map(normalizePhone),
+    normalizePhone(env.RESPONSE_CENTRE_NUMBER || '+27739441222'),
+  ].filter(Boolean)));
+  const skipVoice = new Set(skipVoiceTo.map(normalizePhone));
+  const voiceTargets = all.filter(n => !skipVoice.has(n));
 
-  // ── Twilio SMS to all contacts ──
-  if (env.TWILIO_SID && env.TWILIO_AUTH_TOKEN) {
-    const auth = btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`);
-    for (const to of contacts) {
-      jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
+  const results: AlertResult[] = [];
+  const attempt = async (channel: string, provider: string, to: string, fn: () => Promise<Response>): Promise<boolean> => {
+    try {
+      const r = await fn();
+      const text = (await r.text().catch(() => '')).slice(0, 180);
+      results.push({ channel, provider, to, ok: r.ok, status: r.status, detail: r.ok ? undefined : text });
+      if (!r.ok) console.error(`[${provider} ${channel}] ${r.status} ${text}`);
+      return r.ok;
+    } catch (e: any) {
+      results.push({ channel, provider, to, ok: false, detail: String(e?.message || e).slice(0, 180) });
+      console.error(`[${provider} ${channel}]`, e);
+      return false;
+    }
+  };
+
+  const twAuth = tw.sid && tw.token ? btoa(`${tw.sid}:${tw.token}`) : '';
+  const twPost = (path: string, params: Record<string, string>) =>
+    fetch(`https://api.twilio.com/2010-04-01/Accounts/${tw.sid}/${path}.json`, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${twAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(params).toString(),
+    });
+
+  const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
+
+  await Promise.allSettled(all.map(async (to) => {
+    // SMS: Twilio first, Africa's Talking as backup
+    let smsOk = false;
+    if (twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
+    if (!smsOk && at.key && at.username) {
+      await attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
         method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ From: env.TWILIO_NUMBER, To: to, Body: smsBody }).toString(),
-      }).catch(e => console.error('[Twilio SMS]', e)));
+        headers: { apiKey: at.key, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: at.username, to, message: smsBody }).toString(),
+      }));
     }
 
-    // ── Twilio Voice Call ──
-    const twiml = `<Response><Say voice="alice">SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic from ${location}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">Repeating. SafetyLink emergency. ${callerName || 'User'} needs help. Location: ${location}.</Say></Response>`;
-    for (const to of contacts) {
-      jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Calls.json`, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ From: env.TWILIO_NUMBER, To: to, Twiml: twiml }).toString(),
-      }).catch(e => console.error('[Twilio Voice]', e)));
+    // WhatsApp via Twilio (needs a WhatsApp-enabled sender or the sandbox joined by the recipient)
+    if (twAuth && tw.waFrom) {
+      await attempt('WHATSAPP', 'twilio', to, () => twPost('Messages', { From: `whatsapp:${tw.waFrom}`, To: `whatsapp:${to}`, Body: smsBody }));
     }
 
-    // ── WhatsApp ──
-    for (const to of contacts) {
-      jobs.push(fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/Messages.json`, {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ From: `whatsapp:${env.TWILIO_NUMBER}`, To: `whatsapp:${to}`, Body: smsBody }).toString(),
-      }).catch(e => console.error('[WhatsApp]', e)));
-    }
-  }
-
-  // ── VAPI AI Voice Call ──
-  if (env.VAPI_PRIVATE_KEY && env.VAPI_PHONE_NUMBER_ID) {
-    for (const to of contacts) {
-      jobs.push(fetch('https://api.vapi.ai/call', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${env.VAPI_PRIVATE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumberId: env.VAPI_PHONE_NUMBER_ID,
-          customer: { number: to },
-          assistant: {
-            firstMessage: `This is SafetyLink AI. ${callerName || 'A registered user'} has triggered a panic alert. Their location is ${location}. Please respond immediately.`,
+    // Voice: ONE call per number. Vapi (AI) -> Twilio voice -> Bland, stopping at first success
+    if (voiceTargets.includes(to)) {
+      let called = false;
+      if (vp.key && vp.phoneId) {
+        const body: any = { phoneNumberId: vp.phoneId, customer: { number: to } };
+        if (vp.assistantId) {
+          body.assistantId = vp.assistantId;
+          body.assistantOverrides = { firstMessage: `This is SafetyLink. ${callerName || 'A registered user'} has triggered a panic alert. Location: ${location}. Please respond immediately.` };
+        } else {
+          body.assistant = {
+            firstMessage: `This is SafetyLink. ${callerName || 'A registered user'} has triggered a panic alert. Location: ${location}. Please respond immediately.`,
             model: { provider: 'openai', model: 'gpt-4o-mini', temperature: 0.2 },
             voice: { provider: '11labs', voiceId: '21m00Tcm4TlvDq8ikWAM' },
             maxDurationSeconds: 60,
-          },
-        }),
-      }).catch(e => console.error('[VAPI]', e)));
+          };
+        }
+        called = await attempt('VOICE', 'vapi', to, () => fetch('https://api.vapi.ai/call', {
+          method: 'POST', headers: { Authorization: `Bearer ${vp.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        }));
+      }
+      if (!called && twAuth && tw.from) {
+        called = await attempt('VOICE', 'twilio', to, () => twPost('Calls', { From: tw.from, To: to, Twiml: `<Response><Say voice="alice">${spoken}</Say><Pause length="1"/><Say voice="alice">${spoken}</Say></Response>` }));
+      }
+      if (!called && bl.key && bl.key !== 'not_provided') {
+        await attempt('VOICE', 'bland', to, () => fetch('https://api.bland.ai/v1/calls', {
+          method: 'POST', headers: { authorization: bl.key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: to, task: `Tell the person: ${spoken} Then ask them to confirm they will respond.`, max_duration: 2, wait_for_greeting: true }),
+        }));
+      }
     }
-  }
+  }));
 
-  // ── Africa's Talking SMS ──
-  if (env.AT_API_KEY && env.AT_USERNAME) {
-    for (const to of contacts) {
-      jobs.push(fetch('https://api.africastalking.com/version1/messaging', {
-        method: 'POST',
-        headers: { apiKey: env.AT_API_KEY, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username: env.AT_USERNAME, to, message: smsBody }).toString(),
-      }).catch(e => console.error('[AT SMS]', e)));
-    }
-  }
-
-  // ── Pipedream Webhook ──
   if (env.PIPEDREAM_WEBHOOK_URL) {
-    jobs.push(fetch(env.PIPEDREAM_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await attempt('WEBHOOK', 'pipedream', 'n/a', () => fetch(env.PIPEDREAM_WEBHOOK_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ event: 'PANIC_TRIGGERED', callerNumber, callerName, location, lat, lng, timestamp: new Date().toISOString() }),
-    }).catch(() => {}));
+    }));
   }
-
-  await Promise.allSettled(jobs);
+  return results;
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
@@ -324,27 +357,44 @@ app.post('/api/login', handleLogin);
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
-  const { userId, orgId, lat, lng, callerName, callerNumber } = (await c.req.json()) as any;
-  if (!orgId && !callerNumber) return c.json({ error: 'Missing fields' }, 400);
+  const body = (await c.req.json()) as any;
+  const { userId, orgId, callerName, callerNumber } = body;
+  const lat = body.lat ?? body.latitude;
+  const lng = body.lng ?? body.longitude;
+  const contactNumbers: string[] = Array.isArray(body.emergencyContacts) ? body.emergencyContacts.map((x: any) => x?.phone).filter(Boolean) : [];
+  const origin = c.req.header('Origin') || '';
+  if (!orgId && !callerNumber && contactNumbers.length === 0) return c.json({ error: 'Missing fields' }, 400);
 
   const address = lat ? await reverseGeocode(lat, lng) : 'Location unknown';
   const now = Date.now();
 
-  // Log to D1
-  await c.env.DB!.prepare(
+  await c.env.DB?.prepare(
     'INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
   ).bind(crypto.randomUUID(), orgId || null, userId || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
 
   if (userId && orgId) {
-    await c.env.DB!.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
+    await c.env.DB?.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
       .bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
-  // Fire all alerts in background
-  c.executionCtx.waitUntil(fireAllAlerts(c.env, { callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address }));
-
-  return c.json({ ok: true, address });
+  const results = await fireAllAlerts(c.env, {
+    callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address,
+    extraContacts: contactNumbers,
+    skipVoiceTo: Array.isArray(body.skipVoiceTo) ? body.skipVoiceTo : [],
+    providers: body.providers || {},
+  });
+  return c.json({ ok: results.some(r => r.ok), address, results });
 });
+
+// Which providers have keys loaded (no secret values returned)
+app.get('/api/health/providers', (c) => c.json({
+  twilio: !!(c.env.TWILIO_SID && c.env.TWILIO_AUTH_TOKEN && c.env.TWILIO_NUMBER),
+  vapi: !!(c.env.VAPI_PRIVATE_KEY && c.env.VAPI_PHONE_NUMBER_ID),
+  vapiAssistant: !!c.env.VAPI_ASSISTANT_ID,
+  africasTalking: !!(c.env.AT_API_KEY && c.env.AT_USERNAME),
+  bland: !!(c.env.BLAND_API_KEY && c.env.BLAND_API_KEY !== 'not_provided'),
+  responseCentre: !!c.env.RESPONSE_CENTRE_NUMBER,
+}));
 
 // ── USSD (Africa's Talking) ───────────────────────────────────────────────────
 app.post('/api/ussd', async (c) => {
