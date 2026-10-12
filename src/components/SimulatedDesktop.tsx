@@ -144,146 +144,19 @@ export const SimulatedDesktop: React.FC = () => {
           </div>
         </div>
 
-        {/* PERSISTENT SYSTEM NOTIFICATION / MINI APP BAR (The requested feature) */}
-        <motion.div 
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: 'spring', delay: 0.1 }}
-          className="bg-slate-900/90 backdrop-blur-xl border-2 border-slate-800 rounded-[28px] overflow-hidden shadow-2xl relative z-20"
-        >
-          {/* Header of the notification tray */}
-          <div className="bg-slate-950/80 px-4 py-3 border-b border-slate-800/80 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <SafetyLinkLogo size={20} glowColor={isBackgroundServiceRunning ? '#10b981' : '#ef4444'} />
-              <div>
-                <span className="text-[10px] font-black text-slate-100 uppercase tracking-wider block">SafetyLink Mini App</span>
-                <span className="text-[7.5px] text-slate-500 uppercase tracking-widest font-bold">Connectivity Keep-Alive</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[7.5px] bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-black tracking-widest font-mono uppercase">
-                ACTIVE
-              </span>
-            </div>
+        {/* Native Android Hardware Status Banner */}
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 flex items-center justify-between text-slate-400 font-mono text-[9px] relative z-20">
+          <div className="flex items-center gap-2">
+            <SafetyLinkLogo size={16} glowColor={isBackgroundServiceRunning ? '#10b981' : '#ef4444'} />
+            <span className="font-bold text-slate-200">SAFETYLINK RESILIENT CORE</span>
           </div>
-
-          {/* Mini App Content */}
-          <div className="p-4 space-y-4">
-            {/* Real-time Status Bars */}
-            <div className="grid grid-cols-4 gap-2 text-center text-slate-300">
-              <div className="bg-slate-950/60 border border-slate-800/60 p-2 rounded-2xl flex flex-col justify-between items-center h-16">
-                <span className="text-[7px] text-slate-500 uppercase font-black block">BLE Device</span>
-                <Radio className={`w-4 h-4 ${hasBleConnection ? 'text-blue-400 animate-pulse' : 'text-slate-600'}`} />
-                <span className={`text-[8px] font-extrabold ${hasBleConnection ? 'text-blue-400' : 'text-slate-500'}`}>
-                  {hasBleConnection ? 'OK' : 'DISCONNECTED'}
-                </span>
-              </div>
-
-              <div className="bg-slate-950/60 border border-slate-800/60 p-2 rounded-2xl flex flex-col justify-between items-center h-16">
-                <span className="text-[7px] text-slate-500 uppercase font-black block">GNSS Locks</span>
-                <MapPin className={`w-4 h-4 ${hasGps ? 'text-teal-400' : 'text-slate-600'}`} />
-                <span className={`text-[8px] font-extrabold ${hasGps ? 'text-teal-400' : 'text-slate-500'}`}>
-                  {hasGps ? 'GPS ACTIVE' : 'SEARCHING'}
-                </span>
-              </div>
-
-              <div className="bg-slate-950/60 border border-slate-800/60 p-2 rounded-2xl flex flex-col justify-between items-center h-16">
-                <span className="text-[7px] text-slate-500 uppercase font-black block">IoT Gateway</span>
-                <Wifi className={`w-4 h-4 ${hasGateway ? 'text-emerald-400' : 'text-slate-600'}`} />
-                <span className={`text-[8px] font-extrabold ${hasGateway ? 'text-emerald-400' : 'text-slate-500'}`}>
-                  {hasGateway ? 'MQTT UP' : 'OFF'}
-                </span>
-              </div>
-
-              <div className="bg-slate-950/60 border border-slate-800/60 p-2 rounded-2xl flex flex-col justify-between items-center h-16">
-                <span className="text-[7px] text-slate-500 uppercase font-black block">GSM Network</span>
-                <Signal className="w-4 h-4 text-amber-400" />
-                <span className="text-[8px] font-extrabold text-amber-400">MTN-SA OK</span>
-              </div>
-            </div>
-
-            {/* Simulated Live Connectivity Tests & Diagnostic Module */}
-            <div className="bg-slate-950/70 border border-slate-850 p-3 rounded-2xl space-y-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-[8.5px] text-slate-400 font-bold uppercase tracking-wider">⚡ Immediate Actions</span>
-                <button 
-                  onClick={runDiagnostics}
-                  disabled={diagnosticsRunning}
-                  className="text-[8px] font-bold bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white border border-blue-500/20 px-2 py-0.5 rounded-lg transition-all"
-                >
-                  {diagnosticsRunning ? 'RUNNING SWEEP...' : 'RUN FULL SWEEP'}
-                </button>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  onClick={handlePingGateway}
-                  disabled={pinging}
-                  className="py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[8.5px] rounded-xl text-slate-300 hover:text-white transition-all text-center flex items-center justify-center gap-1"
-                >
-                  <RefreshCw className={`w-3 h-3 ${pinging ? 'animate-spin text-blue-400' : 'text-slate-500'}`} />
-                  <span>{pingResult || 'Ping Gateway'}</span>
-                </button>
-
-                <button
-                  onClick={handleForceGps}
-                  disabled={gpsRefreshing}
-                  className="py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[8.5px] rounded-xl text-slate-300 hover:text-white transition-all text-center flex items-center justify-center gap-1"
-                >
-                  <Navigation className={`w-3 h-3 ${gpsRefreshing ? 'animate-bounce text-teal-400' : 'text-slate-500'}`} />
-                  <span>{gpsRefreshing ? 'Syncing...' : 'Sync GPS'}</span>
-                </button>
-
-                <button
-                  onClick={handleSmsTest}
-                  disabled={smsTesting}
-                  className="py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[8.5px] rounded-xl text-slate-300 hover:text-white transition-all text-center flex items-center justify-center gap-1"
-                >
-                  <Smartphone className={`w-3 h-3 ${smsTesting ? 'animate-pulse text-amber-400' : 'text-slate-500'}`} />
-                  <span>{smsTesting ? 'Testing...' : 'Test SMS Link'}</span>
-                </button>
-              </div>
-
-              {/* Diagnostics output area */}
-              {(diagnosticsRunning || diagnosticLogs.length > 0) && (
-                <div className="bg-slate-950 border border-slate-900 p-2.5 rounded-xl font-mono text-[7px] text-slate-400 space-y-1.5 leading-normal max-h-24 overflow-y-auto">
-                  {diagnosticLogs.map((log, index) => (
-                    <div key={index} className={log.includes('✨') ? 'text-emerald-400 font-bold' : log.includes('⚡') ? 'text-blue-400' : 'text-slate-400'}>
-                      {log}
-                    </div>
-                  ))}
-                  {diagnosticsRunning && diagStep < 6 && (
-                    <div className="flex items-center gap-1.5 text-blue-400 animate-pulse font-bold">
-                      <span className="w-1 h-1.5 bg-blue-500 inline-block animate-ping rounded" />
-                      <span>EVALUATING SENSORS... STEP {diagStep}/5</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Quick Status indicators & Return Button */}
-            <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
-              <div className="flex items-center gap-1 text-[8.5px] text-slate-500 font-bold uppercase">
-                <span>Thread Service Loop:</span>
-                <span className={isBackgroundServiceRunning ? 'text-emerald-400' : 'text-red-400'}>
-                  {isBackgroundServiceRunning ? `ONLINE (TICK #${backgroundServiceTick})` : 'SUSPENDED'}
-                </span>
-              </div>
-
-              <button
-                onClick={() => setMinimized(false)}
-                className="px-3.5 py-1.5 bg-slate-100 hover:bg-white text-slate-950 font-black text-[9px] rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-black/40 flex items-center gap-1"
-              >
-                <span>OPEN FULL CONSOLE</span>
-                <span>⚡</span>
-              </button>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${isBackgroundServiceRunning ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+            <span className={`font-mono text-[8px] font-black tracking-widest ${isBackgroundServiceRunning ? 'text-emerald-400' : 'text-red-400'}`}>
+              {isBackgroundServiceRunning ? 'MESH ACTIVE' : 'PAUSED'}
+            </span>
           </div>
-        </motion.div>
+        </div>
 
         {/* ANDROID HOME SCREEN WIDGET (Big Red Button Forced out to Home Screen) */}
         <motion.div
@@ -385,9 +258,8 @@ export const SimulatedDesktop: React.FC = () => {
 
         {/* Desktop Footer Instruction */}
         <div className="text-center pb-4 text-slate-500 font-bold select-none relative z-10">
-          <div className="flex items-center justify-center gap-1 text-[8.5px] uppercase tracking-widest">
-            <ChevronDown className="w-3.5 h-3.5 text-slate-600 animate-bounce" />
-            <span>Swipe down or pull status bar for system settings</span>
+          <div className="flex items-center justify-center gap-1 text-[8.5px] uppercase tracking-widest text-slate-600">
+            <span>SafetyLink Native Mobile Engine • Background Protected</span>
           </div>
         </div>
 

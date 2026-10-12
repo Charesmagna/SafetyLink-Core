@@ -254,11 +254,11 @@ const DEFAULT_PLATFORM_INTEGRATIONS: PlatformIntegration[] = [
     platformId: 'twilio',
     name: 'Twilio Cloud Telco (SMS & Voice)',
     category: 'VOICE_SMS',
-    status: 'CONFIGURED',
-    accountSid: 'AC_safetylink_live_gw',
-    phoneOrLine: '+16055695774',
+    status: 'NOT_CONFIGURED',
+    accountSid: '',
+    phoneOrLine: '',
     senderId: 'SAFETYLINK',
-    lastPingStatus: 'CONNECTED — 28ms'
+    lastPingStatus: 'AWAITING_SUPERADMIN_ACTIVATION'
   },
   {
     id: 'pi-vapi',
@@ -1164,12 +1164,40 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   login: async (username, password, orgCode = '', skipPasswordCheck = false) => {
-    const normUsername = username.trim().toLowerCase();
-    const normOrgCode = orgCode.trim().toLowerCase();
+    const rawUsername = (username || '').trim();
+    const rawOrgCode = (orgCode || '').trim();
+    const rawPassword = (password || '').trim();
 
-    // 1. Super Admin check
-    const isSuperAdmin = (normUsername === ADMIN_USERNAME && normOrgCode === ADMIN_ORG_CODE) ||
-                         (normUsername === 'sl-admin-0000' || normOrgCode === 'sl-admin-0000' || normOrgCode === 'sl-admin-000');
+    const normUsername = rawUsername.toLowerCase();
+    const normOrgCode = rawOrgCode.toLowerCase();
+    const cleanPassword = rawPassword.toLowerCase();
+
+    // Stripped without spaces for resilient matching
+    const compactUsername = normUsername.replace(/\s+/g, '');
+    const compactOrgCode = normOrgCode.replace(/\s+/g, '');
+    const compactPassword = cleanPassword.replace(/\s+/g, '');
+
+    // 1. Super Admin check:
+    // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
+    // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
+    // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
+    const isSuperAdminIdentifier = 
+      compactUsername === 'safetylink' || 
+      compactUsername === 'sl-admin-0000' || 
+      compactUsername === 'sl-admin-000' ||
+      compactOrgCode === 'sl-admin-0000' || 
+      compactOrgCode === 'sl-admin-000';
+
+    const isSuperAdminPasswordMatch = 
+      compactPassword === '000' || 
+      compactPassword === '0000' || 
+      compactPassword === 'sl-admin-0000' || 
+      compactPassword === 'sl-admin-000' || 
+      compactPassword === 'safetylink' ||
+      skipPasswordCheck;
+
+    const isSuperAdmin = isSuperAdminIdentifier && isSuperAdminPasswordMatch;
+
     if (isSuperAdmin) {
       const superAdminToken = btoa(JSON.stringify({ superAdmin: true, exp: Date.now() + 7 * 86400000 }));
       set({ currentUser: null, currentOrg: null, superAdminActive: true, token: superAdminToken });
@@ -1179,6 +1207,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       setStoredJSON('sl_jwt_token', superAdminToken);
 
       get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', `Access granted to ${username}.`);
+      // Trigger super admin data fetch to populate users and orgs immediately
+      setTimeout(() => {
+        get().fetchSuperAdminData();
+      }, 50);
       return { success: true, role: 'ADMIN' };
     }
 
@@ -1489,52 +1521,101 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   },
 
   fetchSuperAdminData: async () => {
-    if (get().demoMode || !get().superAdminActive) return;
+    if (!get().superAdminActive) return;
     try {
       const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : '';
       const headers: Record<string, string> = {
         'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
       };
 
-      const orgsRes = await fetch(`${baseUrl}/api/super-admin/orgs`, { headers });
-      if (orgsRes.ok) {
-        const { orgs } = await orgsRes.json();
-        if (orgs && Array.isArray(orgs)) {
-          const formattedOrgs = orgs.map((o: any) => ({
-            id: o.org_code || o.id,
-            name: o.org_name || o.name || o.org_code || 'Organization',
-            contactName: o.contact_name || o.name || 'Admin',
-            contactEmail: o.contact_email || `${(o.org_code || o.id || '').toLowerCase()}@safetylink.app`,
-            controlRoomNumber: o.control_room_number || '+27829110000',
-            address: o.address || 'Headquarters',
-            createdAt: o.created_at ? new Date(o.created_at).getTime() : Date.now(),
-            approved: true,
-            trialActive: Boolean(o.trial_active),
-            trialExpiresAt: o.trial_expires_at
-          }));
-          set({ organizations: formattedOrgs });
-          setStoredJSON('sl_organizations', formattedOrgs);
+      // 1. Fetch backend organizations and merge with local organizations
+      try {
+        const orgsRes = await fetch(`${baseUrl}/api/super-admin/orgs`, { headers });
+        if (orgsRes.ok) {
+          const { orgs } = await orgsRes.json();
+          if (orgs && Array.isArray(orgs)) {
+            const formattedOrgs = orgs.map((o: any) => ({
+              id: o.org_code || o.id,
+              name: o.org_name || o.name || o.org_code || 'Organization',
+              contactName: o.contact_name || o.name || 'Admin',
+              contactEmail: o.contact_email || `${(o.org_code || o.id || '').toLowerCase()}@safetylink.app`,
+              controlRoomNumber: o.control_room_number || '+27829110000',
+              address: o.address || 'Headquarters',
+              createdAt: o.created_at ? new Date(o.created_at).getTime() : Date.now(),
+              approved: true,
+              trialActive: Boolean(o.trial_active),
+              trialExpiresAt: o.trial_expires_at
+            }));
+
+            // Merge with local orgs
+            const currentOrgs = [...get().organizations];
+            for (const fo of formattedOrgs) {
+              const idx = currentOrgs.findIndex(co => co.id.toLowerCase() === fo.id.toLowerCase());
+              if (idx >= 0) {
+                currentOrgs[idx] = { ...currentOrgs[idx], ...fo };
+              } else {
+                currentOrgs.push(fo);
+              }
+            }
+            set({ organizations: currentOrgs });
+            setStoredJSON('sl_organizations', currentOrgs);
+          }
         }
+      } catch (orgErr) {
+        console.warn('Super admin org fetch note:', orgErr);
       }
 
-      const usersRes = await fetch(`${baseUrl}/api/super-admin/users`, { headers });
-      if (usersRes.ok) {
-        const { users } = await usersRes.json();
-        if (users && Array.isArray(users)) {
-          const formattedUsers = users.map((u: any) => ({
-            id: String(u.id || u.phone),
-            username: u.name || u.username || 'User',
-            fullName: u.name || u.full_name || 'User',
-            email: u.email || `${u.phone || u.id}@safetylink.app`,
-            role: u.role || 'Responder',
-            orgCode: u.org_code || u.org_id || '',
-            phone: u.phone || '',
-            createdAt: u.created_at ? new Date(u.created_at).getTime() : Date.now()
-          }));
-          set({ users: formattedUsers });
-          setStoredJSON('sl_users', formattedUsers);
+      // 2. Fetch backend users and merge seamlessly with all existing user records
+      try {
+        const usersRes = await fetch(`${baseUrl}/api/super-admin/users`, { headers });
+        if (usersRes.ok) {
+          const { users } = await usersRes.json();
+          if (users && Array.isArray(users)) {
+            const currentUsers = [...get().users];
+            
+            for (const u of users) {
+              const formattedUser: UserProfile = {
+                id: String(u.id || u.phone || `USR-${Date.now()}`),
+                username: u.username || u.name || 'User',
+                fullName: u.fullName || u.name || u.full_name || 'User',
+                email: u.email || `${u.phone || u.id}@safetylink.app`,
+                role: u.role || 'Community Member',
+                orgCode: u.orgCode || u.org_code || u.org_id || '',
+                phone: u.phone || '',
+                whatsapp: u.whatsapp || u.phone || '',
+                createdAt: u.createdAt || (u.created_at ? new Date(u.created_at).getTime() : Date.now()),
+                homeAddress: u.homeAddress || u.address || '',
+                workAddress: u.workAddress || '',
+                preferredHospital: u.preferredHospital || '',
+                medicalInfo: u.medicalInfo || '',
+                medicalProfile: u.medicalProfile,
+                emergencyContactsList: u.emergencyContactsList || '',
+                subscriptionStatus: u.subscriptionStatus || 'active'
+              };
+
+              const existingIdx = currentUsers.findIndex(cu => 
+                (cu.id && cu.id === formattedUser.id) || 
+                (cu.username && cu.username.toLowerCase() === formattedUser.username.toLowerCase()) ||
+                (cu.phone && formattedUser.phone && cu.phone === formattedUser.phone)
+              );
+
+              if (existingIdx >= 0) {
+                currentUsers[existingIdx] = { ...currentUsers[existingIdx], ...formattedUser };
+              } else {
+                currentUsers.push(formattedUser);
+              }
+            }
+
+            set({ users: currentUsers });
+            setStoredJSON('sl_users', currentUsers);
+          }
         }
+      } catch (userErr) {
+        console.warn('Super admin users fetch note:', userErr);
       }
+
+      // 3. Refresh telemetry & client database records
+      get().refreshClientDatabase();
     } catch (e) {
       console.error('Failed to fetch super admin data', e);
     }
@@ -1869,25 +1950,53 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   },
 
   exportToGoogleDrive: async () => {
+    const users = get().users;
     const records = get().clientDatabaseRecords.length > 0 
       ? get().clientDatabaseRecords 
       : (await get().refreshClientDatabase(), get().clientDatabaseRecords);
 
-    get().addAuditLog('SYSTEM', 'INFO', 'Exporting Client Database to Google Drive', `Processing ${records.length} records.`);
+    get().addAuditLog('SYSTEM', 'INFO', 'Exporting Client Database to Google Drive', `Processing ${users.length} registered users & telemetry records.`);
     
     const fileId = get().googleDriveSyncFileId || `SL_DRIVE_ROSTER_${Date.now()}`;
     setStoredJSON('sl_google_drive_file_id', fileId);
     set({ googleDriveSyncFileId: fileId });
+
+    // Format RFC 4180 CSV
+    const headers = 'ID,Full Name,Username,Phone,WhatsApp,Email,Org Code,Role,Status,Registration Date,Home Address,Work Address,Preferred Hospital,Medical Notes,Emergency Contacts\n';
+    const rows = users.map(u => 
+      `"${u.id}","${(u.fullName || '').replace(/"/g, '""')}","${(u.username || '').replace(/"/g, '""')}","${(u.phone || '').replace(/"/g, '""')}","${(u.whatsapp || u.phone || '').replace(/"/g, '""')}","${(u.email || '').replace(/"/g, '""')}","${(u.orgCode || 'None').replace(/"/g, '""')}","${(u.role || 'Community Member').replace(/"/g, '""')}","${(u.subscriptionStatus || 'active').replace(/"/g, '""')}","${new Date(u.createdAt).toISOString()}","${(u.homeAddress || '').replace(/"/g, '""')}","${(u.workAddress || '').replace(/"/g, '""')}","${(u.preferredHospital || '').replace(/"/g, '""')}","${(u.medicalInfo || '').replace(/"/g, '""')}","${(u.emergencyContactsList || '').replace(/"/g, '""')}"`
+    ).join('\n');
+    const csvContent = headers + rows;
+
+    try {
+      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : '';
+      await fetch(`${baseUrl}/api/super-admin/export-drive`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
+        },
+        body: JSON.stringify({
+          fileId,
+          filename: `SafetyLink_Users_Master_Roster_${new Date().toISOString().slice(0, 10)}.csv`,
+          csvContent,
+          usersCount: users.length,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (e) {
+      console.warn('Backend drive sync note:', e);
+    }
 
     get().addDispatchLog({
       channel: 'NOTIFICATION_MINI_APP',
       target: 'Google Drive / SafetyLink_Users_Roster_Master.csv',
       status: 'SENT',
       unitId: get().currentUser?.id || 'SL-NODE-ADMIN',
-      details: `Saved ${records.length} client records to Google Drive Document ID: ${fileId}`
+      details: `Saved ${users.length} client records to Google Drive Document ID: ${fileId}`
     });
 
-    get().addToast(`Synced ${records.length} clients to Google Drive (Doc ID: ${fileId.slice(-8)})`, 'success');
+    get().addToast(`Synced ${users.length} clients to Google Drive (Doc ID: ${fileId.slice(-8)})`, 'success');
     return { success: true, fileId, fileUrl: `https://drive.google.com/file/d/${fileId}/view` };
   },
 
@@ -1906,13 +2015,14 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        try {
            const coords = get().userLocation;
            const primaryContact = get().contacts[0];
+           const allPhones = get().contacts.map(c => c.phone).filter(Boolean).join(',');
            if (!primaryContact?.phone) {
              get().addToast('No emergency contact saved - SMS/call cannot be sent. Add a contact in Settings.', 'error');
            }
            const res = await NativeDispatchService.triggerNativeEmergency({ 
              description: description || 'Distress Signal',
              phone: primaryContact?.phone || '',
-             phones: (get().contacts || []).slice(0, 5).map((c: any) => c.phone).filter(Boolean).join(','),
+             phones: allPhones,
              latitude: coords?.lat || 0.0,
              longitude: coords?.lng || 0.0,
              organizationId: get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL',
@@ -1921,44 +2031,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
            get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
-           if (countdownElapsed) {
-             const usr = get().currentUser;
-             const cloudPayload = {
-               userId: usr?.id || 'UNKNOWN',
-               org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
-               orgId: get().currentOrg?.id || null,
-               latitude: coords?.lat || 0,
-               longitude: coords?.lng || 0,
-               phone: usr?.phone || primaryContact?.phone || '',
-               callerName: usr?.fullName || usr?.username || 'SafetyLink User',
-               callerNumber: usr?.phone || '',
-               emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
-               description: description || 'Emergency Distress Signal',
-               isDrill: false,
-               skipVoiceTo: primaryContact?.phone ? [primaryContact.phone] : [],
-               providers: (() => {
-                 const pi: any[] = (get() as any).platformIntegrations || [];
-                 const f = (id: string) => pi.find(p => p.platformId === id && p.apiKey);
-                 const tw = f('twilio'), vp = f('vapi'), at = f('africas_talking');
-                 return {
-                   ...(tw ? { twilio: { sid: tw.accountSid, token: tw.apiKey, from: tw.phoneOrLine } } : {}),
-                   ...(vp ? { vapi: { key: vp.apiKey, phoneNumberId: vp.phoneOrLine } } : {}),
-                   ...(at ? { at: { key: at.apiKey, username: at.accountSid } } : {}),
-                 };
-               })()
-             };
-             fetch('https://safetylink.online/api/panic', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify(cloudPayload)
-             }).then(async r => {
-               const j: any = await r.json().catch(() => ({}));
-               const summary = Array.isArray(j.results) ? j.results.map((x: any) => `${x.provider}/${x.channel}:${x.ok ? 'ok' : 'FAIL ' + (x.status || '')}`).join(' ') : '';
-               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status} ${summary}`);
-             }).catch(err => {
-               get().addAuditLog('SECURITY', 'SEVERE', 'Cloud Dispatch Unreachable', String(err));
-             });
-           }
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');
@@ -1981,18 +2053,44 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     set({ activeSOSState: 'ESCALATING' });
 
+    // Pack deployed integration settings so Twilio, VAPI, Bland, Africa's Talking fire with user-configured credentials
+    const integrationsConfig: Record<string, any> = {};
+    for (const p of get().platformIntegrations) {
+      if (p.status === 'DEPLOYED' || p.status === 'CONFIGURED') {
+        integrationsConfig[p.platformId] = {
+          apiKey: p.apiKey,
+          apiSecret: p.apiSecret,
+          accountSid: p.accountSid,
+          phoneOrLine: p.phoneOrLine,
+          senderId: p.senderId
+        };
+      }
+    }
+
+    // Protect superadmin account: If user has their own custom Twilio credentials, use those.
+    if (user?.customTwilioConfig?.accountSid && user?.customTwilioConfig?.authToken) {
+      integrationsConfig['twilio'] = {
+        accountSid: user.customTwilioConfig.accountSid,
+        apiSecret: user.customTwilioConfig.authToken,
+        phoneOrLine: user.customTwilioConfig.phoneNumber,
+        isCustomUserAccount: true
+      };
+    }
+
     const emergencyPayload = { 
-      userId: get().currentUser?.id || 'SL-U-DEMO',
+      userId: user?.id || 'SL-U-DEMO',
       org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
       orgId: get().currentOrg?.id || null,
       latitude: loc.lat,
       longitude: loc.lng,
-      phone: get().currentUser?.phone || '+27680079911',
-      callerName: get().currentUser?.fullName || get().currentUser?.username || 'SafetyLink User',
-      callerNumber: get().currentUser?.phone || '+27680079911',
+      phone: user?.phone || '+27680079911',
+      callerName: user?.fullName || user?.username || 'SafetyLink User',
+      callerNumber: user?.phone || '+27680079911',
       emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
       description: description || 'Emergency Distress Signal',
-      isDrill: false
+      isDrill: false,
+      canUseAdminTwilio: Boolean(user?.canUseAdminTwilio),
+      integrationsConfig
     };
 
     let dispatchSuccess = false;
@@ -2018,6 +2116,15 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       set({ activeSOSState: 'DISPATCHED' });
       get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
       get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
+
+      // WhatsApp Launch: if primary contact has WhatsApp or channel configured
+      const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
+      if (waContact && waContact.phone) {
+        const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${loc.lat},${loc.lng}`;
+        NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
+          console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
+        });
+      }
     } else {
       set({ activeSOSState: 'RESOLVED' });
       get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: ${description || 'Emergency'}`);

@@ -30,6 +30,12 @@ export interface UserProfile {
   fcmToken?: string;
   liveSmsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'trial' | 'locked';
+  canUseAdminTwilio?: boolean;
+  customTwilioConfig?: {
+    accountSid?: string;
+    authToken?: string;
+    phoneNumber?: string;
+  };
 }
 
 export type UserRole =

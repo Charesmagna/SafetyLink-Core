@@ -52,7 +52,7 @@ export const ApkDownloadPopup: React.FC = () => {
           // Trigger actual file download download of a dummy file to satisfy the download requirement
           const link = document.createElement('a');
           link.href = 'https://safetylink.online/SafetyLink.apk';
-          link.setAttribute('download', 'safetylink-v2.8.4-release.apk');
+          link.setAttribute('download', 'SafetyLink-Signed.apk');
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);

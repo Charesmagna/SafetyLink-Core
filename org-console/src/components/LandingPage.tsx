@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Smartphone, Monitor, MapPin, Bell, Users, ChevronDown, Download, ArrowRight, Zap, Lock, Radio } from 'lucide-react';
 
-const APK_URL = 'https://safetylink.online/SafetyLink.apk';
+const APK_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
 const APK_DEBUG_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-debug.apk';
 const EXE_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-OrgConsole-Setup-1.0.0.exe';
 

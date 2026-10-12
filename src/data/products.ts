@@ -33,7 +33,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Security Cameras',
     price: 579,
     description: 'Industrial-grade IP66 weatherproof dome camera. 2K QHD resolution with full-color night vision and AI human detection. Perfect for NVR integration.',
-    imageUrl: '/Polish_20260727_023640262.jpg',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_040700.jpg',
     affiliateUrl: 'https://temu.to/k/el0b3xc6t0f'
   },
   {
@@ -96,7 +96,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 404,
     description: 'Durable, wear-resistant cargo pants with multi-pocket design. All-season professional style for responders.',
-    imageUrl: '/Polish_20260907_043403519.jpg',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260907_043403519.jpg',
     affiliateUrl: 'https://temu.to/k/eu1emsrx8vt'
   },
   {
@@ -105,7 +105,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 729,
     description: 'All-season ankle support boots. Shock absorption and anti-slip sole suitable for outdoor operations.',
-    imageUrl: '/Polish_20260819_020134421.jpg',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260819_020134421.jpg',
     affiliateUrl: 'https://temu.to/k/ee990l2ymxu'
   },
   {
@@ -114,7 +114,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 480,
     description: 'Breathable lightweight utility vest. Adjustable Molle system for carrying comms and gear.',
-    imageUrl: '/Polish_20260819_020219883.jpg',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260819_020219883.jpg',
     affiliateUrl: 'https://temu.to/k/eeqt64qkh4x'
   },
   {
@@ -132,7 +132,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Tactical Gear',
     price: 302,
     description: '9-pocket reflective safety vest. ANSI/ISEA compliant for night-time patrols and emergency response.',
-    imageUrl: '/multi-buttons-smooth.png',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20251001_050324776.jpg',
     affiliateUrl: 'https://temu.to/k/ewqmqljcya7'
   },
   {
@@ -150,7 +150,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Vehicle Security',
     price: 684,
     description: 'Keyless entry system with one-button start, remote engine start/stop, and central locking integration.',
-    imageUrl: '/panic-button-smooth.png',
+    imageUrl: '/api/r2/stream/Safetylink/Polish_20260907_010722614.jpg',
     affiliateUrl: 'https://temu.to/k/e10mpbfygg3'
   },
   {
@@ -177,7 +177,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 160,
     description: '12V/24V compatible smart charge controller for managing backup battery banks.',
-    imageUrl: '/buttons-only.jpg',
+    imageUrl: '/api/r2/stream/Safetylink/IMG_20260907_010544.jpg',
     affiliateUrl: 'https://temu.to/k/ek7ktzoz8br'
   },
   {
@@ -204,7 +204,7 @@ export const STORE_PRODUCTS: Product[] = [
     category: 'Power & Sensors',
     price: 140,
     description: 'Independent photoelectric sensor detector. High sensitivity sound and light alarm for early warning.',
-    imageUrl: '/panic-button.png',
+    imageUrl: '/api/r2/stream/Safetylink/HST-01-Anti-Lost-Finder-PRODUCT.jpg',
     affiliateUrl: 'https://temu.to/k/eouhn5zuwkm'
   }
 ];

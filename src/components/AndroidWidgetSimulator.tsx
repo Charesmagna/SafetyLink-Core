@@ -23,8 +23,6 @@ export const AndroidWidgetSimulator: React.FC = () => {
   // Widget states
   const [countdown, setCountdown] = useState<number | null>(null);
   const isArmed = true;
-  const [showNotificationAlert, setShowNotificationAlert] = useState<boolean>(false);
-  const [notificationMsg, setNotificationMsg] = useState<string>('');
   const [widgetCircleSize, setWidgetCircleSize] = useState<number>(112); // Adjustable: 72px, 112px, 150px, 190px
 
   // 10-second disarm timer logic
@@ -47,9 +45,6 @@ export const AndroidWidgetSimulator: React.FC = () => {
   const executeRealPanic = async () => {
     addAuditLog('DISPATCH', 'SEVERE', 'Widget 10s grace period expired. Broadcasting SOS!', 'Transmitting cellular telemetry');
     
-    // Simulate Capacitor Local Notifications payload
-    triggerLocalNotification('SafetyLink Emergency Dispatch Active', 'DISTRESS BEACON BROADCASTED SEQUENTIALLY TO APEX HOUSING RESPONDERS!');
-
     try {
       await triggerPanic('Emergency SOS triggered from Capacitor Android Home Widget.');
     } catch (e) {
@@ -58,12 +53,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
   };
 
   const triggerLocalNotification = (title: string, body: string) => {
-    setNotificationMsg(`${title}: ${body}`);
-    setShowNotificationAlert(true);
-    // Auto-dim notification after 6 seconds
-    setTimeout(() => {
-      setShowNotificationAlert(false);
-    }, 6000);
+    addToast(`${title}: ${body}`, 'info');
   };
 
   const handleWidgetTrigger = () => {
@@ -104,31 +94,6 @@ export const AndroidWidgetSimulator: React.FC = () => {
 
   return (
     <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-5 text-left space-y-4 shadow relative overflow-hidden">
-      {/* Capacitor Notification Badge Popup Simulation */}
-      <AnimatePresence>
-        {showNotificationAlert && (
-          <motion.div
-            initial={{ opacity: 0, y: -40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-4 left-4 right-4 bg-slate-900/95 border border-purple-500/30 text-slate-100 rounded-2xl p-4 shadow-2xl z-[999999] max-w-sm mx-auto flex items-start gap-3"
-          >
-            <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center shrink-0 text-base">
-              🔔
-            </div>
-            <div className="space-y-0.5 text-left">
-              <span className="text-[10px] font-black font-mono text-purple-400 uppercase tracking-widest block">Capacitor Notification Relay</span>
-              <p className="text-xs text-slate-200 font-mono leading-relaxed">{notificationMsg}</p>
-            </div>
-            <button
-              onClick={() => setShowNotificationAlert(false)}
-              className="text-slate-500 hover:text-slate-300 font-mono text-xs font-bold pl-1 uppercase"
-            >
-              Dim
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 10-second Urgent Disarm Overlay */}
       <AnimatePresence>
