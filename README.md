@@ -1,24 +1,27 @@
 # SafetyLink Core
 
-SafetyLink is a unified, highly optimized **Sequential Emergency Alert Network** designed to function seamlessly under restrictive offline, hardware-constrained, or distress scenarios. 
+Contact-chain emergency alerts: sequential SMS, WhatsApp, and voice to people the user chose. This does not call SAPS 112, and it does not dispatch armed response or drones unless a real responder contract is connected.
 
-This repository operates under strict architectural guidelines defined in `AGENTS.md`.
+## Android app
 
-## Features
-* **Background Worker**: Fully decoupled BullMQ dispatch engine for triggering SMS and Voice through Twilio APIs. (Runs concurrently with the web server)
-* **WebRTC Video**: High-priority real-time video feeds over ConnectyCube for active Distress situations.
-* **Supabase Integration**: Native bindings pulling configuration credentials from the existing Supabase storage without manual user proxy mapping.
+Signed release **v1.1.965**:
+
+https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.965/SafetyLink-v1.1.965-Signed.apk
+
+https://safetylink.online/SafetyLink.apk redirects to that file.
 
 ## Setup
-All configurations for Twilio and ConnectyCube use your persistent cloud environment credentials automatically.
 
-`npm install`
-`npm run dev` 
+Copy `.env.example` to `.env` and fill in your own keys. Do not commit real secrets.
 
-Build Android locally:
-`npm run cap:sync`
-`cd android && ./gradlew assembleDebug`
+```
+npm install
+npm run dev
+```
 
+Android debug build:
 
-## Mobile Application (APK)
-* **Download Android App**: [SafetyLink.apk at www.safetylink.online 
+```
+npm run cap:sync
+cd android && ./gradlew assembleDebug
+```
