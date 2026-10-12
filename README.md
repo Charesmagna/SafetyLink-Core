@@ -8,7 +8,7 @@ Signed release **v1.1.965**:
 
 https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.965/SafetyLink-v1.1.965-Signed.apk
 
-https://safetylink.online/SafetyLink.apk redirects to that file.
+https://safetylink.online/download/apk redirects to that file.
 
 ## Setup
 
