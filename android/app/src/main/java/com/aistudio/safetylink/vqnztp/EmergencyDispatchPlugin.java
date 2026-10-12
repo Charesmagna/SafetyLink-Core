@@ -43,8 +43,7 @@ import java.util.ArrayList;
         name = "EmergencyDispatch",
         permissions = {
                 @Permission(strings = { Manifest.permission.SEND_SMS }, alias = "sms"),
-                @Permission(strings = { Manifest.permission.CALL_PHONE }, alias = "call"),
-                @Permission(strings = { Manifest.permission.READ_PHONE_STATE }, alias = "phoneState")
+                @Permission(strings = { Manifest.permission.CALL_PHONE }, alias = "call")
         }
 )
 public class EmergencyDispatchPlugin extends Plugin {
@@ -64,7 +63,6 @@ public class EmergencyDispatchPlugin extends Plugin {
             String ussdUri = "tel:" + code.trim().replace("#", encodedHash);
             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(ussdUri));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            EmergencyService.applyPreferredSim(getContext(), intent);
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();
@@ -117,7 +115,12 @@ public class EmergencyDispatchPlugin extends Plugin {
 
     private void doSendSms(PluginCall call, String phone, String message) {
         try {
-            SmsManager smsManager = EmergencyService.smsManagerFor(getContext());
+            SmsManager smsManager;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                smsManager = getContext().getSystemService(SmsManager.class);
+            } else {
+                smsManager = SmsManager.getDefault();
+            }
 
             if (smsManager == null) {
                 JSObject ret = new JSObject();
@@ -220,7 +223,6 @@ public class EmergencyDispatchPlugin extends Plugin {
             Intent intent = new Intent(Intent.ACTION_CALL);
             intent.setData(Uri.parse("tel:" + phone));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            EmergencyService.applyPreferredSim(getContext(), intent);
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();
@@ -252,9 +254,23 @@ public class EmergencyDispatchPlugin extends Plugin {
             if (cleanPhone.startsWith("0") && cleanPhone.length() == 10) {
                 cleanPhone = "27" + cleanPhone.substring(1);
             }
-            Uri uri = Uri.parse("https://wa.me/" + cleanPhone + "?text=" + Uri.encode(message));
-            Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            Intent intent;
+            // Check if WhatsApp app is installed for direct intent
+            Intent waIntent = new Intent(Intent.ACTION_VIEW);
+            waIntent.setData(Uri.parse("whatsapp://send?phone=" + cleanPhone + "&text=" + Uri.encode(message)));
+            waIntent.setPackage("com.whatsapp");
+            waIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            if (getContext().getPackageManager().resolveActivity(waIntent, 0) != null) {
+                intent = waIntent;
+            } else {
+                // Fallback to wa.me link
+                Uri uri = Uri.parse("https://wa.me/" + cleanPhone + "?text=" + Uri.encode(message));
+                intent = new Intent(Intent.ACTION_VIEW, uri);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            }
+
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();
@@ -266,67 +282,6 @@ public class EmergencyDispatchPlugin extends Plugin {
             ret.put("opened", false);
             ret.put("requiresManualSend", true);
             ret.put("error", "WhatsApp open failed: " + e.getMessage());
-            call.resolve(ret);
-        }
-    }
-
-
-    @PluginMethod
-    public void getSimCards(PluginCall call) {
-        if (getPermissionState("phoneState") != PermissionState.GRANTED) {
-            requestPermissionForAlias("phoneState", call, "simPermsCallback");
-            return;
-        }
-        doGetSimCards(call);
-    }
-
-    @SuppressWarnings("MissingPermission")
-    private void doGetSimCards(PluginCall call) {
-        com.getcapacitor.JSArray arr = new com.getcapacitor.JSArray();
-        try {
-            android.telephony.SubscriptionManager sm = (android.telephony.SubscriptionManager)
-                    getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
-            java.util.List<android.telephony.SubscriptionInfo> subs = sm != null ? sm.getActiveSubscriptionInfoList() : null;
-            if (subs != null) {
-                for (android.telephony.SubscriptionInfo si : subs) {
-                    JSObject o = new JSObject();
-                    o.put("subscriptionId", si.getSubscriptionId());
-                    o.put("slot", si.getSimSlotIndex() + 1);
-                    o.put("carrier", si.getCarrierName() != null ? si.getCarrierName().toString() : "");
-                    o.put("label", si.getDisplayName() != null ? si.getDisplayName().toString() : "");
-                    arr.put(o);
-                }
-            }
-        } catch (Exception e) {
-            JSObject err = new JSObject();
-            err.put("sims", arr);
-            err.put("error", e.getMessage());
-            call.resolve(err);
-            return;
-        }
-        JSObject ret = new JSObject();
-        ret.put("sims", arr);
-        ret.put("preferredSubscriptionId", EmergencyService.getPreferredSubId(getContext()));
-        call.resolve(ret);
-    }
-
-    @PluginMethod
-    public void setPreferredSim(PluginCall call) {
-        int subId = call.getInt("subscriptionId", -1);
-        EmergencyService.setPreferredSubId(getContext(), subId);
-        JSObject ret = new JSObject();
-        ret.put("preferredSubscriptionId", subId);
-        call.resolve(ret);
-    }
-
-    @PermissionCallback
-    private void simPermsCallback(PluginCall call) {
-        if (getPermissionState("phoneState") == PermissionState.GRANTED) {
-            doGetSimCards(call);
-        } else {
-            JSObject ret = new JSObject();
-            ret.put("sims", new com.getcapacitor.JSArray());
-            ret.put("error", "Phone state permission denied");
             call.resolve(ret);
         }
     }

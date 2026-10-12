@@ -211,13 +211,24 @@ export const useEditorialStore = create<EditorialState>((set, get) => ({
   requestAiCopy: async (promptOrParams) => {
     set({ isAiGenerating: true });
     try {
-      const prompt = typeof promptOrParams === 'string' ? promptOrParams : promptOrParams?.prompt || 'Refine emergency dispatch text';
-      const res = await fetch('/api/editorial/ai-assistant', {
+      const payload = typeof promptOrParams === 'string'
+        ? { prompt: promptOrParams }
+        : {
+            field: promptOrParams?.field || 'General Copy',
+            prompt: promptOrParams?.prompt || 'Refine emergency dispatch text',
+            currentValue: promptOrParams?.currentValue || '',
+            platform: promptOrParams?.platform || 'web'
+          };
+
+      const res = await fetch('/api/editorial/ai-assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
+      if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        return data.suggestions;
+      }
       const result = data.result || 'ARMOURING COMMUNITIES ACROSS SOUTH AFRICA.';
       return [result, result.toLowerCase(), `URGENT: ${result}`];
     } catch {

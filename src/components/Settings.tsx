@@ -6,7 +6,6 @@ import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
-import SimAndApiSettings from './SimAndApiSettings';
 
 export const Settings: React.FC = () => {
   const { 
@@ -663,9 +662,118 @@ export const Settings: React.FC = () => {
           </div>
         )}
 
+        {/* User Dedicated Gateway & Personal Twilio Telephony Configuration */}
+        {currentUser && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
+                📡 CELLULAR & TWILIO GATEWAY CREDENTIALS
+              </h4>
+              <span className={`text-[8px] font-mono px-2 py-0.5 rounded-full border ${
+                currentUser.canUseAdminTwilio
+                  ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                  : 'bg-slate-900 border-slate-800 text-slate-400'
+              }`}>
+                {currentUser.canUseAdminTwilio ? 'ADMIN POOL AUTHORIZED' : 'OWN ACCOUNT MODE'}
+              </span>
+            </div>
 
-      
-      <SimAndApiSettings />
+            <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 text-left font-mono">
+              {currentUser.canUseAdminTwilio ? (
+                <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl space-y-1">
+                  <span className="text-[9px] font-bold text-emerald-400 block flex items-center gap-1.5">
+                    <span>✅</span> SYSTEM ADMIN SENDER POOL ACTIVE
+                  </span>
+                  <p className="text-[8.5px] text-slate-400 font-sans leading-relaxed">
+                    The Super Administrator has authorized your account to route emergency SMS & Voice alerts through the central SafetyLink dispatch line. You do not need your own Twilio balance.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl space-y-1">
+                  <span className="text-[9px] font-bold text-amber-400 block flex items-center gap-1.5">
+                    <span>🛡️</span> PRIVATE TWILIO ACCOUNT REQUIRED
+                  </span>
+                  <p className="text-[8.5px] text-slate-400 font-sans leading-relaxed">
+                    To protect shared balance reserves, non-delegated emergency alerts and testing require your own Twilio SID & Token, or standard GSM SMS on device. Enter your private credentials below.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">
+                    My Twilio Account SID
+                  </label>
+                  <input
+                    type="text"
+                    value={currentUser.customTwilioConfig?.accountSid || ''}
+                    onChange={(e) => {
+                      updateUserProfile(currentUser.id, {
+                        customTwilioConfig: {
+                          ...currentUser.customTwilioConfig,
+                          accountSid: e.target.value.trim()
+                        }
+                      });
+                    }}
+                    placeholder="AC_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">
+                    My Twilio Auth Token
+                  </label>
+                  <input
+                    type="password"
+                    value={currentUser.customTwilioConfig?.authToken || ''}
+                    onChange={(e) => {
+                      updateUserProfile(currentUser.id, {
+                        customTwilioConfig: {
+                          ...currentUser.customTwilioConfig,
+                          authToken: e.target.value.trim()
+                        }
+                      });
+                    }}
+                    placeholder="••••••••••••••••••••••••••••••••"
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">
+                    My Twilio Phone Number (Sender)
+                  </label>
+                  <input
+                    type="text"
+                    value={currentUser.customTwilioConfig?.phoneNumber || ''}
+                    onChange={(e) => {
+                      updateUserProfile(currentUser.id, {
+                        customTwilioConfig: {
+                          ...currentUser.customTwilioConfig,
+                          phoneNumber: e.target.value.trim()
+                        }
+                      });
+                    }}
+                    placeholder="+1 (xxx) xxx-xxxx"
+                    className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-amber-500/50"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    useAppStore.getState().addToast('Personal Twilio configuration saved.', 'success');
+                    useAppStore.getState().addAuditLog('SYSTEM', 'INFO', 'User updated custom Twilio config');
+                  }}
+                  className="w-full mt-1 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all"
+                >
+                  💾 Save My Gateway Configuration
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Fleet, Camera, & Drone Integrations */}
       <div className="space-y-4 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">

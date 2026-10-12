@@ -14,7 +14,7 @@ jobs:
     - name: Set up JDK 17
       uses: actions/setup-java@v5
       with:
-        java-version: '21'
+        java-version: '17'
         distribution: 'temurin'
 
     - name: Setup Node.js
@@ -40,10 +40,12 @@ jobs:
 
     - name: Force Java 17 in all generated gradle files
       run: |
-        echo "=== Patching capacitor.build.gradle to Java 17 ==="
-        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
-        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} \;
-        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} \;
+        echo "=== Patching capacitor.build.gradle and plugin gradle files to Java 17 ==="
+        find node_modules -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
+        find node_modules -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "capacitor.build.gradle" -exec sed -i 's/JavaVersion.VERSION_22/JavaVersion.VERSION_17/g' {} + || true
+        find android -name "*.gradle" -exec sed -i 's/JavaVersion.VERSION_21/JavaVersion.VERSION_17/g' {} + || true
         echo "=== Verification ==="
         grep -r "JavaVersion" android/ | grep -v ".git" || echo "No JavaVersion found (all good)"
 
@@ -123,24 +125,17 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
-      shell: bash
       run: |
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
-        set +e +o pipefail
         ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
           -PKEYSTORE_PASSWORD="SafetyLink2024!" \
           -PKEY_ALIAS="safetylink" \
           -PKEY_PASSWORD="SafetyLink2024!" \
           --init-script ../init.gradle \
-          --no-daemon --no-parallel --no-build-cache 2>&1 | tee /tmp/gradle-release.log
-        GRADLE_RC=${PIPESTATUS[0]}
-        if [ "$GRADLE_RC" -ne 0 ]; then
-          grep -E "error:|^e: |What went wrong|Execution failed|Could not" /tmp/gradle-release.log | sed "s|.*/vqnztp/||" | sort -u | head -40 | while IFS= read -r L; do echo "::error::${L:0:300}"; done
-          exit "$GRADLE_RC"
-        fi
+          --no-daemon --no-parallel --no-build-cache
         echo "=== Build output files ==="
         find . -name "*.apk" 2>/dev/null || echo "NO APK FOUND"
         find . -name "*.aab" 2>/dev/null || echo "NO AAB FOUND"

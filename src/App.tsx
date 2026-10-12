@@ -24,7 +24,6 @@ import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { translate, SA_LANGUAGES } from './utils/translations';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { BackgroundNotificationPanel } from './components/BackgroundNotificationPanel';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
 import { SosCountdownOverlay } from './components/SosCountdownOverlay';
@@ -60,18 +59,19 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
+import { getR2StreamUrl } from './utils/r2Assets';
 
-const slide1 = ASSETS.logo;
-const slide2 = ASSETS.logo;
-const slide3 = ASSETS.promoGraphic;
-const slLogoMain = ASSETS.logo;
-const slLogoSet = ASSETS.logo;
-const newBg1 = ASSETS.promoGraphic;
-const newLogo1 = ASSETS.logo;
-const klevaLogo = ASSETS.logoKlev;
-const polishLogo = ASSETS.logo;
+const slide1 = getR2StreamUrl('Random platform background.png');
+const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
+const slide3 = getR2StreamUrl('IMG_20260914_221811.png');
+const slLogoMain = getR2StreamUrl('Polish_20260914_220631067.png');
+const slLogoSet = getR2StreamUrl('IMG_20260914_223311.png');
+const newBg1 = getR2StreamUrl('Emergency_Mesh_Platform_Overview.png');
+const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
+const klevaLogo = getR2StreamUrl('Polish_20260809_035827088.png');
+const polishLogo = getR2StreamUrl('limx dynamics.jpg');
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients';
+type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -984,9 +984,9 @@ const App: React.FC = () => {
               <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Integrations Hub...</div>}><OpenPlatformHub /></Suspense>
             </div>
           )}
-          {activeTab === 'clients' && (
+          {activeTab === 'media' && (
             <div className="animate-fadeIn p-4 overflow-y-auto h-full">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Client Database...</div>}><ClientDatabaseModule /></Suspense>
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Media & Evidence Vault...</div>}><MediaHub /></Suspense>
             </div>
           )}
 
@@ -1012,7 +1012,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-slate-950/95 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-[60] overflow-y-auto"
+              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
@@ -1198,17 +1198,17 @@ const App: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => { setActiveTab('clients'); setIsDrawerOpen(false); }}
+                    onClick={() => { setActiveTab('media'); setIsDrawerOpen(false); }}
                     className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
-                      activeTab === 'clients'
-                        ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 font-bold'
+                      activeTab === 'media'
+                        ? 'bg-purple-500/10 border-purple-500/20 text-purple-400 font-bold'
                         : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
                     }`}
                   >
-                    <span className="text-sm shrink-0">👥</span>
+                    <span className="text-sm shrink-0">🎬</span>
                     <div className="text-left">
-                      <p className="text-xs font-extrabold uppercase font-display leading-none">Client Database & Drive</p>
-                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Auto-refresh roster & Google Drive sync</p>
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">R2 Media & Evidence</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">138 verified Cloudflare R2 assets & videos</p>
                     </div>
                   </button>
 
@@ -1354,8 +1354,6 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-y-auto ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       <GlobalBackground />
-      {/* Persistent System Status Bar & Background Notification Tray */}
-      <BackgroundNotificationPanel />
       {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />

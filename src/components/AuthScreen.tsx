@@ -137,7 +137,11 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
-    const res = await login(loginUsername, skipPasswordCheck ? '' : loginPassword, loginOrgCode, skipPasswordCheck);
+    const cleanUsername = loginUsername.trim();
+    const cleanPassword = loginPassword.trim();
+    const cleanOrg = loginOrgCode.trim();
+
+    const res = await login(cleanUsername, skipPasswordCheck ? '' : cleanPassword, cleanOrg, skipPasswordCheck);
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     } else if (loginReferralCode.trim() && !referralApplied) {
@@ -521,6 +525,38 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* SUPER ADMIN FAST-TRACK COMMAND CHANNEL */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-red-950/30 border border-amber-500/30 flex items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-xl">👑</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black text-amber-300 font-mono uppercase tracking-wider">Super Admin Console</span>
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[7px] font-mono font-bold uppercase">MASTER</span>
+                    </div>
+                    <p className="text-[8.5px] text-slate-400 font-mono truncate">
+                      User: <strong className="text-slate-200">SafetyLink</strong> | Code: <strong className="text-slate-200">SL-ADMIN-0000</strong> | Pin: <strong className="text-slate-200">000</strong>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoginUsername('SafetyLink');
+                    setLoginOrgCode('SL-ADMIN-0000');
+                    setLoginPassword('000');
+                    setLoginError('');
+                    const res = await login('SafetyLink', '000', 'SL-ADMIN-0000');
+                    if (!res.success) {
+                      setLoginError(res.error || 'Super Admin login failed.');
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-[9px] uppercase tracking-wider shrink-0 transition-all shadow-md shadow-amber-950 cursor-pointer"
+                >
+                  ⚡ Access Admin
+                </button>
               </div>
 
               {/* DEMO MODE QUICK LOGIN CHANNELS (Excluding Super Admin) */}

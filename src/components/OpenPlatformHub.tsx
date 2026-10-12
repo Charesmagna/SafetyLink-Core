@@ -220,7 +220,7 @@ export const OpenPlatformHub: React.FC = () => {
                         type="text"
                         value={phoneOrLine}
                         onChange={e => setPhoneOrLine(e.target.value)}
-                        placeholder="+16055695774"
+                        placeholder="+1 (xxx) xxx-xxxx"
                         className="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500"
                       />
                     </div>
