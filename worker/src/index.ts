@@ -377,6 +377,30 @@ app.post('/api/panic', async (c) => {
       .bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
+  const isDemo = Boolean(
+    body.isDemo || 
+    body.isDrill || 
+    userId === '1001' || 
+    userId === '1002' || 
+    userId === '1003' || 
+    userId === '1004' || 
+    userId === 'SL-U-DEMO' ||
+    (body.description && typeof body.description === 'string' && body.description.includes('[DEMO'))
+  );
+
+  if (isDemo) {
+    console.log(`[Worker Demo SOS] Suppressing live telecom dispatch for demo user ${callerName || userId || 'Demo User'}`);
+    return c.json({
+      ok: true,
+      simulated: true,
+      isDemo: true,
+      address,
+      results: [
+        { channel: 'SMS', provider: 'demo_simulation', to: callerNumber || 'DEMO', ok: true, detail: 'Demo SOS simulation completed. Real telecom suppressed.' }
+      ]
+    });
+  }
+
   const results = await fireAllAlerts(c.env, {
     callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address,
     extraContacts: contactNumbers,

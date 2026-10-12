@@ -1593,8 +1593,22 @@ Rules:
         emergencyContacts, 
         description,
         canUseAdminTwilio,
-        integrationsConfig
+        integrationsConfig,
+        isDemo,
+        isDrill,
+        userId: rawUserId
       } = req.body;
+
+      const isDemoSOS = Boolean(
+        isDemo || 
+        isDrill || 
+        rawUserId === '1001' || 
+        rawUserId === '1002' || 
+        rawUserId === '1003' || 
+        rawUserId === '1004' || 
+        rawUserId === 'SL-U-DEMO' ||
+        (description && typeof description === 'string' && description.includes('[DEMO'))
+      );
 
       // Extract credentials from deployed integrations config or fallback to process.env
       // SUPERADMIN TWILIO SECURITY POLICY:
@@ -1699,7 +1713,20 @@ Rules:
       const smsBody = `🚨 SAFETYLINK SOS: ${effectiveName} (${effectivePhone}) needs urgent help! Location: ${address} | Map: ${mapLink}`;
       const twimlVoice = `<Response><Say voice="alice">Emergency alert from SafetyLink. ${effectiveName} has triggered a panic button at ${address}. Please respond immediately.</Say><Pause length="1"/><Say voice="alice">Repeating. Emergency alert from SafetyLink. ${effectiveName} needs urgent help.</Say></Response>`;
 
-      console.log(`[Universal Dispatch] Firing emergency alert to ${targetNumbers.size} recipients.`);
+      console.log(`[Universal Dispatch] Firing emergency alert for ${effectiveName} (${isDemoSOS ? 'DEMO SIMULATION' : 'LIVE'}): target count ${targetNumbers.size}`);
+
+      if (isDemoSOS) {
+        console.log(`[DEMO SOS] Request from ${effectiveName} (${rawUserId || 'demo'}) is in DEMO profile mode. Real SMS, Voice, WhatsApp, and VAPI broadcasts suppressed.`);
+        return res.json({ 
+          success: true, 
+          status: "DISPATCHED_SIMULATED",
+          isDemo: true,
+          simulated: true,
+          message: "Demo panic simulation completed. Real telecom suppressed.",
+          recipientsContacted: targetNumbers.size,
+          address 
+        });
+      }
 
       // 4. DISPATCH: Africa's Talking SMS (Zero-fail direct South African cellular route)
       if (activeAtApiKey) {
