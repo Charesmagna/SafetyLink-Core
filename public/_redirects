@@ -1,4 +1,0 @@
-# Static file. Does not change app code. Points at the signed GitHub release
-# because /SafetyLink.apk was falling through to the SPA (HTML, not an APK).
-/SafetyLink.apk https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.965/SafetyLink-v1.1.965-Signed.apk 302
-/download/apk https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.965/SafetyLink-v1.1.965-Signed.apk 302
