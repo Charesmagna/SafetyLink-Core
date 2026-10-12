@@ -29,6 +29,9 @@ public class BootReceiver extends BroadcastReceiver {
             } else {
                 context.startService(serviceIntent);
             }
+
+            // Arm the survival watchdog alarm cycle
+            WatchdogAlarmReceiver.scheduleWatchdog(context);
         }
     }
 }
