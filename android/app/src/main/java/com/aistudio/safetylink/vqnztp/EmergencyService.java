@@ -129,14 +129,38 @@ public final class EmergencyService {
         }
     }
 
-    public void dispatchEmergency(Context context, String toNumber, String body, String incidentId,
+    private static final java.util.concurrent.atomic.AtomicLong lastDispatchAt = new java.util.concurrent.atomic.AtomicLong(0);
+
+    public void dispatchEmergency(Context context, String toNumber, String allPhones, String body, String incidentId,
                                   double lat, double lng, String orgId, String triggeredBy,
                                   DispatchCallback callback) {
+        // Guard against double-triggers (widget + button + BLE firing together)
+        long nowMs = System.currentTimeMillis();
+        long prev = lastDispatchAt.get();
+        if (nowMs - prev < 30000 || !lastDispatchAt.compareAndSet(prev, nowMs)) {
+            Log.w(TAG, "Duplicate dispatch suppressed for incident: " + incidentId);
+            if (callback != null) callback.onResult(new DispatchResult(true, "SUPPRESSED", "SUPPRESSED", "SUPPRESSED"));
+            return;
+        }
         executor.execute(() -> {
             Log.i(TAG, "Initiating real emergency dispatch for incident: " + incidentId);
 
-            // 1. Native SMS Dispatch
-            String smsStatus = sendNativeSms(context, toNumber, body, incidentId);
+            String smsText = (body == null ? "Emergency" : body) + " - SafetyLink SOS"
+                    + ((lat != 0.0 || lng != 0.0) ? " Location: https://maps.google.com/?q=" + lat + "," + lng : "");
+
+            // 1. Native SMS Dispatch to every saved contact (up to 5)
+            java.util.LinkedHashSet<String> recipients = new java.util.LinkedHashSet<>();
+            if (toNumber != null && !toNumber.trim().isEmpty()) recipients.add(toNumber.trim());
+            if (allPhones != null) {
+                for (String ph : allPhones.split(",")) { if (!ph.trim().isEmpty()) recipients.add(ph.trim()); }
+            }
+            String smsStatus = recipients.isEmpty() ? "UNAVAILABLE" : "FAILED";
+            int sentCount = 0;
+            for (String ph : recipients) {
+                String st = sendNativeSms(context, ph, smsText, incidentId);
+                if ("SENT".equals(st)) sentCount++;
+            }
+            if (sentCount > 0) smsStatus = "SENT";
 
             // 2. Native Emergency Telephony Call
             String callStatus = placeNativeCall(context, toNumber);

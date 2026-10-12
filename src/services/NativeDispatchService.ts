@@ -19,6 +19,7 @@ export interface SafetyLinkEmergencyPlugin {
   trigger(options: {
     description?: string;
     phone?: string;
+    phones?: string;
     latitude?: number;
     longitude?: number;
     organizationId?: string;
@@ -66,6 +67,7 @@ export class NativeDispatchService {
   static async triggerNativeEmergency(payload: {
     description: string;
     phone?: string;
+    phones?: string;
     latitude?: number;
     longitude?: number;
     organizationId?: string;

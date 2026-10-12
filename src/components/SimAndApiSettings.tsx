@@ -70,8 +70,8 @@ export default function SimAndApiSettings() {
           <div key={prov.platformId} className="space-y-1.5 bg-slate-900/40 border border-slate-800 rounded-xl p-3">
             <div className="text-[10px] font-bold text-slate-300">{prov.name}</div>
             <input className={input} type="password" placeholder="API key / Auth token" value={f?.apiKey || ''} onChange={e => update(prov, { apiKey: e.target.value })} />
-            {prov.platformId === 'twilio' && (
-              <input className={input} placeholder="Account SID" value={f?.accountSid || ''} onChange={e => update(prov, { accountSid: e.target.value })} />
+            {(prov.platformId === 'twilio' || prov.platformId === 'africas_talking') && (
+              <input className={input} placeholder={prov.platformId === 'twilio' ? 'Account SID' : 'AT username'} value={f?.accountSid || ''} onChange={e => update(prov, { accountSid: e.target.value })} />
             )}
             <input className={input} placeholder={prov.platformId === 'vapi' ? 'Phone number ID' : 'Sender number / ID'} value={f?.phoneOrLine || ''} onChange={e => update(prov, { phoneOrLine: e.target.value })} />
           </div>

@@ -1912,6 +1912,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
            const res = await NativeDispatchService.triggerNativeEmergency({ 
              description: description || 'Distress Signal',
              phone: primaryContact?.phone || '',
+             phones: (get().contacts || []).slice(0, 5).map((c: any) => c.phone).filter(Boolean).join(','),
              latitude: coords?.lat || 0.0,
              longitude: coords?.lng || 0.0,
              organizationId: get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL',
@@ -1933,14 +1934,27 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
                callerNumber: usr?.phone || '',
                emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
                description: description || 'Emergency Distress Signal',
-               isDrill: false
+               isDrill: false,
+               skipVoiceTo: primaryContact?.phone ? [primaryContact.phone] : [],
+               providers: (() => {
+                 const pi: any[] = (get() as any).platformIntegrations || [];
+                 const f = (id: string) => pi.find(p => p.platformId === id && p.apiKey);
+                 const tw = f('twilio'), vp = f('vapi'), at = f('africas_talking');
+                 return {
+                   ...(tw ? { twilio: { sid: tw.accountSid, token: tw.apiKey, from: tw.phoneOrLine } } : {}),
+                   ...(vp ? { vapi: { key: vp.apiKey, phoneNumberId: vp.phoneOrLine } } : {}),
+                   ...(at ? { at: { key: at.apiKey, username: at.accountSid } } : {}),
+                 };
+               })()
              };
              fetch('https://safetylink.online/api/panic', {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify(cloudPayload)
-             }).then(r => {
-               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status}`);
+             }).then(async r => {
+               const j: any = await r.json().catch(() => ({}));
+               const summary = Array.isArray(j.results) ? j.results.map((x: any) => `${x.provider}/${x.channel}:${x.ok ? 'ok' : 'FAIL ' + (x.status || '')}`).join(' ') : '';
+               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status} ${summary}`);
              }).catch(err => {
                get().addAuditLog('SECURITY', 'SEVERE', 'Cloud Dispatch Unreachable', String(err));
              });
