@@ -142,6 +142,17 @@ public final class EmergencyService {
             if (callback != null) callback.onResult(new DispatchResult(true, "SUPPRESSED", "SUPPRESSED", "SUPPRESSED"));
             return;
         }
+
+        boolean isDemo = (triggeredBy != null && (triggeredBy.contains("DEMO") || triggeredBy.equals("1001") || triggeredBy.equals("1002") || triggeredBy.equals("1003") || triggeredBy.equals("1004")))
+                || (body != null && body.contains("[DEMO"));
+        if (isDemo) {
+            Log.i(TAG, "[DEMO SOS] Suppressing native SMS and telephony for demo account: " + triggeredBy);
+            if (callback != null) {
+                callback.onResult(new DispatchResult(true, "SIMULATED_DEMO", "SKIPPED_DEMO", "SYNCED"));
+            }
+            return;
+        }
+
         executor.execute(() -> {
             Log.i(TAG, "Initiating real emergency dispatch for incident: " + incidentId);
 

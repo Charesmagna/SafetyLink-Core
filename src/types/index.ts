@@ -31,6 +31,7 @@ export interface UserProfile {
   liveSmsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'trial' | 'locked';
   canUseAdminTwilio?: boolean;
+  isDemo?: boolean;
   customTwilioConfig?: {
     accountSid?: string;
     authToken?: string;

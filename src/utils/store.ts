@@ -364,10 +364,10 @@ const MOCK_ORGANIZATIONS: Organization[] = [
 ];
 
 const MOCK_USERS: UserProfile[] = [
-  { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active' },
-  { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'active' },
-  { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Community Member', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active' },
-  { id: '1004', username: 'lerato_k', email: 'lerato@gmail.com', phone: '+27601234570', fullName: 'Lerato Khumalo', role: 'Community Member', orgCode: '', createdAt: Date.now(), subscriptionStatus: 'active' }
+  { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
+  { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
+  { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Community Member', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
+  { id: '1004', username: 'lerato_k', email: 'lerato@gmail.com', phone: '+27601234570', fullName: 'Lerato Khumalo', role: 'Community Member', orgCode: '', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true }
 ];
 
 export function getOrgAbbreviation(name: string): string {
@@ -2010,27 +2010,30 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     triggerPanic: async (description?: string, countdownElapsed?: boolean) => {
     if (get().activeSOSState !== 'IDLE') return;
     
+    const user = get().currentUser;
+    const isDemo = Boolean(get().demoMode || user?.isDemo || user?.id === '1001' || user?.id === '1002' || user?.id === '1003' || user?.id === '1004' || user?.id === 'SL-U-DEMO' || !user);
+
     // Native Execution Path (Golden Build Standard)
     if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
        try {
            const coords = get().userLocation;
            const primaryContact = get().contacts[0];
            const allPhones = get().contacts.map(c => c.phone).filter(Boolean).join(',');
-           if (!primaryContact?.phone) {
+           if (!primaryContact?.phone && !isDemo) {
              get().addToast('No emergency contact saved - SMS/call cannot be sent. Add a contact in Settings.', 'error');
            }
            const res = await NativeDispatchService.triggerNativeEmergency({ 
-             description: description || 'Distress Signal',
+             description: (description || 'Distress Signal') + (isDemo ? ' [DEMO DRILL]' : ''),
              phone: primaryContact?.phone || '',
              phones: allPhones,
              latitude: coords?.lat || 0.0,
              longitude: coords?.lng || 0.0,
              organizationId: get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL',
-             userId: get().currentUser?.id || 'UNKNOWN',
+             userId: isDemo ? 'SL-U-DEMO' : (get().currentUser?.id || 'UNKNOWN'),
              directDispatch: !!countdownElapsed
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
-           get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered Natively', description || '');
+           get().addAuditLog('SECURITY', 'SEVERE', isDemo ? 'Demo Panic Triggered Natively [SIMULATED]' : 'Panic Triggered Natively', description || '');
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');
@@ -2039,7 +2042,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     }
 
     // Web Fallback (For browser testing only)
-    const user = get().currentUser;
     const org = get().currentOrg;
     if (!user && org?.id !== 'kleva') {
       get().addAuditLog('SECURITY', 'SEVERE', 'Unauthorized Dispatch Attempt', 'Unregistered node attempted to deploy a tactical alert.');
@@ -2049,7 +2051,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     const incidentId = `INC-${Math.floor(1000 + Math.random() * 9000)}-SA`;
     const loc = get().userLocation || { lat: 0, lng: 0 };
     set({ activeSOSState: 'ACQUIRING_GPS', panicCountdown: null });
-    get().addAuditLog('SECURITY', 'SEVERE', 'Panic Triggered', description || '');
+    get().addAuditLog('SECURITY', 'SEVERE', isDemo ? 'Demo Panic Triggered [SIMULATED]' : 'Panic Triggered', description || '');
 
     set({ activeSOSState: 'ESCALATING' });
 
@@ -2078,7 +2080,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     }
 
     const emergencyPayload = { 
-      userId: user?.id || 'SL-U-DEMO',
+      userId: isDemo ? 'SL-U-DEMO' : (user?.id || 'SL-U-DEMO'),
       org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
       orgId: get().currentOrg?.id || null,
       latitude: loc.lat,
@@ -2088,13 +2090,15 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       callerNumber: user?.phone || '+27680079911',
       emergencyContacts: (get().contacts || []).map((c: any) => ({ name: c.name, phone: c.phone, whatsapp: c.phone })),
       description: description || 'Emergency Distress Signal',
-      isDrill: false,
-      canUseAdminTwilio: Boolean(user?.canUseAdminTwilio),
+      isDrill: isDemo,
+      isDemo: isDemo,
+      canUseAdminTwilio: !isDemo && Boolean(user?.canUseAdminTwilio),
       integrationsConfig
     };
 
     let dispatchSuccess = false;
-    const endpoints = ['/api/panic', 'https://safetylink.online/api/panic'];
+    // In DEMO mode, NEVER hit external production server https://safetylink.online/api/panic
+    const endpoints = isDemo ? ['/api/panic'] : ['/api/panic', 'https://safetylink.online/api/panic'];
 
     for (const url of endpoints) {
       try {
@@ -2112,18 +2116,28 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       }
     }
 
+    // In demo mode, if local /api/panic is unavailable, still succeed cleanly as local simulation
+    if (isDemo && !dispatchSuccess) {
+      dispatchSuccess = true;
+    }
+
     if (dispatchSuccess) {
       set({ activeSOSState: 'DISPATCHED' });
-      get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
-      get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
+      if (isDemo) {
+        get().addAuditLog('SECURITY', 'SEVERE', 'Demo Panic Dispatched [SIMULATED]', `${incidentId}: Simulation completed. Real SMS & telephony suppressed.`);
+        get().addToast('🛡️ DEMO BROADCAST SIMULATED: Distress drill completed (Real telecom suppressed)', 'info');
+      } else {
+        get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
+        get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
 
-      // WhatsApp Launch: if primary contact has WhatsApp or channel configured
-      const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
-      if (waContact && waContact.phone) {
-        const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${loc.lat},${loc.lng}`;
-        NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
-          console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
-        });
+        // WhatsApp Launch: if primary contact has WhatsApp or channel configured
+        const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
+        if (waContact && waContact.phone) {
+          const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${loc.lat},${loc.lng}`;
+          NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
+            console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
+          });
+        }
       }
     } else {
       set({ activeSOSState: 'RESOLVED' });
