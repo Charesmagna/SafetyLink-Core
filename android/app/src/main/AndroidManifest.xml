@@ -94,6 +94,21 @@
             </intent-filter>
         </receiver>
 
+        <!-- Watchdog Heartbeat Alarm Receiver -->
+        <receiver
+            android:name=".WatchdogAlarmReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.aistudio.safetylink.ACTION_WATCHDOG_HEARTBEAT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Watchdog Health Service -->
+        <service
+            android:name=".WatchdogService"
+            android:exported="false" />
+
         <!-- AppWidget Quick Panic Provider -->
         <receiver
             android:name=".PanicWidgetProvider"
