@@ -39,6 +39,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 
 // Initialize Firebase Admin for Firestore updates
 initializeApp({
@@ -1581,6 +1582,220 @@ Rules:
     }
   });
 
+  // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / USSD WEBHOOK ───
+  // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
+  app.post(["/webhook/pcm", "/api/webhook/pcm"], async (req, res) => {
+    try {
+      const body = req.body || {};
+      const query = (req.query as any) || {};
+
+      // 1. Universal field resolution across forwarder formats
+      // Format A: SMS Forwarder App: { from, text, timestamp } or { sender, message } or { phone, text }
+      // Format B: Custom Gateway APK: { sender, rawMessage, batteryLevel, simSlot, gatewayId, timestamp, callerMsisdn, pcmText }
+      const rawText = String(
+        body.rawMessage || body.pcmText || body.message || body.text || body.msg ||
+        query.text || query.message || query.rawMessage || ''
+      ).trim();
+
+      const gatewaySender = String(
+        body.sender || body.from || body.phone || body.callerMsisdn ||
+        query.from || query.sender || query.phone || ''
+      ).trim();
+
+      const gatewayId = body.gatewayId || query.gatewayId || 'RAIN-SIM-GW-1';
+      const batteryLevel = body.batteryLevel ?? query.batteryLevel;
+      const simSlot = body.simSlot ?? query.simSlot;
+
+      console.log(`[Rain SIM Gateway] Webhook received from ${gatewayId} (${gatewaySender}): "${rawText}"`);
+
+      // 2. Extract South African MSISDN from Please-Call-Me text or sender field
+      // Carrier formats:
+      // Vodacom: "Please call me from 0721234567. Thank you!" or "Please Call Me 082..."
+      // MTN: "Please call me back at 0831234567"
+      // Cell C: "Please call 0841234567"
+      // Telkom: "Please call me at 0811234567"
+      let extractedPhone = body.callerMsisdn || '';
+      if (!extractedPhone && rawText) {
+        const match = rawText.match(/(?:(?:call(?:[ -]?me)?(?:[ -]?back)?[ -]?(?:at|from)?)|(?:^))[:\s]*(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/i) ||
+                      rawText.match(/(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/);
+        if (match) {
+          extractedPhone = match[1];
+        }
+      }
+      if (!extractedPhone && gatewaySender) {
+        extractedPhone = gatewaySender;
+      }
+
+      if (!extractedPhone) {
+        console.warn('[Rain SIM Gateway] No valid MSISDN detected in webhook payload:', req.body);
+        return res.status(400).json({ error: 'No caller MSISDN detected in message payload', received: req.body });
+      }
+
+      // Normalize phone numbers
+      const cleanPhone = extractedPhone.replace(/[\s-]/g, '');
+      let localMsisdn = cleanPhone;
+      let intlMsisdn = cleanPhone;
+      if (cleanPhone.startsWith('+27')) {
+        localMsisdn = '0' + cleanPhone.slice(3);
+      } else if (cleanPhone.startsWith('27')) {
+        localMsisdn = '0' + cleanPhone.slice(2);
+        intlMsisdn = '+' + cleanPhone;
+      } else if (cleanPhone.startsWith('0')) {
+        intlMsisdn = '+27' + cleanPhone.slice(1);
+      }
+
+      // 3. User & Organization Identity Resolution
+      let matchedUser: any = null;
+      let orgCode = 'INDIVIDUAL';
+      let orgId = 1;
+      let userName = `Mobile User (${localMsisdn})`;
+      let latitude = 0.0;
+      let longitude = 0.0;
+      let locationSource: 'LIVE_GPS' | 'CACHED_LAST_KNOWN' | 'SILENT_SMS_FALLBACK' = 'SILENT_SMS_FALLBACK';
+      let isDemo = false;
+
+      try {
+        const userRes = await db.execute({
+          sql: "SELECT u.id, u.name, u.phone, u.latitude, u.longitude, u.org_id, o.org_code FROM users u LEFT JOIN organizations o ON u.org_id = o.id WHERE u.phone = ? OR u.phone = ? LIMIT 1",
+          args: [localMsisdn, intlMsisdn]
+        });
+
+        if (userRes.rows.length > 0) {
+          matchedUser = userRes.rows[0];
+          userName = (matchedUser.name as string) || userName;
+          orgId = (matchedUser.org_id as number) || 1;
+          if (matchedUser.org_code) orgCode = matchedUser.org_code as string;
+          
+          // Dual approach: last known GPS with silent SMS fallback (User Clarification 1)
+          if (matchedUser.latitude && matchedUser.longitude && (matchedUser.latitude !== 0 || matchedUser.longitude !== 0)) {
+            latitude = Number(matchedUser.latitude);
+            longitude = Number(matchedUser.longitude);
+            locationSource = 'CACHED_LAST_KNOWN';
+          }
+        }
+      } catch (dbErr: any) {
+        console.warn('[Rain SIM Gateway] Identity query note:', dbErr.message);
+      }
+
+      // Check if user is a demo profile
+      if (
+        matchedUser?.id === 1001 || matchedUser?.id === 1002 || matchedUser?.id === 1003 || matchedUser?.id === 1004 ||
+        localMsisdn.includes('60123456') || rawText.includes('[DEMO')
+      ) {
+        isDemo = true;
+      }
+
+      // If location is missing or stale, trigger silent SMS fallback ping if airtime available
+      if (locationSource === 'SILENT_SMS_FALLBACK' && !isDemo) {
+        console.log(`[Silent SMS Fallback] Location missing for ${localMsisdn}. Dispatching silent SMS location ping #LOC_PING#`);
+        try {
+          if (AT_API_KEY && AT_USERNAME) {
+            const atParams = new URLSearchParams({
+              username: AT_USERNAME,
+              to: intlMsisdn,
+              message: '#LOC_PING#',
+            });
+            fetch('https://api.africastalking.com/version1/messaging', {
+              method: 'POST',
+              headers: {
+                'apiKey': AT_API_KEY,
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+              },
+              body: atParams.toString()
+            }).catch(e => console.warn('[Silent SMS ping AT error]:', e.message));
+          }
+        } catch (silentErr: any) {
+          console.warn('[Silent SMS fallback dispatch]:', silentErr.message);
+        }
+      }
+
+      // 4. Persistence: Log in DB
+      try {
+        const uId = matchedUser?.id || 1;
+        await db.execute({
+          sql: "INSERT INTO panic_alerts (user_id, latitude, longitude, status) VALUES (?, ?, ?, 'active')",
+          args: [uId, latitude, longitude]
+        });
+        await db.execute({
+          sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, 'USSD_PCM', ?, ?)",
+          args: [orgId, userName, `Rain SIM PCM Triggered: ${rawText} (Location: ${locationSource})`]
+        });
+      } catch (err: any) {
+        console.warn('[Rain SIM Gateway] DB insert note:', err.message);
+      }
+
+      // 5. Dual Broadcast: Realtime WebSockets & FCM Push Alerts (User Clarification 2)
+      // Broadcast 1: Realtime WebSockets (Pusher)
+      try {
+        await getPusher().trigger(`org-${orgCode}`, "panic_alert", {
+          user_id: matchedUser?.id || 0,
+          name: userName,
+          phone: localMsisdn,
+          latitude,
+          longitude,
+          location_source: locationSource,
+          trigger_source: "USSD_PCM",
+          description: `🚨 RAIN SIM USSD / PCM Distress: ${rawText}`,
+          timestamp: new Date().toISOString()
+        });
+      } catch (pusherErr: any) {
+        console.warn('[Rain SIM Gateway] Pusher broadcast note:', pusherErr.message);
+      }
+
+      // Broadcast 2: High-Priority FCM Push Notification
+      try {
+        const messaging = getMessaging();
+        await messaging.send({
+          topic: `org-${orgCode}-responders`,
+          notification: {
+            title: `🚨 EMERGENCY ALERT: ${userName}`,
+            body: `Zero-credit Please Call Me received from ${localMsisdn}. Location: ${locationSource === 'CACHED_LAST_KNOWN' ? 'Cached GPS Available' : 'Silent SMS Location Ping Enqueued'}`
+          },
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'emergency_channel',
+              sound: 'emergency_siren',
+              priority: 'max'
+            }
+          },
+          data: {
+            type: 'EMERGENCY_SOS',
+            phone: localMsisdn,
+            userName,
+            triggerSource: 'USSD_PCM',
+            locationSource,
+            latitude: String(latitude),
+            longitude: String(longitude),
+            rawMessage: rawText,
+            timestamp: String(Date.now())
+          }
+        });
+        console.log(`[Rain SIM Gateway] FCM Push alert dispatched to org-${orgCode}-responders`);
+      } catch (fcmErr: any) {
+        console.warn('[Rain SIM Gateway] FCM Push note (ignorable if credentials unlinked):', fcmErr.message);
+      }
+
+      // 6. Response
+      return res.json({
+        success: true,
+        gatewayId,
+        msisdn: localMsisdn,
+        user: userName,
+        orgCode,
+        location: { latitude, longitude, source: locationSource },
+        isDemo,
+        batteryLevel,
+        simSlot,
+        status: isDemo ? 'DISPATCHED_SIMULATED' : 'DISPATCHED'
+      });
+    } catch (e: any) {
+      console.error('[Rain SIM Gateway Error]:', e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
   app.post("/api/panic", async (req, res) => {
     try {
       const { 
@@ -1670,7 +1885,7 @@ Rules:
         console.warn("[Panic Alert] DB log non-fatal note:", dbErr.message);
       }
 
-      // 2. Realtime Pusher Broadcast
+      // 2. Realtime Pusher Broadcast & FCM Push Dispatch (Dual Broadcast)
       try {
         await getPusher().trigger(`org-${effectiveOrgCode}`, "panic_alert", {
           user_id: userId,
@@ -1683,6 +1898,38 @@ Rules:
         });
       } catch (err: any) {
         console.warn("Pusher broadcast note:", err.message);
+      }
+
+      if (!isDemoSOS) {
+        try {
+          const messaging = getMessaging();
+          await messaging.send({
+            topic: `org-${effectiveOrgCode}-responders`,
+            notification: {
+              title: `🚨 EMERGENCY ALERT: ${effectiveName}`,
+              body: `${description || 'Distress SOS initiated'} | Coordinates: ${Number(latitude || 0).toFixed(4)}, ${Number(longitude || 0).toFixed(4)}`
+            },
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'emergency_channel',
+                sound: 'emergency_siren',
+                priority: 'max'
+              }
+            },
+            data: {
+              type: 'EMERGENCY_SOS',
+              userId: String(userId),
+              phone: String(effectivePhone),
+              name: String(effectiveName),
+              latitude: String(latitude || 0),
+              longitude: String(longitude || 0),
+              timestamp: String(Date.now())
+            }
+          });
+        } catch (fcmErr: any) {
+          console.warn("[Panic Alert] FCM Push broadcast note:", fcmErr.message);
+        }
       }
 
       // 3. Compile Recipients List (User contacts + Command Center + Test Number)

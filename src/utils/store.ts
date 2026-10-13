@@ -497,7 +497,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
-  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', import.meta.env.VITE_API_URL || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev'),
+  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', import.meta.env.VITE_API_URL || 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev'),
   connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
   tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
   auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
@@ -2034,39 +2034,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
            get().addAuditLog('SECURITY', 'SEVERE', isDemo ? 'Demo Panic Triggered Natively [SIMULATED]' : 'Panic Triggered Natively', description || '');
-           if (countdownElapsed && !isDemo) {
-             const pi: any[] = (get() as any).platformIntegrations || [];
-             const f = (id: string) => pi.find(x => x.platformId === id && x.apiKey);
-             const tw = f('twilio'), vp = f('vapi'), at = f('africas_talking');
-             const backend = (get() as any).customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-             const cloudPayload = {
-               userId: user?.id || 'UNKNOWN',
-               orgId: get().currentOrg?.id || null,
-               latitude: coords?.lat || 0,
-               longitude: coords?.lng || 0,
-               callerName: user?.fullName || user?.username || 'SafetyLink User',
-               callerNumber: user?.phone || '',
-               emergencyContacts: get().contacts.map((c: any) => ({ name: c.name, phone: c.phone })),
-               description: description || 'Emergency Distress Signal',
-               skipVoiceTo: primaryContact?.phone ? [primaryContact.phone] : [],
-               providers: {
-                 ...(tw ? { twilio: { sid: tw.accountSid, token: tw.apiKey, from: tw.phoneOrLine } } : {}),
-                 ...(vp ? { vapi: { key: vp.apiKey, phoneNumberId: vp.phoneOrLine } } : {}),
-                 ...(at ? { at: { key: at.apiKey, username: at.accountSid } } : {}),
-               }
-             };
-             fetch(String(backend).replace(/\/$/, '') + '/api/panic', {
-               method: 'POST',
-               headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify(cloudPayload)
-             }).then(async r => {
-               const j: any = await r.json().catch(() => ({}));
-               const summary = Array.isArray(j.results) ? j.results.map((x: any) => `${x.provider}/${x.channel}:${x.ok ? 'ok' : 'FAIL ' + (x.status || x.detail || '')}`).join(' ') : '';
-               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status} ${summary}`);
-             }).catch(err => {
-               get().addAuditLog('SECURITY', 'SEVERE', 'Cloud Dispatch Unreachable', String(err));
-             });
-           }
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');
@@ -2112,10 +2079,12 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       };
     }
 
+    const effectiveTargetOrg = user?.orgCode || get().currentOrg?.id || get().currentOrg?.orgCode || 'INDIVIDUAL';
+
     const emergencyPayload = { 
       userId: isDemo ? 'SL-U-DEMO' : (user?.id || 'SL-U-DEMO'),
-      org_code: get().currentOrg?.orgCode || 'INDIVIDUAL',
-      orgId: get().currentOrg?.id || null,
+      org_code: effectiveTargetOrg,
+      orgId: effectiveTargetOrg,
       latitude: loc.lat,
       longitude: loc.lng,
       phone: user?.phone || '+27680079911',
@@ -2155,13 +2124,34 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     }
 
     if (dispatchSuccess) {
-      set({ activeSOSState: 'DISPATCHED' });
+      const newPanicEvent: PanicEvent = {
+        id: incidentId,
+        status: 'DISPATCHED',
+        severity: 'CRITICAL',
+        lat: loc.lat,
+        lng: loc.lng,
+        timestamp: Date.now(),
+        assignedResponder: effectiveTargetOrg !== 'INDIVIDUAL' ? `${effectiveTargetOrg} Patrol Unit` : 'Escalated Regional Patrol Unit',
+        description: `${description || 'Emergency Distress Signal'} - ${user?.fullName || user?.username || 'User'} (${effectiveTargetOrg})`,
+        timelineData: [
+          `Distress signal registered at ${new Date().toLocaleTimeString()}`,
+          `Bound to Organization Mesh: ${effectiveTargetOrg}`,
+          `Dispatched via telemetry routes`
+        ]
+      };
+
+      set(state => ({
+        activeSOSState: 'DISPATCHED',
+        panicEvents: [newPanicEvent, ...state.panicEvents]
+      }));
+      setStoredJSON('sl_panic_events', get().panicEvents);
+
       if (isDemo) {
         get().addAuditLog('SECURITY', 'SEVERE', 'Demo Panic Dispatched [SIMULATED]', `${incidentId}: Simulation completed. Real SMS & telephony suppressed.`);
         get().addToast('🛡️ DEMO BROADCAST SIMULATED: Distress drill completed (Real telecom suppressed)', 'info');
       } else {
-        get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Africa's Talking, Twilio, & VAPI.`);
-        get().addToast('🚨 EMERGENCY BROADCAST DISPATCHED VIA ALL NETWORKS', 'success');
+        get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Organization ${effectiveTargetOrg}, Twilio, & Responders.`);
+        get().addToast(`🚨 EMERGENCY BROADCAST DISPATCHED TO ${effectiveTargetOrg}`, 'success');
 
         // WhatsApp Launch: if primary contact has WhatsApp or channel configured
         const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
@@ -2584,8 +2574,27 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     const device = get().bleDevices.find(d => d.macAddress === mac);
     if (!device) return;
 
+    // Native Mobile Plugin Connection Path
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+      import('../services/ITagPluginService').then(({ ITagPluginService }) => {
+        ITagPluginService.connectDevice(
+          mac,
+          (status) => {
+            set(state => ({
+              bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: status === 'connected' ? 'CONNECTED' : 'DISCONNECTED', rssi: status === 'connected' ? -50 : -100 } : d)
+            }));
+            setStoredJSON('sl_ble_devices', get().bleDevices);
+          },
+          (val) => {
+            get().addAuditLog('BLE', 'SEVERE', 'iTAG Physical Button Press', `Button clicked: code ${val}`);
+            get().startMultiStagePanic('Hardware trigger: iTAG button pressed', 10);
+          }
+        ).catch(e => console.warn('[store] Native connectDevice note:', e));
+      }).catch(() => {});
+    }
+
     if (!device.triggerServiceUuid || !device.triggerCharacteristicUuid) {
-      // Not bound yet -- run the wizard instead of a plain connect.
+      // In web simulator, run standard wizard or mark connected
       get().bindDeviceTrigger(mac);
       return;
     }
@@ -2605,6 +2614,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         set(state => ({
           bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
         }));
+        setStoredJSON('sl_ble_devices', get().bleDevices);
         get().addAuditLog('BLE', 'SEVERE', 'BLE Wearable Connection Severed', `Hardware link to ${mac} was terminated (out of range or battery dead).`);
         // Auto-reconnect: single non-recursive timer, no stacking
         const maxAttempts = 10;
@@ -2627,11 +2637,13 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       set(state => ({
         bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'CONNECTED', rssi: -55, lastSeen: Date.now() } : d)
       }));
+      setStoredJSON('sl_ble_devices', get().bleDevices);
       get().addAuditLog('BLE', 'INFO', 'BLE Device Connected', `MAC: ${mac} -- subscribed to its bound trigger channel.`);
     }).catch((err: Error) => {
       set(state => ({
         bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED' } : d)
       }));
+      setStoredJSON('sl_ble_devices', get().bleDevices);
       get().addAuditLog('BLE', 'SEVERE', 'BLE Connect Failed', `${mac}: ${err.message}`);
     });
   },
@@ -2639,14 +2651,25 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   disconnectBleDevice: (mac) => {
     const device = get().bleDevices.find(d => d.macAddress === mac);
     disconnectDevice(mac, device?.triggerServiceUuid && device?.triggerCharacteristicUuid ? { serviceUuid: device.triggerServiceUuid, characteristicUuid: device.triggerCharacteristicUuid } : undefined);
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+      import('../services/ITagPluginService').then(({ ITagPluginService }) => {
+        ITagPluginService.disconnectDevice(mac).catch(() => {});
+      }).catch(() => {});
+    }
     set(state => ({
       bleDevices: state.bleDevices.map(d => d.macAddress === mac ? { ...d, connectionState: 'DISCONNECTED', rssi: -100 } : d)
     }));
+    setStoredJSON('sl_ble_devices', get().bleDevices);
     get().addAuditLog('BLE', 'INFO', 'BLE Wearable Disconnected', `MAC: ${mac}`);
   },
 
   removeDevice: (mac) => {
     disconnectDevice(mac);
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+      import('../services/ITagPluginService').then(({ ITagPluginService }) => {
+        ITagPluginService.forgetDevice(mac).catch(() => {});
+      }).catch(() => {});
+    }
     const updated = get().bleDevices.filter(d => d.macAddress !== mac);
     set({ bleDevices: updated });
     setStoredJSON('sl_ble_devices', updated);

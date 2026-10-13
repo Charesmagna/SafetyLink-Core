@@ -168,6 +168,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     const effectiveFullName = userFullName.trim() || userUsername.trim();
     const effectivePhone = userPhone.trim() || '+27 00 000 0000';
     const effectivePassword = userPassword || 'demo123';
+    const effectiveOrgCode = userOrgCode.trim();
 
     const res = await registerUser({
       username: userUsername.trim(),
@@ -178,27 +179,20 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       whatsapp: userWhatsapp,
       avatarUrl: userAvatar,
       email: userEmail.trim(),
-      orgCode: userRole === 'Responder' ? userOrgCode : '',
-      autoLogin: false
+      orgCode: effectiveOrgCode,
+      autoLogin: true
     });
 
     if (res.success) {
-      setUserSuccessMsg('Profile created successfully! Transitioning to mode selection...');
+      setUserSuccessMsg('Profile created successfully! Accessing your SafetyLink Console...');
       const tempUsername = userUsername.trim();
-      const tempFullName = effectiveFullName;
-      const tempEmail = userEmail.trim();
-      
-      setRegisteredUsername(tempUsername);
-      setRegisteredPassword(effectivePassword);
-      
-      // Pre-fill organization register fields with the newly created profile data
-      setOrgContactName(tempFullName);
-      setOrgEmail(tempEmail);
+      const tempPassword = effectivePassword;
+      const tempOrg = effectiveOrgCode;
 
-      setTimeout(() => {
+      setTimeout(async () => {
+        await login(tempUsername, tempPassword, tempOrg);
         setUserSuccessMsg('');
-        setView('POST_REGISTER_DECISION');
-      }, 900);
+      }, 400);
     } else {
       setUserError(res.error || 'Registration failed.');
     }
@@ -527,37 +521,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 )}
               </div>
 
-              {/* SUPER ADMIN FAST-TRACK COMMAND CHANNEL */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-red-950/30 border border-amber-500/30 flex items-center justify-between gap-3 shadow-lg">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="text-xl">👑</span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black text-amber-300 font-mono uppercase tracking-wider">Super Admin Console</span>
-                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[7px] font-mono font-bold uppercase">MASTER</span>
-                    </div>
-                    <p className="text-[8.5px] text-slate-400 font-mono truncate">
-                      User: <strong className="text-slate-200">SafetyLink</strong> | Code: <strong className="text-slate-200">SL-ADMIN-0000</strong> | Pin: <strong className="text-slate-200">000</strong>
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setLoginUsername('SafetyLink');
-                    setLoginOrgCode('SL-ADMIN-0000');
-                    setLoginPassword('000');
-                    setLoginError('');
-                    const res = await login('SafetyLink', '000', 'SL-ADMIN-0000');
-                    if (!res.success) {
-                      setLoginError(res.error || 'Super Admin login failed.');
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-[9px] uppercase tracking-wider shrink-0 transition-all shadow-md shadow-amber-950 cursor-pointer"
-                >
-                  ⚡ Access Admin
-                </button>
-              </div>
+
 
               {/* DEMO MODE QUICK LOGIN CHANNELS (Excluding Super Admin) */}
               {demoMode && (
@@ -862,19 +826,22 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                     <option value="Responder">Responder (Guard/Medical)</option>
                   </select>
                 </div>
-                {userRole === 'Responder' && (
-                  <div className="flex flex-col mt-3">
-                    <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Organization ID</label>
-                    <input
-                      type="text"
-                      value={userOrgCode}
-                      onChange={e => setUserOrgCode(e.target.value)}
-                      placeholder="e.g. SL-WITS-1234"
-                      className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
-                      required
-                    />
-                  </div>
-                )}
+                <div className="flex flex-col mt-3">
+                  <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
+                    Organization / Security Code <span className="text-slate-500 font-normal">{userRole === 'Responder' ? '(Required)' : '(Optional)'}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userOrgCode}
+                    onChange={e => setUserOrgCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. SL-ORG-001 or SL-WITS-4829"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                    required={userRole === 'Responder'}
+                  />
+                  <span className="text-[8px] text-slate-500 mt-0.5">
+                    Link to a security company, university, or estate to deploy panics to their command deck.
+                  </span>
+                </div>
 
                 <div className="flex flex-col">
                   <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Full Name</label>
@@ -965,9 +932,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 type="button"
                 onClick={async () => {
                   const res = await signInWithGoogle();
-                  if (res.success) {
-                    setView('POST_REGISTER_DECISION');
-                  } else {
+                  if (!res.success) {
                     setUserError(res.error || 'Google Sign-Up failed.');
                   }
                 }}

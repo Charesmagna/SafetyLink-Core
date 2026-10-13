@@ -17,6 +17,7 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
@@ -39,9 +40,12 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @CapacitorPlugin(
@@ -83,6 +87,87 @@ public class ITagPlugin extends Plugin {
     private final Map<String, Boolean> isReconnecting = new HashMap<>();
     private final Map<String, Integer> reconnectAttempts = new HashMap<>();
     private android.os.PowerManager.WakeLock wakeLock = null;
+
+    private static final String PREFS_NAME = "safetylink_itag_prefs";
+    private static final String KEY_BONDED_MACS = "bonded_itag_macs";
+    private static volatile ITagPlugin instance = null;
+
+    @Override
+    public void load() {
+        super.load();
+        instance = this;
+        Log.i(TAG, "ITagPlugin loaded: scheduling initial auto-reconnect for bonded devices");
+        handler.postDelayed(() -> reconnectBondedDevices(getContext()), 1500);
+    }
+
+    public static void saveBondedMac(Context context, String address) {
+        if (context == null || address == null || address.trim().isEmpty()) return;
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            Set<String> set = new HashSet<>(prefs.getStringSet(KEY_BONDED_MACS, new HashSet<>()));
+            set.add(address.trim());
+            prefs.edit().putStringSet(KEY_BONDED_MACS, set).apply();
+            Log.i(TAG, "Persisted bonded iTAG MAC: " + address);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving bonded MAC: " + e.getMessage());
+        }
+    }
+
+    public static void removeBondedMac(Context context, String address) {
+        if (context == null || address == null) return;
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            Set<String> set = new HashSet<>(prefs.getStringSet(KEY_BONDED_MACS, new HashSet<>()));
+            set.remove(address.trim());
+            prefs.edit().putStringSet(KEY_BONDED_MACS, set).apply();
+            Log.i(TAG, "Removed bonded iTAG MAC: " + address);
+        } catch (Exception e) {
+            Log.e(TAG, "Error removing bonded MAC: " + e.getMessage());
+        }
+    }
+
+    public static Set<String> getBondedMacs(Context context) {
+        if (context == null) return Collections.emptySet();
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            return prefs.getStringSet(KEY_BONDED_MACS, Collections.emptySet());
+        } catch (Exception e) {
+            return Collections.emptySet();
+        }
+    }
+
+    public static void reconnectBondedDevices(Context context) {
+        if (context == null) return;
+        Set<String> macs = getBondedMacs(context);
+        if (macs == null || macs.isEmpty()) {
+            Log.i(TAG, "No bonded iTAG MACs found in persistent storage to reconnect.");
+            return;
+        }
+
+        BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+        if (bluetoothManager == null) return;
+        BluetoothAdapter adapter = bluetoothManager.getAdapter();
+        if (adapter == null || !adapter.isEnabled()) {
+            Log.w(TAG, "Bluetooth disabled; awaiting activation before reconnecting iTAGs.");
+            return;
+        }
+
+        if (instance != null) {
+            for (String mac : macs) {
+                if (!instance.connectedGatts.containsKey(mac)) {
+                    try {
+                        BluetoothDevice device = adapter.getRemoteDevice(mac);
+                        if (device != null) {
+                            Log.i(TAG, "Auto-reconnecting persistent iTAG device: " + mac);
+                            instance.connectDeviceGatt(device, null);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in auto-reconnecting " + mac + ": " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
 
     private void acquireWakeLock() {
         try {
@@ -372,6 +457,7 @@ public class ITagPlugin extends Plugin {
                     isReconnecting.put(devAddress, false);
                     reconnectAttempts.put(devAddress, 0);
                     acquireWakeLock();
+                    saveBondedMac(getContext(), devAddress);
 
                     if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                         // Request high connection priority to prevent OS dropping connection after inactivity
@@ -511,23 +597,26 @@ public class ITagPlugin extends Plugin {
 
         Integer attemptsObj = reconnectAttempts.get(address);
         final int attempts = (attemptsObj == null) ? 0 : attemptsObj;
+        reconnectAttempts.put(address, attempts + 1);
 
-        if (attempts < 10) {
-            reconnectAttempts.put(address, attempts + 1);
-            long delay = Math.min(2000L * (attempts + 1), 15000L);
+        // Exponential backoff capped at 25 seconds for continuous background recovery
+        long delay = Math.min(2000L * Math.min(attempts + 1, 12), 25000L);
 
-            Log.i(TAG, "Scheduling auto-reconnect to " + address + " (Attempt " + (attempts + 1) + "/10) in " + delay + "ms");
+        Log.i(TAG, "Scheduling persistent auto-reconnect to " + address + " (Attempt " + (attempts + 1) + ") in " + delay + "ms");
 
-            handler.postDelayed(() -> {
+        handler.postDelayed(() -> {
+            BluetoothManager bm = (BluetoothManager) getContext().getSystemService(Context.BLUETOOTH_SERVICE);
+            if (bm == null || bm.getAdapter() == null || !bm.getAdapter().isEnabled()) {
+                Log.w(TAG, "Bluetooth currently off; auto-reconnect paused until adapter turns ON");
+                isReconnecting.put(address, false);
+                return;
+            }
+
+            if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 Log.i(TAG, "Executing auto-reconnect execution for: " + address);
-                if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                    connectDeviceGatt(device, null);
-                }
-            }, delay);
-        } else {
-            Log.e(TAG, "Max reconnect attempts reached for " + address + ". Stopping auto-reconnect.");
-            isReconnecting.put(address, false);
-        }
+                connectDeviceGatt(device, null);
+            }
+        }, delay);
     }
 
     private void subscribeToButtonNotifications(BluetoothGatt gatt) {
@@ -606,9 +695,14 @@ public class ITagPlugin extends Plugin {
     @PluginMethod
     public void disconnect(PluginCall call) {
         String address = call.getString("address");
+        boolean unpair = call.getBoolean("unpair", false);
         if (address == null) {
             call.reject("address is required");
             return;
+        }
+
+        if (unpair) {
+            removeBondedMac(getContext(), address);
         }
 
         BluetoothGatt gatt = connectedGatts.get(address);
@@ -623,8 +717,48 @@ public class ITagPlugin extends Plugin {
             ret.put("disconnected", true);
             call.resolve(ret);
         } else {
-            call.reject("Device was not connected");
+            if (unpair) {
+                JSObject ret = new JSObject();
+                ret.put("disconnected", true);
+                ret.put("unpaired", true);
+                call.resolve(ret);
+            } else {
+                call.reject("Device was not connected");
+            }
         }
+    }
+
+    @PluginMethod
+    public void forgetDevice(PluginCall call) {
+        String address = call.getString("address");
+        if (address != null) {
+            removeBondedMac(getContext(), address);
+            BluetoothGatt gatt = connectedGatts.get(address);
+            if (gatt != null) {
+                isReconnecting.put(address, false);
+                try {
+                    if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                        gatt.disconnect();
+                    }
+                } catch (Exception ignored) {}
+                connectedGatts.remove(address);
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getSavedDevices(PluginCall call) {
+        Set<String> macs = getBondedMacs(getContext());
+        JSArray arr = new JSArray();
+        for (String m : macs) {
+            arr.put(m);
+        }
+        JSObject ret = new JSObject();
+        ret.put("devices", arr);
+        call.resolve(ret);
     }
 
     @PluginMethod
