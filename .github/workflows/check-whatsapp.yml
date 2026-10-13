@@ -1,0 +1,16 @@
+name: Check WhatsApp
+on:
+  workflow_dispatch:
+
+jobs:
+  wa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read WhatsApp Business number (sends nothing)
+        env:
+          TOK: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          PID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          note "WA phone: $(curl -s -m 20 -H "Authorization: Bearer $TOK" "https://graph.facebook.com/v20.0/$PID?fields=display_phone_number,verified_name,quality_rating,code_verification_status,platform_type,name_status" | jq -c '.')"
+          note "WA token check: $(curl -s -m 20 "https://graph.facebook.com/debug_token?input_token=$TOK&access_token=$TOK" | jq -c '{valid: .data.is_valid, expires: .data.expires_at, type: .data.type, scopes: .data.scopes, err: .error.message}')"
