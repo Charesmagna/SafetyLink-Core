@@ -97,7 +97,7 @@ const PaystackCheckout: React.FC = () => {
         });
       } catch (e) {
         // Fallback to worker if local endpoint not accessible
-        const WORKER = 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+        const WORKER = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
         res = await fetch(`${WORKER}/api/paystack/initialize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
