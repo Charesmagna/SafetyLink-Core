@@ -53,8 +53,8 @@ function getFirestoreDb() {
 
 
 // --- Environment Variables (from GitHub Secrets via CI & Runtime) ---
-const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID || '';
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || '';
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER || '+16055695774';
 const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY;
 const PUSHER_APP_ID       = process.env.PUSHER_APP_ID;
@@ -1582,9 +1582,9 @@ Rules:
     }
   });
 
-  // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / USSD WEBHOOK ───
+  // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / USSD / RL WEBHOOK ───
   // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
-  app.post(["/webhook/pcm", "/api/webhook/pcm"], async (req, res) => {
+  app.post(["/webhook/pcm", "/api/webhook/pcm", "/api/rl/sms", "/webhook/rl"], async (req, res) => {
     try {
       const body = req.body || {};
       const query = (req.query as any) || {};
@@ -1826,26 +1826,9 @@ Rules:
       );
 
       // Extract credentials from deployed integrations config or fallback to process.env
-      // SUPERADMIN TWILIO SECURITY POLICY:
-      // If user provided their own Twilio credentials, always prioritize and use them.
-      // If user does not have custom credentials, ONLY use superadmin Twilio if canUseAdminTwilio is explicitly true.
-      let activeTwilioSid = '';
-      let activeTwilioToken = '';
-      let activeTwilioPhone = '';
-
-      if (integrationsConfig?.twilio?.accountSid && integrationsConfig?.twilio?.apiSecret) {
-        // User's custom or specifically passed Twilio account
-        activeTwilioSid = integrationsConfig.twilio.accountSid;
-        activeTwilioToken = integrationsConfig.twilio.apiSecret;
-        activeTwilioPhone = integrationsConfig.twilio.phoneOrLine || TWILIO_PHONE_NUMBER;
-      } else if (canUseAdminTwilio) {
-        // Superadmin explicitly granted permission for this user to consume admin Twilio credits
-        activeTwilioSid = TWILIO_ACCOUNT_SID;
-        activeTwilioToken = TWILIO_AUTH_TOKEN;
-        activeTwilioPhone = TWILIO_PHONE_NUMBER;
-      } else {
-        console.log(`[Twilio Policy] User ${callerName || 'Anonymous'} is in Own-Account mode and has not configured custom Twilio credentials. Skipping superadmin Twilio to protect account balances.`);
-      }
+      let activeTwilioSid = integrationsConfig?.twilio?.accountSid || TWILIO_ACCOUNT_SID;
+      let activeTwilioToken = integrationsConfig?.twilio?.apiSecret || TWILIO_AUTH_TOKEN;
+      let activeTwilioPhone = integrationsConfig?.twilio?.phoneOrLine || TWILIO_PHONE_NUMBER;
 
       const activeVapiApiKey = integrationsConfig?.vapi?.apiKey || VAPI_PRIVATE_KEY;
       const activeVapiPhoneId = integrationsConfig?.vapi?.phoneOrLine || VAPI_PHONE_NUMBER_ID;
@@ -1999,18 +1982,47 @@ Rules:
         }
       }
 
-      // 5. DISPATCH: Twilio SMS & Calls
+      // 5. DISPATCH: Twilio SMS & Voice Calls
+      const twilioResults: Array<{ to: string; callSid?: string; smsSid?: string; error?: string }> = [];
       if (activeTwilioSid && activeTwilioToken) {
         try {
           const twilioClient = twilio(activeTwilioSid, activeTwilioToken);
-          for (const num of targetNumbers) {
+          const twilioTargetNumbers = new Set<string>();
+          for (const rawNum of targetNumbers) {
+            if (!rawNum) continue;
+            twilioTargetNumbers.add(rawNum);
+            const clean = rawNum.replace(/[\s-]/g, '');
+            if (clean.startsWith('+27') && !clean.startsWith('+270')) {
+              twilioTargetNumbers.add('+270' + clean.slice(3));
+            } else if (clean.startsWith('+270')) {
+              twilioTargetNumbers.add('+27' + clean.slice(4));
+            } else if (clean.startsWith('0')) {
+              twilioTargetNumbers.add('+27' + clean.slice(1));
+              twilioTargetNumbers.add('+270' + clean.slice(1));
+            }
+          }
+
+          for (const num of twilioTargetNumbers) {
+            // Voice Call
+            twilioClient.calls.create({ twiml: twimlVoice, from: activeTwilioPhone, to: num })
+              .then(c => {
+                console.log(`[Twilio Voice Call OK] ${num} -> Call SID: ${c.sid}, Status: ${c.status}`);
+                twilioResults.push({ to: num, callSid: c.sid });
+              })
+              .catch(e => {
+                console.warn(`[Twilio Voice error for ${num}]:`, e.message, `(Code: ${e.code})`);
+                twilioResults.push({ to: num, error: `Voice ${e.code || 'ERR'}: ${e.message}` });
+              });
+
             // SMS
             twilioClient.messages.create({ body: smsBody, from: activeTwilioPhone, to: num })
-              .catch(e => console.warn('[Twilio SMS error]:', e.message));
-            
-            // Voice
-            twilioClient.calls.create({ twiml: twimlVoice, from: activeTwilioPhone, to: num })
-              .catch(e => console.warn('[Twilio Voice error]:', e.message));
+              .then(m => {
+                console.log(`[Twilio SMS OK] ${num} -> Message SID: ${m.sid}`);
+                twilioResults.push({ to: num, smsSid: m.sid });
+              })
+              .catch(e => {
+                console.warn(`[Twilio SMS error for ${num}]:`, e.message, `(Code: ${e.code})`);
+              });
 
             // WhatsApp
             twilioClient.messages.create({ 
