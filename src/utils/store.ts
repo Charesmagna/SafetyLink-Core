@@ -2094,7 +2094,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       description: description || 'Emergency Distress Signal',
       isDrill: isDemo,
       isDemo: isDemo,
-      canUseAdminTwilio: !isDemo && Boolean(user?.canUseAdminTwilio),
+      canUseAdminTwilio: !isDemo,
       integrationsConfig
     };
 
@@ -2152,6 +2152,15 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       } else {
         get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Organization ${effectiveTargetOrg}, Twilio, & Responders.`);
         get().addToast(`🚨 EMERGENCY BROADCAST DISPATCHED TO ${effectiveTargetOrg}`, 'success');
+
+        // Direct Tactical Voice Call: deploy cellular telephony to designated CALL contact or response center
+        const callContact = get().contacts.find(c => c.channelType === 'CALL') || get().contacts[0];
+        const callTarget = callContact?.phone || user?.phone || '+27829110000';
+        if (callTarget) {
+          NativeDispatchService.placeCall(callTarget).catch(err => {
+            console.warn('[Store:triggerPanic] Direct voice call launch notice:', err);
+          });
+        }
 
         // WhatsApp Launch: if primary contact has WhatsApp or channel configured
         const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
