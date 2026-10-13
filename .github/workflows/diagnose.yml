@@ -6,20 +6,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Test Worker, webhook, and stop Render failure emails
+      - name: Check Twilio account and Worker keys (sends no messages)
         env:
           WORKER: https://safetylink-api.tshilidzi-mukwevho54.workers.dev
-          PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SID: ${{ secrets.TWILIO_SID }}
+          TOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
         run: |
           note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
-          note "WORKER providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health/providers)"
-          BODY='{"from":"+27700000000","text":"Please Call Me test 0700000000","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
-          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM_WEBHOOK_SECRET" -hex | awk '{print $NF}')
-          note "WEBHOOK signed test: $(curl -s -m 40 -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm | cut -c1-330)"
-          note "WEBHOOK wrong-signature test (expect 401): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -H 'X-Signature: bad' -d "$BODY" -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm)"
-          H="Authorization: Bearer $RENDER_API_KEY"
-          for ID in srv-daa67p5g1s2s73c956ag srv-daa6325g1s2s73c8nk60 srv-daa5r7p5efls73drm7q0; do
-            R=$(curl -s -m 30 -X PATCH -H "$H" -H 'Content-Type: application/json' -d '{"autoDeploy":"no"}' https://api.render.com/v1/services/$ID)
-            note "RENDER autoDeploy off: $(echo "$R" | jq -r '"\(.name) autoDeploy=\(.autoDeploy)"' 2>&1)"
-          done
+          note "WORKER providers: $(curl -s -m 20 $WORKER/api/health/providers)"
+          note "TWILIO account: $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID.json | jq -c '{status, type, friendly_name, code, message}')"
+          note "TWILIO verified numbers (trial can only reach these): $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID/OutgoingCallerIds.json | jq -c '[.outgoing_caller_ids[]?.phone_number]')"
+          note "TWILIO your numbers: $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID/IncomingPhoneNumbers.json | jq -c '[.incoming_phone_numbers[]? | {n: .phone_number, sms: .capabilities.sms, voice: .capabilities.voice}]')"
