@@ -140,7 +140,7 @@ async function fireAllAlerts(
 
   const all = Array.from(new Set([
     ...extraContacts.map(normalizePhone),
-    normalizePhone(env.RESPONSE_CENTRE_NUMBER || '+27739441222'),
+    normalizePhone(env.RESPONSE_CENTRE_NUMBER || '+27816738186'),
   ].filter(Boolean)));
   const skipVoice = new Set(skipVoiceTo.map(normalizePhone));
   const voiceTargets = all.filter(n => !skipVoice.has(n));
