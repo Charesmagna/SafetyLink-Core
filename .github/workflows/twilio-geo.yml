@@ -1,0 +1,19 @@
+name: Twilio Enable South Africa
+on:
+  workflow_dispatch:
+
+jobs:
+  geo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable South Africa dialing and show result
+        env:
+          SID: ${{ secrets.TWILIO_SID }}
+          TOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          note "BEFORE: $(curl -s -m 20 -u "$SID:$TOK" https://voice.twilio.com/v1/DialingPermissions/Countries/ZA | jq -c '{name, low_risk_numbers_enabled, high_risk_special_numbers_enabled, code, message}')"
+          UPD='[{"iso_code":"ZA","low_risk_numbers_enabled":true,"high_risk_special_numbers_enabled":false,"high_risk_tollfraud_numbers_enabled":false}]'
+          note "UPDATE: $(curl -s -m 30 -u "$SID:$TOK" -X POST https://voice.twilio.com/v1/DialingPermissions/BulkCountryUpdates --data-urlencode "UpdateRequest=$UPD" | jq -c '.' | cut -c1-250)"
+          sleep 5
+          note "AFTER: $(curl -s -m 20 -u "$SID:$TOK" https://voice.twilio.com/v1/DialingPermissions/Countries/ZA | jq -c '{name, low_risk_numbers_enabled, high_risk_special_numbers_enabled, code, message}')"
