@@ -12,6 +12,7 @@ import { StatusIndicator } from './components/StatusIndicator';
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
+import { startProfileSync } from './services/ProfileSync';
 import { AuthScreen } from './components/AuthScreen';
 import { GlobalBackground } from "./components/GlobalBackground";
 import { SplashReveal } from "./components/SplashReveal";
@@ -205,6 +206,10 @@ const App: React.FC = () => {
     globalTheme,
     setGlobalTheme
   } = useAppStore();
+
+  useEffect(() => {
+    startProfileSync();
+  }, []);
 
   useEffect(() => {
     checkAppUpdates();
