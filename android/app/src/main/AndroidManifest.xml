@@ -94,6 +94,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Bluetooth Adapter State Receiver for Instant iTAG Reconnect -->
+        <receiver
+            android:name=".BluetoothStateReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Watchdog Heartbeat Alarm Receiver -->
         <receiver
             android:name=".WatchdogAlarmReceiver"

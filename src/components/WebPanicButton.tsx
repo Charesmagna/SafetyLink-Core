@@ -26,31 +26,64 @@ export function WebPanicButton() {
       const { latitude, longitude } = position.coords;
       setStatus('Sending emergency alert...');
 
+      const isDemo = Boolean(
+        currentUser?.isDemo ||
+        currentUser?.id === '1001' ||
+        currentUser?.id === '1002' ||
+        currentUser?.id === '1003' ||
+        currentUser?.id === '1004' ||
+        currentUser?.id === 'SL-U-DEMO' ||
+        currentUser?.username === 'commander_wits' ||
+        currentUser?.username === 'chief_patrol' ||
+        currentUser?.username === 'thabo_m' ||
+        currentUser?.username === 'lerato_k'
+      );
+
       const res = await fetch('/api/panic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          org_code: currentOrg?.orgCode || '',
+          org_code: currentUser?.orgCode || currentOrg?.orgCode || currentOrg?.id || '',
           phone: (currentUser as any)?.phone || '',
+          callerName: currentUser?.fullName || currentUser?.username || 'SafetyLink User',
+          callerNumber: (currentUser as any)?.phone || '',
+          userId: isDemo ? 'SL-U-DEMO' : currentUser?.id,
+          isDemo,
+          isDrill: isDemo,
+          description: isDemo ? 'Web Panic Triggered [DEMO DRILL]' : 'Web Panic Triggered',
           latitude,
           longitude,
         })
       });
 
       if (res.ok) {
-        setStatus('✓ Alert sent. Help is on the way.');
+        setStatus(isDemo ? '✓ Demo drill simulated. No telecom charged.' : '✓ Alert sent. Help is on the way.');
       } else {
         setStatus('Alert sent via device.');
       }
     } catch (err) {
       setStatus('Location unavailable. Alert sent without GPS.');
+      const isDemo = Boolean(
+        currentUser?.isDemo ||
+        currentUser?.id === '1001' ||
+        currentUser?.id === '1002' ||
+        currentUser?.id === '1003' ||
+        currentUser?.id === '1004' ||
+        currentUser?.id === 'SL-U-DEMO'
+      );
       // Still trigger panic without location
       await fetch('/api/panic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          org_code: currentOrg?.orgCode || '',
+          org_code: currentUser?.orgCode || currentOrg?.orgCode || currentOrg?.id || '',
           phone: (currentUser as any)?.phone || '',
+          callerName: currentUser?.fullName || currentUser?.username || 'SafetyLink User',
+          callerNumber: (currentUser as any)?.phone || '',
+          userId: isDemo ? 'SL-U-DEMO' : currentUser?.id,
+          isDemo,
+          isDrill: isDemo,
+          description: isDemo ? 'Web Panic Triggered [DEMO DRILL]' : 'Web Panic Triggered',
           latitude: 0, longitude: 0,
         })
       });

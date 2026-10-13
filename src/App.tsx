@@ -12,7 +12,6 @@ import { StatusIndicator } from './components/StatusIndicator';
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
-import { startProfileSync } from './services/ProfileSync';
 import { AuthScreen } from './components/AuthScreen';
 import { GlobalBackground } from "./components/GlobalBackground";
 import { SplashReveal } from "./components/SplashReveal";
@@ -208,10 +207,6 @@ const App: React.FC = () => {
   } = useAppStore();
 
   useEffect(() => {
-    startProfileSync();
-  }, []);
-
-  useEffect(() => {
     checkAppUpdates();
     const updateInterval = setInterval(() => {
       checkAppUpdates();
@@ -223,6 +218,24 @@ const App: React.FC = () => {
     window.addEventListener('focus', handleFocus);
 
     initFirebaseSync();
+
+    // Persistent BLE iTAG Auto-Reconnect on App Launch & Wake
+    const autoReconnectBondedITags = () => {
+      try {
+        const bonded = useAppStore.getState().bleDevices;
+        if (bonded && bonded.length > 0) {
+          console.log('[App] Auto-reconnecting saved bonded iTAG devices:', bonded.length);
+          bonded.forEach(dev => {
+            if (dev.connectionState !== 'CONNECTED') {
+              useAppStore.getState().connectBleDevice(dev.macAddress);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('[App] Auto-reconnect saved iTAG note:', e);
+      }
+    };
+    const itagTimer = setTimeout(autoReconnectBondedITags, 1000);
     
     // Initialize real-time mesh node sync if firestore sync is active
     let cleanupSync: any = null;

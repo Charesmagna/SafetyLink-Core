@@ -12,7 +12,9 @@ export interface ITagPluginType {
   startScan(): Promise<void>;
   stopScan(): Promise<void>;
   connect(options: { address: string }): Promise<{ connected: boolean; address: string }>;
-  disconnect(options: { address: string }): Promise<{ disconnected: boolean }>;
+  disconnect(options: { address: string; unpair?: boolean }): Promise<{ disconnected: boolean }>;
+  forgetDevice(options: { address: string }): Promise<{ success: boolean }>;
+  getSavedDevices(): Promise<{ devices: string[] }>;
   triggerAlert(options: { address: string; level?: number }): Promise<{ success: boolean }>;
   getConnectedDevices(): Promise<{ devices: string[] }>;
   
@@ -203,11 +205,44 @@ export class ITagPluginService {
     }
     try {
       console.log(`[ITagPluginService] Terminating connection with device: ${address}`);
-      const res = await ITagPlugin.disconnect({ address });
+      const res = await ITagPlugin.disconnect({ address, unpair: false });
       return res.disconnected;
     } catch (e) {
       console.warn(`[ITagPluginService] Disconnect command failed for ${address}:`, e);
       return false;
+    }
+  }
+
+  /**
+   * Completely unpairs and forgets a saved iTAG device so it won't auto-reconnect.
+   */
+  static async forgetDevice(address: string): Promise<boolean> {
+    if (!isNativeAvailable) {
+      return true;
+    }
+    try {
+      console.log(`[ITagPluginService] Forgetting device: ${address}`);
+      const res = await ITagPlugin.forgetDevice({ address });
+      return res.success;
+    } catch (e) {
+      console.warn(`[ITagPluginService] Forget device failed for ${address}:`, e);
+      return false;
+    }
+  }
+
+  /**
+   * Retrieves all persistently bonded iTAG MAC addresses from native SharedPreferences.
+   */
+  static async getSavedDevices(): Promise<string[]> {
+    if (!isNativeAvailable) {
+      return [];
+    }
+    try {
+      const res = await ITagPlugin.getSavedDevices();
+      return res.devices || [];
+    } catch (e) {
+      console.warn('[ITagPluginService] getSavedDevices failed:', e);
+      return [];
     }
   }
 
