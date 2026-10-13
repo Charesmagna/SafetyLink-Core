@@ -1,0 +1,22 @@
+name: Check Backend
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Worker and domains
+        env:
+          PCM: ${{ secrets.PCM_WEBHOOK_SECRET }}
+        run: |
+          W=https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev
+          note() { echo "::notice::$1"; }
+          note "WORKER providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $W/api/health/providers | cut -c1-300)"
+          note "WORKER health: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $W/api/health | cut -c1-200)"
+          BODY='{"from":"test","text":"connectivity test no number","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
+          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM" -hex | sed 's/^.* //')
+          note "WORKER webhook signed: $(curl -s -m 20 -w ' [HTTP %{http_code}]' -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" $W/webhook/pcm | cut -c1-200)"
+          note "WORKER webhook unsigned: $(curl -s -m 20 -w ' [HTTP %{http_code}]' -X POST -H 'Content-Type: application/json' -d "$BODY" $W/webhook/pcm | cut -c1-120)"
+          note "API DOMAIN providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' https://api.safetylink.online/api/health/providers | cut -c1-200)"
+          note "API DOMAIN webhook: $(curl -s -m 20 -w ' [HTTP %{http_code}]' -X POST -H 'Content-Type: application/json' -d "$BODY" https://api.safetylink.online/webhook/pcm | cut -c1-160)"
