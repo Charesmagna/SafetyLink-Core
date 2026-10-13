@@ -2034,6 +2034,39 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
            });
            set({ activeSOSState: res.status === 'DISPATCHING' ? 'ESCALATING' : 'ACQUIRING_GPS' });
            get().addAuditLog('SECURITY', 'SEVERE', isDemo ? 'Demo Panic Triggered Natively [SIMULATED]' : 'Panic Triggered Natively', description || '');
+           if (countdownElapsed && !isDemo) {
+             const pi: any[] = (get() as any).platformIntegrations || [];
+             const f = (id: string) => pi.find(x => x.platformId === id && x.apiKey);
+             const tw = f('twilio'), vp = f('vapi'), at = f('africas_talking');
+             const backend = (get() as any).customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+             const cloudPayload = {
+               userId: user?.id || 'UNKNOWN',
+               orgId: get().currentOrg?.id || null,
+               latitude: coords?.lat || 0,
+               longitude: coords?.lng || 0,
+               callerName: user?.fullName || user?.username || 'SafetyLink User',
+               callerNumber: user?.phone || '',
+               emergencyContacts: get().contacts.map((c: any) => ({ name: c.name, phone: c.phone })),
+               description: description || 'Emergency Distress Signal',
+               skipVoiceTo: primaryContact?.phone ? [primaryContact.phone] : [],
+               providers: {
+                 ...(tw ? { twilio: { sid: tw.accountSid, token: tw.apiKey, from: tw.phoneOrLine } } : {}),
+                 ...(vp ? { vapi: { key: vp.apiKey, phoneNumberId: vp.phoneOrLine } } : {}),
+                 ...(at ? { at: { key: at.apiKey, username: at.accountSid } } : {}),
+               }
+             };
+             fetch(String(backend).replace(/\/$/, '') + '/api/panic', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify(cloudPayload)
+             }).then(async r => {
+               const j: any = await r.json().catch(() => ({}));
+               const summary = Array.isArray(j.results) ? j.results.map((x: any) => `${x.provider}/${x.channel}:${x.ok ? 'ok' : 'FAIL ' + (x.status || x.detail || '')}`).join(' ') : '';
+               get().addAuditLog('SECURITY', 'SEVERE', r.ok ? 'Cloud Dispatch OK' : 'Cloud Dispatch Failed', `HTTP ${r.status} ${summary}`);
+             }).catch(err => {
+               get().addAuditLog('SECURITY', 'SEVERE', 'Cloud Dispatch Unreachable', String(err));
+             });
+           }
        } catch (e) {
            console.error("Native panic failed, falling back", e);
            get().addToast('Native bridge failed. Falling back to web.', 'error');
