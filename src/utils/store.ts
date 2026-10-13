@@ -497,7 +497,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
   thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
-  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', import.meta.env.VITE_API_URL || 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev'),
+  customBackendUrl: getStoredJSON<string>('sl_custom_backend_url', import.meta.env.VITE_API_URL || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev'),
   connectyCubeConfig: getStoredJSON<any>('sl_connectycube_config', null),
   tuyaConfig: getStoredJSON<any>('sl_tuya_config', null),
   auraApiUrl: getStoredJSON<string>('sl_aura_api_url', ''),
@@ -2038,7 +2038,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
              const pi: any[] = (get() as any).platformIntegrations || [];
              const f = (id: string) => pi.find(x => x.platformId === id && x.apiKey);
              const tw = f('twilio'), vp = f('vapi'), at = f('africas_talking');
-             const backend = (get() as any).customBackendUrl || 'https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+             const backend = (get() as any).customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
              const cloudPayload = {
                userId: user?.id || 'UNKNOWN',
                orgId: get().currentOrg?.id || null,

@@ -6,26 +6,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Cloudflare + Render details
+      - name: Test Worker, webhook, and stop Render failure emails
         env:
-          CF: ${{ secrets.CF_WORKERS_TOKEN }}
-          ACC: d089bef8b0b58c5d9506b512ec2f63dc
+          WORKER: https://safetylink-api.tshilidzi-mukwevho54.workers.dev
+          PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
-          CH="Authorization: Bearer $CF"
-          note "CF token verify: $(curl -s -m 20 -H "$CH" https://api.cloudflare.com/client/v4/user/tokens/verify | jq -c '{success, status: .result.status, errors}')"
-          note "CF workers subdomain: $(curl -s -m 20 -H "$CH" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/subdomain | jq -c '{success, sub: .result.subdomain, errors}')"
-          note "CF worker scripts: $(curl -s -m 20 -H "$CH" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/scripts | jq -c '[.result[]?.id]')"
-          note "CF worker custom domains: $(curl -s -m 20 -H "$CH" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/domains | jq -c '[.result[]? | {hostname, service}]')"
-          Z=$(curl -s -m 20 -H "$CH" "https://api.cloudflare.com/client/v4/zones?name=safetylink.online" | jq -r '.result[0].id // empty')
-          note "CF zone id found: ${Z:+yes}"
-          if [ -n "$Z" ]; then
-            note "CF worker routes: $(curl -s -m 20 -H "$CH" https://api.cloudflare.com/client/v4/zones/$Z/workers/routes | jq -c '[.result[]? | {pattern, script}]')"
-            note "CF DNS (api/www/apex): $(curl -s -m 20 -H "$CH" "https://api.cloudflare.com/client/v4/zones/$Z/dns_records?per_page=100" | jq -c '[.result[]? | select(.name|test("^(api\\.|www\\.)?safetylink\\.online$")) | {type, name, content: .content[0:50], proxied}]')"
-          fi
+          note "WORKER providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health/providers)"
+          BODY='{"from":"+27700000000","text":"Please Call Me test 0700000000","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
+          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM_WEBHOOK_SECRET" -hex | awk '{print $NF}')
+          note "WEBHOOK signed test: $(curl -s -m 40 -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm | cut -c1-330)"
+          note "WEBHOOK wrong-signature test (expect 401): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -H 'X-Signature: bad' -d "$BODY" -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm)"
           H="Authorization: Bearer $RENDER_API_KEY"
           for ID in srv-daa67p5g1s2s73c956ag srv-daa6325g1s2s73c8nk60 srv-daa5r7p5efls73drm7q0; do
-            S=$(curl -s -m 30 -H "$H" https://api.render.com/v1/services/$ID)
-            note "RENDER $(echo "$S" | jq -r '"\(.name) env=\(.serviceDetails.env) docker=\(.serviceDetails.envSpecificDetails.dockerfilePath // "-") build=\(.serviceDetails.envSpecificDetails.buildCommand // "-") start=\(.serviceDetails.envSpecificDetails.startCommand // "-") url=\(.serviceDetails.url) domains=\(.serviceDetails.customDomains // "-")"' 2>&1)"
+            R=$(curl -s -m 30 -X PATCH -H "$H" -H 'Content-Type: application/json' -d '{"autoDeploy":"no"}' https://api.render.com/v1/services/$ID)
+            note "RENDER autoDeploy off: $(echo "$R" | jq -r '"\(.name) autoDeploy=\(.autoDeploy)"' 2>&1)"
           done
