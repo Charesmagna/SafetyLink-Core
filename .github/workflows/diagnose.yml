@@ -1,0 +1,40 @@
+name: Diagnose Backend
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Worker + webhook + Render checks
+        env:
+          WORKER: https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev
+          PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          note "WORKER health/providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health/providers)"
+          note "WORKER health: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health)"
+          BODY='{"from":"+27700000000","text":"Please Call Me test 0700000000","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
+          if [ -n "$PCM_WEBHOOK_SECRET" ]; then
+            SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM_WEBHOOK_SECRET" -hex | awk '{print $NF}')
+            note "WEBHOOK signed test (number 0700000000 is fake, no real alert expected to a real person): $(curl -s -m 30 -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm | cut -c1-300)"
+          else
+            note "WEBHOOK: PCM_WEBHOOK_SECRET not set in GitHub"
+          fi
+          note "api.safetylink.online health: $(curl -s -m 20 -w ' [HTTP %{http_code}]' https://api.safetylink.online/api/health | cut -c1-200)"
+          note "api.safetylink.online providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' https://api.safetylink.online/api/health/providers | cut -c1-200)"
+          if [ -n "$RENDER_API_KEY" ]; then
+            H="Authorization: Bearer $RENDER_API_KEY"
+            SV=$(curl -s -m 30 -H "$H" "https://api.render.com/v1/services?limit=20")
+            note "RENDER services: $(echo "$SV" | jq -r '[.[]?.service | "\(.name)|\(.type)|\(.id)|\(.serviceDetails.url // "none")|\(.ownerId)|branch=\(.branch)|autoDeploy=\(.autoDeploy)"] | join(" ;; ")' 2>&1)"
+            for ROW in $(echo "$SV" | jq -r '.[]?.service | "\(.id),\(.ownerId),\(.name)"'); do
+              ID=${ROW%%,*}; REST=${ROW#*,}; OWNER=${REST%%,*}; NAME=${REST#*,}
+              D=$(curl -s -m 30 -H "$H" "https://api.render.com/v1/services/$ID/deploys?limit=1")
+              note "RENDER $NAME latest deploy: $(echo "$D" | jq -r '.[0].deploy | "status=\(.status) commit=\(.commit.message // "")[0:60] finished=\(.finishedAt)"' 2>&1)"
+              LOGS=$(curl -s -m 30 -G -H "$H" "https://api.render.com/v1/logs" --data-urlencode "ownerId=$OWNER" --data-urlencode "resource=$ID" --data-urlencode "type=build" --data-urlencode "limit=60" --data-urlencode "direction=backward")
+              echo "$LOGS" | jq -r '.logs[]?.message' 2>/dev/null | grep -iE "error|failed|cannot|not found|exit" | head -8 | while IFS= read -r L; do note "RENDER $NAME build log: $L"; done
+            done
+          else
+            note "RENDER: RENDER_API_KEY not set in GitHub"
+          fi
