@@ -23,6 +23,7 @@ export interface Env {
   // Bland.ai
   BLAND_API_KEY: string;
   TWILIO_WHATSAPP_FROM?: string;
+  PCM_WEBHOOK_SECRET?: string;
   // Paystack
   PAYSTACK_SECRET_KEY: string;
   PAYSTACK_PUBLIC_KEY: string;
@@ -408,6 +409,52 @@ app.post('/api/panic', async (c) => {
     providers: body.providers || {},
   });
   return c.json({ ok: results.some(r => r.ok), address, results });
+});
+
+// ── PCM / "Please Call Me" webhook (Rain SIM SMS forwarder) ───────────────────
+const hexHmac = async (secret: string, data: string): Promise<string> => {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+const safeEq = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+};
+
+app.post('/webhook/pcm', async (c) => {
+  const secret = c.env.PCM_WEBHOOK_SECRET;
+  if (!secret) return c.json({ error: 'PCM webhook not configured' }, 503); // fail closed
+  const raw = await c.req.text();
+  const given = (c.req.header('X-Signature') || '').toLowerCase();
+  if (!given || !safeEq(given, await hexHmac(secret, raw))) return c.json({ error: 'Invalid signature' }, 401);
+
+  let body: any = {};
+  try { body = JSON.parse(raw); } catch { return c.json({ error: 'Bad JSON' }, 400); }
+  const text = String(body.text || '');
+  const match = text.match(/(?:\+27|27|0)[6-8][0-9]{8}/) || String(body.from || '').match(/(?:\+27|27|0)[6-8][0-9]{8}/);
+  if (!match) return c.json({ ok: false, reason: 'No SA mobile number found in message' }, 200);
+  const msisdn = normalizePhone(match[0]);
+
+  // De-duplicate repeated forwards for the same number within 60s
+  const since = Date.now() - 60000;
+  const dupe = await c.env.DB?.prepare("SELECT 1 FROM incidents WHERE type='PCM_PANIC' AND user_id=? AND created_at>? LIMIT 1")
+    .bind(msisdn, since).first().catch(() => null);
+  if (dupe) return c.json({ ok: true, deduped: true });
+
+  let user: any = null;
+  try { user = await c.env.DB?.prepare('SELECT id, org_id, username FROM users WHERE phone=? LIMIT 1').bind(msisdn).first(); } catch { /* phone column may not exist yet */ }
+
+  await c.env.DB?.prepare('INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), user?.org_id || null, msisdn, 'PCM_PANIC', null, null, Date.now()).run().catch(() => {});
+
+  const results = await fireAllAlerts(c.env, {
+    callerNumber: msisdn, callerName: user?.username || msisdn,
+    address: 'Location unavailable (Please Call Me trigger) - call the number back immediately',
+    extraContacts: [],
+  });
+  return c.json({ ok: results.some(r => r.ok), caller: msisdn, results });
 });
 
 // Which providers have keys loaded (no secret values returned)
