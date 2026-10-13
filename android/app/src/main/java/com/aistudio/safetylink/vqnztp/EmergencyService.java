@@ -4,6 +4,12 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Handler;
+import android.os.Looper;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import android.os.Build;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -98,6 +104,54 @@ public final class EmergencyService {
         }
     }
 
+    // ---- Please Call Me (USSD) to the Rain SIM gateway ----
+    public static final String DEFAULT_PCM_GATEWAY = "0816738186";
+
+    @SuppressWarnings("MissingPermission")
+    public static String sendPleaseCallMe(Context ctx) {
+        try {
+            if (ctx.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return "NO_PERMISSION";
+            String gateway = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("pcm_gateway", DEFAULT_PCM_GATEWAY);
+            TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm == null) return "NO_TELEPHONY";
+            int subId = getPreferredSubId(ctx);
+            if (subId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) tm = tm.createForSubscriptionId(subId);
+            String op = tm.getSimOperator() == null ? "" : tm.getSimOperator(); // MCC+MNC
+            String code = "140";                       // Vodacom (65501) and Telkom (65502)
+            if (op.startsWith("65510")) code = "121";  // MTN
+            else if (op.startsWith("65507")) code = "111"; // Cell C
+            String ussd = "*" + code + "*" + gateway + "#";
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                final CountDownLatch latch = new CountDownLatch(1);
+                final String[] res = { "SENT" };
+                tm.sendUssdRequest(ussd, new TelephonyManager.UssdResponseCallback() {
+                    @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) { latch.countDown(); }
+                    @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) { res[0] = "FAILED_" + failureCode; latch.countDown(); }
+                }, new Handler(Looper.getMainLooper()));
+                latch.await(12, TimeUnit.SECONDS);
+                if (res[0].startsWith("FAILED")) return pcmViaDialer(ctx, ussd, res[0]);
+                return res[0];
+            }
+            return pcmViaDialer(ctx, ussd, "LEGACY");
+        } catch (Exception e) {
+            Log.w(TAG, "PCM USSD failed: " + e.getMessage());
+            return "ERROR";
+        }
+    }
+
+    private static String pcmViaDialer(Context ctx, String ussd, String why) {
+        try {
+            Intent i = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(ussd)));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            applyPreferredSim(ctx, i);
+            ctx.startActivity(i);
+            return "DIALED(" + why + ")";
+        } catch (Exception e) {
+            return "ERROR";
+        }
+    }
+
     private EmergencyService() {}
 
     public static EmergencyService getInstance() {
@@ -182,6 +236,10 @@ public final class EmergencyService {
                 if ("SENT".equals(st)) sentCount++;
             }
             if (sentCount > 0) smsStatus = "SENT";
+
+            // 1b. Free "Please Call Me" USSD to the SafetyLink Rain gateway (works with 0 airtime / 0 data).
+            String pcmStatus = sendPleaseCallMe(context);
+            Log.i(TAG, "PCM USSD status: " + pcmStatus);
 
             // 2. Native Emergency Telephony Call
             String callStatus = placeNativeCall(context, toNumber);
