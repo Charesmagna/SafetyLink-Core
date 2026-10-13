@@ -123,20 +123,22 @@ const normalizePhone = (raw: string): string => {
 
 async function fireAllAlerts(
   env: Env,
-  { callerNumber, callerName, lat, lng, address, extraContacts = [], skipVoiceTo = [], providers = {} }: {
+  { callerNumber, callerName, lat, lng, address, extraContacts = [], skipVoiceTo = [], providers = {}, locationNote = '' }: {
     callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
-    extraContacts?: string[]; skipVoiceTo?: string[]; providers?: any;
+    extraContacts?: string[]; skipVoiceTo?: string[]; providers?: any; locationNote?: string;
   }
 ): Promise<AlertResult[]> {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
-  const smsBody = `SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\nLocation: ${location}\n${mapsLink}`.slice(0, 600);
+  const who = callerName || callerNumber || 'A SafetyLink user';
+  const smsBody = `SAFETYLINK PANIC ALERT\n${who} has pressed the panic button.\nLocation${locationNote}: ${location}\n${mapsLink}\nCall them: ${callerNumber || 'n/a'}`.slice(0, 600);
+  const spokenIntro = `This is SafetyLink. ${who} has pressed the panic button at this location: ${location}. Please respond immediately.`;
 
-  // Per-user keys (entered in app Settings) override server secrets
   const tw = { sid: providers?.twilio?.sid || env.TWILIO_SID, token: providers?.twilio?.token || env.TWILIO_AUTH_TOKEN, from: providers?.twilio?.from || env.TWILIO_NUMBER, waFrom: providers?.twilio?.waFrom || (env as any).TWILIO_WHATSAPP_FROM || providers?.twilio?.from || env.TWILIO_NUMBER };
   const vp = { key: providers?.vapi?.key || env.VAPI_PRIVATE_KEY, phoneId: providers?.vapi?.phoneNumberId || env.VAPI_PHONE_NUMBER_ID, assistantId: providers?.vapi?.assistantId || env.VAPI_ASSISTANT_ID };
   const at = { key: providers?.at?.key || env.AT_API_KEY, username: providers?.at?.username || env.AT_USERNAME };
   const bl = { key: providers?.bland?.key || env.BLAND_API_KEY };
+  const hasBland = !!bl.key && bl.key !== 'not_provided';
 
   const all = Array.from(new Set([
     ...extraContacts.map(normalizePhone),
@@ -168,56 +170,50 @@ async function fireAllAlerts(
       body: new URLSearchParams(params).toString(),
     });
 
-  const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
+  const callVapi = (to: string) => {
+    const body: any = { phoneNumberId: vp.phoneId, customer: { number: to } };
+    if (vp.assistantId) {
+      body.assistantId = vp.assistantId;
+      body.assistantOverrides = { firstMessage: spokenIntro };
+    } else {
+      body.assistant = { firstMessage: spokenIntro, model: { provider: 'openai', model: 'gpt-4o-mini', temperature: 0.2 }, voice: { provider: '11labs', voiceId: '21m00Tcm4TlvDq8ikWAM' }, maxDurationSeconds: 60 };
+    }
+    return fetch('https://api.vapi.ai/call', { method: 'POST', headers: { Authorization: `Bearer ${vp.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  };
+  const callBland = (to: string) => fetch('https://api.bland.ai/v1/calls', {
+    method: 'POST', headers: { authorization: bl.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone_number: to, task: `Say exactly this, then ask them to confirm they will respond: ${spokenIntro}`, max_duration: 2, wait_for_greeting: true }),
+  });
+  const callTwilio = (to: string) => twPost('Calls', { From: tw.from, To: to, Twiml: `<Response><Say voice="alice">${spokenIntro}</Say><Pause length="1"/><Say voice="alice">${spokenIntro}</Say></Response>` });
 
-  await Promise.allSettled(all.map(async (to) => {
-    // SMS: Twilio first, Africa's Talking as backup
-    let smsOk = false;
-    if (twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
-    if (!smsOk && at.key && at.username) {
-      await attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
-        method: 'POST',
-        headers: { apiKey: at.key, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+  // SMS + WhatsApp: every number, every provider in parallel (redundancy matters in an emergency)
+  const messaging = all.flatMap((to) => {
+    const jobs: Promise<unknown>[] = [];
+    if (twAuth && tw.from) {
+      jobs.push(attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody })));
+      if (tw.waFrom) jobs.push(attempt('WHATSAPP', 'twilio', to, () => twPost('Messages', { From: `whatsapp:${tw.waFrom}`, To: `whatsapp:${to}`, Body: smsBody })));
+    }
+    if (at.key && at.username) {
+      jobs.push(attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
+        method: 'POST', headers: { apiKey: at.key, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ username: at.username, to, message: smsBody }).toString(),
-      }));
+      })));
     }
+    return jobs;
+  });
 
-    // WhatsApp via Twilio (needs a WhatsApp-enabled sender or the sandbox joined by the recipient)
-    if (twAuth && tw.waFrom) {
-      await attempt('WHATSAPP', 'twilio', to, () => twPost('Messages', { From: `whatsapp:${tw.waFrom}`, To: `whatsapp:${to}`, Body: smsBody }));
+  // Voice: first contact -> Vapi (AI talks), second contact -> Bland, then everyone else Vapi.
+  // If a provider fails, the next one tries the same person (Vapi -> Twilio -> Bland).
+  const voice = voiceTargets.map(async (to, i) => {
+    const order: Array<'vapi' | 'bland' | 'twilio'> = (i === 1 && hasBland) ? ['bland', 'vapi', 'twilio'] : ['vapi', 'twilio', 'bland'];
+    for (const prov of order) {
+      if (prov === 'vapi' && vp.key && vp.phoneId) { if (await attempt('VOICE', 'vapi', to, () => callVapi(to))) return; }
+      if (prov === 'twilio' && twAuth && tw.from) { if (await attempt('VOICE', 'twilio', to, () => callTwilio(to))) return; }
+      if (prov === 'bland' && hasBland) { if (await attempt('VOICE', 'bland', to, () => callBland(to))) return; }
     }
+  });
 
-    // Voice: ONE call per number. Vapi (AI) -> Twilio voice -> Bland, stopping at first success
-    if (voiceTargets.includes(to)) {
-      let called = false;
-      if (vp.key && vp.phoneId) {
-        const body: any = { phoneNumberId: vp.phoneId, customer: { number: to } };
-        if (vp.assistantId) {
-          body.assistantId = vp.assistantId;
-          body.assistantOverrides = { firstMessage: `This is SafetyLink. ${callerName || 'A registered user'} has triggered a panic alert. Location: ${location}. Please respond immediately.` };
-        } else {
-          body.assistant = {
-            firstMessage: `This is SafetyLink. ${callerName || 'A registered user'} has triggered a panic alert. Location: ${location}. Please respond immediately.`,
-            model: { provider: 'openai', model: 'gpt-4o-mini', temperature: 0.2 },
-            voice: { provider: '11labs', voiceId: '21m00Tcm4TlvDq8ikWAM' },
-            maxDurationSeconds: 60,
-          };
-        }
-        called = await attempt('VOICE', 'vapi', to, () => fetch('https://api.vapi.ai/call', {
-          method: 'POST', headers: { Authorization: `Bearer ${vp.key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-        }));
-      }
-      if (!called && twAuth && tw.from) {
-        called = await attempt('VOICE', 'twilio', to, () => twPost('Calls', { From: tw.from, To: to, Twiml: `<Response><Say voice="alice">${spoken}</Say><Pause length="1"/><Say voice="alice">${spoken}</Say></Response>` }));
-      }
-      if (!called && bl.key && bl.key !== 'not_provided') {
-        await attempt('VOICE', 'bland', to, () => fetch('https://api.bland.ai/v1/calls', {
-          method: 'POST', headers: { authorization: bl.key, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone_number: to, task: `Tell the person: ${spoken} Then ask them to confirm they will respond.`, max_duration: 2, wait_for_greeting: true }),
-        }));
-      }
-    }
-  }));
+  await Promise.allSettled([...messaging, ...voice]);
 
   if (env.PIPEDREAM_WEBHOOK_URL) {
     await attempt('WEBHOOK', 'pipedream', 'n/a', () => fetch(env.PIPEDREAM_WEBHOOK_URL, {
@@ -226,6 +222,20 @@ async function fireAllAlerts(
     }));
   }
   return results;
+}
+
+// ── Profiles: lets the server find out WHO pressed (needed for offline "Please Call Me") ──
+let schemaReady = false;
+async function ensureSchema(env: Env) {
+  if (schemaReady || !env.DB) return;
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS profiles (phone TEXT PRIMARY KEY, name TEXT, contacts TEXT, lat REAL, lng REAL, token_hash TEXT, updated_at INTEGER)').run().catch(() => {});
+  schemaReady = true;
+}
+const sha256Hex = async (t: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))).map(b => b.toString(16).padStart(2, '0')).join('');
+async function recentIncident(env: Env, key: string, ms: number): Promise<boolean> {
+  if (!env.DB || !key) return false;
+  const r = await env.DB.prepare('SELECT 1 FROM incidents WHERE user_id=? AND created_at>? LIMIT 1').bind(key, Date.now() - ms).first().catch(() => null);
+  return !!r;
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
@@ -363,43 +373,18 @@ app.post('/api/panic', async (c) => {
   const lat = body.lat ?? body.latitude;
   const lng = body.lng ?? body.longitude;
   const contactNumbers: string[] = Array.isArray(body.emergencyContacts) ? body.emergencyContacts.map((x: any) => x?.phone).filter(Boolean) : [];
-  const origin = c.req.header('Origin') || '';
   if (!orgId && !callerNumber && contactNumbers.length === 0) return c.json({ error: 'Missing fields' }, 400);
+  await ensureSchema(c.env);
+
+  const key = normalizePhone(callerNumber || '') || userId || '';
+  if (await recentIncident(c.env, key, 60000)) return c.json({ ok: true, deduped: true });
 
   const address = lat ? await reverseGeocode(lat, lng) : 'Location unknown';
   const now = Date.now();
-
-  await c.env.DB?.prepare(
-    'INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(crypto.randomUUID(), orgId || null, userId || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
-
+  await c.env.DB?.prepare('INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), orgId || null, key || null, 'PANIC', lat || null, lng || null, now).run().catch(() => {});
   if (userId && orgId) {
-    await c.env.DB?.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?')
-      .bind(now, lat || null, lng || null, userId).run().catch(() => {});
-  }
-
-  const isDemo = Boolean(
-    body.isDemo || 
-    body.isDrill || 
-    userId === '1001' || 
-    userId === '1002' || 
-    userId === '1003' || 
-    userId === '1004' || 
-    userId === 'SL-U-DEMO' ||
-    (body.description && typeof body.description === 'string' && body.description.includes('[DEMO'))
-  );
-
-  if (isDemo) {
-    console.log(`[Worker Demo SOS] Suppressing live telecom dispatch for demo user ${callerName || userId || 'Demo User'}`);
-    return c.json({
-      ok: true,
-      simulated: true,
-      isDemo: true,
-      address,
-      results: [
-        { channel: 'SMS', provider: 'demo_simulation', to: callerNumber || 'DEMO', ok: true, detail: 'Demo SOS simulation completed. Real telecom suppressed.' }
-      ]
-    });
+    await c.env.DB?.prepare('UPDATE users SET sos_active=1, last_seen=?, lat=?, lng=? WHERE id=?').bind(now, lat || null, lng || null, userId).run().catch(() => {});
   }
 
   const results = await fireAllAlerts(c.env, {
@@ -409,6 +394,29 @@ app.post('/api/panic', async (c) => {
     providers: body.providers || {},
   });
   return c.json({ ok: results.some(r => r.ok), address, results });
+});
+
+// App saves who the user is + their emergency contacts + last known location (works when online)
+app.post('/api/profile/sync', async (c) => {
+  await ensureSchema(c.env);
+  const b = (await c.req.json().catch(() => ({}))) as any;
+  const phone = normalizePhone(b.phone || '');
+  if (!/^\+27[6-8][0-9]{8}$/.test(phone)) return c.json({ error: 'A valid South African mobile number is required' }, 400);
+  const contacts = (Array.isArray(b.contacts) ? b.contacts : []).slice(0, 5)
+    .map((x: any) => ({ name: String(x?.name || '').slice(0, 60), phone: normalizePhone(x?.phone || '') })).filter((x: any) => x.phone);
+  const given = c.req.header('X-Profile-Token') || '';
+  const existing: any = await c.env.DB?.prepare('SELECT token_hash FROM profiles WHERE phone=?').bind(phone).first().catch(() => null);
+  let token = '';
+  let hash = existing?.token_hash || '';
+  if (existing?.token_hash) {
+    if (!given || (await sha256Hex(given)) !== existing.token_hash) return c.json({ error: 'This number is already registered from another device' }, 403);
+  } else {
+    token = crypto.randomUUID() + crypto.randomUUID();
+    hash = await sha256Hex(token);
+  }
+  await c.env.DB?.prepare('INSERT INTO profiles (phone, name, contacts, lat, lng, token_hash, updated_at) VALUES (?,?,?,?,?,?,?) ON CONFLICT(phone) DO UPDATE SET name=excluded.name, contacts=excluded.contacts, lat=COALESCE(excluded.lat, profiles.lat), lng=COALESCE(excluded.lng, profiles.lng), updated_at=excluded.updated_at')
+    .bind(phone, String(b.name || '').slice(0, 80), JSON.stringify(contacts), b.lat ?? null, b.lng ?? null, hash, Date.now()).run();
+  return c.json({ ok: true, contacts: contacts.length, ...(token ? { token } : {}) });
 });
 
 // ── PCM / "Please Call Me" webhook (Rain SIM SMS forwarder) ───────────────────
@@ -429,6 +437,7 @@ app.post('/webhook/pcm', async (c) => {
   const raw = await c.req.text();
   const given = (c.req.header('X-Signature') || '').toLowerCase();
   if (!given || !safeEq(given, await hexHmac(secret, raw))) return c.json({ error: 'Invalid signature' }, 401);
+  await ensureSchema(c.env);
 
   let body: any = {};
   try { body = JSON.parse(raw); } catch { return c.json({ error: 'Bad JSON' }, 400); }
@@ -437,24 +446,27 @@ app.post('/webhook/pcm', async (c) => {
   if (!match) return c.json({ ok: false, reason: 'No SA mobile number found in message' }, 200);
   const msisdn = normalizePhone(match[0]);
 
-  // De-duplicate repeated forwards for the same number within 60s
-  const since = Date.now() - 60000;
-  const dupe = await c.env.DB?.prepare("SELECT 1 FROM incidents WHERE type='PCM_PANIC' AND user_id=? AND created_at>? LIMIT 1")
-    .bind(msisdn, since).first().catch(() => null);
-  if (dupe) return c.json({ ok: true, deduped: true });
+  if (await recentIncident(c.env, msisdn, 90000)) return c.json({ ok: true, deduped: true, caller: msisdn });
 
-  let user: any = null;
-  try { user = await c.env.DB?.prepare('SELECT id, org_id, username FROM users WHERE phone=? LIMIT 1').bind(msisdn).first(); } catch { /* phone column may not exist yet */ }
+  // Who is this? Look up the profile the app saved while online.
+  const prof: any = await c.env.DB?.prepare('SELECT name, contacts, lat, lng, updated_at FROM profiles WHERE phone=?').bind(msisdn).first().catch(() => null);
+  let contacts: string[] = [];
+  try { contacts = (JSON.parse(prof?.contacts || '[]') as any[]).map(x => x.phone).filter(Boolean); } catch { /* ignore */ }
+  const lat = prof?.lat ?? undefined, lng = prof?.lng ?? undefined;
+  const ageMin = prof?.updated_at ? Math.max(1, Math.round((Date.now() - prof.updated_at) / 60000)) : 0;
 
   await c.env.DB?.prepare('INSERT INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)')
-    .bind(crypto.randomUUID(), user?.org_id || null, msisdn, 'PCM_PANIC', null, null, Date.now()).run().catch(() => {});
+    .bind(crypto.randomUUID(), null, msisdn, 'PCM_PANIC', lat ?? null, lng ?? null, Date.now()).run().catch(() => {});
 
   const results = await fireAllAlerts(c.env, {
-    callerNumber: msisdn, callerName: user?.username || msisdn,
-    address: 'Location unavailable (Please Call Me trigger) - call the number back immediately',
-    extraContacts: [],
+    callerNumber: msisdn,
+    callerName: prof?.name || msisdn,
+    lat, lng,
+    address: lat ? undefined : 'unknown (phone was offline) - call them back immediately',
+    locationNote: lat ? ` (last known, updated ${ageMin} min ago)` : '',
+    extraContacts: contacts,
   });
-  return c.json({ ok: results.some(r => r.ok), caller: msisdn, results });
+  return c.json({ ok: results.some(r => r.ok), caller: msisdn, knownProfile: !!prof, contacts: contacts.length, results });
 });
 
 // Which providers have keys loaded (no secret values returned)
