@@ -71,7 +71,7 @@ const VAPI_PHONE_NUMBER_ID   = process.env.VAPI_PHONE_NUMBER_ID || 'ef00ad6f-92e
 const VAPI_ASSISTANT_ID      = process.env.VAPI_ASSISTANT_ID || '9c9313eb-8593-4c49-b993-09eef7e8d540';
 const AT_API_KEY             = process.env.AT_API_KEY || process.env.USSD_API_KEY;
 const AT_USERNAME            = process.env.AT_USERNAME || 'SafetyLink';
-const RESPONSE_CENTRE_NUMBER = process.env.RESPONSE_CENTRE_NUMBER || '+27816738186';
+const RESPONSE_CENTRE_NUMBER = process.env.RESPONSE_CENTRE_NUMBER || '+27739441222';
 const TEST_DESTINATION_NUMBER= process.env.TEST_DESTINATION_NUMBER || '+27680079911';
 
 // --- Database & Auth Initialization ---
