@@ -1,0 +1,25 @@
+name: Check All Providers (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read each provider status (sends nothing)
+        env:
+          TSID: ${{ secrets.TWILIO_SID }}
+          TTOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          AT_KEY: ${{ secrets.AT_API_KEY }}
+          AT_USER: ${{ secrets.AT_USERNAME }}
+          BL_KEY: ${{ secrets.BLAND_API_KEY }}
+          WA_TOK: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          WA_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          VAPI: ${{ secrets.VAPI_PRIVATE_KEY }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          note "TWILIO: $(curl -s -m 20 -u "$TSID:$TTOK" https://api.twilio.com/2010-04-01/Accounts/$TSID.json | jq -c '{status, type}')"
+          note "AFRICAS_TALKING user=${AT_USER:-missing}: $(curl -s -m 20 -H "apiKey: $AT_KEY" -H 'Accept: application/json' "https://api.africastalking.com/version1/user?username=$AT_USER" | cut -c1-200)"
+          note "BLAND: $(curl -s -m 20 -H "authorization: $BL_KEY" https://api.bland.ai/v1/me | jq -c '.' 2>/dev/null | cut -c1-200)"
+          note "WHATSAPP (Meta): $(curl -s -m 20 -H "Authorization: Bearer $WA_TOK" "https://graph.facebook.com/v20.0/$WA_ID?fields=display_phone_number,verified_name,code_verification_status,quality_rating" | jq -c '.' | cut -c1-260)"
+          note "VAPI: $(curl -s -m 20 -H "Authorization: Bearer $VAPI" https://api.vapi.ai/phone-number | jq -c 'if type=="array" then [.[]|{provider,number,status}] else . end' | cut -c1-200)"
