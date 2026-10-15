@@ -6,14 +6,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Check Twilio account and Worker keys (sends no messages)
+      - name: Probe Worker (no alerts sent)
         env:
           WORKER: https://safetylink-api.tshilidzi-mukwevho54.workers.dev
-          SID: ${{ secrets.TWILIO_SID }}
-          TOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
         run: |
           note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
-          note "WORKER providers: $(curl -s -m 20 $WORKER/api/health/providers)"
-          note "TWILIO account: $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID.json | jq -c '{status, type, friendly_name, code, message}')"
-          note "TWILIO verified numbers (trial can only reach these): $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID/OutgoingCallerIds.json | jq -c '[.outgoing_caller_ids[]?.phone_number]')"
-          note "TWILIO your numbers: $(curl -s -m 20 -u "$SID:$TOK" https://api.twilio.com/2010-04-01/Accounts/$SID/IncomingPhoneNumbers.json | jq -c '[.incoming_phone_numbers[]? | {n: .phone_number, sms: .capabilities.sms, voice: .capabilities.voice}]')"
+          note "providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health/providers)"
+          note "health: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health)"
+          note "panic (empty body, expect 400 not 500): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d '{}' -w ' [HTTP %{http_code}]' $WORKER/api/panic | cut -c1-200)"
+          note "profile sync (bad number, expect 400): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d '{"phone":"x"}' -w ' [HTTP %{http_code}]' $WORKER/api/profile/sync | cut -c1-200)"
+          note "pcm unsigned (expect 401): $(curl -s -m 20 -X POST -H 'X-Signature: bad' -H 'Content-Type: application/json' -d '{}' -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm | cut -c1-200)"
