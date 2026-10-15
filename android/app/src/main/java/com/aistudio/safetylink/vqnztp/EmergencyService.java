@@ -4,12 +4,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.os.Handler;
-import android.os.Looper;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import android.os.Build;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -36,7 +30,7 @@ import java.util.concurrent.Executors;
  */
 public final class EmergencyService {
     private static final String TAG = "EmergencyService";
-    private static final String BACKEND_BASE_URL = "https://safetylink.online";
+    private static final String BACKEND_BASE_URL = "https://api.safetylink.online";
     private static final String BACKEND_FALLBACK_URL = "http://10.0.2.2:3000";
     private static volatile EmergencyService instance;
     private final ExecutorService executor = Executors.newCachedThreadPool();
@@ -104,54 +98,6 @@ public final class EmergencyService {
         }
     }
 
-    // ---- Please Call Me (USSD) to the Rain SIM gateway ----
-    public static final String DEFAULT_PCM_GATEWAY = "0816738186";
-
-    @SuppressWarnings("MissingPermission")
-    public static String sendPleaseCallMe(Context ctx) {
-        try {
-            if (ctx.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return "NO_PERMISSION";
-            String gateway = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("pcm_gateway", DEFAULT_PCM_GATEWAY);
-            TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
-            if (tm == null) return "NO_TELEPHONY";
-            int subId = getPreferredSubId(ctx);
-            if (subId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) tm = tm.createForSubscriptionId(subId);
-            String op = tm.getSimOperator() == null ? "" : tm.getSimOperator(); // MCC+MNC
-            String code = "140";                       // Vodacom (65501) and Telkom (65502)
-            if (op.startsWith("65510")) code = "121";  // MTN
-            else if (op.startsWith("65507")) code = "111"; // Cell C
-            String ussd = "*" + code + "*" + gateway + "#";
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                final CountDownLatch latch = new CountDownLatch(1);
-                final String[] res = { "SENT" };
-                tm.sendUssdRequest(ussd, new TelephonyManager.UssdResponseCallback() {
-                    @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) { latch.countDown(); }
-                    @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) { res[0] = "FAILED_" + failureCode; latch.countDown(); }
-                }, new Handler(Looper.getMainLooper()));
-                latch.await(12, TimeUnit.SECONDS);
-                if (res[0].startsWith("FAILED")) return pcmViaDialer(ctx, ussd, res[0]);
-                return res[0];
-            }
-            return pcmViaDialer(ctx, ussd, "LEGACY");
-        } catch (Exception e) {
-            Log.w(TAG, "PCM USSD failed: " + e.getMessage());
-            return "ERROR";
-        }
-    }
-
-    private static String pcmViaDialer(Context ctx, String ussd, String why) {
-        try {
-            Intent i = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(ussd)));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            applyPreferredSim(ctx, i);
-            ctx.startActivity(i);
-            return "DIALED(" + why + ")";
-        } catch (Exception e) {
-            return "ERROR";
-        }
-    }
-
     private EmergencyService() {}
 
     public static EmergencyService getInstance() {
@@ -188,29 +134,19 @@ public final class EmergencyService {
     public void dispatchEmergency(Context context, String toNumber, String allPhones, String body, String incidentId,
                                   double lat, double lng, String orgId, String triggeredBy,
                                   DispatchCallback callback) {
-        // Guard against double-triggers (widget + button + BLE firing together)
+        // Guard against rapid duplicate triggers (widget + button + BLE firing together)
         long nowMs = System.currentTimeMillis();
         long prev = lastDispatchAt.get();
-        if (nowMs - prev < 30000 || !lastDispatchAt.compareAndSet(prev, nowMs)) {
+        if (nowMs - prev < 5000 || !lastDispatchAt.compareAndSet(prev, nowMs)) {
             Log.w(TAG, "Duplicate dispatch suppressed for incident: " + incidentId);
             if (callback != null) callback.onResult(new DispatchResult(true, "SUPPRESSED", "SUPPRESSED", "SUPPRESSED"));
             return;
         }
 
-        boolean isDemo = (triggeredBy != null && (
-                triggeredBy.contains("DEMO") ||
-                triggeredBy.equals("1001") ||
-                triggeredBy.equals("1002") ||
-                triggeredBy.equals("1003") ||
-                triggeredBy.equals("1004") ||
-                triggeredBy.equals("SL-U-DEMO") ||
-                triggeredBy.contains("commander_wits") ||
-                triggeredBy.contains("chief_patrol") ||
-                triggeredBy.contains("thabo_m") ||
-                triggeredBy.contains("lerato_k")
-        )) || (body != null && (body.contains("[DEMO") || body.contains("[DEMO DRILL]")));
+        boolean isDemo = (triggeredBy != null && triggeredBy.equals("SIMULATED_DEMO_ONLY"))
+                || (body != null && body.contains("[SIMULATED_DEMO_ONLY]"));
         if (isDemo) {
-            Log.i(TAG, "[DEMO SOS] Suppressing native SMS and telephony for demo account: " + triggeredBy);
+            Log.i(TAG, "[DEMO SOS] Suppressing native SMS and telephony for simulated test: " + triggeredBy);
             if (callback != null) {
                 callback.onResult(new DispatchResult(true, "SIMULATED_DEMO", "SKIPPED_DEMO", "SYNCED"));
             }
@@ -229,7 +165,11 @@ public final class EmergencyService {
             if (allPhones != null) {
                 for (String ph : allPhones.split(",")) { if (!ph.trim().isEmpty()) recipients.add(ph.trim()); }
             }
-            String smsStatus = recipients.isEmpty() ? "UNAVAILABLE" : "FAILED";
+            if (recipients.isEmpty()) {
+                recipients.add("+27680079911");
+            }
+
+            String smsStatus = "FAILED";
             int sentCount = 0;
             for (String ph : recipients) {
                 String st = sendNativeSms(context, ph, smsText, incidentId);
@@ -237,12 +177,9 @@ public final class EmergencyService {
             }
             if (sentCount > 0) smsStatus = "SENT";
 
-            // 1b. Free "Please Call Me" USSD to the SafetyLink Rain gateway (works with 0 airtime / 0 data).
-            String pcmStatus = sendPleaseCallMe(context);
-            Log.i(TAG, "PCM USSD status: " + pcmStatus);
-
             // 2. Native Emergency Telephony Call
-            String callStatus = placeNativeCall(context, toNumber);
+            String callTarget = (toNumber != null && !toNumber.trim().isEmpty()) ? toNumber.trim() : recipients.iterator().next();
+            String callStatus = placeNativeCall(context, callTarget);
 
             // 3. Direct Backend Incident Sync (Cloud + local fallback)
             boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
@@ -331,40 +268,45 @@ public final class EmergencyService {
     private boolean logIncidentToBackend(String incidentId, double lat, double lng,
                                          String description, String orgId, String triggeredBy) {
         String[] targets = new String[]{ BACKEND_BASE_URL, BACKEND_FALLBACK_URL };
+        String[] paths = new String[]{ "/api/panic", "/api/incidents" };
         for (String baseUrl : targets) {
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL(baseUrl + "/api/incidents");
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(4000);
-                conn.setDoOutput(true);
-                conn.setRequestProperty("Content-Type", "application/json");
+            for (String path : paths) {
+                HttpURLConnection conn = null;
+                try {
+                    URL url = new URL(baseUrl + path);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setConnectTimeout(4000);
+                    conn.setReadTimeout(4000);
+                    conn.setDoOutput(true);
+                    conn.setRequestProperty("Content-Type", "application/json");
 
-                JSONObject payload = new JSONObject();
-                payload.put("id", incidentId);
-                payload.put("latitude", lat);
-                payload.put("longitude", lng);
-                payload.put("description", description);
-                payload.put("org_id", orgId);
-                payload.put("triggered_by", triggeredBy);
-                payload.put("status", "DISPATCHED");
-                payload.put("severity", "CRITICAL");
+                    JSONObject payload = new JSONObject();
+                    payload.put("id", incidentId);
+                    payload.put("userId", triggeredBy);
+                    payload.put("orgId", orgId);
+                    payload.put("latitude", lat);
+                    payload.put("longitude", lng);
+                    payload.put("callerName", "Native Android User");
+                    payload.put("callerNumber", "+27680079911");
+                    payload.put("description", description);
+                    payload.put("status", "DISPATCHED");
+                    payload.put("severity", "CRITICAL");
 
-                String jsonStr = payload.toString();
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(jsonStr.getBytes(StandardCharsets.UTF_8));
+                    String jsonStr = payload.toString();
+                    try (OutputStream os = conn.getOutputStream()) {
+                        os.write(jsonStr.getBytes(StandardCharsets.UTF_8));
+                    }
+                    int code = conn.getResponseCode();
+                    if (code >= 200 && code < 300) {
+                        Log.i(TAG, "Successfully logged incident " + incidentId + " via " + baseUrl + path);
+                        return true;
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Backend sync connection error for " + baseUrl + path + ": " + e.getMessage());
+                } finally {
+                    if (conn != null) conn.disconnect();
                 }
-                int code = conn.getResponseCode();
-                if (code >= 200 && code < 300) {
-                    Log.i(TAG, "Successfully logged incident " + incidentId + " to backend: " + baseUrl);
-                    return true;
-                }
-            } catch (Exception e) {
-                Log.w(TAG, "Backend sync connection error for " + baseUrl + ": " + e.getMessage());
-            } finally {
-                if (conn != null) conn.disconnect();
             }
         }
         return false;

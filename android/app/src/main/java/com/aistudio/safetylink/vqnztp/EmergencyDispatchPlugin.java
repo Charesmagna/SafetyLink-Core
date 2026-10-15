@@ -228,6 +228,22 @@ public class EmergencyDispatchPlugin extends Plugin {
             JSObject ret = new JSObject();
             ret.put("dialed", true);
             call.resolve(ret);
+        } catch (SecurityException se) {
+            try {
+                Intent dialIntent = new Intent(Intent.ACTION_DIAL);
+                dialIntent.setData(Uri.parse("tel:" + phone));
+                dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(dialIntent);
+                JSObject ret = new JSObject();
+                ret.put("dialed", true);
+                ret.put("dialerFallback", true);
+                call.resolve(ret);
+            } catch (Exception ex) {
+                JSObject ret = new JSObject();
+                ret.put("dialed", false);
+                ret.put("error", "Dialer fallback failed: " + ex.getMessage());
+                call.resolve(ret);
+            }
         } catch (Exception e) {
             JSObject ret = new JSObject();
             ret.put("dialed", false);

@@ -1815,14 +1815,10 @@ Rules:
       } = req.body;
 
       const isDemoSOS = Boolean(
-        isDemo || 
-        isDrill || 
-        rawUserId === '1001' || 
-        rawUserId === '1002' || 
-        rawUserId === '1003' || 
-        rawUserId === '1004' || 
-        rawUserId === 'SL-U-DEMO' ||
-        (description && typeof description === 'string' && description.includes('[DEMO'))
+        isDemo && isDrill && (
+          rawUserId === 'SL-U-DEMO' || 
+          (description && typeof description === 'string' && description.includes('[SIMULATED_DEMO_ONLY]'))
+        )
       );
 
       // Extract credentials from deployed integrations config or fallback to process.env

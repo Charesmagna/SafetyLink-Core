@@ -1,9 +1,10 @@
 import React from 'react';
+import { Capacitor } from '@capacitor/core';
 
 // Minimal non-intrusive footer — only shows on web, hidden on native app
 export const GlobalFooter: React.FC = () => {
   // Don't render at all inside the native Android/iOS app
-  if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+  if (Capacitor.isNativePlatform()) {
     return null;
   }
 
