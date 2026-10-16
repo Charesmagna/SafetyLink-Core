@@ -1,7 +1,7 @@
 import { useAppStore } from '../utils/store';
 
 const TOKEN_KEY = 'sl_profile_token';
-const DEFAULT_BACKEND = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+const DEFAULT_BACKEND = 'https://api.safetylink.online';
 let lastSig = '';
 
 /**

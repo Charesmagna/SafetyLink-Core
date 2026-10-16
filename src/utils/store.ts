@@ -7,6 +7,7 @@ import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organi
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
+import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 import { UpdateInfo } from '../services/UpdateService';
@@ -2052,6 +2053,18 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        }
     }
 
+    let pcmSent = false;
+    if (isNativeApp && !isDemo) {
+      try {
+        pcmSent = await Promise.race([
+          firePleaseCallMe(),
+          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 8000)),
+        ]);
+      } catch (err) {
+        console.warn('[Store:triggerPanic] Please Call Me failed:', err);
+      }
+    }
+
     // 2. Cloud Integrations & Backend Dispatch (Twilio, VAPI, Bland AI, Africa's Talking, Pusher, FCM)
     // Pack deployed integration settings so Twilio, VAPI, Bland, Africa's Talking fire with user-configured credentials
     const integrationsConfig: Record<string, any> = {};
@@ -2094,6 +2107,10 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     };
 
     let dispatchSuccess = false;
+    if (pcmSent) {
+      postPanicLocation(user?.phone || '', coords.lat, coords.lng).catch(() => {});
+      dispatchSuccess = true;
+    }
     const backendEndpoints: string[] = [
       'https://api.safetylink.online/api/panic'
     ];
@@ -2105,6 +2122,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     backendEndpoints.push('/api/panic');
 
     for (const url of backendEndpoints) {
+      if (pcmSent) break;
       try {
         const response = await fetch(url, {
           method: 'POST',
@@ -2159,7 +2177,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Organization ${effectiveTargetOrg}, Telephony, & Responders.`);
         get().addToast(`🚨 EMERGENCY BROADCAST DISPATCHED TO ${effectiveTargetOrg}`, 'success');
 
-        // Direct Tactical Voice Call: deploy cellular telephony to designated CALL contact or response center
+        if (!pcmSent) {
         const callContact = get().contacts.find(c => c.channelType === 'CALL') || get().contacts[0];
         const callTarget = callContact?.phone || user?.phone || '+27829110000';
         if (callTarget) {
@@ -2175,6 +2193,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
           NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
             console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
           });
+        }
         }
       }
 
