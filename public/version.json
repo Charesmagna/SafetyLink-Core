@@ -1,12 +1,12 @@
 {
-  "version": "1.1.935",
-  "buildTime": "2026-10-01T09:16:48Z",
-  "releaseName": "SafetyLink Core v1.1.935",
-  "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.935/SafetyLink-v1.1.935-Signed.apk",
+  "version": "1.1.994",
+  "buildTime": "2026-10-16T01:13:04Z",
+  "releaseName": "SafetyLink Core v1.1.994",
+  "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.994/SafetyLink-v1.1.994-Signed.apk",
   "liveWebUrl": "https://safetylink.online",
   "features": [
-    "Automatic Over-The-Air release detection & in-app update prompt banner",
-    "Direct APK & Windows EXE downloads from latest GitHub release",
-    "Hardened emergency dispatch and Paystack gateway fraud protection"
+    "Panic alerts: SMS, WhatsApp, AI voice calls",
+    "Works offline via Please Call Me (USSD)",
+    "Fixed screen scaling on all phones"
   ]
 }
