@@ -10,6 +10,15 @@ import java.util.ArrayList;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    // Ignore the phone's system font/display size so the app looks the same on every phone
+    @Override
+    protected void attachBaseContext(android.content.Context base) {
+        android.content.res.Configuration cfg = new android.content.res.Configuration(base.getResources().getConfiguration());
+        cfg.fontScale = 1.0f;
+        super.attachBaseContext(base.createConfigurationContext(cfg));
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(EmergencyDispatchPlugin.class);
@@ -17,6 +26,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ITagPlugin.class);
         super.onCreate(savedInstanceState);
         requestEmergencyPermissions();
+        try { getBridge().getWebView().getSettings().setTextZoom(100); } catch (Exception ignored) {}
     }
 
     private void requestEmergencyPermissions() {
