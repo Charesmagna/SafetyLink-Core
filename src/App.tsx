@@ -36,6 +36,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
 import { BatteryIndicator } from './components/common/BatteryIndicator';
+import { startProfileSync } from './services/ProfileSync';
 
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
@@ -218,6 +219,7 @@ const App: React.FC = () => {
     window.addEventListener('focus', handleFocus);
 
     initFirebaseSync();
+    startProfileSync();
 
     // Persistent BLE iTAG Auto-Reconnect on App Launch & Wake
     const autoReconnectBondedITags = () => {

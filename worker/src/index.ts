@@ -3,6 +3,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { gatewayNumber, inboundPcm, locatePcm, syncProfile } from './zero-airtime';
 
 export interface Env {
   DB?: D1Database;
@@ -37,6 +38,8 @@ export interface Env {
   // Other
   RESPONSE_CENTRE_NUMBER: string;
   PIPEDREAM_WEBHOOK_URL: string;
+  PCM_WEBHOOK_SECRET?: string;
+  RAIN_GATEWAY_MSISDN?: string;
   RECAPTCHA_SECRET: string;
 }
 
@@ -477,6 +480,20 @@ app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
 
+app.post('/api/profile/sync', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const outcome = await syncProfile(c.env, body, c.req.header('x-profile-token') || '');
+  return c.json(outcome.json, outcome.status);
+});
+
+app.get('/api/pcm/gateway', (c) => c.json({ number: gatewayNumber(c.env) || null }));
+
+app.post('/api/pcm/locate', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const outcome = await locatePcm(c.env, body);
+  return c.json(outcome.json, outcome.status);
+});
+
 async function handlePcmWebhook(c: any) {
   let body: any = {};
   try {
@@ -510,55 +527,19 @@ async function handlePcmWebhook(c: any) {
   }
 
   const cleanPhone = extractedPhone.replace(/[\s-]/g, '');
-  let localMsisdn = cleanPhone;
-  let intlMsisdn = cleanPhone;
-  if (cleanPhone.startsWith('+27')) localMsisdn = '0' + cleanPhone.slice(3);
-  else if (cleanPhone.startsWith('27')) {
-    localMsisdn = '0' + cleanPhone.slice(2);
-    intlMsisdn = '+' + cleanPhone;
-  } else if (cleanPhone.startsWith('0')) intlMsisdn = '+27' + cleanPhone.slice(1);
-
-  let lat = 0.0;
-  let lng = 0.0;
-  let locationSource = 'SILENT_SMS_FALLBACK';
-  let userName = `Mobile User (${localMsisdn})`;
-
-  // Lookup in Cloudflare D1 DB if available
-  if (c.env.DB) {
-    try {
-      const user = await c.env.DB.prepare('SELECT id, username, lat, lng FROM users WHERE phone=? OR phone=? LIMIT 1')
-        .bind(localMsisdn, intlMsisdn).first();
-      if (user) {
-        userName = (user.username as string) || userName;
-        if (user.lat && user.lng) {
-          lat = Number(user.lat);
-          lng = Number(user.lng);
-          locationSource = 'CACHED_LAST_KNOWN';
-        }
-      }
-    } catch {}
-  }
+  const localMsisdn = cleanPhone.startsWith('+27')
+    ? '0' + cleanPhone.slice(3)
+    : cleanPhone.startsWith('27')
+      ? '0' + cleanPhone.slice(2)
+      : cleanPhone;
 
   const isDemo = localMsisdn.includes('60123456') || rawText.includes('[DEMO');
-
-  if (!isDemo) {
-    c.executionCtx.waitUntil(fireAllAlerts(c.env, {
-      callerNumber: localMsisdn,
-      callerName: `${userName} [USSD/PCM]`,
-      lat,
-      lng,
-      address: locationSource === 'CACHED_LAST_KNOWN' ? `Cached GPS (${lat.toFixed(4)}, ${lng.toFixed(4)})` : 'Silent SMS Ping Pending',
-    }));
+  if (isDemo) {
+    return c.json({ ok: true, msisdn: localMsisdn, status: 'DISPATCHED_SIMULATED', isDemo: true });
   }
 
-  return c.json({
-    ok: true,
-    msisdn: localMsisdn,
-    user: userName,
-    location: { lat, lng, source: locationSource },
-    isDemo,
-    status: isDemo ? 'DISPATCHED_SIMULATED' : 'DISPATCHED'
-  });
+  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, c.req.header('x-safetylink-gateway') || '');
+  return c.json(outcome.json, outcome.status);
 }
 
 // ── USER HEARTBEAT ────────────────────────────────────────────────────────────
