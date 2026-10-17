@@ -97,10 +97,6 @@ export const PanicButton: React.FC = () => {
 
       <div className="text-center mb-6 relative z-10">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <SafetyLinkLogo 
-            size={18} 
-            glowColor={activeSOSState !== 'IDLE' ? 'rgba(239, 68, 68, 0.4)' : 'rgba(52, 211, 153, 0.4)'} 
-          />
           <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.25em] font-display">
             {activeSOSState !== 'IDLE' ? "TRANSMITTING DISTRESS SIGNAL" : "MISSION-CONTROL SOS ACTUATOR"}
           </h3>
