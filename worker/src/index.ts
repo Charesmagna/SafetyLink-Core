@@ -133,7 +133,14 @@ async function fireAllAlerts(
 ): Promise<AlertResult[]> {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
-  const smsBody = `SAFETYLINK PANIC ALERT\n${callerName || callerNumber} has triggered an emergency.\nLocation: ${location}\n${mapsLink}`.slice(0, 600);
+  const smsBody = [
+    'SAFETYLINK PANIC ALERT',
+    `${who} pressed the panic button.`,
+    `Location: ${location}${locationNote}`,
+    mapsLink ? `Map: ${mapsLink}` : '',
+    callerNumber ? `Call back: ${callerNumber}` : '',
+    'Please respond now.',
+  ].filter(Boolean).join('\n').slice(0, 600);
 
   // Per-user keys (entered in app Settings) override server secrets
   const tw = { sid: providers?.twilio?.sid || env.TWILIO_SID, token: providers?.twilio?.token || env.TWILIO_AUTH_TOKEN, from: providers?.twilio?.from || env.TWILIO_NUMBER, waFrom: providers?.twilio?.waFrom || (env as any).TWILIO_WHATSAPP_FROM || providers?.twilio?.from || env.TWILIO_NUMBER };
