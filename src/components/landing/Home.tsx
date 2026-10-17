@@ -76,7 +76,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [rotationTick, setRotationTick] = useState(0);
   const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [releaseVersion, setReleaseVersion] = useState('v1.1.906');
+  const [releaseVersion, setReleaseVersion] = useState('latest');
   const [heroClipMuted, setHeroClipMuted] = useState(true);
   const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
 
