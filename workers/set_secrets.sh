@@ -17,10 +17,14 @@ echo "atsk_REDACTEDREDACTED33c9573b" | wrangler secret put USSD_API_KEY
 # wrangler secret put SUPABASE_URL
 # wrangler secret put SUPABASE_SERVICE_KEY
 
-# These you fill in manually:
+# Cloudflare Worker Secrets for VAPI Outbound Emergency Voice Alerts:
+# Run these in your terminal where wrangler is authenticated:
 # wrangler secret put VAPI_PRIVATE_KEY
-# wrangler secret put VAPI_ASSISTANT_ID
 # wrangler secret put VAPI_PHONE_NUMBER_ID
+# wrangler secret put INTERNAL_API_SECRET
+# wrangler secret put TEST_DESTINATION_NUMBER
+
+# Other platform integrations:
 # wrangler secret put TWILIO_SID
 # wrangler secret put TWILIO_NUMBER
 # wrangler secret put WHATSAPP_ACCESS_TOKEN
