@@ -45,7 +45,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
 
             if (apkAsset) {
               qualified.push({
-                version: r.tag_name || 'v1.1.912',
+                version: r.tag_name || 'latest',
                 name: r.name || `SafetyLink Core ${r.tag_name}`,
                 publishedAt: r.published_at ? new Date(r.published_at).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Verified Build',
                 sizeMb: (apkAsset.size / (1024 * 1024)).toFixed(1),
@@ -141,7 +141,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Android Signed APK</h3>
                 <p style={{ fontSize: '12px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
-                  {latestRelease?.version || 'v1.1.912'} · Full Hardware Bundle ({latestRelease?.sizeMb || '94.4'} MB)
+                  {latestRelease?.version || 'latest'} · Full Hardware Bundle ({latestRelease?.sizeMb || '94.4'} MB)
                 </p>
               </div>
               <p style={{ fontSize: '13px', color: '#8892a4', lineHeight: 1.6, flex: 1 }}>
@@ -169,7 +169,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
                     transition: 'opacity .2s',
                   }}
                 >
-                  <span>⬇️</span> DOWNLOAD OFFICIAL APK ({latestRelease?.version || 'v1.1.912'})
+                  <span>⬇️</span> DOWNLOAD OFFICIAL APK ({latestRelease?.version || 'latest'})
                 </a>
               </div>
             </div>
