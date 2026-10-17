@@ -7,10 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Send one test alert to verified number only
-        env:
-          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
         run: |
-          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
           U="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/panic"
           BODY='{"userId":"TEST-VERIFIED","callerName":"SafetyLink test","callerNumber":"+27680079911","latitude":-26.27,"longitude":27.87,"emergencyContacts":[{"name":"Tshilidzi","phone":"+27680079911"}],"skipVoiceTo":[],"description":"TEST alert - please ignore"}'
-          note "alert result: $(curl -s -m 120 -X POST -H 'Content-Type: application/json' -d "$BODY" -w ' [HTTP %{http_code}]' "$U" | cut -c1-900)"
+          curl -s -m 150 -X POST -H 'Content-Type: application/json' -d "$BODY" "$U" > result.json
+          jq -r '.results[] | "\(.channel) \(.provider) to \(.to) ok=\(.ok) status=\(.status // "-") \((.detail // "") | tostring | .[0:120])"' result.json | while IFS= read -r line; do echo "::notice::$line"; done
