@@ -81,6 +81,21 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
 
   // Dynamically resolve latest release APK & EXE from GitHub releases
+  // AdSense: landing page only (never loaded inside the app or emergency screens)
+  useEffect(() => {
+    if (document.getElementById('adsense-loader')) return;
+    const meta = document.createElement('meta');
+    meta.name = 'google-adsense-account';
+    meta.content = 'ca-pub-9698872193899450';
+    document.head.appendChild(meta);
+    const s = document.createElement('script');
+    s.id = 'adsense-loader';
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9698872193899450';
+    document.head.appendChild(s);
+  }, []);
+
   useEffect(() => {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', true);
