@@ -1,0 +1,17 @@
+name: Check Voice Providers (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recent AI call results (no calls placed)
+        env:
+          VAPI: ${{ secrets.VAPI_PRIVATE_KEY }}
+          BL: ${{ secrets.BLAND_API_KEY }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          note "VAPI recent: $(curl -s -m 20 -H "Authorization: Bearer $VAPI" 'https://api.vapi.ai/call?limit=5' | jq -c 'if type=="array" then [.[] | {status, endedReason, t: .createdAt[11:16]}] else . end' | cut -c1-340)"
+          note "BLAND recent: $(curl -s -m 20 -H "authorization: $BL" 'https://api.bland.ai/v1/calls?limit=5' | jq -c '.calls[]? | {status, error_message, t: .created_at[11:16]}' | head -5 | tr '\n' ' ' | cut -c1-340)"
+          note "BLAND account: $(curl -s -m 20 -H "authorization: $BL" https://api.bland.ai/v1/me | jq -c '{status, balance: .billing.current_balance}')"
