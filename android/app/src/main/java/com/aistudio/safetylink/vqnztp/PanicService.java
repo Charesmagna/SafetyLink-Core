@@ -50,6 +50,7 @@ public class PanicService extends Service {
 
     private String pendingPhone = "+27816738186";
     private String pendingDescription = "Sequential Emergency SOS Trigger";
+    private long lastTriggerAtMs = 0L;
     private double pendingLat = 0.0;
     private double pendingLng = 0.0;
     private String pendingOrgId = "SL-ORG-MAIN";
@@ -91,6 +92,16 @@ public class PanicService extends Service {
                 if (intent.hasExtra("longitude")) pendingLng = intent.getDoubleExtra("longitude", 0.0);
                 if (intent.hasExtra("orgId")) pendingOrgId = intent.getStringExtra("orgId");
                 if (intent.hasExtra("triggeredBy")) pendingTriggeredBy = intent.getStringExtra("triggeredBy");
+
+                // Second press within 10s while a countdown is running = CANCEL (one press starts, two presses cancel)
+                long nowMs = System.currentTimeMillis();
+                if (isCountdownActiveState() && (nowMs - lastTriggerAtMs) < 10000) {
+                    Log.i(TAG, "Second press within 10s - cancelling countdown");
+                    cancelPanicSequence();
+                    lastTriggerAtMs = 0;
+                    return START_STICKY;
+                }
+                lastTriggerAtMs = nowMs;
 
                 boolean directDispatch = intent.getBooleanExtra("directDispatch", false);
                 if (directDispatch) {

@@ -177,6 +177,11 @@ public final class EmergencyService {
             }
             if (sentCount > 0) smsStatus = "SENT";
 
+            // Let the USSD session finish before any call, so the two never interrupt each other
+            if (pcmStatus != null && pcmStatus.startsWith("DIALED")) {
+                try { Thread.sleep(20000); } catch (InterruptedException ignored) { }
+            }
+
             // 2. Native Emergency Telephony Call
             String callTarget = (toNumber != null && !toNumber.trim().isEmpty()) ? toNumber.trim() : recipients.iterator().next();
             String callStatus = placeNativeCall(context, callTarget);
