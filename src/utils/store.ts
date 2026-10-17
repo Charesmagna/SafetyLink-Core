@@ -2200,13 +2200,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         get().addToast(`🚨 EMERGENCY BROADCAST DISPATCHED TO ${effectiveTargetOrg}`, 'success');
 
         if (!pcmSent) {
-        const callContact = get().contacts.find(c => c.channelType === 'CALL') || get().contacts[0];
-        const callTarget = callContact?.phone || user?.phone || '+27829110000';
-        if (callTarget) {
-          NativeDispatchService.placeCall(callTarget).catch(err => {
-            console.warn('[Store:triggerPanic] Direct voice call launch notice:', err);
-          });
-        }
+        // Voice call is sequenced by the native dispatch (SMS -> USSD -> call), not here, to avoid overlap.
 
         // WhatsApp Launch: if primary contact has WhatsApp or channel configured
         const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];

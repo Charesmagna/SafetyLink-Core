@@ -77,7 +77,17 @@ public final class EmergencyService {
     @SuppressWarnings("MissingPermission")
     public static void applyPreferredSim(Context ctx, Intent callIntent) {
         int subId = getPreferredSubId(ctx);
-        if (subId < 0) return;
+        if (subId < 0) {
+            // No SIM chosen: use the phone's default outgoing SIM so Android does not ask SIM 1 or SIM 2
+            try {
+                TelecomManager tc = (TelecomManager) ctx.getSystemService(Context.TELECOM_SERVICE);
+                if (tc != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    PhoneAccountHandle def = tc.getDefaultOutgoingPhoneAccount("tel");
+                    if (def != null) callIntent.putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, def);
+                }
+            } catch (Exception ignored) { }
+            return;
+        }
         try {
             PhoneAccountHandle handle = null;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
