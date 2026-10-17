@@ -7,3 +7,8 @@ compatibility_flags = ["nodejs_compat"]
 ENVIRONMENT = "production"
 CLOUDINARY_CLOUD = "qcp4fx2v"
 PIPEDREAM_WEBHOOK_URL = "https://eomnz1lxw9o2hyq.m.pipedream.net"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "safetylink-core"
+database_id = "9daa8cbf-861f-4483-92e5-9f03541c6e71"
