@@ -1,0 +1,16 @@
+name: Test Alert To Verified Number
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send one test alert to verified number only
+        env:
+          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          U="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/panic"
+          BODY='{"userId":"TEST-VERIFIED","callerName":"SafetyLink test","callerNumber":"+27680079911","latitude":-26.27,"longitude":27.87,"emergencyContacts":[{"name":"Tshilidzi","phone":"+27680079911"}],"skipVoiceTo":[],"description":"TEST alert - please ignore"}'
+          note "alert result: $(curl -s -m 120 -X POST -H 'Content-Type: application/json' -d "$BODY" -w ' [HTTP %{http_code}]' "$U" | cut -c1-900)"
