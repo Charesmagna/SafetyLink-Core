@@ -1,0 +1,36 @@
+name: Setup D1 Database
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  d1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create D1 database and bind it to the Worker
+        env:
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+          ACC: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          H="Authorization: Bearer $CF"
+          LIST=$(curl -s -H "$H" "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database?per_page=100")
+          ID=$(echo "$LIST" | jq -r '.result[]? | select(.name=="safetylink-core") | .uuid' | head -1)
+          if [ -z "$ID" ]; then
+            CREATE=$(curl -s -X POST -H "$H" -H 'Content-Type: application/json' -d '{"name":"safetylink-core"}' "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database")
+            ID=$(echo "$CREATE" | jq -r '.result.uuid // empty')
+            echo "create response: $(echo "$CREATE" | jq -c '{success, errors}' | cut -c1-200)"
+          fi
+          echo "database id: ${ID:-none}"
+          if [ -z "$ID" ]; then echo "::error::Could not create D1 database. Token needs D1 permission."; exit 1; fi
+          if ! grep -q "d1_databases" worker/wrangler.toml; then
+            printf '\n[[d1_databases]]\nbinding = "DB"\ndatabase_name = "safetylink-core"\ndatabase_id = "%s"\n' "$ID" >> worker/wrangler.toml
+          fi
+          git config user.name "setup-bot"; git config user.email "setup-bot@users.noreply.github.com"
+          git add worker/wrangler.toml
+          git commit -m "chore: bind D1 database DB to worker" || echo "nothing to commit"
+          git push
