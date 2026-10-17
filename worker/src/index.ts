@@ -561,7 +561,7 @@ async function handlePcmWebhook(c: any) {
     return c.json({ ok: true, msisdn: localMsisdn, status: 'DISPATCHED_SIMULATED', isDemo: true });
   }
 
-  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, c.req.header('x-safetylink-gateway') || '');
+  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, (tokenOk || sigOk) ? (c.env.PCM_WEBHOOK_SECRET || '') : (c.req.header('x-safetylink-gateway') || ''));
   return c.json(outcome.json, outcome.status as any);
 }
 
