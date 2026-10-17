@@ -67,12 +67,9 @@ public final class ButtonPatternDetector {
                 appContext.startForegroundService(i);
                 break;
             }
-            case ACTION_FIND_PHONE: {
-                Intent i = new Intent(appContext, ITagForegroundService.class);
-                i.setAction("FIND_PHONE");
-                appContext.startService(i);
+            case ACTION_FIND_PHONE:
+                Log.i(TAG, "FIND_PHONE not wired in the Java build yet");
                 break;
-            }
             default:
                 break;
         }
