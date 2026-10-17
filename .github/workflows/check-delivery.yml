@@ -1,0 +1,19 @@
+name: Check Delivery (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  delivery:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vapi and Africa's Talking delivery status
+        env:
+          VAPI: ${{ secrets.VAPI_PRIVATE_KEY }}
+          AT_KEY: ${{ secrets.AT_API_KEY }}
+          AT_USER: ${{ secrets.AT_USERNAME }}
+        run: |
+          note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
+          curl -s -m 20 -H "Authorization: Bearer $VAPI" 'https://api.vapi.ai/call?limit=4' > vapi.json
+          jq -r '.[] | "VAPI call status=\(.status) reason=\(.endedReason // "-") to=\(.customer.number // "-") at=\(.createdAt[11:16])"' vapi.json 2>/dev/null | while IFS= read -r l; do note "$l"; done
+          curl -s -m 20 -H "apiKey: $AT_KEY" -H 'Accept: application/json' "https://api.africastalking.com/version1/messaging" -G --data-urlencode "username=$AT_USER" > at.json
+          note "AT messages: $(jq -c '.SMSMessageData.Messages[0:3][] | {number, status, statusCode}' at.json 2>/dev/null | tr '\n' ' ' | cut -c1-360) raw:$(head -c 120 at.json)"
