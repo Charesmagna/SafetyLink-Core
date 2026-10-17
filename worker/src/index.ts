@@ -523,6 +523,15 @@ const hexHmac = async (secret: string, data: string): Promise<string> => {
 };
 
 async function handlePcmWebhook(c: any) {
+  try {
+    return await handlePcmWebhookInner(c);
+  } catch (e: any) {
+    console.error('[PCM] crash', e);
+    return c.json({ ok: false, error: 'server error', detail: String(e?.message || e).slice(0, 300) }, 200 as any);
+  }
+}
+
+async function handlePcmWebhookInner(c: any) {
   // AUTH: every request must carry the secret token (?token= or x-pcm-token header),
   // or a valid HMAC signature. Without this anyone could trigger alerts.
   const expected = (c.env.PCM_WEBHOOK_TOKEN || '').trim();
