@@ -645,7 +645,6 @@ const App: React.FC = () => {
           )}
           
           <div className="flex items-center gap-2.5">
-            <LogoSetPart part="badge" size={38} rounded="xl" />
             <div className="text-left">
               <h1 className={`text-sm font-black tracking-wider uppercase font-mono leading-none flex items-center gap-1 ${
                 globalTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
