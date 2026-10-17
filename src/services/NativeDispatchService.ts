@@ -4,6 +4,7 @@ export interface EmergencyDispatchPlugin {
   sendSms(options: { phone: string; message: string }): Promise<{ sent: boolean; error?: string }>;
   placeCall(options: { phone: string }): Promise<{ dialed: boolean; error?: string }>;
   openWhatsApp(options: { phone: string; message: string }): Promise<{ opened: boolean; requiresManualSend: boolean; error?: string }>;
+  sendUssd(options: { code: string }): Promise<{ dialed: boolean; code?: string; channel?: string; error?: string }>;
   getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }>;
   setPreferredSim(options: { subscriptionId: number }): Promise<{ preferredSubscriptionId: number }>;
 }

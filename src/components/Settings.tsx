@@ -6,6 +6,7 @@ import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
+import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
 
 export const Settings: React.FC = () => {
   const { 
@@ -49,6 +50,7 @@ export const Settings: React.FC = () => {
   const [biometryType, setBiometryType] = useState('FINGERPRINT');
   const [isPinSettingsUnlocked, setIsPinSettingsUnlocked] = useState(() => biometricService.isScopeUnlocked('settings'));
   const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
+  const [isTestingUssd, setIsTestingUssd] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -315,6 +317,152 @@ export const Settings: React.FC = () => {
                 <option value="HYBRID_SATELLITE">High-Resolution Satellite Imagery</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Carrier USSD & Zero-Data Please-Call-Me (PCM) Emergency Settings */}
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+          <div className="flex justify-between items-center">
+            <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+              <span>📶</span> Zero-Data USSD "Please Call Me" System
+            </h5>
+            <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
+              dispatchSettings.ussdEnabled !== false ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
+            }`}>
+              {dispatchSettings.ussdEnabled !== false ? 'ACTIVE ON PANIC' : 'DISABLED'}
+            </span>
+          </div>
+
+          <p className="text-[7.5px] text-slate-400 leading-relaxed font-sans">
+            Automatically dials your network operator's free USSD Please-Call-Me code to the SafetyLink GSM gateway when panic is pressed. Operates over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
+          </p>
+
+          <div className="space-y-3 pt-1">
+            <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
+              <div>
+                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain</span>
+                <span className="text-[7.5px] text-slate-500">Executes hardware USSD dialer immediately as panic is triggered.</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={dispatchSettings.ussdEnabled !== false}
+                onChange={e => {
+                  setDispatchSettings({ ussdEnabled: e.target.checked });
+                  useAppStore.getState().addToast(`USSD Auto-Dial ${e.target.checked ? 'Enabled' : 'Disabled'}`, 'info');
+                }}
+                className="accent-emerald-500 w-4 h-4 cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold text-slate-500 uppercase block">Mobile Network Operator / Carrier Rules</label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                {[
+                  { id: 'AUTO', label: 'Auto (SIM)', code: 'Auto-detect' },
+                  { id: 'MTN', label: 'MTN', code: '*121*#' },
+                  { id: 'VODACOM', label: 'Vodacom', code: '*140*#' },
+                  { id: 'CELL_C', label: 'Cell C', code: '*111*#' },
+                  { id: 'TELKOM', label: 'Telkom', code: '*140*#' },
+                  { id: 'CUSTOM', label: 'Custom', code: 'Template' }
+                ].map(c => {
+                  const isSelected = (dispatchSettings.carrierPreset || 'AUTO') === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setDispatchSettings({ carrierPreset: c.id as any });
+                        useAppStore.getState().addToast(`Carrier rule set to ${c.label}`, 'info');
+                      }}
+                      className={`p-2 rounded-xl text-center border transition-all ${
+                        isSelected
+                          ? 'bg-amber-950/40 border-amber-500/50 text-amber-300 shadow-sm'
+                          : 'bg-slate-950 border-slate-900 text-slate-400 hover:border-slate-800'
+                      }`}
+                    >
+                      <div className="text-[8.5px] font-bold uppercase">{c.label}</div>
+                      <div className="text-[7px] text-slate-500 font-mono mt-0.5">{c.code}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {dispatchSettings.carrierPreset === 'CUSTOM' && (
+              <div className="space-y-1 animate-fadeIn">
+                <label className="text-[8px] font-bold text-slate-400 uppercase block">Custom USSD Template (use &#123;NUMBER&#125; placeholder)</label>
+                <input
+                  type="text"
+                  value={dispatchSettings.customUssdPattern || '*140*{NUMBER}#'}
+                  onChange={e => setDispatchSettings({ customUssdPattern: e.target.value })}
+                  placeholder="e.g. *140*{NUMBER}# or *121*{NUMBER}#"
+                  className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-amber-500/50 font-mono"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-[8px] font-bold text-slate-500 uppercase block">SafetyLink GSM Gateway SIM Number (Destination)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={dispatchSettings.pcmGatewayNumber || '0816738186'}
+                  onChange={e => setDispatchSettings({ pcmGatewayNumber: e.target.value })}
+                  placeholder="0816738186"
+                  className="flex-1 bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-emerald-500/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDispatchSettings({ pcmGatewayNumber: '0816738186' });
+                    useAppStore.getState().addToast('Reset to default Rain SIM Gateway (081 673 8186)', 'info');
+                  }}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-slate-200 rounded-xl text-[8px] font-bold uppercase"
+                >
+                  Rain Gateway
+                </button>
+              </div>
+            </div>
+
+            {/* Live Computed USSD String Preview & Test Button */}
+            {(() => {
+              const liveCode = resolveUssdCode({
+                carrierPreset: dispatchSettings.carrierPreset || 'AUTO',
+                customPattern: dispatchSettings.customUssdPattern || '*140*{NUMBER}#',
+                gatewayNumber: dispatchSettings.pcmGatewayNumber || '0816738186'
+              });
+              return (
+                <div className="p-3 bg-slate-950 border border-slate-900 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <span className="text-[7.5px] text-slate-500 uppercase block font-bold">Generated USSD String:</span>
+                    <span className="text-[11px] font-black text-amber-400 font-mono tracking-wider">{liveCode}</span>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isTestingUssd}
+                    onClick={async () => {
+                      setIsTestingUssd(true);
+                      try {
+                        useAppStore.getState().addToast(`Dialing USSD string: ${liveCode}...`, 'info');
+                        const res = await firePleaseCallMe(liveCode);
+                        if (res.success) {
+                          useAppStore.getState().addToast(`USSD transmitted: ${liveCode}`, 'success');
+                        } else {
+                          useAppStore.getState().addToast(`USSD dial complete or opened in dialer`, 'info');
+                        }
+                      } catch (err: any) {
+                        useAppStore.getState().addToast(`USSD error: ${err?.message || err}`, 'error');
+                      } finally {
+                        setIsTestingUssd(false);
+                      }
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-[9px] tracking-wider uppercase transition-all shadow-md active:scale-95 disabled:opacity-50"
+                  >
+                    {isTestingUssd ? 'DIALING...' : '⚡ TEST DIAL USSD'}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

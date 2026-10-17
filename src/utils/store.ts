@@ -333,7 +333,11 @@ const DEFAULT_DISPATCH_SETTINGS: DispatchSettings = {
   countdownDuration: 10,
   countdownOverlayEnabled: true,
   dispatchPreset: 'VIP_TWILIO_CLOUD',
-  mapProvider: 'GOOGLE_MAPS'
+  mapProvider: 'GOOGLE_MAPS',
+  ussdEnabled: true,
+  carrierPreset: 'AUTO',
+  customUssdPattern: '*140*{NUMBER}#',
+  pcmGatewayNumber: '0816738186'
 };
 
 
@@ -2054,12 +2058,30 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     }
 
     let pcmSent = false;
-    if (isNativeApp && !isDemo) {
+    const dispatchConfig = get().dispatchSettings;
+    const isUssdEnabled = dispatchConfig?.ussdEnabled !== false;
+
+    if (isUssdEnabled && !isDemo) {
       try {
-        pcmSent = await Promise.race([
-          firePleaseCallMe(),
-          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 8000)),
+        const pcmResult = await Promise.race([
+          firePleaseCallMe(undefined, {
+            carrierPreset: dispatchConfig?.carrierPreset,
+            customPattern: dispatchConfig?.customUssdPattern,
+            gatewayNumber: dispatchConfig?.pcmGatewayNumber
+          }),
+          new Promise<{ success: boolean; code: string }>((resolve) =>
+            setTimeout(() => resolve({ success: false, code: '' }), 8000)
+          ),
         ]);
+        pcmSent = !!pcmResult?.success;
+        if (pcmResult?.code) {
+          get().addAuditLog(
+            'SECURITY',
+            pcmResult.success ? 'INFO' : 'WARN',
+            pcmResult.success ? 'USSD Please-Call-Me Transmitted' : 'USSD Please-Call-Me Attempted',
+            `Carrier USSD code: ${pcmResult.code}`
+          );
+        }
       } catch (err) {
         console.warn('[Store:triggerPanic] Please Call Me failed:', err);
       }
