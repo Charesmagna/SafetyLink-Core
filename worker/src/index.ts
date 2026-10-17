@@ -539,7 +539,7 @@ async function handlePcmWebhook(c: any) {
   if (!extractedPhone && gatewaySender) extractedPhone = gatewaySender;
 
   if (!extractedPhone) {
-    return c.json({ error: 'No caller MSISDN detected in message payload' }, 400);
+    return c.json({ ok: true, alerted: false, reason: 'No caller number in message (test or non-emergency SMS)' }, 200);
   }
 
   const cleanPhone = extractedPhone.replace(/[\s-]/g, '');
