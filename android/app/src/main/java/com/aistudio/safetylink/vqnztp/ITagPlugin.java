@@ -532,6 +532,7 @@ public class ITagPlugin extends Plugin {
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
                     notifyListeners("hardware_trigger_pressed", eventObj);
+                    ButtonPatternDetector.onPress(getContext());
                 }
             }
 
@@ -553,6 +554,7 @@ public class ITagPlugin extends Plugin {
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
                     notifyListeners("hardware_trigger_pressed", eventObj);
+                    ButtonPatternDetector.onPress(getContext());
                 }
             }
         };
