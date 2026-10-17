@@ -39,6 +39,7 @@ export interface Env {
   RESPONSE_CENTRE_NUMBER: string;
   PIPEDREAM_WEBHOOK_URL: string;
   PCM_WEBHOOK_SECRET?: string;
+  PCM_WEBHOOK_TOKEN?: string;
   RAIN_GATEWAY_MSISDN?: string;
   RECAPTCHA_SECRET: string;
 }
@@ -82,7 +83,7 @@ const checkTrialExpired = async (db: D1Database, orgId: string) => {
 
 const authMiddleware = async (c: any, next: any) => {
   const auth = c.req.header('Authorization');
-  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401);
+  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401 as any);
   const payload = verifyToken(auth.slice(7));
   if (!payload) return c.json({ error: 'Invalid or expired token' }, 401);
   if (await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
@@ -483,7 +484,7 @@ app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
 app.post('/api/profile/sync', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const outcome = await syncProfile(c.env, body, c.req.header('x-profile-token') || '');
-  return c.json(outcome.json, outcome.status);
+  return c.json(outcome.json, outcome.status as any);
 });
 
 app.get('/api/pcm/gateway', (c) => c.json({ number: gatewayNumber(c.env) || null }));
@@ -491,20 +492,34 @@ app.get('/api/pcm/gateway', (c) => c.json({ number: gatewayNumber(c.env) || null
 app.post('/api/pcm/locate', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const outcome = await locatePcm(c.env, body);
-  return c.json(outcome.json, outcome.status);
+  return c.json(outcome.json, outcome.status as any);
 });
 
+const safeEq = (a: string, b: string): boolean => {
+  if (a.length !== b.length) return false;
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+};
+const hexHmac = async (secret: string, data: string): Promise<string> => {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 async function handlePcmWebhook(c: any) {
+  // AUTH: every request must carry the secret token (?token= or x-pcm-token header),
+  // or a valid HMAC signature. Without this anyone could trigger alerts.
+  const expected = c.env.PCM_WEBHOOK_TOKEN || '';
+  const secret = c.env.PCM_WEBHOOK_SECRET || '';
+  if (!expected && !secret) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
+  const raw = await c.req.text();
+  const givenTok = c.req.query('token') || c.req.header('x-pcm-token') || '';
+  const givenSig = (c.req.header('X-Signature') || '').toLowerCase();
+  const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
+  const sigOk = !!secret && !!givenSig && safeEq(givenSig, await hexHmac(secret, raw));
+  if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);
   let body: any = {};
-  try {
-    body = await c.req.json();
-  } catch {
-    try {
-      body = Object.fromEntries(new URLSearchParams(await c.req.text()));
-    } catch {
-      body = {};
-    }
-  }
+  try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
 
   const rawText = String(
     body.rawMessage || body.pcmText || body.message || body.text || body.msg || ''
@@ -539,7 +554,7 @@ async function handlePcmWebhook(c: any) {
   }
 
   const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, c.req.header('x-safetylink-gateway') || '');
-  return c.json(outcome.json, outcome.status);
+  return c.json(outcome.json, outcome.status as any);
 }
 
 // ── USER HEARTBEAT ────────────────────────────────────────────────────────────
