@@ -174,8 +174,8 @@ function loosePayload(raw) {
 }
 
 async function handlePcm(request, env, { fireAlerts }, ctx) {
-  const token = new URL(request.url).pathname.split('/')[2] || '';
-  if (env.PCM_WEBHOOK_TOKEN && !safeEqual(token, env.PCM_WEBHOOK_TOKEN)) return json({ error: 'not_found' }, 404);
+  const token = (new URL(request.url).pathname.split('/')[2] || '').trim();
+  if (env.PCM_WEBHOOK_TOKEN && !safeEqual(token, env.PCM_WEBHOOK_TOKEN.trim())) return json({ error: 'not_found' }, 404);
 
   const raw = await request.text();
   let p; try { p = JSON.parse(raw); } catch { p = loosePayload(raw); }

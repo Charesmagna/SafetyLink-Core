@@ -476,6 +476,14 @@ app.post('/api/ussd', async (c) => {
 });
 
 // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / RL SMS WEBHOOK ───────
+app.post('/pcm/:token', async (c) => handlePcmWebhook(c));
+app.post('/pcm', async (c) => handlePcmWebhook(c));
+app.get('/pcm/:token', (c) => {
+  const expected = c.env.PCM_WEBHOOK_TOKEN || '';
+  if (!expected || !safeEq(c.req.param('token'), expected)) return c.json({ error: 'Unauthorized' }, 401 as any);
+  return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
+});
+app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
@@ -517,12 +525,12 @@ const hexHmac = async (secret: string, data: string): Promise<string> => {
 async function handlePcmWebhook(c: any) {
   // AUTH: every request must carry the secret token (?token= or x-pcm-token header),
   // or a valid HMAC signature. Without this anyone could trigger alerts.
-  const expected = c.env.PCM_WEBHOOK_TOKEN || '';
-  const secret = c.env.PCM_WEBHOOK_SECRET || '';
+  const expected = (c.env.PCM_WEBHOOK_TOKEN || '').trim();
+  const secret = (c.env.PCM_WEBHOOK_SECRET || '').trim();
   if (!expected && !secret) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
   const raw = await c.req.text();
-  const givenTok = c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '';
-  const givenSig = (c.req.header('X-Signature') || '').toLowerCase();
+  const givenTok = (c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
+  const givenSig = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').toLowerCase().trim();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
   const sigOk = !!secret && !!givenSig && safeEq(givenSig, await hexHmac(secret, raw));
   if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);

@@ -51,4 +51,5 @@ gradle-*/
 jdk-*/
 *.zip
 .restored_features_backup/
-
+.aistudio/
+data/

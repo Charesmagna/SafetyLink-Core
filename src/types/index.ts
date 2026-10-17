@@ -254,6 +254,11 @@ export interface DispatchSettings {
   dispatchPreset: 'STRICT_OFFLINE' | 'VIP_TWILIO_CLOUD' | 'SMS_ONLY' | 'CUSTOM';
   mapProvider: 'GOOGLE_MAPS' | 'OPENSTREETMAP' | 'MAPBOX' | 'OFFLINE_GIS_VECTOR' | 'HYBRID_SATELLITE';
   customChannels?: string[];
+  // Zero-Data USSD & Please-Call-Me (PCM) Settings
+  ussdEnabled: boolean;
+  carrierPreset: 'AUTO' | 'MTN' | 'VODACOM' | 'CELL_C' | 'TELKOM' | 'CUSTOM';
+  customUssdPattern: string;
+  pcmGatewayNumber: string;
 }
 
 export interface PlatformIntegration {
