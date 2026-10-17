@@ -40,29 +40,14 @@ export function extractMsisdn(rawText: string, sender: string): string {
 }
 
 export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS sl_profiles (
-      phone TEXT PRIMARY KEY,
-      name TEXT,
-      lat REAL,
-      lng REAL,
-      token TEXT,
-      updated_at INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS sl_contacts (
-      id TEXT PRIMARY KEY,
-      owner_phone TEXT NOT NULL,
-      name TEXT,
-      contact_phone TEXT NOT NULL,
-      sort_order INTEGER DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS sl_pcm_events (
-      id TEXT PRIMARY KEY,
-      owner_phone TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      located INTEGER DEFAULT 0
-    );
-  `);
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, updated_at INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS sl_pcm_events (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, created_at INTEGER NOT NULL, located INTEGER DEFAULT 0)`,
+  ];
+  for (const sql of statements) {
+    await db.prepare(sql).run();
+  }
 }
 
 export async function syncProfile(env: ZeroEnv, body: any, presentedToken: string): Promise<{ status: number; json: any }> {
