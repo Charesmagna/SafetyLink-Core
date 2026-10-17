@@ -6,14 +6,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Worker (no alerts sent)
+      - name: Probe webhook like the forwarder app does
         env:
-          WORKER: https://safetylink-api.tshilidzi-mukwevho54.workers.dev
-          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+          TOK: ${{ secrets.PCM_WEBHOOK_TOKEN }}
         run: |
           note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
-          note "providers: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health/providers)"
-          note "health: $(curl -s -m 20 -w ' [HTTP %{http_code}]' $WORKER/api/health)"
-          note "panic (empty body, expect 400 not 500): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d '{}' -w ' [HTTP %{http_code}]' $WORKER/api/panic | cut -c1-200)"
-          note "profile sync (bad number, expect 400): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d '{"phone":"x"}' -w ' [HTTP %{http_code}]' $WORKER/api/profile/sync | cut -c1-200)"
-          note "pcm unsigned (expect 401): $(curl -s -m 20 -X POST -H 'X-Signature: bad' -H 'Content-Type: application/json' -d '{}' -w ' [HTTP %{http_code}]' $WORKER/webhook/pcm | cut -c1-200)"
+          U="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/webhook/pcm/$TOK"
+          note "POST empty: $(curl -s -m 20 -X POST -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
+          note "POST json test: $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d '{"text":"test"}' -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
+          note "POST form test: $(curl -s -m 20 -X POST -H 'Content-Type: application/x-www-form-urlencoded' -d 'text=test' -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
+          note "GET test: $(curl -s -m 20 -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
+          note "bad token (expect 401): $(curl -s -m 20 -X POST -w ' [HTTP %{http_code}]' https://safetylink-api.tshilidzi-mukwevho54.workers.dev/webhook/pcm/wrong | cut -c1-200)"
