@@ -477,6 +477,7 @@ app.post('/api/ussd', async (c) => {
 
 // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / RL SMS WEBHOOK ───────
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
+app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
@@ -513,7 +514,7 @@ async function handlePcmWebhook(c: any) {
   const secret = c.env.PCM_WEBHOOK_SECRET || '';
   if (!expected && !secret) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
   const raw = await c.req.text();
-  const givenTok = c.req.query('token') || c.req.header('x-pcm-token') || '';
+  const givenTok = c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '';
   const givenSig = (c.req.header('X-Signature') || '').toLowerCase();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
   const sigOk = !!secret && !!givenSig && safeEq(givenSig, await hexHmac(secret, raw));
