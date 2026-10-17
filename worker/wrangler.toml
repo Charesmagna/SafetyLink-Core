@@ -7,6 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 ENVIRONMENT = "production"
 CLOUDINARY_CLOUD = "qcp4fx2v"
 PIPEDREAM_WEBHOOK_URL = "https://eomnz1lxw9o2hyq.m.pipedream.net"
+VAPI_BASE_URL = "https://api.vapi.ai"
+VAPI_ASSISTANT_ID = "9c9313eb-8593-4c49-b993-09eef7e8d540"
+ALERTS_ENABLED = "false"
 
 [[d1_databases]]
 binding = "DB"
