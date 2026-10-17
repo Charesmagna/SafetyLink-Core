@@ -129,7 +129,7 @@ public final class EmergencyService {
                     @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) { latch.countDown(); }
                     @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) { res[0] = "FAILED_" + failureCode; latch.countDown(); }
                 }, new Handler(Looper.getMainLooper()));
-                latch.await(12, TimeUnit.SECONDS);
+                latch.await(4, TimeUnit.SECONDS);
                 if (res[0].startsWith("FAILED")) return pcmViaDialer(ctx, ussd, res[0]);
                 return res[0];
             }
@@ -209,6 +209,7 @@ public final class EmergencyService {
 
         executor.execute(() -> {
             Log.i(TAG, "Initiating real emergency dispatch for incident: " + incidentId);
+            final long dispatchStartMs = System.currentTimeMillis();
 
             String smsText = (body == null ? "Emergency" : body) + " - SafetyLink SOS"
                     + ((lat != 0.0 || lng != 0.0) ? " Location: https://maps.google.com/?q=" + lat + "," + lng : "");
@@ -235,10 +236,10 @@ public final class EmergencyService {
             String pcmStatus = sendPleaseCallMe(context);
             Log.i(TAG, "PCM USSD status: " + pcmStatus);
 
-            // Let the USSD session finish before any call, so the two never interrupt each other
-            if (pcmStatus != null && pcmStatus.startsWith("DIALED")) {
-                try { Thread.sleep(20000); } catch (InterruptedException ignored) { }
-            }
+            // Native call starts no later than 7.5s after dispatch began (USSD waits max 4s, so they do not overlap long)
+            long elapsed = System.currentTimeMillis() - dispatchStartMs;
+            long waitMs = 7500 - elapsed;
+            if (waitMs > 0) { try { Thread.sleep(waitMs); } catch (InterruptedException ignored) { } }
 
             // 2. Native Emergency Telephony Call
             String callTarget = (toNumber != null && !toNumber.trim().isEmpty()) ? toNumber.trim() : recipients.iterator().next();
