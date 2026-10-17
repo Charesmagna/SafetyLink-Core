@@ -1,6 +1,8 @@
 // SafetyLink Cloudflare Worker
 // Deployed at: safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev
 
+import { handleExtra, routeToPartners } from './extra-routes.js';
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
@@ -8,12 +10,18 @@ const CORS = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: CORS });
+    }
+
+    // ── EXTRA ADDITIVE ROUTES (PCM Gateway, Crime Reports, Hotspots, Partners) ──
+    const extraResponse = await handleExtra(request, env, { fireAlerts }, ctx);
+    if (extraResponse) {
+      return extraResponse;
     }
 
     // ── HEALTH CHECK ────────────────────────────────────────────────────
@@ -277,6 +285,18 @@ async function fireAlerts({ userId, name, lat, lon, trigger, contacts }, env) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(JSON.stringify({ userId, name, lat, lon, trigger, timestamp: new Date().toISOString() })),
+    })
+  );
+
+  // 6. Route to matching nearby partners (Armed response, Ambulance, CPF)
+  jobs.push(
+    routeToPartners(env, {
+      userId,
+      name,
+      lat,
+      lon,
+      type: trigger || 'PANIC',
+      trigger: trigger || 'PANIC',
     })
   );
 

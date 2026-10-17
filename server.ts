@@ -1584,7 +1584,7 @@ Rules:
 
   // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / USSD / RL WEBHOOK ───
   // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
-  app.post(["/webhook/pcm", "/api/webhook/pcm", "/api/rl/sms", "/webhook/rl"], async (req, res) => {
+  const pcmGatewayHandler = async (req: express.Request, res: express.Response) => {
     try {
       const body = req.body || {};
       const query = (req.query as any) || {};
@@ -1794,7 +1794,14 @@ Rules:
       console.error('[Rain SIM Gateway Error]:', e);
       return res.status(500).json({ error: e.message });
     }
-  });
+  };
+
+  app.post("/pcm/:token", pcmGatewayHandler);
+  app.post("/pcm", pcmGatewayHandler);
+  app.post("/webhook/pcm", pcmGatewayHandler);
+  app.post("/api/webhook/pcm", pcmGatewayHandler);
+  app.post("/api/rl/sms", pcmGatewayHandler);
+  app.post("/webhook/rl", pcmGatewayHandler);
 
   app.post("/api/panic", async (req, res) => {
     try {
