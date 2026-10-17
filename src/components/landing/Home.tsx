@@ -74,7 +74,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
   const [tick, setTick] = useState(0);
   const [rotationTick, setRotationTick] = useState(0);
-  const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.906/SafetyLink-v1.1.906-Signed.apk');
+  const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [releaseVersion, setReleaseVersion] = useState('v1.1.906');
   const [heroClipMuted, setHeroClipMuted] = useState(true);

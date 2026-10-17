@@ -62,11 +62,11 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
           } else {
             // High reliability fallback with current signed release
             const fallback: ReleaseItem = {
-              version: 'v1.1.912',
-              name: 'SafetyLink Core v1.1.912',
-              publishedAt: '21 Sep 2026',
-              sizeMb: '94.4',
-              apkUrl: 'https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.912/SafetyLink-v1.1.912-Signed.apk',
+              version: 'Latest',
+              name: 'SafetyLink Core (latest release)',
+              publishedAt: 'Latest',
+              sizeMb: '',
+              apkUrl: 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest',
               isLatest: true,
             };
             setReleases([fallback]);

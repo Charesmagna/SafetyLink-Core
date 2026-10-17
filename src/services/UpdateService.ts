@@ -96,34 +96,42 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     const currentVersion = await getCurrentAppVersion();
     console.log(`[UpdateService] Checking updates. Current: ${currentVersion}`);
 
-    // 1. Try checking the fast live version endpoint first (/api/version or /version.json)
+    // 1. Always ask GitHub for the newest release first (never stale)
     try {
-      let liveMeta: any = null;
-      try {
-        liveMeta = await xhrGet(`/api/version?t=${Date.now()}`);
-      } catch {
-        try {
-          liveMeta = await xhrGet(`/version.json?t=${Date.now()}`);
-        } catch {
-          liveMeta = await xhrGet(`${LIVE_VERSION_ENDPOINT}?t=${Date.now()}`);
-        }
+      const release = await xhrGet(GITHUB_RELEASES_API);
+      const latestVersion = (release.tag_name || '').replace(/^v/, '');
+      if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
+        const apk = (release.assets || []).find((x: any) => x.name.endsWith('.apk'));
+        return {
+          available: true,
+          version: latestVersion,
+          apkUrl: apk?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink-v${latestVersion}-Signed.apk`,
+          releaseNotes: release.body ? String(release.body).slice(0, 300) : 'New release available.',
+          isLiveUpdate: false
+        };
       }
+      if (latestVersion) return { available: false };
+    } catch {
+      // GitHub unreachable - fall back to the website's version file
+    }
 
+    // 2. Fallback: website version file
+    try {
+      const liveMeta = await xhrGet(`/version.json?t=${Date.now()}`);
       if (liveMeta?.version && isNewerVersion(liveMeta.version, currentVersion)) {
-        console.log(`[UpdateService] Newer live version detected: v${liveMeta.version}`);
         return {
           available: true,
           version: liveMeta.version,
           apkUrl: liveMeta.apkUrl || `${APK_DOWNLOAD_BASE}/SafetyLink-v${liveMeta.version}-Signed.apk`,
-          releaseNotes: liveMeta.features?.join(' • ') || 'New live updates and security optimizations.',
-          isLiveUpdate: true
+          releaseNotes: liveMeta.features?.join(' • ') || 'New release available.',
+          isLiveUpdate: false
         };
       }
     } catch {
-      // fallback to GitHub API
+      // ignore
     }
 
-    // 2. Query GitHub Releases API
+    // 3. Final GitHub query (kept for the asset lookup below)
     const release = await xhrGet(GITHUB_RELEASES_API);
     const latestVersion = (release.tag_name || '').replace(/^v/, '');
 
