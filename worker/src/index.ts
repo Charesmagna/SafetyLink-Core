@@ -478,6 +478,13 @@ app.post('/api/ussd', async (c) => {
 // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / RL SMS WEBHOOK ───────
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
+// Some forwarder apps test the address with a GET request: answer 200 when the token is right
+app.get('/webhook/pcm/:token', (c) => {
+  const expected = c.env.PCM_WEBHOOK_TOKEN || '';
+  if (!expected || !safeEq(c.req.param('token'), expected)) return c.json({ error: 'Unauthorized' }, 401 as any);
+  return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
+});
+app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
