@@ -135,8 +135,8 @@ async function fireAllAlerts(
   const mapsLink = lat ? `https://maps.google.com/?q=${lat},${lng}` : '';
   const smsBody = [
     'SAFETYLINK PANIC ALERT',
-    `${who} pressed the panic button.`,
-    `Location: ${location}${locationNote}`,
+    `${callerName || callerNumber || 'A SafetyLink user'} pressed the panic button.`,
+    `Location: ${location}`,
     mapsLink ? `Map: ${mapsLink}` : '',
     callerNumber ? `Call back: ${callerNumber}` : '',
     'Please respond now.',
