@@ -6,14 +6,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Signed probe like incoming SMS gateway app
+      - name: List Cloudflare workers and routes (read only)
         env:
-          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+          ACC: d089bef8b0b58c5d9506b512ec2f63dc
         run: |
           note() { echo "::notice::$(echo "$1" | tr '\n' ' ' | cut -c1-380)"; }
-          U="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/webhook/pcm"
-          BODY='{"from":"+27700000000","text":"test","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
-          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | awk '{print $NF}')
-          note "signed POST (expect 200): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
-          note "unsigned POST (expect 401): $(curl -s -m 20 -X POST -H 'Content-Type: application/json' -d "$BODY" -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
-          note "GET (expect 200): $(curl -s -m 20 -w ' [HTTP %{http_code}]' "$U" | cut -c1-200)"
+          H="Authorization: Bearer $CF"
+          note "workers: $(curl -s -m 20 -H "$H" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/scripts | jq -c '[.result[]?.id]')"
+          note "custom domains: $(curl -s -m 20 -H "$H" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/domains | jq -c '[.result[]? | {hostname, service}]')"
+          note "subdomain: $(curl -s -m 20 -H "$H" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/subdomain | jq -c '.result')"
+          note "d1 databases: $(curl -s -m 20 -H "$H" https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database | jq -c '[.result[]? | .name]')"
