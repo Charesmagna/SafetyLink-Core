@@ -24,6 +24,9 @@ export interface Env {
   // Bland.ai
   BLAND_API_KEY: string;
   TWILIO_WHATSAPP_FROM?: string;
+  SMSGATE_USERNAME?: string;
+  SMSGATE_PASSWORD?: string;
+  SMSGATE_BASE_URL?: string;
   // Paystack
   PAYSTACK_SECRET_KEY: string;
   PAYSTACK_PUBLIC_KEY: string;
@@ -183,7 +186,16 @@ async function fireAllAlerts(
   await Promise.allSettled(all.map(async (to) => {
     // SMS: Twilio first, Africa's Talking as backup
     let smsOk = false;
-    if (twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
+    // 0) Free route: Rain SIM via SMSGate (200 SMS/month included). Off until credentials are saved.
+    const sgUser = (env as any).SMSGATE_USERNAME, sgPass = (env as any).SMSGATE_PASSWORD;
+    if (sgUser && sgPass) {
+      smsOk = await attempt('SMS', 'smsgate', to, () => fetch(`${((env as any).SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '')}/3rdparty/v1/messages`, {
+        method: 'POST',
+        headers: { Authorization: 'Basic ' + btoa(`${sgUser}:${sgPass}`), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textMessage: { text: smsBody }, phoneNumbers: [to] }),
+      }));
+    }
+    if (!smsOk && twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
     if (!smsOk && at.key && at.username) {
       await attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
         method: 'POST',
