@@ -1,0 +1,17 @@
+name: Test SMSGate SMS (verified number only)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send one SMS through the Rain SIM gateway
+        env:
+          U: ${{ secrets.SMSGATE_USERNAME }}
+          P: ${{ secrets.SMSGATE_PASSWORD }}
+        run: |
+          curl -s -m 60 -X POST https://api.sms-gate.app/3rdparty/v1/messages \
+            -u "$U:$P" -H 'Content-Type: application/json' \
+            -d '{"textMessage":{"text":"SafetyLink test: SMS gateway works."},"phoneNumbers":["+27680079911"]}' > out.json -w "%{http_code}" > code.txt
+          echo "::notice::HTTP $(cat code.txt): $(head -c 300 out.json)"
