@@ -12,4 +12,4 @@ routes = [
 ENVIRONMENT = "production"
 VAPI_BASE_URL = "https://api.vapi.ai"
 VAPI_ASSISTANT_ID = "9c9313eb-8593-4c49-b993-09eef7e8d540"
-ALERTS_ENABLED = "false"
+ALERTS_ENABLED = "true"

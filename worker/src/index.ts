@@ -13,6 +13,7 @@ export interface Env {
   // Upstash Redis (Rate limiting & Deduplication)
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
+  ALERTS_ENABLED?: string;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -535,6 +536,7 @@ app.get('/api/health/providers', (c) => c.json({
   bland: !!(c.env.BLAND_API_KEY && c.env.BLAND_API_KEY !== 'not_provided'),
   responseCentre: !!c.env.RESPONSE_CENTRE_NUMBER,
   redis: !!(c.env.UPSTASH_REDIS_REST_URL && c.env.UPSTASH_REDIS_REST_TOKEN),
+  alertsEnabled: c.env.ALERTS_ENABLED !== 'false',
 }));
 
 // ── USSD (Africa's Talking) ───────────────────────────────────────────────────
