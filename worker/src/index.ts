@@ -1,3 +1,5 @@
+import { sendLoudAlarm } from './fcm';
+import { saveDeviceToken, tokensForPhone } from './device-tokens';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -14,6 +16,7 @@ export interface Env {
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   ALERTS_ENABLED?: string;
+  FCM_SERVICE_ACCOUNT?: string;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -240,6 +243,20 @@ async function fireAllAlerts(
   const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
 
   await Promise.allSettled(all.map(async (to) => {
+    // Loud push to any SafetyLink phone registered with this number
+    const sa = (env as any).FCM_SERVICE_ACCOUNT;
+    if (sa && env.DB) {
+      try {
+        const tokens = await tokensForPhone(env.DB, to);
+        for (const tok of tokens) {
+          await attempt('ALARM', 'fcm', to, async () => {
+            const r = await sendLoudAlarm(sa, tok, 'SafetyLink ALERT', smsBody.split('\n').slice(0, 2).join(' '));
+            return new Response(r.error || '', { status: r.ok ? 200 : (r.status || 500) });
+          });
+        }
+      } catch (e) { console.error('[FCM]', e); }
+    }
+
     // SMS: Twilio first, Africa's Talking as backup
     let smsOk = false;
     // 0) Free route: Rain SIM via SMSGate (200 SMS/month included). Off until credentials are saved.
@@ -595,6 +612,17 @@ app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webho
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
+
+// The phone registers its FCM device token so loud alerts can reach it
+app.post('/api/device/token', async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as any;
+  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
+  const token = String(b.token || '');
+  if (!/^\+27[6-8][0-9]{8}$/.test(phone) || token.length < 20) return c.json({ error: 'phone and token required' }, 400 as any);
+  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
+  await saveDeviceToken(c.env.DB, phone, token);
+  return c.json({ ok: true });
+});
 
 app.post('/api/profile/sync', async (c) => {
   const body = await c.req.json().catch(() => ({}));
