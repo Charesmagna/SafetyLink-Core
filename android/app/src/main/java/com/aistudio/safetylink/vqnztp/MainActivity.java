@@ -25,6 +25,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SafetyLinkBridgePlugin.class);
         registerPlugin(ITagPlugin.class);
         super.onCreate(savedInstanceState);
+        LoudAlarmChannel.create(this);
         requestEmergencyPermissions();
         try { getBridge().getWebView().getSettings().setTextZoom(100); } catch (Exception ignored) {}
     }
