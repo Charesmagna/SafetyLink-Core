@@ -295,4 +295,13 @@ public class SafetyLinkBridgePlugin extends Plugin {
         notifyListeners("onPanicStatusChange", ret);
         notifyListeners("onPanicEvent", ret);
     }
+
+    @PluginMethod
+    public void savePushIdentity(PluginCall call) {
+        String phone = call.getString("phone", "");
+        String profileToken = call.getString("profileToken", "");
+        if (phone.isEmpty() || profileToken.isEmpty()) { call.reject("phone and profileToken required"); return; }
+        PushRegistrar.saveIdentity(getContext(), phone, profileToken);
+        call.resolve();
+    }
 }

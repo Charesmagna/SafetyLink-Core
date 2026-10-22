@@ -23,6 +23,7 @@ public class SafetyFcmService extends FirebaseMessagingService {
     public void onNewToken(String token) {
         // Stored locally; the app sends it to the server so alerts can reach this phone.
         getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_FCM_TOKEN, token).apply();
+        PushRegistrar.register(this);
     }
 
     @Override

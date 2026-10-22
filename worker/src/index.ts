@@ -620,6 +620,9 @@ app.post('/api/device/token', async (c) => {
   const token = String(b.token || '');
   if (!/^\+27[6-8][0-9]{8}$/.test(phone) || token.length < 20) return c.json({ error: 'phone and token required' }, 400 as any);
   if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
+  const presented = c.req.header('X-Profile-Token') || '';
+  const owner: any = await c.env.DB.prepare('SELECT token FROM sl_profiles WHERE phone=?').bind(phone).first().catch(() => null);
+  if (!owner?.token || !presented || !safeEq(presented, owner.token)) return c.json({ error: 'Not authorised for this number' }, 401 as any);
   await saveDeviceToken(c.env.DB, phone, token);
   return c.json({ ok: true });
 });

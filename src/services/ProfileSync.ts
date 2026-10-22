@@ -26,6 +26,13 @@ export async function syncProfile(): Promise<void> {
     });
     const j: any = await res.json().catch(() => ({}));
     if (j.token) localStorage.setItem(TOKEN_KEY, j.token);
+    const savedToken = j.token || token;
+    if (res.ok && savedToken) {
+      try {
+        const { SafetyLinkEmergency } = await import('./NativeDispatchService');
+        await (SafetyLinkEmergency as any).savePushIdentity({ phone: user.phone, profileToken: savedToken });
+      } catch { /* native bridge not available on web */ }
+    }
     if (res.ok) lastSig = sig;
   } catch {
     /* offline - will retry on the next change or timer */
