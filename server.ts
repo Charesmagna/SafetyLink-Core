@@ -37,14 +37,46 @@ import twilio from "twilio";
 import { Queue } from "bullmq";
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { WebSocketServer } from "ws";
-import { initializeApp } from 'firebase-admin/app';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import fs from 'fs';
 
-// Initialize Firebase Admin for Firestore updates
-initializeApp({
-  projectId: 'safetylink-99e56'
-});
+// Initialize Firebase Admin for Firestore & FCM updates
+let firebaseAdminApp: any = null;
+if (!getApps().length) {
+  let credentialConfig: any = null;
+  const serviceAccountPath = './safetylink-99e56-service-account.json';
+
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    try {
+      credentialConfig = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY));
+    } catch {
+      try {
+        if (fs.existsSync(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)) {
+          credentialConfig = cert(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        }
+      } catch (e) {
+        console.warn('[FirebaseAdmin] Failed loading FIREBASE_SERVICE_ACCOUNT_KEY path:', e);
+      }
+    }
+  } else if (fs.existsSync(serviceAccountPath)) {
+    try {
+      credentialConfig = cert(serviceAccountPath);
+      console.log('[FirebaseAdmin] Loaded credentials from safetylink-99e56-service-account.json');
+    } catch (e) {
+      console.warn('[FirebaseAdmin] Failed loading safetylink-99e56-service-account.json:', e);
+    }
+  }
+
+  firebaseAdminApp = initializeApp(credentialConfig ? {
+    credential: credentialConfig,
+    projectId: 'safetylink-99e56'
+  } : {
+    projectId: 'safetylink-99e56'
+  });
+}
+
 let firestoreDb: any = null;
 function getFirestoreDb() {
   if (!firestoreDb) firestoreDb = getFirestore();
