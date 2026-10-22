@@ -10,6 +10,9 @@ export interface Env {
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
+  // Upstash Redis (Rate limiting & Deduplication)
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -111,6 +114,58 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
     return parts.join(', ') || d.display_name || `${lat},${lng}`;
   } catch {
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
+}
+
+// ── UPSTASH REDIS RATE LIMITING & DEDUPLICATION ──────────────────────────────
+async function checkPanicRateLimit(
+  env: Env,
+  identifier: string,
+  ttlSeconds = 60
+): Promise<{ rateLimited: boolean; reason?: string }> {
+  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
+    return { rateLimited: false };
+  }
+
+  const cleanId = String(identifier || 'unknown').replace(/[^a-zA-Z0-9_\-+]/g, '_').slice(0, 64);
+  const key = `ratelimit:panic:${cleanId}`;
+  const url = env.UPSTASH_REDIS_REST_URL.replace(/\/$/, '');
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000); // 2s fail-open safeguard for emergency resilience
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.UPSTASH_REDIS_REST_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(['SET', key, '1', 'EX', ttlSeconds, 'NX']),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      console.warn(`[RateLimit] Upstash returned status ${res.status}`);
+      return { rateLimited: false };
+    }
+
+    const data = (await res.json()) as { result?: string | null };
+    // 'OK' means new key was set -> allowed
+    // null means key already existed -> throttled
+    if (data.result === 'OK') {
+      return { rateLimited: false };
+    } else {
+      return {
+        rateLimited: true,
+        reason: `Duplicate panic alert throttled: cooldown active for ${ttlSeconds} seconds`,
+      };
+    }
+  } catch (err: any) {
+    // Non-negotiable life safety rule: fail open if Redis/network has an issue
+    console.error(`[RateLimit] Error querying Upstash Redis, failing open:`, err?.message || err);
+    return { rateLimited: false };
   }
 }
 
@@ -424,6 +479,28 @@ app.post('/api/panic', async (c) => {
     });
   }
 
+  // 60-second anti-spam deduplication rate limit (Upstash Redis)
+  const rateLimitTarget = callerNumber || userId || orgId || 'anonymous';
+  const rl = await checkPanicRateLimit(c.env, rateLimitTarget, 60);
+  if (rl.rateLimited) {
+    console.warn(`[Panic RateLimit] Throttled duplicate panic alert for ${rateLimitTarget} within 60s window.`);
+    return c.json({
+      ok: true,
+      rateLimited: true,
+      address,
+      message: 'Duplicate panic alert throttled (60s cooldown active). Responders already notified.',
+      results: [
+        {
+          channel: 'ALL',
+          provider: 'upstash_redis_ratelimit',
+          to: rateLimitTarget,
+          ok: true,
+          detail: 'Alert throttled: a live distress dispatch was already executed for this user/number within the last 60 seconds.'
+        }
+      ]
+    });
+  }
+
   const results = await fireAllAlerts(c.env, {
     callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address,
     extraContacts: contactNumbers,
@@ -457,6 +534,7 @@ app.get('/api/health/providers', (c) => c.json({
   africasTalking: !!(c.env.AT_API_KEY && c.env.AT_USERNAME),
   bland: !!(c.env.BLAND_API_KEY && c.env.BLAND_API_KEY !== 'not_provided'),
   responseCentre: !!c.env.RESPONSE_CENTRE_NUMBER,
+  redis: !!(c.env.UPSTASH_REDIS_REST_URL && c.env.UPSTASH_REDIS_REST_TOKEN),
 }));
 
 // ── USSD (Africa's Talking) ───────────────────────────────────────────────────
