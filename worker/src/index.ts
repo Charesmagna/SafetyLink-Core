@@ -1,3 +1,4 @@
+import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 import { sendLoudAlarm } from './fcm';
 import { saveDeviceToken, tokensForPhone } from './device-tokens';
 // SafetyLink Cloudflare Worker — Full Backend
@@ -17,6 +18,7 @@ export interface Env {
   UPSTASH_REDIS_REST_TOKEN?: string;
   ALERTS_ENABLED?: string;
   FCM_SERVICE_ACCOUNT?: string;
+  ADMIN_API_KEY?: string;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -612,6 +614,23 @@ app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webho
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
+
+// ── Superadmin (protected by X-Admin-Key) ─────────────────────────────────────
+app.get('/api/admin/summary', async (c) => {
+  if (!adminAuthorised(c.env, c.req.raw)) return c.json({ error: 'Unauthorised' }, 401 as any);
+  return c.json(await adminSummary(c.env.DB));
+});
+app.get('/api/admin/users', async (c) => {
+  if (!adminAuthorised(c.env, c.req.raw)) return c.json({ error: 'Unauthorised' }, 401 as any);
+  return c.json({ users: await adminUsers(c.env.DB) });
+});
+app.post('/api/admin/delete-user', async (c) => {
+  if (!adminAuthorised(c.env, c.req.raw)) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const b = (await c.req.json().catch(() => ({}))) as any;
+  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
+  if (!phone) return c.json({ error: 'phone required' }, 400 as any);
+  return c.json(await adminDelete(c.env.DB, phone));
+});
 
 // The phone registers its FCM device token so loud alerts can reach it
 app.post('/api/device/token', async (c) => {

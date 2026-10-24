@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useAppStore } from '../utils/store';
 import { translate } from '../utils/translations';
 import { FleetMonitor } from './FleetMonitor';
+import { SuperAdminUsers } from './SuperAdminUsers';
 
 export const SuperDashboard: React.FC = () => {
   const { organizations, panicEvents, users, language } = useAppStore();
@@ -82,6 +83,7 @@ export const SuperDashboard: React.FC = () => {
       <div className="mt-8">
         <FleetMonitor />
       </div>
+      <SuperAdminUsers />
     </div>
   );
 };
