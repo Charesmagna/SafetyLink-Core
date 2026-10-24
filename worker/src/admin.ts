@@ -10,10 +10,12 @@ const safeEq = (a: string, b: string) => {
 
 const mask = (p: string) => (p && p.length > 6 ? p.slice(0, 5) + '***' + p.slice(-3) : '***');
 
-export function adminAuthorised(env: any, req: Request): boolean {
-  const want = env.ADMIN_API_KEY || '';
-  const got = req.headers.get('X-Admin-Key') || '';
-  return !!want && !!got && safeEq(got, want);
+import { sessionValid } from './admin-auth';
+
+export async function adminAuthorised(env: any, req: Request): Promise<boolean> {
+  const auth = req.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return token ? await sessionValid(env, token) : false;
 }
 
 export async function adminSummary(db: any) {

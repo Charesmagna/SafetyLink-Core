@@ -7,10 +7,12 @@ type Summary = Record<string, number>;
 
 /**
  * Superadmin panel: counts, current users (masked numbers) and delete.
- * The admin key is typed in each session and kept only in memory. It is never saved.
+ * Sign in with the superadmin email and password. The session lives in memory only.
  */
 export const SuperAdminUsers: React.FC = () => {
-  const [key, setKey] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState('');
   const [summary, setSummary] = useState<Summary | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [msg, setMsg] = useState('');
@@ -18,11 +20,29 @@ export const SuperAdminUsers: React.FC = () => {
   const call = async (path: string, init?: RequestInit) => {
     const res = await fetch(BACKEND + path, {
       ...init,
-      headers: { 'X-Admin-Key': key, 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', ...(init?.headers || {}) },
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(j.error || 'Request failed (' + res.status + ')');
     return j;
+  };
+
+  const signIn = async () => {
+    setMsg('');
+    try {
+      const res = await fetch(BACKEND + '/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || 'Sign-in failed');
+      setToken(j.token);
+      setPassword('');
+      setMsg('');
+    } catch (e: any) {
+      setMsg(e.message);
+    }
   };
 
   const load = async () => {
@@ -33,6 +53,7 @@ export const SuperAdminUsers: React.FC = () => {
       setUsers(u.users || []);
     } catch (e: any) {
       setMsg(e.message);
+      if (String(e.message).includes('401')) setToken('');
     }
   };
 
@@ -50,12 +71,22 @@ export const SuperAdminUsers: React.FC = () => {
   return (
     <div className="mt-8 border-t border-slate-800 pt-6 text-slate-200 font-mono">
       <h2 className="text-lg font-bold text-cyan-400 tracking-widest uppercase mb-3">Users</h2>
-      <div className="flex gap-2 mb-4">
-        <input type="password" value={key} onChange={(e) => setKey(e.target.value)}
-          placeholder="Admin key" className="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-sm" />
-        <button onClick={load} disabled={!key}
-          className="bg-cyan-700 px-4 py-2 rounded text-sm disabled:opacity-40">Load</button>
-      </div>
+      {!token ? (
+        <div className="flex flex-col gap-2 mb-4">
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Superadmin email"
+            className="bg-slate-900 border border-slate-800 rounded px-3 py-2 text-sm" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
+            className="bg-slate-900 border border-slate-800 rounded px-3 py-2 text-sm" />
+          <button onClick={signIn} disabled={!email || !password}
+            className="bg-cyan-700 px-4 py-2 rounded text-sm disabled:opacity-40">Sign in</button>
+        </div>
+      ) : (
+        <div className="flex gap-2 mb-4">
+          <button onClick={load} className="bg-cyan-700 px-4 py-2 rounded text-sm">Refresh</button>
+          <button onClick={() => { setToken(''); setSummary(null); setUsers([]); }}
+            className="bg-slate-800 px-4 py-2 rounded text-sm">Sign out</button>
+        </div>
+      )}
       {msg && <p className="text-xs text-amber-400 mb-3">{msg}</p>}
       {summary && (
         <div className="grid grid-cols-3 gap-3 mb-4 text-center text-xs">
