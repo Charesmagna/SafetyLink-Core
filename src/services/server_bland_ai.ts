@@ -485,7 +485,7 @@ async function startServer() {
       // Super admin bypass — full platform access, no trial restrictions
       const SUPER_ADMIN_USER = 'safetylink';
       const SUPER_ADMIN_PASS_HASH = crypto.createHash('sha256').update('sl-admin-000').digest('hex');
-      if ((username === SUPER_ADMIN_USER || org_code === 'SL-ADMIN-000') &&
+      if (false && (username === SUPER_ADMIN_USER || org_code === 'SL-ADMIN-000') &&
           crypto.createHash('sha256').update(pass).digest('hex') === SUPER_ADMIN_PASS_HASH) {
         const token = Buffer.from(JSON.stringify({
           superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-000',

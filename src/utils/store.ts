@@ -1203,7 +1203,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       compactPassword === 'safetylink' ||
       skipPasswordCheck;
 
-    const isSuperAdmin = isSuperAdminIdentifier && isSuperAdminPasswordMatch;
+    // Hard-coded superadmin login removed. Superadmin is server-side only (/api/admin/login).
+    const isSuperAdmin = false && isSuperAdminIdentifier && isSuperAdminPasswordMatch;
 
     if (isSuperAdmin) {
       const superAdminToken = btoa(JSON.stringify({ superAdmin: true, exp: Date.now() + 7 * 86400000 }));
