@@ -1,0 +1,12 @@
+name: Check APK download link (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check /download/safetylink.apk
+        run: |
+          H=$(curl -sI -m 60 https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk)
+          echo "::notice::$(echo "$H" | grep -iE '^HTTP|content-length|content-type' | tr -d '\r' | tr '\n' ' ' | cut -c1-300)"
