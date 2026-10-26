@@ -1,0 +1,21 @@
+name: Check recent dispatches (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query D1 for recent events
+        env:
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+          ACC: d089bef8b0b58c5d9506b512ec2f63dc
+          DB: 9daa8cbf-861f-4483-92e5-9f03541c6e71
+        run: |
+          q() { curl -s -m 30 -X POST -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+            -d "{\"sql\":\"$1\"}" "https://api.cloudflare.com/client/v4/accounts/$ACC/d1/database/$DB/query" | jq -c '.result[0].results // .errors' | cut -c1-900; }
+          echo "::notice::TABLES: $(q "SELECT name FROM sqlite_master WHERE type='table'")"
+          echo "::notice::PCM_EVENTS: $(q "SELECT from_number, status, received_at FROM sl_pcm_events ORDER BY received_at DESC LIMIT 8")"
+          echo "::notice::PROFILES: $(q "SELECT COUNT(*) AS n FROM sl_profiles")"
+          echo "::notice::DEVICE_TOKENS: $(q "SELECT COUNT(*) AS n FROM sl_device_tokens")"
+          echo "::notice::ATTEMPTS: $(q "SELECT channel, provider, ok, http_status, substr(error,1,80) AS err FROM sl_alert_attempts ORDER BY created_at DESC LIMIT 8")"
