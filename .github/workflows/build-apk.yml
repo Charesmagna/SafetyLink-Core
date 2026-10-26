@@ -83,8 +83,9 @@ jobs:
         keyPassword=SafetyLink2024!
         PROPS
 
-    - name: Create mock google-services.json
+    - name: Create mock google-services.json (only if the real one is missing)
       run: |
+        if [ -s android/app/google-services.json ]; then echo "Real google-services.json present - keeping it"; exit 0; fi
         cat << 'JSON_EOF' > android/app/google-services.json
         {
           "project_info": {
@@ -154,12 +155,6 @@ jobs:
         fi
         echo "Using APK: $APK"
         cp "$APK" release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: SafetyLink-Release-APK
-        path: release-output/*.apk
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
