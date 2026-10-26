@@ -426,12 +426,6 @@ const handleLogin = async (c: any) => {
   const orgCode = body.orgCode || body.org_code;
 
   if (!username || !password) return c.json({ error: 'Credentials required' }, 400);
-  // SuperAdmin shortcut
-  if ((username === 'safetylink' && password === '0000' && (orgCode === 'SL-ADMIN-0000' || orgCode === 'SL-ADMIN-000')) ||
-      (username === 'safetylink' && password === 'sl-admin-000')) {
-    const token = makeToken({ orgId: 'SL-ADMIN-0000', username, superAdmin: true });
-    return c.json({ token, orgId: 'SL-ADMIN-0000', org_code: 'SL-ADMIN-0000', org_name: 'SafetyLink Super Admin', superAdmin: true });
-  }
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const user = await c.env.DB!.prepare(
     'SELECT id, username, org_id FROM users WHERE username = ? AND password_hash = ?'
