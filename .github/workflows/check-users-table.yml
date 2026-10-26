@@ -15,4 +15,4 @@ jobs:
         run: |
           npm install -g wrangler@4 >/dev/null 2>&1 || true
           OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "PRAGMA table_info(users)" 2>&1)
-          echo "::notice::COLS: $(echo "$OUT" | grep -o '"name": *"[^"]*"' | tr -s ' ' | tr '\n' ' ' | cut -c1-400)"
+          echo "::notice::RAW: $(echo "$OUT" | tr -d "\n" | tr -s " " | cut -c1-500)"
