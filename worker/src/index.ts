@@ -329,7 +329,7 @@ async function fireAllAlerts(
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 app.get('/api/init-db', async (c) => {
-  await c.env.DB!.exec(`
+  const initStatements = `
     CREATE TABLE IF NOT EXISTS organisations (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -358,7 +358,10 @@ app.get('/api/init-db', async (c) => {
       resolved INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL
     );
-  `);
+  `;
+  for (const stmt of initStatements.split(';')) {
+    if (stmt.trim()) await c.env.DB!.prepare(stmt).run();
+  }
   // Add the password column to existing databases (ignored if it already exists)
   await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN password_hash TEXT').run().catch(() => {});
 
