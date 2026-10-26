@@ -17,8 +17,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
         run: |
           npm install -g wrangler@4 > /dev/null 2>&1 || true
-          OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT COUNT(*) AS n FROM sl_profiles" 2>&1)
-          echo "::notice::PROFILES: $(echo "$OUT" | tr -d '\n' | tr -s ' ' | cut -c1-200)"
+          OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT (SELECT COUNT(*) FROM sl_profiles) AS profiles, (SELECT COUNT(*) FROM sl_contacts) AS contacts, (SELECT COUNT(*) FROM sl_device_tokens) AS devices, (SELECT COUNT(*) FROM sl_pcm_events) AS pcm_events" 2>&1)
+          echo "::notice::COUNTS: $(echo "$OUT" | tr -d '\n' | grep -o '"[a-z_]*": [0-9]*' | tr '\n' ' ')"
           OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(received_at/1000,'unixepoch') AS at, substr(from_number,1,7) AS from_m, status, alert_count FROM sl_pcm_events ORDER BY received_at DESC LIMIT 8" 2>&1)
           echo "::notice::PCM RAW: $(echo "$OUT" | tr -d '\n' | cut -c1-3000)"
           OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(created_at/1000,'unixepoch') AS at, channel, provider, ok, http_status, substr(error,1,100) AS error FROM sl_alert_attempts ORDER BY created_at DESC LIMIT 12" 2>&1)
