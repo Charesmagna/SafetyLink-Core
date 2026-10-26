@@ -1,0 +1,25 @@
+name: Read dispatch log (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recent PCM events and alert attempts
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          npm install -g wrangler@4 >/dev/null 2>&1
+          echo "== tables =="
+          npx wrangler d1 execute safetylink-core --remote --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" 2>&1 | grep -o '"name": *"[^"]*"' | cut -c1-120
+          echo "== last PCM events =="
+          npx wrangler d1 execute safetylink-core --remote --command "SELECT datetime(received_at/1000,'unixepoch') AS at, from_number, status, alert_count FROM sl_pcm_events ORDER BY received_at DESC LIMIT 10" 2>&1 | tail -40
+          echo "== last alert attempts =="
+          npx wrangler d1 execute safetylink-core --remote --command "SELECT datetime(created_at/1000,'unixepoch') AS at, channel, provider, ok, http_status, substr(error,1,120) AS error FROM sl_alert_attempts ORDER BY created_at DESC LIMIT 15" 2>&1 | tail -60
