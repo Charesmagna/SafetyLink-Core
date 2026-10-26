@@ -1,0 +1,14 @@
+name: Check R2 access (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  r2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List R2 buckets
+        env:
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+        run: |
+          R=$(curl -s -m 20 -H "Authorization: Bearer $CF" https://api.cloudflare.com/client/v4/accounts/d089bef8b0b58c5d9506b512ec2f63dc/r2/buckets)
+          echo "::notice::$(echo "$R" | jq -c '{success, buckets: [.result.buckets[]?.name], errors}' | cut -c1-350)"
