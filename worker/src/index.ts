@@ -359,6 +359,9 @@ app.get('/api/init-db', async (c) => {
       created_at INTEGER NOT NULL
     );
   `);
+  // Add the password column to existing databases (ignored if it already exists)
+  await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN password_hash TEXT').run().catch(() => {});
+
   return c.json({ ok: true });
 });
 
