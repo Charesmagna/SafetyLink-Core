@@ -1,0 +1,13 @@
+name: Run init-db (one-time migration)
+on:
+  workflow_dispatch:
+
+jobs:
+  init:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call init-db
+        run: |
+          sleep 120
+          R=$(curl -s -m 60 https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/init-db)
+          echo "::notice::$(echo "$R" | cut -c1-200)"
