@@ -16,10 +16,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
         run: |
-          npm install -g wrangler@4 >/dev/null 2>&1
-          echo "== tables =="
-          npx wrangler d1 execute safetylink-core --remote --json --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" 2>/dev/null | jq -r '.[0].results[]?.name' | tr '\n' ' ' | while read -r l; do echo "::notice::TABLES $l"; done
-          echo "== last PCM events =="
-          npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(received_at/1000,'unixepoch') AS at, substr(from_number,1,7)||'***' AS from_m, status, alert_count FROM sl_pcm_events ORDER BY received_at DESC LIMIT 8" 2>/dev/null | jq -r '.[0].results[]? | "PCM \(.at) \(.from_m) \(.status) alerts=\(.alert_count)"' | while read -r l; do echo "::notice::$l"; done
-          echo "== last alert attempts =="
-          npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(created_at/1000,'unixepoch') AS at, channel, provider, ok, http_status, substr(error,1,110) AS error FROM sl_alert_attempts ORDER BY created_at DESC LIMIT 12" 2>/dev/null | jq -r '.[0].results[]? | "ATT \(.at) \(.channel) \(.provider) ok=\(.ok) http=\(.http_status) \(.error // "")"' | while read -r l; do echo "::notice::$l"; done
+          npm install -g wrangler@4 > /dev/null 2>&1 || true
+          OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT name FROM sqlite_master WHERE type='table'" 2>&1)
+          echo "::notice::TABLES RAW: $(echo "$OUT" | tr -d '\n' | cut -c1-400)"
+          OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(received_at/1000,'unixepoch') AS at, substr(from_number,1,7) AS from_m, status, alert_count FROM sl_pcm_events ORDER BY received_at DESC LIMIT 8" 2>&1)
+          echo "::notice::PCM RAW: $(echo "$OUT" | tr -d '\n' | cut -c1-600)"
+          OUT=$(npx wrangler d1 execute safetylink-core --remote --json --command "SELECT datetime(created_at/1000,'unixepoch') AS at, channel, provider, ok, http_status, substr(error,1,100) AS error FROM sl_alert_attempts ORDER BY created_at DESC LIMIT 12" 2>&1)
+          echo "::notice::ATT RAW: $(echo "$OUT" | tr -d '\n' | cut -c1-900)"
