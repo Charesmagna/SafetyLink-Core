@@ -410,8 +410,8 @@ app.post('/api/auth/register-user', async (c) => {
   const id = crypto.randomUUID();
   try {
     await c.env.DB!.prepare(
-      'INSERT INTO users (id, org_id, username, email, role, created_at) VALUES (?,?,?,?,?,?)'
-    ).bind(id, orgCode || null, username, email || null, 'User', Date.now()).run();
+      'INSERT INTO users (id, org_id, username, email, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?)'
+    ).bind(id, orgCode || null, username, email || null, 'User', hash, Date.now()).run();
     return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username }), userId: id, username });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
