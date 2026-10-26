@@ -66,7 +66,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               name: 'SafetyLink Core (latest release)',
               publishedAt: 'Latest',
               sizeMb: '',
-              apkUrl: 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest',
+              apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk',
               isLatest: true,
             };
             setReleases([fallback]);
@@ -149,7 +149,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <a
-                  href={latestRelease?.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest'}
+                  href={latestRelease?.apkUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'}
                   download
                   style={{
                     background: '#00e676',
