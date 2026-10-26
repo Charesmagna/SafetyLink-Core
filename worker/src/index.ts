@@ -20,6 +20,7 @@ export interface Env {
   ALERTS_ENABLED?: string;
   FCM_SERVICE_ACCOUNT?: string;
   ADMIN_API_KEY?: string;
+  RELEASES?: any;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -642,6 +643,20 @@ app.post('/api/admin/delete-user', async (c) => {
   const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
   if (!phone) return c.json({ error: 'phone required' }, 400 as any);
   return c.json(await adminDelete(c.env.DB, phone));
+});
+
+// Latest APK, served from R2 (the repo can stay private)
+app.get('/download/safetylink.apk', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
+  if (!obj) return c.json({ error: 'No release available yet' }, 404 as any);
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': 'application/vnd.android.package-archive',
+      'Content-Disposition': 'attachment; filename="SafetyLink.apk"',
+      'Content-Length': String(obj.size),
+      'Cache-Control': 'no-cache',
+    },
+  });
 });
 
 // The phone registers its FCM device token so loud alerts can reach it

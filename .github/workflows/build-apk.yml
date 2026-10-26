@@ -170,3 +170,16 @@ jobs:
         generate_release_notes: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish APK to R2 (latest + versioned copy)
+      env:
+        CF: ${{ secrets.CF_WORKERS_TOKEN }}
+        ACC: d089bef8b0b58c5d9506b512ec2f63dc
+      run: |
+        APK=$(ls release-output/*.apk | head -1)
+        for KEY in safetylink-latest.apk "versions/$(basename "$APK")"; do
+          curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @"$APK" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects/$KEY" > /dev/null
+          echo "published $KEY"
+        done
