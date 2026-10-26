@@ -16,5 +16,8 @@ jobs:
           R=$(curl -s -m 60 -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/json" -d "$BODY" https://api.cloudflare.com/client/v4/accounts/$ACC/workers/domains)
           echo "::notice::$(echo "$R" | jq -c '{success, hostname: .result.hostname, errors: [.errors[]?.message]}' | cut -c1-300)"
           sleep 60
+          sleep 120
           H=$(curl -sI -m 60 https://download.safetylink.online/download/safetylink.apk)
+          B=$(curl -s -m 60 https://download.safetylink.online/download/safetylink.apk | head -c 200 | tr -cd "[:print:]")
+          echo "::notice::body: $B"
           echo "::notice::$(echo "$H" | grep -iE '^HTTP|content-length' | tr -d '\r' | tr '\n' ' ' | cut -c1-200)"
