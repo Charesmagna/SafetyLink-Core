@@ -149,7 +149,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <a
-                  href={latestRelease?.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.912/SafetyLink-v1.1.912-Signed.apk'}
+                  href={latestRelease?.apkUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest'}
                   download
                   style={{
                     background: '#00e676',
