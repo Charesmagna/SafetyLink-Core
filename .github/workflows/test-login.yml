@@ -1,0 +1,29 @@
+name: Test responder register and login (throwaway account)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Register, log in, then delete the test account
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          U="sltest$RANDOM$RANDOM"; P="Test-Pass-$RANDOM$RANDOM"
+          API=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
+          R1=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$P\"}" $API/api/auth/register-user)
+          echo "::notice::REGISTER: $(echo $R1 | cut -c1-160)"
+          R2=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$P\"}" $API/api/auth/login)
+          echo "::notice::LOGIN: $(echo $R2 | cut -c1-160)"
+          R3=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"wrong-$P\"}" $API/api/auth/login)
+          echo "::notice::WRONG PASSWORD: $(echo $R3 | cut -c1-120)"
+          npm install -g wrangler@4 >/dev/null 2>&1 || true
+          npx wrangler d1 execute safetylink-core --remote --command "DELETE FROM users WHERE username LIKE 'sltest%'" >/dev/null 2>&1
+          echo "::notice::test account removed"
