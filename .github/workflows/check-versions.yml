@@ -1,0 +1,14 @@
+name: Check version list (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Version list and download
+        run: |
+          V=$(curl -s -m 60 https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/versions)
+          echo "::notice::VERSIONS: $(echo "$V" | jq -c '[.versions[]? | {version, size, date}] | .[0:5]' | cut -c1-300)"
+          H=$(curl -sI -m 60 https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk)
+          echo "::notice::DOWNLOAD: $(echo "$H" | grep -iE '^HTTP|content-length' | tr -d '\r' | tr '\n' ' ')"
