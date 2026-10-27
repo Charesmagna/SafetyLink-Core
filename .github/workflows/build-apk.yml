@@ -171,15 +171,28 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Publish APK to R2 (latest + versioned copy)
+    - name: Publish APK to R2 (latest, versioned copy, version list)
       env:
         CF: ${{ secrets.CF_WORKERS_TOKEN }}
         ACC: d089bef8b0b58c5d9506b512ec2f63dc
       run: |
         APK=$(ls release-output/*.apk | head -1)
-        for KEY in safetylink-latest.apk "versions/$(basename "$APK")"; do
+        NAME=$(basename "$APK")
+        VER=$(echo "$NAME" | sed -E 's/SafetyLink-v([0-9.]+)-Signed\.apk/\1/')
+        SIZE=$(stat -c%s "$APK")
+        DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        BASE="https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects"
+        # 1. latest + versioned copy
+        for KEY in safetylink-latest.apk "versions/$NAME"; do
           curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary @"$APK" \
-            "https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects/$KEY" > /dev/null
+            --data-binary @"$APK" "$BASE/$KEY" > /dev/null
           echo "published $KEY"
         done
+        # 2. version list (newest first, last 30 kept)
+        curl -s -H "Authorization: Bearer $CF" "$BASE/versions%2Findex.json" -o old.json || true
+        jq -e 'type=="array"' old.json > /dev/null 2>&1 || echo '[]' > old.json
+        jq --arg v "$VER" --arg f "$NAME" --argjson s "$SIZE" --arg d "$DATE" \
+          '[{version:$v,file:$f,size:$s,date:$d}] + (map(select(.file != $f))) | .[0:30]' old.json > index.json
+        curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/json" \
+          --data-binary @index.json "$BASE/versions%2Findex.json" > /dev/null
+        echo "version list updated: $VER"

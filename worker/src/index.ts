@@ -330,6 +330,21 @@ async function fireAllAlerts(
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
+// Public version list (published by the build; no GitHub involved)
+app.get('/api/app/versions', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('versions/index.json');
+  if (!obj) return c.json({ versions: [] });
+  const list = await obj.json().catch(() => []);
+  return c.json({ versions: Array.isArray(list) ? list : [] });
+});
+app.get('/download/version/:file', async (c) => {
+  const file = c.req.param('file');
+  if (!/^SafetyLink-v[0-9.]+-Signed\.apk$/.test(file)) return c.json({ error: 'not found' }, 404 as any);
+  const obj: any = await (c.env as any).RELEASES?.get('versions/' + file);
+  if (!obj) return c.json({ error: 'not found' }, 404 as any);
+  return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': 'attachment; filename="' + file + '"', 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
+});
+
 // Latest APK, served from R2 (the repo can stay private)
 app.get('/download/safetylink.apk', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
