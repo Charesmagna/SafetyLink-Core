@@ -307,6 +307,20 @@ async function fireAllAlerts(
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
+// Latest APK, served from R2 (the repo can stay private)
+app.get('/download/safetylink.apk', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
+  if (!obj) return c.json({ error: 'No release available yet' }, 404 as any);
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': 'application/vnd.android.package-archive',
+      'Content-Disposition': 'attachment; filename="SafetyLink.apk"',
+      'Content-Length': String(obj.size),
+      'Cache-Control': 'no-cache',
+    },
+  });
+});
+
 app.get('/api/init-db', async (c) => {
   const initStatements = `
     CREATE TABLE IF NOT EXISTS organisations (
