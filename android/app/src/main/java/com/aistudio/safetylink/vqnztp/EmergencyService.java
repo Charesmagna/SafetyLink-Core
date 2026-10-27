@@ -218,13 +218,31 @@ public final class EmergencyService {
         }
 
         executor.execute(() -> {
-            Log.i(TAG, "Initiating real emergency dispatch for incident: " + incidentId);
-            final long dispatchStartMs = System.currentTimeMillis();
+            Log.i(TAG, "Initiating sequential non-intercepting emergency dispatch for incident: " + incidentId);
 
+            // =========================================================================
+            // STAGE 1: Backend & Cloud Telemetry Sync (Instant IP Data + Local Queue)
+            // =========================================================================
+            Log.i(TAG, "[STAGE 1/4] Disagreeing radio modems: Syncing incident to backend first...");
+            boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
+            String syncStatus = backendOk ? "SYNCED" : "PENDING";
+            if (!backendOk && context != null) {
+                com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker.queueOfflineIncident(
+                        context, incidentId, lat, lng, body, orgId, triggeredBy
+                );
+            }
+            Log.i(TAG, "[STAGE 1/4 COMPLETE] Backend Cloud Sync: " + syncStatus);
+
+            // Short 1.0s breath so IP data buffers commit before cellular radio engages
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+
+            // =========================================================================
+            // STAGE 2: Primary GSM SMS Broadcast (Over User-Configured SIM Card)
+            // =========================================================================
+            Log.i(TAG, "[STAGE 2/4] Radio clear. Transmitting GSM SMS telemetry via locked SIM...");
             String smsText = (body == null ? "Emergency" : body) + " - SafetyLink SOS"
                     + ((lat != 0.0 || lng != 0.0) ? " Location: https://maps.google.com/?q=" + lat + "," + lng : "");
 
-            // 1. Native SMS Dispatch to every saved contact (up to 5)
             java.util.LinkedHashSet<String> recipients = new java.util.LinkedHashSet<>();
             if (toNumber != null && !toNumber.trim().isEmpty()) recipients.add(toNumber.trim());
             if (allPhones != null) {
@@ -241,30 +259,30 @@ public final class EmergencyService {
                 if ("SENT".equals(st)) sentCount++;
             }
             if (sentCount > 0) smsStatus = "SENT";
+            Log.i(TAG, "[STAGE 2/4 COMPLETE] SMS Broadcast: " + smsStatus + " (" + sentCount + "/" + recipients.size() + " recipients)");
 
-            // 1b. Free "Please Call Me" USSD to the SafetyLink Rain gateway
-            String pcmStatus = sendPleaseCallMe(context);
-            Log.i(TAG, "PCM USSD status: " + pcmStatus);
+            // Settle time for SMS PDUs to exit modem radio buffer (3.0s) so it doesn't intercept the voice call
+            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
 
-            // Native call starts no later than 7.5s after dispatch began (USSD waits max 4s, so they do not overlap long)
-            long elapsed = System.currentTimeMillis() - dispatchStartMs;
-            long waitMs = 7500 - elapsed;
-            if (waitMs > 0) { try { Thread.sleep(waitMs); } catch (InterruptedException ignored) { } }
-
-            // 2. Native Emergency Telephony Call
+            // =========================================================================
+            // STAGE 3: Direct Emergency Voice Telephony Call (Over User-Configured SIM Card)
+            // =========================================================================
+            Log.i(TAG, "[STAGE 3/4] Cellular line clear. Initiating direct voice call to primary responder...");
             String callTarget = (toNumber != null && !toNumber.trim().isEmpty()) ? toNumber.trim() : recipients.iterator().next();
             String callStatus = placeNativeCall(context, callTarget);
+            Log.i(TAG, "[STAGE 3/4 COMPLETE] Voice Call Status: " + callStatus + " to " + callTarget);
 
-            // 3. Direct Backend Incident Sync (Cloud + local fallback)
-            boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
-            String syncStatus = backendOk ? "SYNCED" : "PENDING";
-            if (!backendOk && context != null) {
-                com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker.queueOfflineIncident(
-                        context, incidentId, lat, lng, body, orgId, triggeredBy
-                );
-            }
+            // Wait 5.0s for carrier voice circuit establishment before executing carrier MMI code
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
 
-            boolean overallSuccess = "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || "INITIATED".equals(callStatus) || backendOk;
+            // =========================================================================
+            // STAGE 4: Free Zero-Data USSD "Please Call Me" (PCM) (Last Step)
+            // =========================================================================
+            Log.i(TAG, "[STAGE 4/4] Executing zero-data USSD Please Call Me to gateway (final fallback)...");
+            String pcmStatus = sendPleaseCallMe(context);
+            Log.i(TAG, "[STAGE 4/4 COMPLETE] PCM USSD Status: " + pcmStatus);
+
+            boolean overallSuccess = backendOk || "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || "INITIATED".equals(callStatus) || "DIALED".equals(pcmStatus);
             DispatchResult result = new DispatchResult(overallSuccess, smsStatus, callStatus, syncStatus);
 
             if (callback != null) {

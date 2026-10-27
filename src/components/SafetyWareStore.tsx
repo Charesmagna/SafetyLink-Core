@@ -1,6 +1,72 @@
 import React, { useState } from 'react';
-import { STORE_PRODUCTS, Product } from '../data/products';
 import { ShoppingCart, ShieldAlert, Zap, Truck, Camera, Lock, Search, AlertCircle, Phone, ArrowRight } from 'lucide-react';
+
+export interface Product {
+  slug: string;
+  name: string;
+  category: 'Security Cameras' | 'Access Control' | 'Tactical Gear' | 'Vehicle Security' | 'Power & Sensors';
+  price: number;
+  description: string;
+  imageUrl?: string;
+  affiliateUrl?: string;
+}
+
+export const STORE_PRODUCTS: Product[] = [
+  {
+    slug: 'itag-ble-panic-button',
+    name: 'SafetyLink iTAG BLE Physical Panic Button',
+    category: 'Tactical Gear',
+    price: 189,
+    description: 'Ultra-durable Bluetooth Low Energy hardware panic keyfob with configurable 1-press SOS, 2-press find phone, 3-press walk timeout, and pocket disarm.',
+    imageUrl: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20iTAG%20BLE%20Keyfob'
+  },
+  {
+    slug: 'gsm-tactical-relay-node',
+    name: 'SafetyLink GSM Mesh Tactical Relay Node',
+    category: 'Power & Sensors',
+    price: 1250,
+    description: 'Autonomous micro-base station with dual SIM fallback, internal battery backup, and long-range BLE beacon aggregator.',
+    imageUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20GSM%20Relay%20Node'
+  },
+  {
+    slug: 'ai-solar-ptz-security-camera',
+    name: '4G AI Solar PTZ Perimeter Surveillance Camera',
+    category: 'Security Cameras',
+    price: 2490,
+    description: 'Solar-powered 4G LTE PTZ camera with human intrusion detection, night vision, and autonomous webhook alerts directly to SafetyLink War Room.',
+    imageUrl: 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20AI%20Solar%20Camera'
+  },
+  {
+    slug: 'tactical-body-worn-camera',
+    name: 'Patrol Grade Body-Worn Camera 1440p',
+    category: 'Tactical Gear',
+    price: 1850,
+    description: 'Rugged law-enforcement grade body camera with continuous GPS logging, tamper-proof internal storage, and one-touch distress stream.',
+    imageUrl: 'https://images.unsplash.com/photo-1508873696983-2df5293cb325?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20Bodycam'
+  },
+  {
+    slug: 'smart-biometric-deadbolt-lock',
+    name: 'Heavy-Duty Biometric Bluetooth Smart Deadbolt',
+    category: 'Access Control',
+    price: 1450,
+    description: 'Anti-tamper fingerprint deadbolt lock with temporary visitor codes, emergency physical key override, and remote lockdown link.',
+    imageUrl: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20Smart%20Lock'
+  },
+  {
+    slug: 'obd2-gps-kill-switch-tracker',
+    name: 'OBD2 Real-Time Vehicle Tracker with Remote Kill-Switch',
+    category: 'Vehicle Security',
+    price: 980,
+    description: 'Plug-and-play vehicle telemetry tracker with crash detection, geo-fence alerts, and remote ignition disablement on distress.',
+    imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80',
+    affiliateUrl: 'https://wa.me/27680079911?text=Order%20Vehicle%20Tracker'
+  }
+];
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Security Cameras': <Camera className="w-5 h-5" />,

@@ -162,19 +162,6 @@ export class NativeDispatchService {
     }
   }
 
-  static async getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }> {
-    if (!this.isNative) return { sims: [], preferredSubscriptionId: -1 };
-    try {
-      return await NativeEmergencyDispatch.getSimCards();
-    } catch (e) {
-      return { sims: [], preferredSubscriptionId: -1, error: e instanceof Error ? e.message : String(e) };
-    }
-  }
-
-  static async setPreferredSim(subscriptionId: number): Promise<void> {
-    if (!this.isNative) return;
-    await NativeEmergencyDispatch.setPreferredSim({ subscriptionId });
-  }
 
   static async toggleFloatingWidget(enable: boolean): Promise<{ enabled: boolean; needsPermission?: boolean }> {
     if (!this.isNative) {
@@ -410,6 +397,51 @@ export class NativeDispatchService {
       active = false;
       clearInterval(interval);
     };
+  }
+
+  /**
+   * Retrieves installed active SIM card profiles from device SubscriptionManager.
+   */
+  static async getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }> {
+    if (!this.isNative) {
+      const saved = Number(localStorage.getItem('sl_preferred_sim_id') || '-1');
+      return {
+        sims: [
+          { subscriptionId: 1, slot: 0, carrier: 'Vodacom (Simulated)', label: 'SIM 1 - Primary Voice & Data' },
+          { subscriptionId: 2, slot: 1, carrier: 'MTN / Rain (Simulated)', label: 'SIM 2 - Dedicated Emergency' }
+        ],
+        preferredSubscriptionId: saved
+      };
+    }
+    try {
+      const res = await NativeEmergencyDispatch.getSimCards();
+      return {
+        sims: res.sims || [],
+        preferredSubscriptionId: res.preferredSubscriptionId ?? -1,
+        error: res.error
+      };
+    } catch (e) {
+      console.warn('[NativeDispatch] getSimCards error:', e);
+      return { sims: [], preferredSubscriptionId: -1, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  /**
+   * Locks all emergency SMS, Calls, and USSDs to the selected SIM card subscription ID.
+   * Passing -1 sets it to System Default (auto-handled by OS with zero user prompts).
+   */
+  static async setPreferredSim(subscriptionId: number): Promise<number> {
+    localStorage.setItem('sl_preferred_sim_id', subscriptionId.toString());
+    if (!this.isNative) {
+      return subscriptionId;
+    }
+    try {
+      const res = await NativeEmergencyDispatch.setPreferredSim({ subscriptionId });
+      return res.preferredSubscriptionId;
+    } catch (e) {
+      console.warn('[NativeDispatch] setPreferredSim error:', e);
+      return subscriptionId;
+    }
   }
 }
 

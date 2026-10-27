@@ -1,7 +1,3 @@
-import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
-import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
-import { sendLoudAlarm } from './fcm';
-import { saveDeviceToken, tokensForPhone } from './device-tokens';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -18,9 +14,6 @@ export interface Env {
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   ALERTS_ENABLED?: string;
-  FCM_SERVICE_ACCOUNT?: string;
-  ADMIN_API_KEY?: string;
-  RELEASES?: any;
   // Twilio
   TWILIO_SID: string;
   TWILIO_AUTH_TOKEN: string;
@@ -247,20 +240,6 @@ async function fireAllAlerts(
   const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
 
   await Promise.allSettled(all.map(async (to) => {
-    // Loud push to any SafetyLink phone registered with this number
-    const sa = (env as any).FCM_SERVICE_ACCOUNT;
-    if (sa && env.DB) {
-      try {
-        const tokens = await tokensForPhone(env.DB, to);
-        for (const tok of tokens) {
-          await attempt('ALARM', 'fcm', to, async () => {
-            const r = await sendLoudAlarm(sa, tok, 'SafetyLink ALERT', smsBody.split('\n').slice(0, 2).join(' '));
-            return new Response(r.error || '', { status: r.ok ? 200 : (r.status || 500) });
-          });
-        }
-      } catch (e) { console.error('[FCM]', e); }
-    }
-
     // SMS: Twilio first, Africa's Talking as backup
     let smsOk = false;
     // 0) Free route: Rain SIM via SMSGate (200 SMS/month included). Off until credentials are saved.
@@ -334,15 +313,16 @@ app.get('/api/init-db', async (c) => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       contact_name TEXT,
-      contact_email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
+      contact_email TEXT UNIQUE,
+      password_hash TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       org_id TEXT,
-      username TEXT,
+      username TEXT UNIQUE,
       email TEXT,
+      phone TEXT,
       role TEXT DEFAULT 'User',
       last_seen INTEGER,
       lat REAL, lng REAL,
@@ -432,6 +412,7 @@ const handleLogin = async (c: any) => {
   const orgCode = body.orgCode || body.org_code;
 
   if (!username || !password) return c.json({ error: 'Credentials required' }, 400);
+
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const user = await c.env.DB!.prepare(
     'SELECT id, username, org_id FROM users WHERE username = ? AND password_hash = ?'
@@ -616,62 +597,6 @@ app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webho
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
-
-app.post('/api/admin/login', async (c) => {
-  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
-  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
-  if (await tooManyFailures(c.env.DB, ip)) return c.json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429 as any);
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const ok = await checkCredentials(c.env, b.email, b.password);
-  await recordAttempt(c.env.DB, ip, ok);
-  if (!ok) return c.json({ error: 'Email or password is incorrect' }, 401 as any);
-  return c.json({ token: await makeSession(c.env), expiresInHours: 8 });
-});
-
-// ── Superadmin (protected by superadmin session) ─────────────────────────────────────
-app.get('/api/admin/summary', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  return c.json(await adminSummary(c.env.DB));
-});
-app.get('/api/admin/users', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  return c.json({ users: await adminUsers(c.env.DB) });
-});
-app.post('/api/admin/delete-user', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
-  if (!phone) return c.json({ error: 'phone required' }, 400 as any);
-  return c.json(await adminDelete(c.env.DB, phone));
-});
-
-// Latest APK, served from R2 (the repo can stay private)
-app.get('/download/safetylink.apk', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
-  if (!obj) return c.json({ error: 'No release available yet' }, 404 as any);
-  return new Response(obj.body, {
-    headers: {
-      'Content-Type': 'application/vnd.android.package-archive',
-      'Content-Disposition': 'attachment; filename="SafetyLink.apk"',
-      'Content-Length': String(obj.size),
-      'Cache-Control': 'no-cache',
-    },
-  });
-});
-
-// The phone registers its FCM device token so loud alerts can reach it
-app.post('/api/device/token', async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
-  const token = String(b.token || '');
-  if (!/^\+27[6-8][0-9]{8}$/.test(phone) || token.length < 20) return c.json({ error: 'phone and token required' }, 400 as any);
-  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
-  const presented = c.req.header('X-Profile-Token') || '';
-  const owner: any = await c.env.DB.prepare('SELECT token FROM sl_profiles WHERE phone=?').bind(phone).first().catch(() => null);
-  if (!owner?.token || !presented || !safeEq(presented, owner.token)) return c.json({ error: 'Not authorised for this number' }, 401 as any);
-  await saveDeviceToken(c.env.DB, phone, token);
-  return c.json({ ok: true });
-});
 
 app.post('/api/profile/sync', async (c) => {
   const body = await c.req.json().catch(() => ({}));

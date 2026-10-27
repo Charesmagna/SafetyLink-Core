@@ -40,7 +40,15 @@ export const Settings: React.FC = () => {
     dispatchLogs,
     clearDispatchLogs,
     notificationPanelLogs,
-    clearNotificationPanelLogs
+    clearNotificationPanelLogs,
+    bleButtonConfig,
+    setBleButtonConfig,
+    handleHardwareButtonPress,
+    bleDevices,
+    availableSims,
+    preferredSimId,
+    setPreferredSim,
+    loadSimCards
   } = useAppStore();
 
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
@@ -51,6 +59,11 @@ export const Settings: React.FC = () => {
   const [isPinSettingsUnlocked, setIsPinSettingsUnlocked] = useState(() => biometricService.isScopeUnlocked('settings'));
   const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
   const [isTestingUssd, setIsTestingUssd] = useState(false);
+  const [testClicks, setTestClicks] = useState(0);
+
+  useEffect(() => {
+    loadSimCards();
+  }, [loadSimCards]);
 
   useEffect(() => {
     let active = true;
@@ -574,6 +587,368 @@ export const Settings: React.FC = () => {
           )}
         </div>
       </div>
+
+        {/* Primary Cellular SIM Card Selection & Sequential Pipeline Card */}
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">📶</span>
+                <h4 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
+                  Primary Cellular SIM Card Selection (Emergency Auto-Lock)
+                </h4>
+              </div>
+              <p className="text-[8px] text-slate-500 mt-0.5">
+                Pre-locks your chosen SIM card so Android never presents a &quot;Choose SIM 1 or SIM 2&quot; prompt during distress.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[7.5px] px-2 py-0.5 rounded-full font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                {preferredSimId === -1 ? 'AUTO-LOCK (DEFAULT)' : `LOCKED: SUB ${preferredSimId}`}
+              </span>
+              <button
+                type="button"
+                onClick={() => loadSimCards()}
+                className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded text-[7.5px] border border-slate-800 transition-all"
+                title="Refresh SIM card detection"
+              >
+                ↻ Scan SIMs
+              </button>
+            </div>
+          </div>
+
+          {/* SIM Selector Grid */}
+          <div className="space-y-2">
+            <label className="text-[8.5px] font-bold text-slate-400 uppercase block">
+              Active Radio Modem Assignment:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Option 1: Auto / System Default */}
+              <button
+                type="button"
+                onClick={() => setPreferredSim(-1)}
+                className={`p-3 rounded-xl border text-left transition-all relative ${
+                  preferredSimId === -1
+                    ? 'bg-emerald-950/30 border-emerald-500/60 shadow-lg shadow-emerald-950/40'
+                    : 'bg-slate-900/30 border-slate-900 hover:border-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-bold text-slate-200">System Default</span>
+                  <span className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                    preferredSimId === -1 ? 'border-emerald-400 bg-emerald-400/20' : 'border-slate-700'
+                  }`}>
+                    {preferredSimId === -1 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                  </span>
+                </div>
+                <p className="text-[7.5px] text-slate-400 font-mono">
+                  Auto-routed via OS default outgoing telephony account. Zero prompts.
+                </p>
+                <span className="text-[7px] text-emerald-400 font-bold mt-1.5 inline-block">
+                  RECOMMENDED FOR SINGLE SIM
+                </span>
+              </button>
+
+              {/* Dynamic SIMs from Device */}
+              {availableSims.map((sim, idx) => (
+                <button
+                  key={sim.subscriptionId}
+                  type="button"
+                  onClick={() => setPreferredSim(sim.subscriptionId)}
+                  className={`p-3 rounded-xl border text-left transition-all relative ${
+                    preferredSimId === sim.subscriptionId
+                      ? 'bg-cyan-950/30 border-cyan-500/60 shadow-lg shadow-cyan-950/40'
+                      : 'bg-slate-900/30 border-slate-900 hover:border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-bold text-slate-200">
+                      SIM {sim.slot + 1}: {sim.carrier || `Slot ${sim.slot}`}
+                    </span>
+                    <span className={`w-3 h-3 rounded-full border flex items-center justify-center ${
+                      preferredSimId === sim.subscriptionId ? 'border-cyan-400 bg-cyan-400/20' : 'border-slate-700'
+                    }`}>
+                      {preferredSimId === sim.subscriptionId && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                    </span>
+                  </div>
+                  <p className="text-[7.5px] text-slate-400 font-mono truncate">
+                    {sim.label || `Hardware Radio Slot ${sim.slot}`}
+                  </p>
+                  <span className="text-[7px] text-cyan-400 font-bold mt-1.5 inline-block">
+                    SLOT {sim.slot} • SUB #{sim.subscriptionId}
+                  </span>
+                </button>
+              ))}
+
+              {/* Fallback if no SIMs detected */}
+              {availableSims.length === 0 && (
+                <div className="col-span-2 p-3 rounded-xl border border-dashed border-slate-800/80 bg-slate-900/20 text-center">
+                  <p className="text-[8px] text-slate-500">
+                    Scanning active SIM hardware slots... (Detected on Android device with READ_PHONE_STATE).
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sequential Timed Non-Intercepting Dispatch Pipeline Indicator */}
+          <div className="bg-slate-900/40 border border-slate-900/80 rounded-xl p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                <span>⏱️</span> Sequential, Timed, Non-Intercepting Dispatch Sequence
+              </span>
+              <span className="text-[7px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20 font-bold">
+                RADIO MODEM COLLISION SHIELD ACTIVE
+              </span>
+            </div>
+            <p className="text-[7.5px] text-slate-500">
+              Emergency channels fire sequentially in strict order to prevent cellular transceiver bus contention:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
+              <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
+                <div className="flex items-center justify-between text-indigo-400 font-bold">
+                  <span>STAGE 1</span>
+                  <span>T+0.0s</span>
+                </div>
+                <div className="text-slate-300 font-bold">Cloud &amp; Mesh Sync</div>
+                <p className="text-slate-500 text-[7px]">
+                  Flushes IP packets to Cloud Gateway &amp; ThingsBoard before cellular voice locks.
+                </p>
+              </div>
+
+              <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
+                <div className="flex items-center justify-between text-cyan-400 font-bold">
+                  <span>STAGE 2</span>
+                  <span>T+1.5s</span>
+                </div>
+                <div className="text-slate-300 font-bold">GSM SMS Broadcast</div>
+                <p className="text-slate-500 text-[7px]">
+                  PDU transmitted directly via chosen SIM card with incident GPS coordinates.
+                </p>
+              </div>
+
+              <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
+                <div className="flex items-center justify-between text-emerald-400 font-bold">
+                  <span>STAGE 3</span>
+                  <span>T+4.5s</span>
+                </div>
+                <div className="text-slate-300 font-bold">Direct Voice Call</div>
+                <p className="text-slate-500 text-[7px]">
+                  Binds phone circuit via CALL_PHONE using locked PhoneAccountHandle.
+                </p>
+              </div>
+
+              <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
+                <div className="flex items-center justify-between text-amber-400 font-bold">
+                  <span>STAGE 4 (LAST)</span>
+                  <span>T+9.5s</span>
+                </div>
+                <div className="text-slate-300 font-bold">Free USSD PCM</div>
+                <p className="text-slate-500 text-[7px]">
+                  Zero-airtime carrier Please-Call-Me code dials last without intercepting voice.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-2 bg-emerald-950/20 border border-emerald-900/30 rounded-lg text-[7.5px] text-emerald-400/90 flex items-center gap-2 mt-1">
+              <span className="text-xs">🛡️</span>
+              <span>
+                <strong>Zero-Prompt Guarantee:</strong> By pre-binding Telecom PhoneAccountHandle and SmsManager subscriptionId at the native Android layer, SafetyLink guarantees zero UI dialog prompts during life-critical emergencies.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* BLE & iTAG Hardware Button Configuration Card */}
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔘</span>
+                <h4 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
+                  BLE / iTAG Hardware Button Triggers
+                </h4>
+              </div>
+              <p className="text-[8px] text-slate-500 mt-0.5">
+                Configure customized click sequences and pocket disarm actions for physical Bluetooth buttons.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-[7.5px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                bleDevices.some(d => d.connectionState === 'CONNECTED')
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-slate-900 text-slate-500 border border-slate-800'
+              }`}>
+                {bleDevices.filter(d => d.connectionState === 'CONNECTED').length} Hardware Linked
+              </span>
+            </div>
+          </div>
+
+          {/* Configuration Form Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {/* 1 Press Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>1 Press (Single Click)</span>
+                <span className="text-red-400 font-extrabold text-[7.5px]">DEFAULT: SOS</span>
+              </label>
+              <select
+                value={bleButtonConfig.singlePressAction}
+                onChange={e => setBleButtonConfig({ singlePressAction: e.target.value as any })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value="PANIC">🚨 Emergency SOS (10s Countdown)</option>
+                <option value="SILENT_PANIC">🔕 Silent SOS (Stealth Mode, No Sirens)</option>
+                <option value="DISABLED">⚪ Disabled (Ignore 1 press)</option>
+              </select>
+              <p className="text-[7.5px] text-slate-500">
+                Initiates full emergency SOS countdown with audible siren and GPS broadcast.
+              </p>
+            </div>
+
+            {/* Countdown Cancel Toggle */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <div className="flex items-center justify-between">
+                <label className="text-[8.5px] font-bold text-slate-300 uppercase">
+                  Press During 10s Countdown
+                </label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <span className={`text-[7.5px] font-bold ${bleButtonConfig.cancelDuringCountdown ? 'text-emerald-400' : 'text-slate-600'}`}>
+                    {bleButtonConfig.cancelDuringCountdown ? 'DISARM' : 'IGNORE'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={bleButtonConfig.cancelDuringCountdown}
+                    onChange={e => setBleButtonConfig({ cancelDuringCountdown: e.target.checked })}
+                    className="accent-emerald-500 w-3.5 h-3.5 cursor-pointer"
+                  />
+                </label>
+              </div>
+              <p className="text-[7.5px] text-slate-500 mt-1">
+                Pressing the button again while the 10-second countdown is ticking immediately aborts dispatch and silences all alarms directly from your pocket.
+              </p>
+            </div>
+
+            {/* 2 Presses Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>2 Presses (Double Click)</span>
+                <span className="text-cyan-400 font-extrabold text-[7.5px]">UTILITY</span>
+              </label>
+              <select
+                value={bleButtonConfig.doublePressAction}
+                onChange={e => setBleButtonConfig({ doublePressAction: e.target.value as any })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value="FIND_PHONE">🔔 Find My Phone (Rings phone at max volume)</option>
+                <option value="CANCEL">🛡️ Cancel / Disarm Active Alert</option>
+                <option value="SAFETY_TIMEOUT">⏱️ Start Safety Walk Timeout</option>
+                <option value="NONE">⚪ None (Ignore double click)</option>
+              </select>
+              <p className="text-[7.5px] text-slate-500">
+                Triggered when two clicks are detected within a 480ms window.
+              </p>
+            </div>
+
+            {/* 3 Presses Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>3 Presses (Triple Click)</span>
+                <span className="text-amber-400 font-extrabold text-[7.5px]">DEFAULT: TIMEOUT</span>
+              </label>
+              <select
+                value={bleButtonConfig.triplePressAction}
+                onChange={e => setBleButtonConfig({ triplePressAction: e.target.value as any })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value="SAFETY_TIMEOUT">⏱️ Start Safety Walk Timeout (Walk-Alone Timer)</option>
+                <option value="FIND_PHONE">🔔 Find My Phone (Rings phone at max volume)</option>
+                <option value="PANIC">🚨 Emergency SOS (Instant Trigger)</option>
+                <option value="DISABLED">⚪ Disabled (Ignore triple click)</option>
+              </select>
+              <p className="text-[7.5px] text-slate-500">
+                Starts safety check-in countdown. If not checked in before it expires, SOS automatically escalates.
+              </p>
+            </div>
+
+            {/* Safety Timeout Duration */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase block">
+                Safety Timeout Duration
+              </label>
+              <select
+                value={bleButtonConfig.safetyTimeoutMinutes}
+                onChange={e => setBleButtonConfig({ safetyTimeoutMinutes: Number(e.target.value) })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value={5}>5 Minutes (Quick transit)</option>
+                <option value={10}>10 Minutes (Short commute)</option>
+                <option value={15}>15 Minutes [Default]</option>
+                <option value={30}>30 Minutes (Extended walk)</option>
+                <option value={60}>60 Minutes (Night shift / Lone worker)</option>
+              </select>
+              <p className="text-[7.5px] text-slate-500">
+                Timer length before automatic panic escalation if you fail to check in.
+              </p>
+            </div>
+
+            {/* Haptic Feedback Toggle */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <div className="flex items-center justify-between">
+                <label className="text-[8.5px] font-bold text-slate-300 uppercase">
+                  Pocket Haptic Feedback
+                </label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <span className={`text-[7.5px] font-bold ${bleButtonConfig.hapticFeedback ? 'text-cyan-400' : 'text-slate-600'}`}>
+                    {bleButtonConfig.hapticFeedback ? 'ENABLED' : 'OFF'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={bleButtonConfig.hapticFeedback}
+                    onChange={e => setBleButtonConfig({ hapticFeedback: e.target.checked })}
+                    className="accent-cyan-500 w-3.5 h-3.5 cursor-pointer"
+                  />
+                </label>
+              </div>
+              <p className="text-[7.5px] text-slate-500 mt-1">
+                Phone vibrates with distinct patterns (1 long steady buzz = Disarmed, 3 pulses = Timeout armed, pulsing buzz = SOS).
+              </p>
+            </div>
+          </div>
+
+          {/* Interactive Hardware Click Pattern Simulator */}
+          <div className="p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="space-y-0.5 text-center sm:text-left">
+              <span className="text-[8.5px] font-bold text-cyan-400 uppercase block">
+                🧪 Test Hardware Click Sequences
+              </span>
+              <p className="text-[7.5px] text-slate-400">
+                Click this button 1, 2, or 3 times rapidly to test your configured actions right in Settings.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setTestClicks(prev => prev + 1);
+                handleHardwareButtonPress('SETTINGS_SIMULATOR');
+                setTimeout(() => setTestClicks(0), 1200);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
+            >
+              <span>🔘 Click Button</span>
+              {testClicks > 0 && (
+                <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[8px] animate-pulse">
+                  {testClicks}x
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Security PINs Section */}
         {currentUser && (

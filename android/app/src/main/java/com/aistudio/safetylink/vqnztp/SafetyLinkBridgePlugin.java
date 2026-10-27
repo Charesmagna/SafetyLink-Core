@@ -296,12 +296,48 @@ public class SafetyLinkBridgePlugin extends Plugin {
         notifyListeners("onPanicEvent", ret);
     }
 
+    public void emitSafetyTimeoutEvent(int minutes) {
+        JSObject ret = new JSObject();
+        ret.put("action", "SAFETY_TIMEOUT");
+        ret.put("minutes", minutes);
+        notifyListeners("onSafetyTimeoutTriggered", ret);
+    }
+
+    public void emitFindPhoneEvent() {
+        JSObject ret = new JSObject();
+        ret.put("action", "FIND_PHONE");
+        notifyListeners("onFindPhoneTriggered", ret);
+    }
+
     @PluginMethod
-    public void savePushIdentity(PluginCall call) {
-        String phone = call.getString("phone", "");
-        String profileToken = call.getString("profileToken", "");
-        if (phone.isEmpty() || profileToken.isEmpty()) { call.reject("phone and profileToken required"); return; }
-        PushRegistrar.saveIdentity(getContext(), phone, profileToken);
-        call.resolve();
+    public void setButtonConfig(PluginCall call) {
+        try {
+            String p1 = call.getString("singlePressAction", ButtonPatternDetector.ACTION_PANIC);
+            boolean cancelDuringCountdown = Boolean.TRUE.equals(call.getBoolean("cancelDuringCountdown", true));
+            String p2 = call.getString("doublePressAction", ButtonPatternDetector.ACTION_FIND_PHONE);
+            String p3 = call.getString("triplePressAction", ButtonPatternDetector.ACTION_SAFETY_TIMEOUT);
+            int timeoutMins = call.getInt("safetyTimeoutMinutes", 15);
+            boolean haptic = Boolean.TRUE.equals(call.getBoolean("hapticFeedback", true));
+
+            ButtonPatternDetector.saveConfig(getContext(), p1, cancelDuringCountdown, p2, p3, timeoutMins, haptic);
+
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to save button config: " + e.getMessage(), e);
+            call.reject("Failed to save button config: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getButtonConfig(PluginCall call) {
+        try {
+            JSObject ret = ButtonPatternDetector.getConfigAsJson(getContext());
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get button config: " + e.getMessage(), e);
+            call.reject("Failed to get button config: " + e.getMessage());
+        }
     }
 }
