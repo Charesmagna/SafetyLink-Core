@@ -25,62 +25,33 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
   const [searchFilter, setSearchFilter] = useState('');
 
   useEffect(() => {
-    const xhr = new XMLHttpRequest();
-    // Fetch recent releases
-    xhr.open('GET', 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases?per_page=35', true);
-    xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
-    xhr.timeout = 10000;
-    xhr.onload = () => {
-      try {
-        const rawList = JSON.parse(xhr.responseText);
-        if (Array.isArray(rawList)) {
-          // Strictly filter for high-capacity, fully-compiled APK releases (file size > 80 MB)
-          // to ensure zero incomplete builds or stripped stubs are shown to users.
-          const qualified: ReleaseItem[] = [];
-
-          rawList.forEach((r, idx) => {
-            if (!r.assets || !Array.isArray(r.assets)) return;
-            const apkAsset = r.assets.find((a: any) => a.name && a.name.endsWith('.apk') && a.size > 80 * 1024 * 1024);
-            const exeAsset = r.assets.find((a: any) => a.name && a.name.endsWith('.exe'));
-
-            if (apkAsset) {
-              qualified.push({
-                version: r.tag_name || 'latest',
-                name: r.name || `SafetyLink Core ${r.tag_name}`,
-                publishedAt: r.published_at ? new Date(r.published_at).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Verified Build',
-                sizeMb: (apkAsset.size / (1024 * 1024)).toFixed(1),
-                apkUrl: apkAsset.browser_download_url,
-                exeUrl: exeAsset?.browser_download_url,
-                isLatest: idx === 0,
-              });
-            }
-          });
-
-          if (qualified.length > 0) {
-            setReleases(qualified);
-            setLatestRelease(qualified[0]);
-          } else {
-            // High reliability fallback with current signed release
-            const fallback: ReleaseItem = {
-              version: 'Latest',
-              name: 'SafetyLink Core (latest release)',
-              publishedAt: 'Latest',
-              sizeMb: '',
-              apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk',
-              isLatest: true,
-            };
-            setReleases([fallback]);
-            setLatestRelease(fallback);
-          }
+    const WORKER = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+    fetch(WORKER + '/api/app/versions')
+      .then((r) => r.json())
+      .then((j) => {
+        const list: ReleaseItem[] = (j.versions || []).map((v: any, idx: number) => ({
+          version: v.version,
+          name: 'SafetyLink ' + v.version,
+          publishedAt: v.date ? new Date(v.date).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' }) : '',
+          sizeMb: v.size ? (v.size / (1024 * 1024)).toFixed(1) : '',
+          apkUrl: WORKER + '/download/version/' + encodeURIComponent(v.file),
+          isLatest: idx === 0,
+        }));
+        if (list.length) {
+          setReleases(list);
+          setLatestRelease(list[0]);
+        } else {
+          const fallback: ReleaseItem = { version: 'latest', name: 'SafetyLink (latest)', publishedAt: '', sizeMb: '', apkUrl: WORKER + '/download/safetylink.apk', isLatest: true };
+          setReleases([fallback]);
+          setLatestRelease(fallback);
         }
-      } catch (e) {
-        console.warn('Error reading release list:', e);
-      }
-      setLoading(false);
-    };
-    xhr.onerror = () => setLoading(false);
-    xhr.ontimeout = () => setLoading(false);
-    xhr.send();
+      })
+      .catch(() => {
+        const fallback: ReleaseItem = { version: 'latest', name: 'SafetyLink (latest)', publishedAt: '', sizeMb: '', apkUrl: WORKER + '/download/safetylink.apk', isLatest: true };
+        setReleases([fallback]);
+        setLatestRelease(fallback);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredReleases = releases.filter(r => 
@@ -191,7 +162,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <a
-                  href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
+                  href={latestRelease?.apkUrl || "https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk"}
                   target="_blank"
                   rel="noreferrer"
                   style={{
@@ -280,7 +251,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
             <div style={{ width: '100%', maxWidth: '300px' }}>
               <input
                 type="text"
-                placeholder="Search releases (e.g. v1.1.9)..."
+                placeholder="Search releases (e.g. 1.1.10)..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 style={{
