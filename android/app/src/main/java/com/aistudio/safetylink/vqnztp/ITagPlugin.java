@@ -525,14 +525,13 @@ public class ITagPlugin extends Plugin {
 
                     Log.i(TAG, "Button pressed on: " + devAddress + ", byte value: " + byteVal);
 
-                    // Golden Rule: Direct Native Emergency Dispatch on physical press
-                    triggerNativePanicDirectly("iTAG Hardware Button Trigger (" + devAddress + ")");
-
                     JSObject eventObj = new JSObject();
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
                     notifyListeners("hardware_trigger_pressed", eventObj);
-                    ButtonPatternDetector.onPress(getContext());
+
+                    // Intelligent Configurable Pattern Detector (1=Panic/Countdown, 2=Disarm/FindPhone, 3=Safety Timeout)
+                    ButtonPatternDetector.onPress(getContext(), devAddress);
                 }
             }
 
@@ -547,14 +546,13 @@ public class ITagPlugin extends Plugin {
 
                     Log.i(TAG, "Button pressed (API 33+) on: " + devAddress + ", byte value: " + byteVal);
 
-                    // Golden Rule: Direct Native Emergency Dispatch on physical press
-                    triggerNativePanicDirectly("iTAG Hardware Button Trigger (" + devAddress + ")");
-
                     JSObject eventObj = new JSObject();
                     eventObj.put("address", devAddress);
                     eventObj.put("value", byteVal);
                     notifyListeners("hardware_trigger_pressed", eventObj);
-                    ButtonPatternDetector.onPress(getContext());
+
+                    // Intelligent Configurable Pattern Detector (1=Panic/Countdown, 2=Disarm/FindPhone, 3=Safety Timeout)
+                    ButtonPatternDetector.onPress(getContext(), devAddress);
                 }
             }
         };

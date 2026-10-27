@@ -3,8 +3,12 @@ package com.aistudio.safetylink.vqnztp;
 import android.Manifest;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
@@ -15,6 +19,7 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * EmergencyDispatch
@@ -52,6 +57,49 @@ public class EmergencyDispatchPlugin extends Plugin {
     private String pendingMessage = null;
 
     @PluginMethod
+    public void getSimCards(PluginCall call) {
+        JSObject ret = new JSObject();
+        JSArray simsArray = new JSArray();
+        int preferredSubId = EmergencyService.getPreferredSubId(getContext());
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                if (sm != null) {
+                    List<SubscriptionInfo> list = sm.getActiveSubscriptionInfoList();
+                    if (list != null) {
+                        for (SubscriptionInfo info : list) {
+                            JSObject simObj = new JSObject();
+                            simObj.put("subscriptionId", info.getSubscriptionId());
+                            simObj.put("slot", info.getSimSlotIndex());
+                            simObj.put("carrier", info.getCarrierName() != null ? info.getCarrierName().toString() : "SIM " + (info.getSimSlotIndex() + 1));
+                            simObj.put("label", info.getDisplayName() != null ? info.getDisplayName().toString() : "SIM " + (info.getSimSlotIndex() + 1));
+                            simsArray.put(simObj);
+                        }
+                    }
+                }
+            }
+        } catch (SecurityException se) {
+            ret.put("error", "READ_PHONE_STATE permission required to enumerate SIM cards");
+        } catch (Exception e) {
+            ret.put("error", e.getMessage());
+        }
+
+        ret.put("sims", simsArray);
+        ret.put("preferredSubscriptionId", preferredSubId);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void setPreferredSim(PluginCall call) {
+        int subId = call.getInt("subscriptionId", -1);
+        EmergencyService.setPreferredSubId(getContext(), subId);
+        JSObject ret = new JSObject();
+        ret.put("preferredSubscriptionId", subId);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void sendUssd(PluginCall call) {
         String code = call.getString("code");
         if (code == null || code.trim().isEmpty()) {
@@ -63,6 +111,7 @@ public class EmergencyDispatchPlugin extends Plugin {
             String ussdUri = "tel:" + code.trim().replace("#", encodedHash);
             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(ussdUri));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            EmergencyService.applyPreferredSim(getContext(), intent);
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();
@@ -76,6 +125,7 @@ public class EmergencyDispatchPlugin extends Plugin {
                 String ussdUri = "tel:" + code.trim().replace("#", encodedHash);
                 Intent dialIntent = new Intent(Intent.ACTION_DIAL, Uri.parse(ussdUri));
                 dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                EmergencyService.applyPreferredSim(getContext(), dialIntent);
                 getContext().startActivity(dialIntent);
                 JSObject ret = new JSObject();
                 ret.put("dialed", true);
@@ -115,12 +165,7 @@ public class EmergencyDispatchPlugin extends Plugin {
 
     private void doSendSms(PluginCall call, String phone, String message) {
         try {
-            SmsManager smsManager;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                smsManager = getContext().getSystemService(SmsManager.class);
-            } else {
-                smsManager = SmsManager.getDefault();
-            }
+            SmsManager smsManager = EmergencyService.smsManagerFor(getContext());
 
             if (smsManager == null) {
                 JSObject ret = new JSObject();
@@ -223,6 +268,7 @@ public class EmergencyDispatchPlugin extends Plugin {
             Intent intent = new Intent(Intent.ACTION_CALL);
             intent.setData(Uri.parse("tel:" + phone));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            EmergencyService.applyPreferredSim(getContext(), intent);
             getContext().startActivity(intent);
 
             JSObject ret = new JSObject();
@@ -233,6 +279,7 @@ public class EmergencyDispatchPlugin extends Plugin {
                 Intent dialIntent = new Intent(Intent.ACTION_DIAL);
                 dialIntent.setData(Uri.parse("tel:" + phone));
                 dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                EmergencyService.applyPreferredSim(getContext(), dialIntent);
                 getContext().startActivity(dialIntent);
                 JSObject ret = new JSObject();
                 ret.put("dialed", true);

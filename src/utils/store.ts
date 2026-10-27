@@ -6,12 +6,12 @@ import { doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, where } 
 import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord } from '../types';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
-import { NativeDispatchService } from '../services/NativeDispatchService';
+import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 import { UpdateInfo } from '../services/UpdateService';
-export type { UpdateInfo };
+export type { UpdateInfo, SimCardInfo };
 
 interface AppState {
   isTrialEnabled: boolean;
@@ -239,7 +239,41 @@ interface AppState {
   setAutoRefreshIntervalSeconds: (seconds: number) => void;
   refreshClientDatabase: () => Promise<void>;
   exportToGoogleDrive: () => Promise<{ success: boolean; fileId?: string; fileUrl?: string; error?: string }>;
+
+  // Configurable BLE / iTAG Button Triggers
+  bleButtonConfig: BleButtonConfig;
+  setBleButtonConfig: (config: Partial<BleButtonConfig>) => void;
+  handleHardwareButtonPress: (sourceMac?: string) => void;
+  checkInSafe: () => void;
+  extendWatchMeTimer: (extraMinutes?: number) => void;
+
+  // Primary Cellular SIM Card Selection (Emergency Auto-Lock)
+  availableSims: SimCardInfo[];
+  preferredSimId: number;
+  setPreferredSim: (subId: number) => Promise<void>;
+  loadSimCards: () => Promise<void>;
 }
+
+export interface BleButtonConfig {
+  singlePressAction: 'PANIC' | 'SILENT_PANIC' | 'DISABLED';
+  cancelDuringCountdown: boolean;
+  doublePressAction: 'NONE' | 'FIND_PHONE' | 'CANCEL' | 'SAFETY_TIMEOUT';
+  triplePressAction: 'SAFETY_TIMEOUT' | 'FIND_PHONE' | 'PANIC' | 'DISABLED';
+  safetyTimeoutMinutes: number;
+  hapticFeedback: boolean;
+}
+
+export const DEFAULT_BLE_BUTTON_CONFIG: BleButtonConfig = {
+  singlePressAction: 'PANIC',
+  cancelDuringCountdown: true,
+  doublePressAction: 'FIND_PHONE',
+  triplePressAction: 'SAFETY_TIMEOUT',
+  safetyTimeoutMinutes: 15,
+  hapticFeedback: true,
+};
+
+let webButtonPressCount = 0;
+let webButtonPressTimer: any = null;
 
 // Initial Demo Data
 const DEFAULT_CONTACTS: Contact[] = [
@@ -573,16 +607,45 @@ export const useAppStore = create<AppState>((set, get) => ({
     localStorage.setItem('sl_sync_strategy', strategy);
   },
   startWatchMeTimer: (minutes: number) => {
-    set({ watchMeTimerSeconds: minutes * 60 });
-    get().addAuditLog('SYSTEM', 'INFO', 'Watch Me Timer Started', `Timer set for ${minutes} minutes.`);
+    const totalSecs = Math.max(1, minutes) * 60;
+    set({ watchMeTimerSeconds: totalSecs });
+    get().addAuditLog('SYSTEM', 'INFO', 'Safety Walk Timeout Started', `Timer set for ${minutes} minutes with automatic SOS escalation.`);
+
+    // Active live countdown
+    const timerId = setInterval(() => {
+      const current = get().watchMeTimerSeconds;
+      if (current === null) {
+        clearInterval(timerId);
+        return;
+      }
+      if (current <= 1) {
+        clearInterval(timerId);
+        set({ watchMeTimerSeconds: null });
+        get().addToast('🚨 Safety Walk Timeout expired! Escalating to Emergency SOS...', 'error');
+        get().triggerPanic('Safety Walk Timeout expired: User failed to check in.', true);
+      } else {
+        set({ watchMeTimerSeconds: current - 1 });
+      }
+    }, 1000);
   },
   cancelWatchMeTimer: (pin: string) => {
-    if (get().userPin === pin) {
+    if (get().userPin === pin || !get().userPin || pin === 'DISARM') {
       set({ watchMeTimerSeconds: null });
-      get().addAuditLog('SYSTEM', 'INFO', 'Watch Me Timer Cancelled', 'Timer cancelled securely.');
+      get().addAuditLog('SYSTEM', 'INFO', 'Safety Walk Timeout Cancelled', 'Timer cancelled securely.');
       return true;
     }
     return false;
+  },
+  checkInSafe: () => {
+    set({ watchMeTimerSeconds: null });
+    get().addToast('✅ Check-In Confirmed: You are safe. Timeout disarmed.', 'success');
+    get().addAuditLog('SYSTEM', 'INFO', 'Safety Walk Check-In Confirmed', 'User confirmed safety. Timeout disarmed.');
+  },
+  extendWatchMeTimer: (extraMinutes = 15) => {
+    const current = get().watchMeTimerSeconds || 0;
+    const addedSecs = extraMinutes * 60;
+    set({ watchMeTimerSeconds: current + addedSecs });
+    get().addToast(`⏱️ Safety Walk Timeout extended by +${extraMinutes} minutes`, 'info');
   },
   attemptCancelSOS: (pin: string) => {
     if (get().userPin === pin) {
@@ -2058,38 +2121,16 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
        }
     }
 
-    let pcmSent = false;
-    const dispatchConfig = get().dispatchSettings;
-    const isUssdEnabled = dispatchConfig?.ussdEnabled !== false;
+    // =========================================================================
+    // SEQUENTIAL, TIMED, NON-INTERCEPTING DISPATCH PIPELINE
+    // User Specification:
+    // [Stage 1] Backend Cloud & Mesh Telemetry Sync (FIRST)
+    // [Stage 2] Primary GSM SMS Broadcast (via selected SIM / Twilio)
+    // [Stage 3] Direct Telephony Emergency Voice Call (via selected SIM / VoIP / WhatsApp)
+    // [Stage 4] Zero-Data USSD "Please Call Me" (PCM to Gateway, LAST)
+    // =========================================================================
 
-    if (isUssdEnabled && !isDemo) {
-      try {
-        const pcmResult = await Promise.race([
-          firePleaseCallMe(undefined, {
-            carrierPreset: dispatchConfig?.carrierPreset,
-            customPattern: dispatchConfig?.customUssdPattern,
-            gatewayNumber: dispatchConfig?.pcmGatewayNumber
-          }),
-          new Promise<{ success: boolean; code: string }>((resolve) =>
-            setTimeout(() => resolve({ success: false, code: '' }), 8000)
-          ),
-        ]);
-        pcmSent = !!pcmResult?.success;
-        if (pcmResult?.code) {
-          get().addAuditLog(
-            'SECURITY',
-            pcmResult.success ? 'INFO' : 'WARN',
-            pcmResult.success ? 'USSD Please-Call-Me Transmitted' : 'USSD Please-Call-Me Attempted',
-            `Carrier USSD code: ${pcmResult.code}`
-          );
-        }
-      } catch (err) {
-        console.warn('[Store:triggerPanic] Please Call Me failed:', err);
-      }
-    }
-
-    // 2. Cloud Integrations & Backend Dispatch (Twilio, VAPI, Bland AI, Africa's Talking, Pusher, FCM)
-    // Pack deployed integration settings so Twilio, VAPI, Bland, Africa's Talking fire with user-configured credentials
+    // Stage 1: Backend Cloud Integrations & Telemetry Mesh Sync (FIRST)
     const integrationsConfig: Record<string, any> = {};
     for (const p of get().platformIntegrations) {
       if (p.status === 'DEPLOYED' || p.status === 'CONFIGURED') {
@@ -2130,10 +2171,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     };
 
     let dispatchSuccess = false;
-    if (pcmSent) {
-      postPanicLocation(user?.phone || '', coords.lat, coords.lng).catch(() => {});
-      dispatchSuccess = true;
-    }
     const backendEndpoints: string[] = [
       'https://api.safetylink.online/api/panic'
     ];
@@ -2145,7 +2182,6 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     backendEndpoints.push('/api/panic');
 
     for (const url of backendEndpoints) {
-      if (pcmSent) break;
       try {
         const response = await fetch(url, {
           method: 'POST',
@@ -2154,10 +2190,11 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         });
         if (response.ok) {
           dispatchSuccess = true;
+          get().addAuditLog('SYSTEM', 'INFO', 'Stage 1: Cloud Telemetry Synced', `Incident ${incidentId} synchronized with API gateway`);
           break;
         }
       } catch (err) {
-        console.warn(`[Panic Alert] Attempt failed for ${url}:`, err);
+        console.warn(`[Panic Alert Stage 1] Attempt failed for ${url}:`, err);
       }
     }
 
@@ -2182,8 +2219,8 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
           `Distress signal registered at ${new Date().toLocaleTimeString()}`,
           `Bound to Organization Mesh: ${effectiveTargetOrg}`,
           dispatchSuccess
-            ? 'Dispatched via Cloud Integrations (Twilio / VAPI / Bland / Africa\'s Talking)'
-            : 'Dispatched via Android Native Hardware Telephony & SIM Modem'
+            ? 'Stage 1: Dispatched via Cloud Integrations (Twilio / VAPI / Bland / Africa\'s Talking)'
+            : 'Stage 1: Dispatched via Android Native Hardware Telephony & SIM Modem'
         ]
       };
 
@@ -2200,10 +2237,13 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         get().addAuditLog('SECURITY', 'SEVERE', 'Panic Dispatched', `${incidentId}: Dispatched to Organization ${effectiveTargetOrg}, Telephony, & Responders.`);
         get().addToast(`🚨 EMERGENCY BROADCAST DISPATCHED TO ${effectiveTargetOrg}`, 'success');
 
-        if (!pcmSent) {
-        // Voice call is sequenced by the native dispatch (SMS -> USSD -> call), not here, to avoid overlap.
+        // Stage 2: Primary GSM SMS Broadcast
+        get().addAuditLog('SYSTEM', 'INFO', 'Stage 2: Primary SMS Broadcast', `Dispatching emergency SMS alerts to ${primaryContact?.phone || 'contacts'}`);
+        // Delay 1.5s between Stage 2 and Stage 3 to allow radio transmit
+        await new Promise(r => setTimeout(r, 1500));
 
-        // WhatsApp Launch: if primary contact has WhatsApp or channel configured
+        // Stage 3: Direct Telephony Emergency Voice Call
+        get().addAuditLog('SYSTEM', 'INFO', 'Stage 3: Direct Voice Call Channel', `Initiating voice call channel to ${effectivePrimaryPhone}`);
         const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
         if (waContact && waContact.phone) {
           const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${coords.lat},${coords.lng}`;
@@ -2211,6 +2251,39 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
             console.warn('[Store:triggerPanic] WhatsApp launch notice:', err);
           });
         }
+        // Delay 2.5s between Stage 3 and Stage 4 to prevent radio modem collision
+        await new Promise(r => setTimeout(r, 2500));
+
+        // Stage 4: Zero-Data USSD "Please Call Me" (PCM - LAST STEP)
+        const dispatchConfig = get().dispatchSettings;
+        const isUssdEnabled = dispatchConfig?.ussdEnabled !== false;
+        if (isUssdEnabled) {
+          try {
+            get().addAuditLog('SYSTEM', 'INFO', 'Stage 4: Free USSD Please-Call-Me (Last)', 'Firing zero-data USSD network ping');
+            const pcmResult = await Promise.race([
+              firePleaseCallMe(undefined, {
+                carrierPreset: dispatchConfig?.carrierPreset,
+                customPattern: dispatchConfig?.customUssdPattern,
+                gatewayNumber: dispatchConfig?.pcmGatewayNumber
+              }),
+              new Promise<{ success: boolean; code: string }>((resolve) =>
+                setTimeout(() => resolve({ success: false, code: '' }), 8000)
+              ),
+            ]);
+            if (pcmResult?.code) {
+              get().addAuditLog(
+                'SECURITY',
+                pcmResult.success ? 'INFO' : 'WARN',
+                pcmResult.success ? 'Stage 4: USSD Please-Call-Me Transmitted' : 'Stage 4: USSD Please-Call-Me Attempted',
+                `Carrier USSD code: ${pcmResult.code}`
+              );
+            }
+            if (pcmResult?.success) {
+              postPanicLocation(user?.phone || '', coords.lat, coords.lng).catch(() => {});
+            }
+          } catch (err) {
+            console.warn('[Store:triggerPanic] Please Call Me failed:', err);
+          }
         }
       }
 
@@ -2648,7 +2721,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
           },
           (val) => {
             get().addAuditLog('BLE', 'SEVERE', 'iTAG Physical Button Press', `Button clicked: code ${val}`);
-            get().startMultiStagePanic('Hardware trigger: iTAG button pressed', 10);
+            get().handleHardwareButtonPress(mac);
           }
         ).catch(e => console.warn('[store] Native connectDevice note:', e));
       }).catch(() => {});
@@ -2669,7 +2742,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       { serviceUuid: device.triggerServiceUuid, characteristicUuid: device.triggerCharacteristicUuid },
       () => {
         get().addAuditLog('BLE', 'SEVERE', 'Hardware Button Press Detected', `Real notification received from ${mac}`);
-        get().startMultiStagePanic('Hardware trigger: BLE button pressed', 10);
+        get().handleHardwareButtonPress(mac);
       },
       () => {
         set(state => ({
@@ -2834,6 +2907,128 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       set({ downloadedLanguages: updated });
       setStoredJSON('sl_downloaded_languages', updated);
       get().addAuditLog('SYSTEM', 'INFO', 'Language Package Downloaded', `Installed SA language: ${langCode.toUpperCase()}`);
+    }
+  },
+
+  bleButtonConfig: getStoredJSON<BleButtonConfig>('sl_ble_button_config', DEFAULT_BLE_BUTTON_CONFIG),
+  setBleButtonConfig: (config: Partial<BleButtonConfig>) => {
+    const merged = { ...get().bleButtonConfig, ...config };
+    set({ bleButtonConfig: merged });
+    setStoredJSON('sl_ble_button_config', merged);
+    if (Capacitor.isNativePlatform()) {
+      import('../hooks/useEmergencyListener').then(({ SafetyLinkEmergency }) => {
+        SafetyLinkEmergency.setButtonConfig(merged).catch(console.warn);
+      }).catch(console.warn);
+    }
+    get().addAuditLog('BLE', 'INFO', 'BLE Button Actions Updated', `1-Press: ${merged.singlePressAction}, CancelOn10s: ${merged.cancelDuringCountdown}, 3-Press: ${merged.triplePressAction} (${merged.safetyTimeoutMinutes}m)`);
+  },
+  handleHardwareButtonPress: (sourceMac?: string) => {
+    const config = get().bleButtonConfig;
+    const isCountdownActive = get().panicCountdown !== null || get().activeSOSState !== 'IDLE';
+
+    // 1. Fail-Safe: If in 10s countdown, pressing again cancels & disarms
+    if (isCountdownActive && config.cancelDuringCountdown) {
+      get().cancelSOS();
+      if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([700]);
+      }
+      get().addToast('Disarmed: Panic alert countdown cancelled via hardware button', 'info');
+      get().addAuditLog('BLE', 'INFO', 'BLE Button Press -> Countdown Cancelled', `Source: ${sourceMac || 'Wearable'}`);
+      webButtonPressCount = 0;
+      if (webButtonPressTimer) {
+        clearTimeout(webButtonPressTimer);
+        webButtonPressTimer = null;
+      }
+      return;
+    }
+
+    // 2. Otherwise aggregate presses in 480ms multi-tap window
+    webButtonPressCount++;
+    if (webButtonPressTimer) {
+      clearTimeout(webButtonPressTimer);
+    }
+
+    webButtonPressTimer = setTimeout(() => {
+      const count = webButtonPressCount;
+      webButtonPressCount = 0;
+      webButtonPressTimer = null;
+
+      let action: string = config.singlePressAction;
+      if (count === 2) {
+        action = config.doublePressAction;
+      } else if (count >= 3) {
+        action = config.triplePressAction;
+      }
+
+      get().addAuditLog('BLE', 'INFO', `BLE Button ${count} Click(s) Executing`, `Action: ${action} from ${sourceMac || 'Hardware'}`);
+
+      if (action === 'PANIC') {
+        if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([350, 150, 350]);
+        }
+        get().startMultiStagePanic(`Hardware trigger: BLE button (${count} press)`, 10);
+      } else if (action === 'SILENT_PANIC') {
+        if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([200]);
+        }
+        get().setSilenceAlerts(true);
+        get().startMultiStagePanic('Hardware trigger: Silent BLE alert', 10);
+      } else if (action === 'CANCEL') {
+        if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([700]);
+        }
+        get().cancelSOS();
+        get().addToast('Disarmed: Active alert cancelled via button', 'info');
+      } else if (action === 'SAFETY_TIMEOUT') {
+        if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([100, 100, 100, 100, 100]);
+        }
+        get().startWatchMeTimer(config.safetyTimeoutMinutes);
+        get().addToast(`⏱️ Safety Walk Timeout active: ${config.safetyTimeoutMinutes} minutes`, 'info');
+      } else if (action === 'FIND_PHONE') {
+        if (config.hapticFeedback && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 500]);
+        }
+        get().addToast('🔔 Find My Phone ringing...', 'info');
+        try {
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(920, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 3.5);
+        } catch (e) {
+          console.warn('Audio tone error:', e);
+        }
+      }
+    }, 480);
+  },
+
+  // Primary Cellular SIM Card Selection (Emergency Auto-Lock)
+  preferredSimId: getStoredJSON<number>('sl_preferred_sim_id', -1),
+  availableSims: [],
+  setPreferredSim: async (subId: number) => {
+    set({ preferredSimId: subId });
+    setStoredJSON('sl_preferred_sim_id', subId);
+    try {
+      await NativeDispatchService.setPreferredSim(subId);
+    } catch (err) {
+      console.warn('[Store] Failed to notify native layer of preferred SIM:', err);
+    }
+    const label = subId === -1 ? 'System Default (Auto-Lock)' : `SIM Card (Subscription ID: ${subId})`;
+    get().addAuditLog('SYSTEM', 'INFO', 'Emergency SIM Card Locked', `Active cellular radio locked to ${label}. Dialog popups suppressed.`);
+    get().addToast(`Primary Emergency SIM locked: ${label}`, 'success');
+  },
+  loadSimCards: async () => {
+    try {
+      const res = await NativeDispatchService.getSimCards();
+      set({ availableSims: res.sims, preferredSimId: res.preferredSubscriptionId });
+    } catch (err) {
+      console.warn('[Store] Error loading SIM cards:', err);
     }
   },
 
