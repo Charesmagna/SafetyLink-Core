@@ -26,6 +26,16 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ITagPlugin.class);
         super.onCreate(savedInstanceState);
         LoudAlarmChannel.create(this);
+        // One-time SIM choice: remember the phone's default voice SIM so panic never asks SIM 1 or SIM 2
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 22) {
+                android.content.SharedPreferences sp = getSharedPreferences("safetylink_prefs", MODE_PRIVATE);
+                if (sp.getInt("preferred_sim_sub_id", -1) < 0) {
+                    int sub = android.telephony.SubscriptionManager.getDefaultVoiceSubscriptionId();
+                    if (sub >= 0) sp.edit().putInt("preferred_sim_sub_id", sub).apply();
+                }
+            }
+        } catch (Exception ignored) { }
         requestEmergencyPermissions();
         try { getBridge().getWebView().getSettings().setTextZoom(100); } catch (Exception ignored) {}
     }
