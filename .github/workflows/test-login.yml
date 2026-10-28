@@ -18,7 +18,7 @@ jobs:
         run: |
           U="sltest$RANDOM$RANDOM"; P="Test-Pass-$RANDOM$RANDOM"
           API=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
-          R1=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$P\"}" $API/api/auth/register-user)
+          R1=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$P\"}" $API/api/register)
           echo "::notice::REGISTER: $(echo $R1 | cut -c1-160)"
           R2=$(curl -s -m 30 -X POST -H 'Content-Type: application/json' -d "{\"username\":\"$U\",\"password\":\"$P\"}" $API/api/auth/login)
           echo "::notice::LOGIN: $(echo $R2 | cut -c1-160)"
