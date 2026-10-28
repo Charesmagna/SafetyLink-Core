@@ -1066,7 +1066,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live Backend)', `Username: ${createdUser.username}`);
         return { success: true };
       }
+      // Server refused: never keep an account that exists only on this phone
+      const errTxt = await regRes.text().catch(() => '');
+      return { success: false, error: 'Could not create your account on the server (' + regRes.status + '). Check your connection and try again.' + (errTxt ? ' ' + errTxt.slice(0, 120) : '') };
     } catch (netErr) {
+      return { success: false, error: 'No connection to the SafetyLink server. Your account was not created. Try again when you are online.' };
       console.warn('Backend register call failed, continuing to Firebase & Vault fallback:', netErr);
     }
 
