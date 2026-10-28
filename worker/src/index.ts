@@ -436,7 +436,7 @@ const handleRegisterOrg = async (c: any) => {
 app.post('/api/auth/register-org', handleRegisterOrg);
 app.post('/api/register-org', handleRegisterOrg);
 
-app.post('/api/auth/register-user', async (c) => {
+app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
   const body: any = await c.req.json();
   const username = body.username;
   const password = body.password;
