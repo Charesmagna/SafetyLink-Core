@@ -55,9 +55,9 @@ export async function getCurrentAppVersion(): Promise<string> {
   return CURRENT_VERSION;
 }
 
-const GITHUB_RELEASES_API = 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest';
-const APK_DOWNLOAD_BASE = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download';
-const LIVE_VERSION_ENDPOINT = 'https://safetylink.online/version.json';
+const GITHUB_RELEASES_API = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest';
+const APK_DOWNLOAD_BASE = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download';
+const LIVE_VERSION_ENDPOINT = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest';
 
 export interface UpdateInfo {
   available: boolean;
@@ -117,7 +117,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 
     // 2. Fallback: website version file
     try {
-      const liveMeta = await xhrGet(`/version.json?t=${Date.now()}`);
+      const liveMeta: any = null; // stale static file removed: version comes from the server only
       if (liveMeta?.version && isNewerVersion(liveMeta.version, currentVersion)) {
         return {
           available: true,

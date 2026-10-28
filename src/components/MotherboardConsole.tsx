@@ -54,7 +54,7 @@ export const MotherboardConsole: React.FC = () => {
 
   const handleDownloadClick = async () => {
     try {
-      const response = await fetch("https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest");
+      const response = await fetch("https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest");
       if (!response.ok) {
         throw new Error("Failed to fetch latest release");
       }
@@ -65,13 +65,13 @@ export const MotherboardConsole: React.FC = () => {
         window.open(exeAsset.browser_download_url, '_blank');
       } else {
         alert("No executable found in the latest release. Please check GitHub Releases.");
-        window.open("https://github.com/Charesmagna/SafetyLink-Core/releases/latest", '_blank');
+        window.open("https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk", '_blank');
       }
     } catch (err: any) {
       console.error(err);
       alert("Error finding latest executable: " + err.message);
       // Fallback
-      window.open("https://github.com/Charesmagna/SafetyLink-Core/releases/latest", '_blank');
+      window.open("https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk", '_blank');
     }
   };
 

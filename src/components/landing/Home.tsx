@@ -74,8 +74,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
   const [tick, setTick] = useState(0);
   const [rotationTick, setRotationTick] = useState(0);
-  const [apkDownloadUrl, setApkDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
+  const [apkDownloadUrl, setApkDownloadUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk');
+  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk');
   const [releaseVersion, setReleaseVersion] = useState('latest');
   const [heroClipMuted, setHeroClipMuted] = useState(true);
   const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
@@ -98,7 +98,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
   useEffect(() => {
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', true);
+    xhr.open('GET', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest', true);
     xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
     xhr.timeout = 7000;
     xhr.onload = () => {
@@ -685,7 +685,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 icon: '📱',
                 label: `Android APK (${releaseVersion})`,
                 sub: 'Signed release APK with background monitoring & BLE keyfob integration.',
-                href: apkDownloadUrl || `https://github.com/Charesmagna/SafetyLink-Core/releases/download/${releaseVersion}/SafetyLink-${releaseVersion}-Signed.apk`,
+                href: apkDownloadUrl || `https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk`,
                 btn: `Download Official APK (${releaseVersion})`,
                 c: '#00e676',
                 cr: '0,230,118',

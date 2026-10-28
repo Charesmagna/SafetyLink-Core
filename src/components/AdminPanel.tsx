@@ -435,7 +435,7 @@ export const AdminPanel: React.FC = () => {
                 <a href="https://github.com/Charesmagna/SafetyLink-Core/actions" target="_blank" rel="noreferrer">
                   <img src="https://github.com/Charesmagna/SafetyLink-Core/actions/workflows/build-apk.yml/badge.svg" alt="Build APK Status" className="h-5" />
                 </a>
-                <a href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest" target="_blank" rel="noreferrer" className="text-[10px] font-mono text-amber-500 hover:text-amber-400 hover:underline">
+                <a href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk" target="_blank" rel="noreferrer" className="text-[10px] font-mono text-amber-500 hover:text-amber-400 hover:underline">
                   Download Latest Artifact →
                 </a>
               </div>

@@ -11,7 +11,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
   useEffect(() => {
     // Use XHR to bypass any fetch interceptors
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest', true);
+    xhr.open('GET', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest', true);
     xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
     xhr.timeout = 10000;
     xhr.onload = () => {
