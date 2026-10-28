@@ -107,7 +107,8 @@ async function notifyContacts(env: ZeroEnv, opts: {
     ? opts.contacts
     : [toE164(env.RESPONSE_CENTRE_NUMBER || '')].filter(Boolean);
   const place = opts.lat && opts.lng ? `https://maps.google.com/?q=${opts.lat},${opts.lng}` : 'Location not available yet';
-  const smsBody = `${opts.smsPrefix}\n${opts.ownerName} (${opts.ownerPhone}) needs help.\n${place}`.slice(0, 480);
+  const locTxt = opts.lat && opts.lng ? `Last known location: ${place}` : 'Last known location: not available yet';
+  const smsBody = `SAFETYLINK ALERT: ${opts.ownerName} (${opts.ownerPhone}) pressed the SafetyLink button. ${locTxt}. Please call them now. SafetyLink does not replace 10111 or 112.`.slice(0, 480);
   const spoken = `This is SafetyLink. ${opts.ownerName} has triggered a panic alert. ${opts.lat ? 'A map link was sent by message.' : 'No location yet.'} Please respond.`;
   const twAuth = env.TWILIO_SID && env.TWILIO_AUTH_TOKEN ? btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`) : '';
   const waFrom = env.TWILIO_WHATSAPP_FROM || env.TWILIO_NUMBER;
@@ -126,7 +127,19 @@ async function notifyContacts(env: ZeroEnv, opts: {
       results.push({ to, channel: 'WHATSAPP', ok: !!r?.ok, status: r?.status });
     }
     let smsOk = false;
-    if (env.AT_API_KEY && env.AT_USERNAME) {
+    // 1) Free route first: Rain SIM through SMSGate (200 SMS a month included)
+    const sgU = (env as any).SMSGATE_USERNAME, sgP = (env as any).SMSGATE_PASSWORD;
+    if (sgU && sgP) {
+      const r = await fetch('https://api.sms-gate.app/3rdparty/v1/messages', {
+        method: 'POST',
+        headers: { Authorization: 'Basic ' + btoa(`${sgU}:${sgP}`), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textMessage: { text: smsBody }, phoneNumbers: [to] }),
+      }).catch(() => null);
+      smsOk = !!r?.ok;
+      results.push({ to, channel: 'SMS', provider: 'smsgate', ok: smsOk, status: r?.status });
+    }
+    // 2) Backups only if the Rain route did not work
+    if (!smsOk && env.AT_API_KEY && env.AT_USERNAME) {
       const r = await fetch('https://api.africastalking.com/version1/messaging', {
         method: 'POST',
         headers: { apiKey: env.AT_API_KEY, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
