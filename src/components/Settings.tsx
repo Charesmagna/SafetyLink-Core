@@ -115,7 +115,7 @@ export const Settings: React.FC = () => {
            // Desktop Web/Electron
            window.open(updateInfo.exeUrl, '_blank');
         } else {
-           window.open('https://github.com/Charesmagna/SafetyLink-Core/releases/latest', '_blank');
+           window.open('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk', '_blank');
         }
       } else {
         useAppStore.getState().addToast("You are already on the latest version.", "info");

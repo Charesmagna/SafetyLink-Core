@@ -330,6 +330,22 @@ async function fireAllAlerts(
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
+// Latest release, in the same shape the app and website already read
+app.get('/api/app/latest', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('versions/index.json');
+  const list = obj ? await obj.json().catch(() => []) : [];
+  const first = Array.isArray(list) && list.length ? list[0] : null;
+  const base = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+  if (!first) return c.json({ tag_name: '', name: 'SafetyLink', assets: [] });
+  const file = first.file;
+  return c.json({
+    tag_name: 'v' + first.version,
+    name: 'SafetyLink ' + first.version,
+    published_at: first.date,
+    assets: [{ name: file, size: first.size, browser_download_url: base + '/download/safetylink.apk' }],
+  });
+});
+
 // Public version list (published by the build; no GitHub involved)
 app.get('/api/app/versions', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('versions/index.json');
