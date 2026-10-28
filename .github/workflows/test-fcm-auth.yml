@@ -1,0 +1,27 @@
+name: Test FCM credentials (no message delivered)
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Ask Google to send to a fake token (expect a token-error, not an auth-error)
+        env:
+          SA: ${{ secrets.FCM_SERVICE_ACCOUNT }}
+        working-directory: worker
+        run: |
+          cat > t.mjs <<'JS'
+          import { sendLoudAlarm } from './src/fcm.ts';
+          JS
+          node --experimental-strip-types -e "
+            const sa = process.env.SA;
+            const mod = await import('./src/fcm.ts');
+            const r = await mod.sendLoudAlarm(sa, 'fake-token-for-auth-check-only-0000000000000000', 'test', 'test');
+            console.log('RESULT', JSON.stringify(r).slice(0,300));
+          " 2>&1 | tail -3 > out.txt || true
+          echo "::notice::$(cat out.txt | cut -c1-300)"
