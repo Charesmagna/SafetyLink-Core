@@ -42,7 +42,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
         working-directory: worker
         run: |
-          npx wrangler d1 export safetylink-core --remote --output=backup.sql
+          npx wrangler d1 export safetylink-core --remote --output=backup.sql > export.log 2>&1 || { echo "::notice::EXPORT ERR: $(tr -d '\n' < export.log | cut -c1-300)"; exit 1; }
           KEY="backups/safetylink-core-$(date -u +%Y%m%d-%H%M%S).sql"
           curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/sql" \
             --data-binary @backup.sql \
