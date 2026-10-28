@@ -22,7 +22,7 @@ export async function syncProfile(): Promise<void> {
     const res = await fetch(backend + '/api/profile/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Profile-Token': token } : {}) },
-      body: JSON.stringify({ phone: user.phone, name: user.fullName || user.username, contacts, lat: loc?.lat, lng: loc?.lng }),
+      body: JSON.stringify({ phone: user.phone, name: user.fullName || user.username, contacts, lat: loc?.lat, lng: loc?.lng, alertNote: (user as any).alertNote || '' }),
     });
     const j: any = await res.json().catch(() => ({}));
     if (j.token) localStorage.setItem(TOKEN_KEY, j.token);
