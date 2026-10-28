@@ -1,0 +1,15 @@
+name: List database backups (read-only)
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List backups
+        env:
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+          ACC: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          R=$(curl -s -m 30 -H "Authorization: Bearer $CF" "https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects?prefix=backups/&per_page=5")
+          echo "::notice::BACKUPS: $(echo "$R" | jq -c '[.result[]? | {key, size}]' | cut -c1-300)"
