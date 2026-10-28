@@ -40,6 +40,7 @@ export function extractMsisdn(rawText: string, sender: string): string {
 }
 
 export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
+  await (db as any).prepare('ALTER TABLE sl_profiles ADD COLUMN alert_note TEXT').run().catch(() => {});
   const statements = [
     `CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, updated_at INTEGER)`,
     `CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
@@ -69,6 +70,8 @@ export async function syncProfile(env: ZeroEnv, body: any, presentedToken: strin
      VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(phone) DO UPDATE SET name=excluded.name, lat=COALESCE(excluded.lat, sl_profiles.lat), lng=COALESCE(excluded.lng, sl_profiles.lng), updated_at=excluded.updated_at`
   ).bind(phone, String(body?.name || '').slice(0, 80), Number.isFinite(lat) ? lat : null, Number.isFinite(lng) ? lng : null, token, now).run();
+  const note = String(body?.alertNote || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+  await env.DB.prepare('UPDATE sl_profiles SET alert_note=? WHERE phone=?').bind(note || null, phone).run().catch(() => {});
   await env.DB.prepare('DELETE FROM sl_contacts WHERE owner_phone=?').bind(phone).run();
   for (let i = 0; i < contacts.length; i++) {
     const c = contacts[i] || {};
@@ -81,8 +84,8 @@ export async function syncProfile(env: ZeroEnv, body: any, presentedToken: strin
   return { status: 200, json: { ok: true, phone, token, contacts: contacts.length } };
 }
 
-async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string; contacts: string[]; lat?: number; lng?: number }> {
-  const profile = await env.DB!.prepare('SELECT name, lat, lng FROM sl_profiles WHERE phone=?').bind(phone).first<{ name: string; lat: number; lng: number }>();
+async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string; contacts: string[]; lat?: number; lng?: number; note?: string }> {
+  const profile = await env.DB!.prepare('SELECT name, lat, lng, alert_note FROM sl_profiles WHERE phone=?').bind(phone).first<{ name: string; lat: number; lng: number; alert_note: string }>();
   const rows = await env.DB!.prepare(
     'SELECT contact_phone FROM sl_contacts WHERE owner_phone=? ORDER BY sort_order ASC LIMIT 5'
   ).bind(phone).all<{ contact_phone: string }>();
@@ -91,6 +94,7 @@ async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string
     contacts: (rows.results || []).map(r => r.contact_phone).filter(Boolean),
     lat: profile?.lat || undefined,
     lng: profile?.lng || undefined,
+    note: profile?.alert_note || undefined,
   };
 }
 
@@ -102,13 +106,15 @@ async function notifyContacts(env: ZeroEnv, opts: {
   lng?: number;
   voice: boolean;
   smsPrefix: string;
+  note?: string;
 }): Promise<any[]> {
   const targets = opts.contacts.length
     ? opts.contacts
     : [toE164(env.RESPONSE_CENTRE_NUMBER || '')].filter(Boolean);
   const place = opts.lat && opts.lng ? `https://maps.google.com/?q=${opts.lat},${opts.lng}` : 'Location not available yet';
   const locTxt = opts.lat && opts.lng ? `Last known location: ${place}` : 'Last known location: not available yet';
-  const smsBody = `SAFETYLINK ALERT: ${opts.ownerName} (${opts.ownerPhone}) pressed the SafetyLink button. ${locTxt}. Please call them now. SafetyLink does not replace 10111 or 112.`.slice(0, 480);
+  const noteTxt = opts.note ? ` Message from ${opts.ownerName}: ${opts.note}.` : '';
+  const smsBody = `SAFETYLINK ALERT: ${opts.ownerName} (${opts.ownerPhone}) pressed the SafetyLink button. ${locTxt}.${noteTxt} Please call them now. SafetyLink does not replace 10111 or 112.`.slice(0, 480);
   const spoken = `This is SafetyLink. ${opts.ownerName} has triggered a panic alert. ${opts.lat ? 'A map link was sent by message.' : 'No location yet.'} Please respond.`;
   const twAuth = env.TWILIO_SID && env.TWILIO_AUTH_TOKEN ? btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`) : '';
   const waFrom = env.TWILIO_WHATSAPP_FROM || env.TWILIO_NUMBER;
@@ -215,6 +221,7 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string, 
     lng: saved.lng,
     voice: true,
     smsPrefix: 'SAFETYLINK PANIC',
+    note: saved.note,
   });
   return { status: 200, json: { ok: true, status: 'DISPATCHED', msisdn: phone, eventId, results } };
 }
