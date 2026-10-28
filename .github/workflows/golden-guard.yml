@@ -1,0 +1,28 @@
+name: Golden guard (main is locked to golden-v1)
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Restore main to the golden version if it was changed
+        run: |
+          GOLD=$(git rev-parse "golden-v1^{commit}")
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [ "$GOLD" = "$HEAD_SHA" ]; then
+            echo "main matches golden-v1. OK."
+          else
+            echo "::warning::main changed. Restoring golden-v1. New work belongs on the v2 branch."
+            git config user.name "golden-guard"
+            git config user.email "golden-guard@users.noreply.github.com"
+            git push origin "$GOLD":refs/heads/main --force
+          fi
