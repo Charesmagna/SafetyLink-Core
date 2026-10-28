@@ -19,6 +19,34 @@ jobs:
         run: npm install -g wrangler@4
       - name: Install worker dependencies
         run: cd worker && npm install
+      - name: Safety checks (block risky changes before deploy)
+        run: |
+          set -e
+          echo "Checking for destructive database changes..."
+          if grep -rniE "DROP (TABLE|COLUMN|DATABASE)|TRUNCATE " worker/src | grep -v "^.*//" ; then
+            echo "::error::Destructive SQL found in worker code. Deploy blocked."; exit 1
+          fi
+          echo "Checking that customer-facing routes still exist..."
+          for R in "/api/login" "/api/register" "/api/auth/register-user" "/api/profile/sync" "/api/device/token" "/api/admin/login" "/api/app/latest" "/api/app/versions" "/download/safetylink.apk" "/webhook/pcm" "/api/init-db"; do
+            if ! grep -q "'$R'" worker/src/index.ts && ! grep -q "\"$R\"" worker/src/index.ts; then
+              echo "::error::Required route missing: $R. Deploy blocked so old app versions keep working."; exit 1
+            fi
+          done
+          echo "All safety checks passed."
+
+      - name: Back up the database to storage before deploying
+        env:
+          CF: ${{ secrets.CF_WORKERS_TOKEN }}
+          ACC: d089bef8b0b58c5d9506b512ec2f63dc
+        working-directory: worker
+        run: |
+          npx wrangler d1 export safetylink-core --remote --output=backup.sql
+          KEY="backups/safetylink-core-$(date -u +%Y%m%d-%H%M%S).sql"
+          curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/sql" \
+            --data-binary @backup.sql \
+            "https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects/$(echo $KEY | sed 's|/|%2F|g')"
+          echo "Backup saved: $KEY"
+
       - name: Deploy Worker
         run: cd worker && npx wrangler deploy
         env:
