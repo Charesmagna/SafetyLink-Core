@@ -1251,14 +1251,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
     // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
     // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
-    const isSuperAdminIdentifier = 
+    const isSuperAdminIdentifier = false && 
       compactUsername === 'safetylink' || 
       compactUsername === 'sl-admin-0000' || 
       compactUsername === 'sl-admin-000' ||
       compactOrgCode === 'sl-admin-0000' || 
       compactOrgCode === 'sl-admin-000';
 
-    const isSuperAdminPasswordMatch = 
+    const isSuperAdminPasswordMatch = false && 
       compactPassword === '000' || 
       compactPassword === '0000' || 
       compactPassword === 'sl-admin-0000' || 
@@ -1343,6 +1343,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (loginRes.ok) {
         const data = await loginRes.json();
         if (data.token) {
+          if (!data.user && data.userId) {
+            data.user = { id: data.userId, username: data.username || username, orgCode: data.org_code || data.orgId || '', role: 'Community Member' };
+          }
           if (data.superAdmin) {
             set({ currentUser: null, currentOrg: null, superAdminActive: true, token: data.token });
             setStoredJSON('sl_current_user', null);
