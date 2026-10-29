@@ -1064,7 +1064,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         setStoredJSON('sl_real_users', [...realUsers.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), createdUser]);
 
         get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live Backend)', `Username: ${createdUser.username}`);
-        return { success: true };
+        // v2: after sign-up, go straight into the app. No second trip to the login screen.
+        return await get().login(user.username, user.password, user.orgCode || '');
       }
       // Server refused: never keep an account that exists only on this phone
       const errTxt = await regRes.text().catch(() => '');
