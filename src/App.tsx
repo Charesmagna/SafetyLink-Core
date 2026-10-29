@@ -61,6 +61,7 @@ const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
 import { getR2StreamUrl } from './utils/r2Assets';
+import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
 
 const slide1 = getR2StreamUrl('Random platform background.png');
 const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
@@ -1468,6 +1469,9 @@ const App: React.FC = () => {
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
       <FirstLaunchDisclaimer />
+
+      {/* Sensitive Permissions & Google Play Privacy Notice Modal */}
+      <PrivacyNoticeModal />
 
     </div>
   );

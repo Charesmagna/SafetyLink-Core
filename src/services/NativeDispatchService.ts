@@ -443,5 +443,30 @@ export class NativeDispatchService {
       return subscriptionId;
     }
   }
+
+  /**
+   * Persists user profile, alert note, coordinates, and emergency contacts to native
+   * SharedPreferences (safetylink_prefs and sl_contacts_store) so DispatchRunner.java
+   * can execute completely standalone from physical buttons without WebView.
+   */
+  static async saveNativeProfile(payload: {
+    name?: string;
+    phone?: string;
+    alertNote?: string;
+    lat?: number;
+    lng?: number;
+    contacts?: any[];
+  }): Promise<boolean> {
+    if (!this.isNative) {
+      return true;
+    }
+    try {
+      await (NativeEmergencyDispatch as any).saveNativeProfile(payload);
+      return true;
+    } catch (e) {
+      console.warn('[NativeDispatch] saveNativeProfile failed:', e);
+      return false;
+    }
+  }
 }
 

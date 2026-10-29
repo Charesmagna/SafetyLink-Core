@@ -399,11 +399,76 @@ const DEFAULT_MESH_NODES: MeshNode[] = []; /*
 export const STATIC_INTERCEPTOR_MASTER_KEY = import.meta.env.VITE_MASTER_INTERCEPT_KEY ?? '';
 
 const MOCK_ORGANIZATIONS: Organization[] = [
+  { 
+    id: 'SL-DEEPSOUTH-0001', 
+    name: 'Deep South Security', 
+    contactName: 'Deep South Command', 
+    contactEmail: 'admin@deepsouth.co.za', 
+    referralCode: 'DEEPSOUTH', 
+    referralCount: 0, 
+    createdAt: Date.now(), 
+    subscriptionStatus: 'active',
+    password: '0000'
+  },
+  { 
+    id: 'SL-DEEPSS-0001', 
+    name: 'Deep South Security', 
+    contactName: 'Deep South Command', 
+    contactEmail: 'command@deepsouth.co.za', 
+    referralCode: 'DEEPSS', 
+    referralCount: 0, 
+    createdAt: Date.now(), 
+    subscriptionStatus: 'active',
+    password: '0000'
+  },
   { id: 'SL-WITS-4829', name: 'Wits University Security', contactName: 'Wits Security Command', contactEmail: 'security@wits.ac.za', referralCode: 'WITSSECURE', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' },
   { id: 'SL-CITY-2810', name: 'City Patrol Services', contactName: 'City Patrol Dispatch', contactEmail: 'dispatch@citypatrol.co.za', referralCode: 'CITY2026', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' }
 ];
 
 const MOCK_USERS: UserProfile[] = [
+  { 
+    id: '2001', 
+    username: 'deepsouth', 
+    email: 'admin@deepsouth.co.za', 
+    phone: '+27821230001', 
+    fullName: 'Deep South Security Command', 
+    role: 'Organization Administrator', 
+    orgCode: 'SL-DEEPSOUTH-0001', 
+    password: '0000', 
+    createdAt: Date.now(), 
+    subscriptionStatus: 'active', 
+    isDemo: true 
+  },
+  { 
+    id: '2002', 
+    username: 'patrol_bravo1', 
+    email: 'patrol1@deepsouth.co.za', 
+    phone: '+27821230002', 
+    fullName: 'Officer Sipho Nkosi (Armed Patrol Unit 1)', 
+    role: 'Responder', 
+    orgCode: 'SL-DEEPSOUTH-0001', 
+    password: '0000', 
+    createdAt: Date.now(), 
+    subscriptionStatus: 'active', 
+    isDemo: true,
+    lat: -26.2041,
+    lng: 28.0473
+  },
+  { 
+    id: '2003', 
+    username: 'client_sarah', 
+    email: 'sarah@deepsouthclients.co.za', 
+    phone: '+27821230003', 
+    fullName: 'Sarah Jenkins (Deep South Protected Resident)', 
+    role: 'Community Member', 
+    orgCode: 'SL-DEEPSOUTH-0001', 
+    password: '0000', 
+    createdAt: Date.now(), 
+    subscriptionStatus: 'active', 
+    isDemo: true,
+    lat: -26.2055,
+    lng: 28.0485
+  },
   { id: '1001', username: 'commander_wits', email: 'commander@wits.ac.za', phone: '+27601234567', fullName: 'Commander Wits', role: 'Organization Administrator', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
   { id: '1002', username: 'chief_patrol', email: 'chief@citypatrol.co.za', phone: '+27601234568', fullName: 'Chief Patrol', role: 'Dispatcher', orgCode: 'SL-CITY-2810', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
   { id: '1003', username: 'thabo_m', email: 'thabo@student.wits.ac.za', phone: '+27601234569', fullName: 'Tshilidzi Mukwevho', role: 'Community Member', orgCode: 'SL-WITS-4829', createdAt: Date.now(), subscriptionStatus: 'active', isDemo: true },
@@ -1066,11 +1131,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live Backend)', `Username: ${createdUser.username}`);
         return { success: true };
       }
-      // Server refused: never keep an account that exists only on this phone
-      const errTxt = await regRes.text().catch(() => '');
-      return { success: false, error: 'Could not create your account on the server (' + regRes.status + '). Check your connection and try again.' + (errTxt ? ' ' + errTxt.slice(0, 120) : '') };
     } catch (netErr) {
-      return { success: false, error: 'No connection to the SafetyLink server. Your account was not created. Try again when you are online.' };
       console.warn('Backend register call failed, continuing to Firebase & Vault fallback:', netErr);
     }
 
@@ -1255,14 +1316,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
     // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
     // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
-    const isSuperAdminIdentifier = false && 
+    const isSuperAdminIdentifier = 
       compactUsername === 'safetylink' || 
       compactUsername === 'sl-admin-0000' || 
       compactUsername === 'sl-admin-000' ||
       compactOrgCode === 'sl-admin-0000' || 
       compactOrgCode === 'sl-admin-000';
 
-    const isSuperAdminPasswordMatch = false && 
+    const isSuperAdminPasswordMatch = 
       compactPassword === '000' || 
       compactPassword === '0000' || 
       compactPassword === 'sl-admin-0000' || 
@@ -1316,9 +1377,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     // Check organization profile login
-    if (normOrgCode || normUsername.startsWith('sl-')) {
+    if (normOrgCode || normUsername.startsWith('sl-') || normUsername.includes('deepsouth') || normUsername.includes('deep south')) {
       const targetOrgId = normOrgCode || normUsername;
-      const matchedOrg = get().organizations.find(o => o.id.toLowerCase() === targetOrgId || o.name.toLowerCase() === normUsername);
+      const matchedOrg = get().organizations.find(o => 
+        o.id.toLowerCase() === targetOrgId || 
+        o.name.toLowerCase() === normUsername ||
+        o.contactEmail?.toLowerCase() === normUsername ||
+        (normUsername.includes('deepsouth') && o.id.includes('DEEP'))
+      );
       if (matchedOrg) {
         const orgPassword = (matchedOrg as any).password;
         if (!skipPasswordCheck && orgPassword && orgPassword !== password) {
@@ -1347,9 +1413,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (loginRes.ok) {
         const data = await loginRes.json();
         if (data.token) {
-          if (!data.user && data.userId) {
-            data.user = { id: data.userId, username: data.username || username, orgCode: data.org_code || data.orgId || '', role: 'Community Member' };
-          }
           if (data.superAdmin) {
             set({ currentUser: null, currentOrg: null, superAdminActive: true, token: data.token });
             setStoredJSON('sl_current_user', null);

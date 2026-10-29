@@ -22,11 +22,30 @@ export async function syncProfile(): Promise<void> {
     const res = await fetch(backend + '/api/profile/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Profile-Token': token } : {}) },
-      body: JSON.stringify({ phone: user.phone, name: user.fullName || user.username, contacts, lat: loc?.lat, lng: loc?.lng, alertNote: (user as any).alertNote || '' }),
+      body: JSON.stringify({ phone: user.phone, name: user.fullName || user.username, contacts, lat: loc?.lat, lng: loc?.lng }),
     });
     const j: any = await res.json().catch(() => ({}));
     if (j.token) localStorage.setItem(TOKEN_KEY, j.token);
     const savedToken = j.token || token;
+    // Persist to native Android SharedPreferences (safetylink_prefs & sl_contacts_store)
+    // so DispatchRunner and PanicSequence can dispatch directly from hardware keys
+    try {
+      const { NativeDispatchService } = await import('./NativeDispatchService');
+      await NativeDispatchService.saveNativeProfile({
+        name: user.fullName || user.username,
+        phone: user.phone,
+        alertNote: (user as any).alertNote || '',
+        lat: loc?.lat,
+        lng: loc?.lng,
+        contacts: (s.contacts || []).map((c: any) => ({
+          name: c.name,
+          phone: c.phone,
+          sms: c.sms !== false,
+          call: Boolean(c.call || c.priorityCall || c.priority)
+        }))
+      });
+    } catch { /* native bridge not available on web */ }
+
     if (res.ok && savedToken) {
       try {
         const { SafetyLinkEmergency } = await import('./NativeDispatchService');
@@ -36,6 +55,27 @@ export async function syncProfile(): Promise<void> {
     if (res.ok) lastSig = sig;
   } catch {
     /* offline - will retry on the next change or timer */
+    try {
+      const s: any = useAppStore.getState();
+      const user = s.currentUser;
+      const loc = s.userLocation;
+      if (user?.phone) {
+        const { NativeDispatchService } = await import('./NativeDispatchService');
+        await NativeDispatchService.saveNativeProfile({
+          name: user.fullName || user.username,
+          phone: user.phone,
+          alertNote: (user as any).alertNote || '',
+          lat: loc?.lat,
+          lng: loc?.lng,
+          contacts: (s.contacts || []).map((c: any) => ({
+            name: c.name,
+            phone: c.phone,
+            sms: c.sms !== false,
+            call: Boolean(c.call || c.priorityCall || c.priority)
+          }))
+        });
+      }
+    } catch {}
   }
 }
 

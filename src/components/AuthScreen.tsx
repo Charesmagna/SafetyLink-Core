@@ -472,15 +472,18 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
               </div>
 
               <div className="flex flex-col">
-                <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Organizational Mesh Code</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Organizational Mesh Code</label>
+                  <span className="text-[8px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-1.5 py-0.5 rounded">e.g. SL-ORG-001 / SL-DEEPSOUTH-002</span>
+                </div>
                 <input
                   type="text"
                   value={loginOrgCode}
-                  onChange={e => setLoginOrgCode(e.target.value)}
-                  placeholder="e.g. SL-ORG-XXXX"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
+                  onChange={e => setLoginOrgCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. SL-ORG-001 or SL-DEEPSOUTH-002"
+                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all uppercase"
                 />
-                <span className="text-[9px] text-slate-500 mt-1 pl-1">Leave blank for standalone mesh profile mode.</span>
+                <span className="text-[9px] text-slate-500 mt-1 pl-1">Format: SL-&lt;COMPANY&gt;-001. Leave blank for standalone personal profile mode.</span>
               </div>
               <div className="flex flex-col mt-2">
                 <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
@@ -822,24 +825,28 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                     onChange={e => setUserRole(e.target.value as import('../types').UserRole)}
                     className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
                   >
-                    <option value="Community Member">Community Member</option>
-                    <option value="Responder">Responder (Guard/Medical)</option>
+                    <option value="Community Member">Resident / Community Member</option>
+                    <option value="Client">Corporate / Estate Client</option>
+                    <option value="Responder">Responder (Patrol / Armed Guard / Medical)</option>
                   </select>
                 </div>
                 <div className="flex flex-col mt-3">
-                  <label className="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-                    Organization / Security Code <span className="text-slate-500 font-normal">{userRole === 'Responder' ? '(Required)' : '(Optional)'}</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Organization / Security Code <span className="text-slate-500 font-normal">{userRole === 'Responder' ? '(Required)' : '(Optional)'}</span>
+                    </label>
+                    <span className="text-[8px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-1.5 py-0.5 rounded">e.g. SL-ORG-001 / SL-DEEPSOUTH-002</span>
+                  </div>
                   <input
                     type="text"
                     value={userOrgCode}
                     onChange={e => setUserOrgCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. SL-ORG-001 or SL-WITS-4829"
-                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                    placeholder="e.g. SL-DEEPSOUTH-002 or SL-ORG-001"
+                    className="bg-slate-950 border border-slate-900 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono uppercase"
                     required={userRole === 'Responder'}
                   />
                   <span className="text-[8px] text-slate-500 mt-0.5">
-                    Link to a security company, university, or estate to deploy panics to their command deck.
+                    Link to a security company, university, or estate (e.g. SL-DEEPSOUTH-002) to join their command network.
                   </span>
                 </div>
 
