@@ -99,6 +99,14 @@ public final class PanicSequence {
         state = State.COUNTDOWN;
         secondsLeft = seconds;
         Log.i(TAG, "Countdown started: " + seconds + " s");
+        try {
+            Intent ci = new Intent(appCtx, CountdownActivity.class);
+            ci.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            ci.putExtra("seconds", seconds);
+            appCtx.startActivity(ci);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to launch CountdownActivity: " + e.getMessage());
+        }
         main.postDelayed(tick, 1000L);
     }
 
@@ -113,6 +121,11 @@ public final class PanicSequence {
 
     private static void cancelCountdownTimer() {
         main.removeCallbacks(tick);
+        if (appCtx != null) {
+            Intent dismiss = new Intent("com.aistudio.safetylink.ACTION_DISMISS_COUNTDOWN");
+            dismiss.setPackage(appCtx.getPackageName());
+            appCtx.sendBroadcast(dismiss);
+        }
     }
 
     private static void beginDispatch() {

@@ -61,6 +61,7 @@ const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
 import { getR2StreamUrl } from './utils/r2Assets';
+import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
 
 const slide1 = getR2StreamUrl('Random platform background.png');
 const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
@@ -1031,7 +1032,7 @@ const App: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="fixed left-0 top-0 h-[100dvh] w-80 max-w-[85vw] bg-slate-950/95 backdrop-blur-xl border-r border-slate-900 p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col justify-between z-[60] overflow-y-auto overscroll-contain"
+              className="fixed top-0 left-0 bottom-0 w-80 bg-slate-950/60 backdrop-blur-xl border-r border-slate-900 p-5 flex flex-col justify-between z-50 overflow-y-auto relative"
             >
               {/* Cinematic Background Image Slideshow at 60% opacity with ambient lighting */}
               <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
@@ -1468,6 +1469,9 @@ const App: React.FC = () => {
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
       <FirstLaunchDisclaimer />
+
+      {/* Sensitive Permissions & Google Play Privacy Notice Modal */}
+      <PrivacyNoticeModal />
 
     </div>
   );

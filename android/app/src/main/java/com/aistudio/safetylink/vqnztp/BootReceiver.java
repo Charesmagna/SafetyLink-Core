@@ -21,7 +21,8 @@ public class BootReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)
-                || "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
+                || "android.intent.action.QUICKBOOT_POWERON".equals(action)
+                || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             Log.i(TAG, "Boot detected – starting background sentinel service");
             Intent serviceIntent = new Intent(context, SafelinkForegroundService.class);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
