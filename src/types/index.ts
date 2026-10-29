@@ -32,6 +32,9 @@ export interface UserProfile {
   subscriptionStatus?: 'active' | 'trial' | 'locked';
   canUseAdminTwilio?: boolean;
   isDemo?: boolean;
+  password?: string;
+  lat?: number;
+  lng?: number;
   customTwilioConfig?: {
     accountSid?: string;
     authToken?: string;
@@ -155,6 +158,8 @@ export interface Organization {
   referralCode?: string;
   referralCount?: number;
   subscriptionStatus?: 'active' | 'trial' | 'locked';
+  password?: string;
+  adminPassword?: string;
 }
 
 export interface CustomTool {
