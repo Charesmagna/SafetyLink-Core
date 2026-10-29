@@ -178,6 +178,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish APK to R2 (latest, versioned copy, version list)
+      if: github.ref == 'refs/heads/main'
       env:
         CF: ${{ secrets.CF_WORKERS_TOKEN }}
         ACC: d089bef8b0b58c5d9506b512ec2f63dc
