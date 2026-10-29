@@ -2137,6 +2137,13 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     // [Stage 4] Zero-Data USSD "Please Call Me" (PCM to Gateway, LAST)
     // =========================================================================
 
+    // v2: on the phone, the native PanicSequence is the only dispatch.
+    // The web stage pipeline below must not run on native builds, or the two overlap.
+    if (isNativeApp) {
+      set({ activeSOSState: 'DISPATCHED' });
+      return;
+    }
+
     // Stage 1: Backend Cloud Integrations & Telemetry Mesh Sync (FIRST)
     const integrationsConfig: Record<string, any> = {};
     for (const p of get().platformIntegrations) {
