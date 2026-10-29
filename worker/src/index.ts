@@ -1,7 +1,3 @@
-import { sendLoudAlarm } from './fcm';
-import { saveDeviceToken, tokensForPhone } from './device-tokens';
-import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
-import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -10,11 +6,6 @@ import { cors } from 'hono/cors';
 import { gatewayNumber, inboundPcm, locatePcm, syncProfile } from './zero-airtime';
 
 export interface Env {
-  FCM_SERVICE_ACCOUNT?: string;
-  ADMIN_EMAIL?: string;
-  ADMIN_PASSWORD_HASH?: string;
-  ADMIN_SESSION_SECRET?: string;
-  RELEASES?: any;
   DB?: D1Database;
   // Auth
   JWT_SECRET: string;
@@ -249,20 +240,6 @@ async function fireAllAlerts(
   const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
 
   await Promise.allSettled(all.map(async (to) => {
-    // Loud push to any SafetyLink phone registered with this number
-    const sa = (env as any).FCM_SERVICE_ACCOUNT;
-    if (sa && env.DB) {
-      try {
-        const tokens = await tokensForPhone(env.DB, to);
-        for (const tok of tokens) {
-          await attempt('ALARM', 'fcm', to, async () => {
-            const r = await sendLoudAlarm(sa, tok, 'SafetyLink ALERT', smsBody.split('\n').slice(0, 2).join(' '));
-            return new Response(r.error || '', { status: r.ok ? 200 : (r.status || 500) });
-          });
-        }
-      } catch (e) { console.error('[FCM]', e); }
-    }
-
     // SMS: Twilio first, Africa's Talking as backup
     let smsOk = false;
     // 0) Free route: Rain SIM via SMSGate (200 SMS/month included). Off until credentials are saved.
@@ -330,49 +307,6 @@ async function fireAllAlerts(
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
-// Latest release, in the same shape the app and website already read
-app.get('/api/app/latest', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('versions/index.json');
-  const list = obj ? await obj.json().catch(() => []) : [];
-  const first = Array.isArray(list) && list.length ? list[0] : null;
-  const base = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-  if (!first) return c.json({ tag_name: '', name: 'SafetyLink', assets: [] });
-  const file = first.file;
-  return c.json({
-    tag_name: 'v' + first.version,
-    name: 'SafetyLink ' + first.version,
-    published_at: first.date,
-    assets: [{ name: file, size: first.size, browser_download_url: base + '/download/safetylink.apk' }],
-  });
-});
-
-// Public version list (published by the build; no GitHub involved)
-app.get('/api/app/versions', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('versions/index.json');
-  if (!obj) return c.json({ versions: [] });
-  const list = await obj.json().catch(() => []);
-  return c.json({ versions: Array.isArray(list) ? list : [] });
-});
-app.get('/download/version/:file', async (c) => {
-  const file = c.req.param('file');
-  if (!/^SafetyLink-v[0-9.]+-Signed\.apk$/.test(file)) return c.json({ error: 'not found' }, 404 as any);
-  const obj: any = await (c.env as any).RELEASES?.get('versions/' + file);
-  if (!obj) return c.json({ error: 'not found' }, 404 as any);
-  return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': 'attachment; filename="' + file + '"', 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
-});
-
-// Version 2 (development) downloads and version list. Version 1 routes above are unchanged.
-app.get('/download/v2/safetylink.apk', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk');
-  if (!obj) return c.json({ error: 'No version 2 build yet' }, 404 as any);
-  return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': 'attachment; filename="SafetyLink-v2-dev.apk"', 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
-});
-app.get('/api/app/v2/versions', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('versions-v2/index.json');
-  const list = obj ? await obj.json().catch(() => []) : [];
-  return c.json({ versions: Array.isArray(list) ? list : [] });
-});
-
 // Latest APK, served from R2 (the repo can stay private)
 app.get('/download/safetylink.apk', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
@@ -381,6 +315,20 @@ app.get('/download/safetylink.apk', async (c) => {
     headers: {
       'Content-Type': 'application/vnd.android.package-archive',
       'Content-Disposition': 'attachment; filename="SafetyLink.apk"',
+      'Content-Length': String(obj.size),
+      'Cache-Control': 'no-cache',
+    },
+  });
+});
+
+// Version 2 Development APK, served from R2
+app.get('/download/v2/safetylink.apk', async (c) => {
+  const obj: any = (await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk')) || (await (c.env as any).RELEASES?.get('safetylink-latest.apk'));
+  if (!obj) return c.json({ error: 'No v2 release available yet' }, 404 as any);
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': 'application/vnd.android.package-archive',
+      'Content-Disposition': 'attachment; filename="SafetyLink-v2-dev.apk"',
       'Content-Length': String(obj.size),
       'Cache-Control': 'no-cache',
     },
@@ -437,8 +385,17 @@ const handleRegisterOrg = async (c: any) => {
   const contactName = body.contactName || body.contact_name || orgName || 'Admin';
 
   if (!email || !password || !orgName || !contactName) return c.json({ error: 'All fields required' }, 400);
-  const abbrev = orgName.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) || 'ORG';
-  const orgId = body.id || body.org_code || body.orgCode || `SL-${abbrev}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const cleanName = orgName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const abbrev = cleanName.length >= 3 ? cleanName.slice(0, 9) : (cleanName || 'ORG');
+  let orgId = body.id || body.org_code || body.orgCode;
+  if (!orgId) {
+    try {
+      const existing = (await c.env.DB!.prepare("SELECT COUNT(*) as count FROM organisations WHERE id LIKE ?").bind(`SL-${abbrev}-%`).first() as any)?.count || 0;
+      orgId = `SL-${abbrev}-${String(existing + 1).padStart(3, '0')}`;
+    } catch {
+      orgId = `SL-${abbrev}-001`;
+    }
+  }
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   try {
     await c.env.DB!.prepare(
@@ -464,21 +421,22 @@ const handleRegisterOrg = async (c: any) => {
 app.post('/api/auth/register-org', handleRegisterOrg);
 app.post('/api/register-org', handleRegisterOrg);
 
-app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
+app.post('/api/auth/register-user', async (c) => {
   const body: any = await c.req.json();
   const username = body.username;
   const password = body.password;
   const email = body.email;
   const phone = body.phone;
   const orgCode = body.orgCode || body.org_code;
+  const role = body.role || 'Client'; // 'Responder' | 'Client' | 'Resident'
   if (!username || !password) return c.json({ error: 'Username and password required' }, 400);
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const id = crypto.randomUUID();
   try {
     await c.env.DB!.prepare(
-      'INSERT INTO users (id, org_id, username, email, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?)'
-    ).bind(id, orgCode || null, username, email || null, 'User', hash, Date.now()).run();
-    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username }), userId: id, username });
+      'INSERT INTO users (id, org_id, username, email, phone, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?,?)'
+    ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, Date.now()).run();
+    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username, role }), userId: id, username, role });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
@@ -495,7 +453,7 @@ const handleLogin = async (c: any) => {
 
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const user = await c.env.DB!.prepare(
-    'SELECT id, username, org_id FROM users WHERE username = ? AND password_hash = ?'
+    'SELECT id, username, org_id, role, email, phone FROM users WHERE username = ? AND password_hash = ?'
   ).bind(username, hash).first().catch(() => null) as any;
   if (!user) {
     // Try org login
@@ -509,8 +467,8 @@ const handleLogin = async (c: any) => {
     return c.json({ token, orgId: org.id, org_code: org.id, orgName: org.name, org_name: org.name });
   }
   if (user.org_id && await checkTrialExpired(c.env.DB, user.org_id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-  const token = makeToken({ userId: user.id, orgId: user.org_id, username: user.username });
-  return c.json({ token, userId: user.id, orgId: user.org_id, org_code: user.org_id, username: user.username });
+  const token = makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role });
+  return c.json({ token, userId: user.id, orgId: user.org_id, org_code: user.org_id, username: user.username, role: user.role || 'User', email: user.email, phone: user.phone });
 };
 
 app.post('/api/auth/login', handleLogin);
@@ -677,47 +635,6 @@ app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webho
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
-
-// Superadmin login (email + strong password, returns a session)
-app.post('/api/admin/login', async (c) => {
-  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
-  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
-  if (await tooManyFailures(c.env.DB, ip)) return c.json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429 as any);
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const ok = await checkCredentials(c.env, b.email, b.password);
-  await recordAttempt(c.env.DB, ip, ok);
-  if (!ok) return c.json({ error: 'Email or password is incorrect' }, 401 as any);
-  return c.json({ token: await makeSession(c.env), expiresInHours: 8 });
-});
-app.get('/api/admin/summary', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  return c.json(await adminSummary(c.env.DB));
-});
-app.get('/api/admin/users', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  return c.json({ users: await adminUsers(c.env.DB) });
-});
-app.post('/api/admin/delete-user', async (c) => {
-  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
-  if (!phone) return c.json({ error: 'phone required' }, 400 as any);
-  return c.json(await adminDelete(c.env.DB, phone));
-});
-
-// Phone registers its FCM token (must present its profile token for that number)
-app.post('/api/device/token', async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as any;
-  const phone = String(b.phone || '').replace(/[^0-9+]/g, '');
-  const token = String(b.token || '');
-  if (!/^\+27[6-8][0-9]{8}$/.test(phone) || token.length < 20) return c.json({ error: 'phone and token required' }, 400 as any);
-  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
-  const presented = c.req.header('X-Profile-Token') || '';
-  const owner: any = await c.env.DB.prepare('SELECT token FROM sl_profiles WHERE phone=?').bind(phone).first().catch(() => null);
-  if (!owner?.token || !presented || presented !== owner.token) return c.json({ error: 'Not authorised for this number' }, 401 as any);
-  await saveDeviceToken(c.env.DB, phone, token);
-  return c.json({ ok: true });
-});
 
 app.post('/api/profile/sync', async (c) => {
   const body = await c.req.json().catch(() => ({}));
