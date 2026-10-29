@@ -1,3 +1,4 @@
+import { DownloadHubVersions } from './DownloadHubVersions';
 import React, { useState, useEffect } from 'react';
 import { ASSETS } from '../../utils/cloudinary';
 
@@ -61,6 +62,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
 
   return (
     <div style={{ background: 'transparent', color: '#f0f4f8', fontFamily: "'Inter',system-ui,sans-serif", minHeight: '100vh' }}>
+      <DownloadHubVersions />
       
       {/* ── HEADER ── */}
       <section style={{ padding: '80px 40px 60px', background: 'rgba(7,10,15,0.65)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
