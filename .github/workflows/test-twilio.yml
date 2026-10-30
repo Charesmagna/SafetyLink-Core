@@ -1,0 +1,19 @@
+name: Test Twilio SMS and call to verified Telkom number
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: One SMS and one call from Twilio to the verified number
+        env:
+          SID: ${{ secrets.TWILIO_SID }}
+          TOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          FROM: ${{ secrets.TWILIO_NUMBER }}
+        run: |
+          TO="+27680079911"
+          S=$(curl -s -m 60 -u "$SID:$TOK" -X POST https://api.twilio.com/2010-04-01/Accounts/$SID/Messages.json --data-urlencode "From=$FROM" --data-urlencode "To=$TO" --data-urlencode "Body=SafetyLink Twilio test: SMS path works.")
+          echo "::notice::SMS: $(echo "$S" | jq -c '{sid, status, error_code, error_message}')"
+          C=$(curl -s -m 60 -u "$SID:$TOK" -X POST https://api.twilio.com/2010-04-01/Accounts/$SID/Calls.json --data-urlencode "From=$FROM" --data-urlencode "To=$TO" --data-urlencode 'Twiml=<Response><Say voice="alice">This is a SafetyLink Twilio test call. The call path works.</Say></Response>')
+          echo "::notice::CALL: $(echo "$C" | jq -c '{sid, status, error_code, error_message}')"
