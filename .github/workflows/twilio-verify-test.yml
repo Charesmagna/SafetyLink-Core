@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Twilio: list TwiML apps, send SMS, place call
+      - name: "Twilio - list TwiML apps, send SMS, place call"
         env:
           SID: ${{ secrets.TWILIO_SID }}
           TOK: ${{ secrets.TWILIO_AUTH_TOKEN }}
