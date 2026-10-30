@@ -767,10 +767,6 @@ const App: React.FC = () => {
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
             <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
-              {/* TOP: Logo */}
-              <div className="shrink-0 pt-1">
-                <SafetyLinkLogo size={72} showText={true} />
-              </div>
 
               {/* OFFLINE QUEUE INDICATOR */}
               {localOfflineQueue && localOfflineQueue.length > 0 && (
