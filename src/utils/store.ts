@@ -408,7 +408,6 @@ const MOCK_ORGANIZATIONS: Organization[] = [
     referralCount: 0, 
     createdAt: Date.now(), 
     subscriptionStatus: 'active',
-    password: '0000'
   },
   { 
     id: 'SL-DEEPSS-0001', 
@@ -419,7 +418,6 @@ const MOCK_ORGANIZATIONS: Organization[] = [
     referralCount: 0, 
     createdAt: Date.now(), 
     subscriptionStatus: 'active',
-    password: '0000'
   },
   { id: 'SL-WITS-4829', name: 'Wits University Security', contactName: 'Wits Security Command', contactEmail: 'security@wits.ac.za', referralCode: 'WITSSECURE', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' },
   { id: 'SL-CITY-2810', name: 'City Patrol Services', contactName: 'City Patrol Dispatch', contactEmail: 'dispatch@citypatrol.co.za', referralCode: 'CITY2026', referralCount: 0, createdAt: Date.now(), subscriptionStatus: 'active' }
@@ -434,7 +432,6 @@ const MOCK_USERS: UserProfile[] = [
     fullName: 'Deep South Security Command', 
     role: 'Organization Administrator', 
     orgCode: 'SL-DEEPSOUTH-0001', 
-    password: '0000', 
     createdAt: Date.now(), 
     subscriptionStatus: 'active', 
     isDemo: true 
@@ -447,7 +444,6 @@ const MOCK_USERS: UserProfile[] = [
     fullName: 'Officer Sipho Nkosi (Armed Patrol Unit 1)', 
     role: 'Responder', 
     orgCode: 'SL-DEEPSOUTH-0001', 
-    password: '0000', 
     createdAt: Date.now(), 
     subscriptionStatus: 'active', 
     isDemo: true,
@@ -462,7 +458,6 @@ const MOCK_USERS: UserProfile[] = [
     fullName: 'Sarah Jenkins (Deep South Protected Resident)', 
     role: 'Community Member', 
     orgCode: 'SL-DEEPSOUTH-0001', 
-    password: '0000', 
     createdAt: Date.now(), 
     subscriptionStatus: 'active', 
     isDemo: true,
@@ -1316,20 +1311,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
     // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
     // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
-    const isSuperAdminIdentifier = 
+    const isSuperAdminIdentifier = false && 
       compactUsername === 'safetylink' || 
       compactUsername === 'sl-admin-0000' || 
       compactUsername === 'sl-admin-000' ||
       compactOrgCode === 'sl-admin-0000' || 
       compactOrgCode === 'sl-admin-000';
 
-    const isSuperAdminPasswordMatch = 
-      compactPassword === '000' || 
+    const isSuperAdminPasswordMatch = false && (compactPassword === '000' || 
       compactPassword === '0000' || 
       compactPassword === 'sl-admin-0000' || 
       compactPassword === 'sl-admin-000' || 
       compactPassword === 'safetylink' ||
-      skipPasswordCheck;
+      skipPasswordCheck);
 
     // Hard-coded superadmin login removed. Superadmin is server-side only (/api/admin/login).
     const isSuperAdmin = false && isSuperAdminIdentifier && isSuperAdminPasswordMatch;
