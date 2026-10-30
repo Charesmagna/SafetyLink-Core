@@ -18,6 +18,6 @@ jobs:
           A=$(curl -s -m 60 -u "$SID:$TOK" "https://api.twilio.com/2010-04-01/Accounts/$SID/Applications.json?PageSize=50")
           echo "::notice::TWIML APPS: $(echo "$A" | jq -c '[.applications[]? | {sid, friendly_name, voice_url}]' | cut -c1-300)"
           S=$(curl -s -m 60 -u "$SID:$TOK" -X POST "https://api.twilio.com/2010-04-01/Accounts/$SID/Messages.json" --data-urlencode "From=$FROM" --data-urlencode "To=$TO" --data-urlencode "Body=SafetyLink Twilio test: SMS path works.")
-          echo "::notice::SMS: $(echo "$S" | jq -c '{sid, status, error_code, error_message}')"
+          echo "::notice::SMS RAW: $(echo "$S" | tr -d "\n" | cut -c1-350)"
           C=$(curl -s -m 60 -u "$SID:$TOK" -X POST "https://api.twilio.com/2010-04-01/Accounts/$SID/Calls.json" --data-urlencode "From=$FROM" --data-urlencode "To=$TO" --data-urlencode 'Twiml=<Response><Say voice="alice">This is a SafetyLink Twilio test call. The call path works.</Say></Response>')
-          echo "::notice::CALL: $(echo "$C" | jq -c '{sid, status, error_code, error_message}')"
+          echo "::notice::CALL RAW: $(echo "$C" | tr -d "\n" | cut -c1-350)"
