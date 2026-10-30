@@ -34,7 +34,9 @@ export async function checkCredentials(env: any, email: string, password: string
   const parts = stored.split('$'); // pbkdf2$iter$salt$hash
   if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
   const iter = Math.min(Number(parts[1]) || 0, ITER_LIMIT);
-  const emailOk = safeEq(String(email || '').trim().toLowerCase(), String(env.ADMIN_EMAIL || '').toLowerCase());
+  // Superadmin username 'safetylink' maps to the admin email. The strong password is still required.
+  const who = String(email || '').trim().toLowerCase();
+  const emailOk = safeEq(who === 'safetylink' ? String(env.ADMIN_EMAIL || '').toLowerCase() : who, String(env.ADMIN_EMAIL || '').toLowerCase());
   const hash = await pbkdf2(String(password || ''), parts[2], iter);
   return emailOk && safeEq(hash, parts[3]);
 }
