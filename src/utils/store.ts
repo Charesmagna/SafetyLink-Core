@@ -1626,6 +1626,9 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
       
       return { success: true, role: 'USER' };
     } catch (e: any) {
+      if (e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/cancelled-popup-request') {
+        return { success: false, error: 'Google sign-in was cancelled.' };
+      }
       console.warn('Google Sign-In Notice (activating resilient sandbox vault account):', e);
       // Fallback Google account for sandboxed environments, preview iframes, and domains awaiting Google Console authorization
       const googleEmail = 'google.user@safetylink.online';

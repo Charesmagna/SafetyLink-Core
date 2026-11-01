@@ -10,6 +10,10 @@ const config: CapacitorConfig = {
       'safetylink.online',
       '*.safetylink.online',
       'api.safetylink.online',
+      'safetylink-99e56.firebaseapp.com',
+      '*.firebaseapp.com',
+      'accounts.google.com',
+      '*.google.com',
       'checkout.paystack.com',
       'api.paystack.co'
     ]
