@@ -1,0 +1,38 @@
+name: Set superadmin login on the server (one-time)
+on:
+  push:
+    branches: [v2]
+    paths: ['.github/workflows/set-admin-login.yml']
+  workflow_dispatch:
+
+jobs:
+  set:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the password hash and save it on the server
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          set -e
+          test -n "$ADMIN_PASSWORD" || { echo "::error::ADMIN_PASSWORD secret is empty"; exit 1; }
+          python3 - <<'PY'
+          import os, hashlib, secrets
+          pw = os.environ['ADMIN_PASSWORD'].encode()
+          salt = secrets.token_hex(16)
+          h = hashlib.pbkdf2_hmac('sha256', pw, bytes.fromhex(salt), 120000, dklen=32).hex()
+          open('hash.txt','w').write(f'pbkdf2$120000${salt}${h}')
+          open('session.txt','w').write(secrets.token_hex(32))
+          print('hash built (not shown)')
+          PY
+          cd worker && npm install --silent wrangler@4 >/dev/null 2>&1
+          cd ..
+          npx --prefix worker wrangler secret put ADMIN_PASSWORD_HASH --name safetylink-api < hash.txt
+          printf 'info@safetylink.online' | npx --prefix worker wrangler secret put ADMIN_EMAIL --name safetylink-api
+          npx --prefix worker wrangler secret put ADMIN_SESSION_SECRET --name safetylink-api < session.txt
+          echo "::notice::Superadmin login saved on the server (email info@safetylink.online)."
