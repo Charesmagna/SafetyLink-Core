@@ -19,20 +19,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
         run: |
-          set -e
-          test -n "$ADMIN_PASSWORD" || { echo "::error::ADMIN_PASSWORD secret is empty"; exit 1; }
-          python3 - <<'PY'
-          import os, hashlib, secrets
-          pw = os.environ['ADMIN_PASSWORD'].encode()
-          salt = secrets.token_hex(16)
-          h = hashlib.pbkdf2_hmac('sha256', pw, bytes.fromhex(salt), 120000, dklen=32).hex()
-          open('hash.txt','w').write(f'pbkdf2$120000${salt}${h}')
-          open('session.txt','w').write(secrets.token_hex(32))
-          print('hash built (not shown)')
-          PY
-          cd worker && npm install --silent wrangler@4 >/dev/null 2>&1
-          cd ..
-          npx --prefix worker wrangler secret put ADMIN_PASSWORD_HASH --name safetylink-api < hash.txt
-          printf 'info@safetylink.online' | npx --prefix worker wrangler secret put ADMIN_EMAIL --name safetylink-api
-          npx --prefix worker wrangler secret put ADMIN_SESSION_SECRET --name safetylink-api < session.txt
-          echo "::notice::Superadmin login saved on the server (email info@safetylink.online)."
+          if [ -z "$ADMIN_PASSWORD" ]; then echo "::error::ADMIN_PASSWORD is empty"; exit 1; fi
+          echo "::notice::step 1: password received"
+          python3 .github/scripts/make_hash.py || { echo "::error::hash step failed"; exit 1; }
+          echo "::notice::step 2: hash built"
+          npm install -g wrangler@4 >/dev/null 2>&1 || { echo "::error::wrangler install failed"; exit 1; }
+          echo "::notice::step 3: wrangler ready"
+          wrangler secret put ADMIN_PASSWORD_HASH --name safetylink-api < hash.txt || { echo "::error::saving hash failed"; exit 1; }
+          echo "::notice::step 4: hash saved"
+          printf 'info@safetylink.online' | wrangler secret put ADMIN_EMAIL --name safetylink-api || { echo "::error::saving email failed"; exit 1; }
+          echo "::notice::step 5: email saved"
+          wrangler secret put ADMIN_SESSION_SECRET --name safetylink-api < session.txt || { echo "::error::saving session secret failed"; exit 1; }
+          echo "::notice::step 6: done. Superadmin login saved (email info@safetylink.online)"
