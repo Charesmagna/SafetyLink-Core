@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShoppingCart, ShieldAlert, Zap, Truck, Camera, Lock, Search, AlertCircle, Phone, ArrowRight } from 'lucide-react';
+import { ShoppingCart, ShieldAlert, Zap, Truck, Camera, Lock, Search, AlertCircle, Phone, ArrowRight, Sparkles } from 'lucide-react';
+import { PepxiOrderModal } from './PepxiOrderModal';
 
 export interface Product {
   slug: string;
@@ -16,8 +17,8 @@ export const STORE_PRODUCTS: Product[] = [
     slug: 'itag-ble-panic-button',
     name: 'SafetyLink iTAG BLE Physical Panic Button',
     category: 'Tactical Gear',
-    price: 189,
-    description: 'Ultra-durable Bluetooth Low Energy hardware panic keyfob with configurable 1-press SOS, 2-press find phone, 3-press walk timeout, and pocket disarm.',
+    price: 75,
+    description: 'Ultra-durable Bluetooth Low Energy hardware panic keyfob (Brandability / Altitude spec). Includes 14-day free hardware pairing trial and nationwide Pepxi counter-to-counter delivery (R100).',
     imageUrl: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=600&auto=format&fit=crop&q=80',
     affiliateUrl: 'https://wa.me/27680079911?text=Order%20iTAG%20BLE%20Keyfob'
   },
@@ -80,6 +81,7 @@ const SafetyWareStore: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [checkingStock, setCheckingStock] = useState<string | null>(null);
+  const [showPepxiModal, setShowPepxiModal] = useState<boolean>(false);
 
   const categories = ['All', ...Array.from(new Set(STORE_PRODUCTS.map(p => p.category)))];
 
@@ -91,6 +93,11 @@ const SafetyWareStore: React.FC = () => {
   });
 
   const handleBuy = async (product: Product) => {
+    if (product.slug === 'itag-ble-panic-button') {
+      setShowPepxiModal(true);
+      return;
+    }
+
     setCheckingStock(product.slug);
     try {
       const res = await fetch(`/api/check-stock/${product.slug}`, {
@@ -246,6 +253,12 @@ const SafetyWareStore: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* PEPXI NATIONWIDE ITAG DELIVERY MODAL */}
+      <PepxiOrderModal 
+        isOpen={showPepxiModal} 
+        onClose={() => setShowPepxiModal(false)} 
+      />
     </div>
   );
 };

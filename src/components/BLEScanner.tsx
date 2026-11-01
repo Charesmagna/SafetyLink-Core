@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ITagPluginService, ITagDevice } from '../services/ITagPluginService';
 import { DeviceScanner } from './DeviceScanner';
 
+import { PepxiOrderModal } from './PepxiOrderModal';
+import { Sparkles, Truck, ShieldCheck, CheckCircle2 } from 'lucide-react';
+
 export const BLEScanner: React.FC = () => {
   const { bleDevices, discoveredDevices, isScanning, pairingProgress, startBleScan, disconnectBleDevice, connectBleDevice, removeDevice, registerDiscoveredDevice, demoMode, isBackgroundServiceRunning } = useAppStore();
 
@@ -22,7 +25,32 @@ export const BLEScanner: React.FC = () => {
   const [manualFormError, setManualFormError] = React.useState<string>('');
   const [isDeviceScannerOpen, setIsDeviceScannerOpen] = React.useState<boolean>(false);
   const [showUpgradeGate, setShowUpgradeGate] = React.useState<boolean>(false);
+  const [showPepxiModal, setShowPepxiModal] = React.useState<boolean>(false);
   const { currentUser } = useAppStore();
+
+  const isTrial = currentUser?.subscriptionStatus === 'trial';
+  const trialDaysRemaining = React.useMemo(() => {
+    if (!isTrial) return 0;
+    const startTime = currentUser?.trialStartedAt || currentUser?.createdAt || Date.now();
+    const elapsedMs = Date.now() - startTime;
+    const remainingDays = Math.max(1, Math.ceil((14 * 86400000 - elapsedMs) / 86400000));
+    return remainingDays;
+  }, [currentUser, isTrial]);
+
+  const handleStartFreeTrial = () => {
+    if (currentUser) {
+      const updatedUser = {
+        ...currentUser,
+        subscriptionStatus: 'trial' as const,
+        trialStartedAt: Date.now()
+      };
+      useAppStore.getState().updateUserProfile(currentUser.id, updatedUser);
+    }
+    setShowUpgradeGate(false);
+    useAppStore.getState().addToast("14-Day Free iTAG Trial Activated! Pairing unlocked.", "success");
+    useAppStore.getState().addAuditLog('BLE', 'INFO', '14-Day iTAG Trial Activated', 'Hardware panic button pairing enabled for 14-day trial period.');
+    startBleScan();
+  };
 
   // Paired Device Renaming States
   const [editingMac, setEditingMac] = React.useState<string | null>(null);
@@ -279,6 +307,33 @@ export const BLEScanner: React.FC = () => {
         </div>
       </div>
 
+      {/* FREE APP + 14-DAY ITAG TRIAL STATUS BANNER */}
+      <div className="relative z-10 w-full mb-3 bg-gradient-to-r from-emerald-950/40 to-slate-900 border border-emerald-500/25 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+        <div className="text-left">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+              {currentUser?.subscriptionStatus === 'active' 
+                ? 'PREMIUM HARDWARE LINK ACTIVE'
+                : isTrial 
+                  ? `FREE 14-DAY iTAG TRIAL (${trialDaysRemaining} DAYS REMAINING)`
+                  : 'FREE TO USE · 14-DAY iTAG TRIAL AVAILABLE'}
+            </span>
+          </div>
+          <p className="text-[8.5px] font-mono text-slate-400 mt-0.5">
+            SafetyLink is 100% free forever · Pair physical iTAGs with 14-day trial
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowPepxiModal(true)}
+          className="shrink-0 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[8.5px] font-mono font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-colors"
+        >
+          <Truck className="w-3 h-3 text-amber-400" />
+          Order Tag via Pepxi (R100)
+        </button>
+      </div>
+
       <div className="flex justify-between items-center border-b border-slate-900 pb-3.5 relative z-10">
         <div className="text-left">
           <h3 className="text-xs font-black text-slate-100 tracking-[0.2em] font-display uppercase">
@@ -496,75 +551,68 @@ export const BLEScanner: React.FC = () => {
             >
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
               
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-xl">
-                  🔒
+              <div className="flex justify-between items-start mb-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-400">
+                  <Sparkles className="w-6 h-6" />
                 </div>
                 <button
                   onClick={() => setShowUpgradeGate(false)}
-                  className="text-slate-400 hover:text-white"
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
                 >
                   ✕
                 </button>
               </div>
 
-              <h3 className="text-xl font-bold text-white mb-2">Unlock Physical Panic Buttons</h3>
+              <div className="inline-block bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-2">
+                14-Day Free Trial
+              </div>
+
+              <h3 className="text-xl font-bold text-white mb-1.5">Pair Physical Panic Buttons</h3>
               
-              <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-                To trigger silent emergency alerts directly from your pocket without touching your phone, upgrade to <strong>SafetyLink Premium</strong> for just R49/month.
+              <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+                <strong>SafetyLink is 100% free to use.</strong> When you pair an iTAG or wearable beacon to trigger silent distress alerts from your pocket, you receive a complimentary <strong>14-day free trial</strong>. Zero credit card required upfront.
               </p>
 
-              <div className="bg-slate-950 rounded-xl p-4 mb-6 border border-slate-800">
+              <div className="bg-slate-950 rounded-2xl p-3.5 mb-5 border border-slate-800 text-left">
                 <ul className="space-y-2 text-xs text-slate-300">
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span> Bypass locked screens
+                    <span className="text-emerald-400 font-bold">✓</span> SafetyLink digital SOS & dispatch is 100% free forever
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span> Connect up to 5 iTags
+                    <span className="text-emerald-400 font-bold">✓</span> 14-day free hardware trial to pair any iTAG keyfob
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-emerald-400">✓</span> Professional monitoring
+                    <span className="text-emerald-400 font-bold">✓</span> Silent pocket triggering with screen locked & app backgrounded
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-emerald-400 font-bold">✓</span> Connect up to 5 physical iTAG buttons
                   </li>
                 </ul>
               </div>
 
-              <div className="space-y-3">
-                
+              <div className="space-y-2.5">
                 <button
-                  onClick={async () => {
-                    // Trigger Payfast checkout dynamically
-                    try {
-                      const response = await fetch('/api/payfast/checkout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          plan_name: 'Premium',
-                          amount: '49.00',
-                          item_description: 'SafetyLink Premium Subscription (BLE Unlock)',
-                          email: 'user@example.com'
-                        })
-                      });
-                      const data = await response.json();
-                      if (data.success && data.url) {
-                        window.location.href = data.url;
-                      } else {
-                        alert('Checkout initialization failed.');
-                      }
-                    } catch(err) {
-                      console.error(err);
-                      alert('Checkout initialization failed.');
-                    }
-                  }}
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-900/50"
+                  onClick={handleStartFreeTrial}
+                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2"
                 >
-
-                  Activate Button for R49/mo
+                  <Sparkles className="w-4 h-4" /> Start Free 14-Day iTAG Trial
                 </button>
+
+                <button
+                  onClick={() => {
+                    setShowUpgradeGate(false);
+                    setShowPepxiModal(true);
+                  }}
+                  className="w-full py-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold text-xs transition-all flex items-center justify-center gap-2"
+                >
+                  <Truck className="w-4 h-4 text-amber-400" /> Order Tag via Pepxi (R100 Nationwide)
+                </button>
+
                 <button
                   onClick={() => setShowUpgradeGate(false)}
-                  className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-all"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-xs transition-all"
                 >
-                  Continue with Digital SOS
+                  Continue with Free Digital SOS
                 </button>
               </div>
             </motion.div>
@@ -841,6 +889,13 @@ export const BLEScanner: React.FC = () => {
       </div>
       </>
       )}
+
+      {/* PEPXI NATIONWIDE ITAG DELIVERY MODAL */}
+      <PepxiOrderModal 
+        isOpen={showPepxiModal} 
+        onClose={() => setShowPepxiModal(false)} 
+        onStartTrial={handleStartFreeTrial} 
+      />
 
     </motion.div>
   );

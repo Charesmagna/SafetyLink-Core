@@ -30,6 +30,7 @@ export interface UserProfile {
   fcmToken?: string;
   liveSmsEnabled?: boolean;
   subscriptionStatus?: 'active' | 'trial' | 'locked';
+  trialStartedAt?: number;
   canUseAdminTwilio?: boolean;
   isDemo?: boolean;
   password?: string;
