@@ -2442,7 +2442,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     // Check if worker endpoint is available for bulk sync
     try {
-      const baseUrl = get().customBackendUrl || '';
+      const baseUrl = get().customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       const bulkRes = await fetch(`${baseUrl}/api/sync/offline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
