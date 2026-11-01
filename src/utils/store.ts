@@ -1303,6 +1303,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     const rawOrgCode = (orgCode || '').trim();
     const rawPassword = (password || '').trim();
 
+    // Superadmin: username "safetylink" is checked on the server against the saved strong password.
+    if (rawUsername.toLowerCase() === 'safetylink') {
+      try {
+        const base = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+        const adminRes = await fetch(`${base}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'safetylink', password: rawPassword }),
+        });
+        if (adminRes.ok) {
+          const adminData = await adminRes.json();
+          setStoredJSON('sl_super_admin', true);
+          setStoredJSON('sl_jwt_token', adminData.token);
+          set({ currentUser: null, currentOrg: null, superAdminActive: true, token: adminData.token });
+          return { success: true };
+        }
+        return { success: false, error: 'Invalid credentials. Please verify username and password.' };
+      } catch (e) {
+        return { success: false, error: 'No connection to the SafetyLink server. Try again when you are online.' };
+      }
+    }
+
     const normUsername = rawUsername.toLowerCase();
     const normOrgCode = rawOrgCode.toLowerCase();
     const cleanPassword = rawPassword.toLowerCase();
