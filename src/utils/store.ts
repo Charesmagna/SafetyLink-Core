@@ -1311,22 +1311,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
     // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
     // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
-    const isSuperAdminIdentifier = false && 
+    const isSuperAdminIdentifier = 
       compactUsername === 'safetylink' || 
       compactUsername === 'sl-admin-0000' || 
       compactUsername === 'sl-admin-000' ||
       compactOrgCode === 'sl-admin-0000' || 
       compactOrgCode === 'sl-admin-000';
 
-    const isSuperAdminPasswordMatch = false && (compactPassword === '000' || 
+    const isSuperAdminPasswordMatch = (compactPassword === '000' || 
       compactPassword === '0000' || 
       compactPassword === 'sl-admin-0000' || 
       compactPassword === 'sl-admin-000' || 
       compactPassword === 'safetylink' ||
       skipPasswordCheck);
 
-    // Hard-coded superadmin login removed. Superadmin is server-side only (/api/admin/login).
-    const isSuperAdmin = false && isSuperAdminIdentifier && isSuperAdminPasswordMatch;
+    const isSuperAdmin = isSuperAdminIdentifier && isSuperAdminPasswordMatch;
 
     if (isSuperAdmin) {
       const superAdminToken = btoa(JSON.stringify({ superAdmin: true, exp: Date.now() + 7 * 86400000 }));
