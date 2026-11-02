@@ -1,0 +1,21 @@
+name = "safetylink-api"
+main = "worker/src/index.ts"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "production"
+CLOUDINARY_CLOUD = "qcp4fx2v"
+PIPEDREAM_WEBHOOK_URL = "https://eomnz1lxw9o2hyq.m.pipedream.net"
+VAPI_BASE_URL = "https://api.vapi.ai"
+VAPI_ASSISTANT_ID = "9c9313eb-8593-4c49-b993-09eef7e8d540"
+ALERTS_ENABLED = "true"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "safetylink-core"
+database_id = "9daa8cbf-861f-4483-92e5-9f03541c6e71"
+
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "safetylink-releases"
