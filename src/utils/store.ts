@@ -1602,7 +1602,16 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const userCred = await signInWithPopup(auth, provider);
+      // Native Android: Google account picker from the phone (no popup, so it returns to the app).
+      // Browser: the existing popup flow.
+      let userCred: any;
+      if (Capacitor.isNativePlatform()) {
+        const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+        const nativeRes: any = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: false });
+        userCred = { user: nativeRes.user };
+      } else {
+        userCred = await signInWithPopup(auth, provider);
+      }
       let userData = null;
 
       try {
