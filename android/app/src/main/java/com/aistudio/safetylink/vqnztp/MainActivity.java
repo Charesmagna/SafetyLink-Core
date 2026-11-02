@@ -1,13 +1,21 @@
 package com.aistudio.safetylink.vqnztp;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Message;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import java.util.ArrayList;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
 
@@ -37,7 +45,96 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception ignored) { }
         requestEmergencyPermissions();
-        try { getBridge().getWebView().getSettings().setTextZoom(100); } catch (Exception ignored) {}
+
+        setupOAuthPopupSupport();
+    }
+
+    private void setupOAuthPopupSupport() {
+        try {
+            WebView mainWebView = getBridge().getWebView();
+            WebSettings mainSettings = mainWebView.getSettings();
+            mainSettings.setTextZoom(100);
+            mainSettings.setSupportMultipleWindows(true);
+            mainSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+            mainWebView.setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
+                private Dialog popupDialog;
+                private WebView popupWebView;
+
+                @Override
+                public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                    if (MainActivity.this.isFinishing()) {
+                        return false;
+                    }
+
+                    popupWebView = new WebView(MainActivity.this);
+                    WebSettings settings = popupWebView.getSettings();
+                    settings.setJavaScriptEnabled(true);
+                    settings.setDomStorageEnabled(true);
+                    settings.setSupportMultipleWindows(true);
+                    settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+                    // Prevent Google OAuth "403: disallowed_useragent" by removing WebView signature flags
+                    String ua = settings.getUserAgentString();
+                    if (ua != null) {
+                        ua = ua.replace("; wv", "").replace("Version/4.0 ", "");
+                        settings.setUserAgentString(ua);
+                    }
+
+                    popupDialog = new Dialog(MainActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+                    popupDialog.setContentView(popupWebView);
+                    popupDialog.setOnCancelListener(dialog -> {
+                        if (popupWebView != null) {
+                            popupWebView.destroy();
+                            popupWebView = null;
+                        }
+                    });
+                    popupDialog.show();
+
+                    popupWebView.setWebChromeClient(new WebChromeClient() {
+                        @Override
+                        public void onCloseWindow(WebView window) {
+                            if (popupDialog != null && popupDialog.isShowing()) {
+                                popupDialog.dismiss();
+                            }
+                            if (window != null) {
+                                window.destroy();
+                            }
+                        }
+                    });
+
+                    popupWebView.setWebViewClient(new WebViewClient() {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
+                            return false;
+                        }
+
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView v, String url) {
+                            return false;
+                        }
+                    });
+
+                    WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                    transport.setWebView(popupWebView);
+                    resultMsg.sendToTarget();
+                    return true;
+                }
+
+                @Override
+                public void onCloseWindow(WebView window) {
+                    if (popupDialog != null && popupDialog.isShowing()) {
+                        popupDialog.dismiss();
+                    }
+                    if (window != null) {
+                        window.destroy();
+                    }
+                    super.onCloseWindow(window);
+                }
+            });
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Failed to setup OAuth popup support", e);
+        }
     }
 
     private void requestEmergencyPermissions() {
