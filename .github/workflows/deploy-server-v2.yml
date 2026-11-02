@@ -1,5 +1,8 @@
 name: Deploy server from v2 (worker only)
 on:
+  push:
+    branches: [v2]
+    paths: ['.github/workflows/deploy-server-v2.yml', 'worker/**']
   workflow_dispatch:
 jobs:
   deploy:
