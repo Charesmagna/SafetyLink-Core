@@ -139,7 +139,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               </div>
               <div style={{ fontSize: '2.5rem' }}>📱</div>
               <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Download SafetyLink Version 1</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Android Signed APK</h3>
                 <p style={{ fontSize: '12px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
                   {latestRelease?.version || 'latest'} · Full Hardware Bundle ({latestRelease?.sizeMb || '94.4'} MB)
                 </p>
@@ -169,19 +169,19 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
                     transition: 'opacity .2s',
                   }}
                 >
-                  <span>⬇️</span> DOWNLOAD VERSION 1 (APK)
+                  <span>⬇️</span> DOWNLOAD STABLE APK (v1.0)
                 </a>
               </div>
             </div>
 
-            {/* Android Version 2 Experimental Phase Preview */}
+            {/* Android Version 2 Development Preview */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', fontSize: '10px', fontWeight: 800, padding: '4px 10px', borderRadius: '999px', fontFamily: "'JetBrains Mono',monospace" }}>
-                EXPERIMENTAL PHASE
+                VERSION 2 DEV
               </div>
               <div style={{ fontSize: '2.5rem' }}>⚡</div>
               <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Download SafetyLink Version 2 Experimental Phase</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>SafetyLink v2 (In Development)</h3>
                 <p style={{ fontSize: '12px', color: '#f59e0b', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
                   Build v2.0-preview · Dual-SIM Auto-Lock & Offline PCM
                 </p>
@@ -211,7 +211,7 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
                     transition: 'opacity .2s',
                   }}
                 >
-                  <span>⚡</span> DOWNLOAD VERSION 2 EXPERIMENTAL PHASE
+                  <span>⚡</span> DOWNLOAD VERSION 2 (DEV)
                 </a>
               </div>
             </div>
