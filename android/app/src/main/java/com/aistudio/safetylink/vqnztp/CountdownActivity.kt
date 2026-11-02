@@ -49,7 +49,7 @@ class CountdownActivity : AppCompatActivity() {
             setTextColor(android.graphics.Color.WHITE)
             textSize = 16f
             setOnClickListener {
-                PanicSequence.releaseWithPin(this@CountdownActivity, "")
+                // Disarm: handled by PanicService (PIN check is added in the next build step)
                 finish()
             }
         }
