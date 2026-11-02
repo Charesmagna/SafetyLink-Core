@@ -54,9 +54,6 @@ public final class ButtonPatternDetector {
      */
     public static void onPress(Context ctx, String deviceAddress) {
         if (ctx == null) return;
-        // Every iTAG press goes through the single panic state machine.
-        PanicSequence.onPress(ctx, "ITAG:" + deviceAddress);
-        if (true) return;
         appContext = ctx.getApplicationContext();
 
         SharedPreferences p = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
