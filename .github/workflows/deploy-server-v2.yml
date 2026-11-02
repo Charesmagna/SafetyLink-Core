@@ -1,0 +1,25 @@
+name: Deploy server from v2 (worker only)
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deploy the Worker
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: d089bef8b0b58c5d9506b512ec2f63dc
+        run: |
+          npm install --no-audit --no-fund --legacy-peer-deps >/dev/null 2>&1
+          npx wrangler deploy > d.log 2>&1; code=$?
+          tail -n 6 d.log | sed 's/^/::notice::/'
+          exit $code
+      - name: Test admin login (wrong password should be 401, not 405/500)
+        run: |
+          sleep 20
+          curl -s -m 30 -o /dev/null -w "admin login HTTP %{http_code}\n" -X POST https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/admin/login -H 'Content-Type: application/json' -d '{"email":"safetylink","password":"wrong"}' | sed 's/^/::notice::/'
