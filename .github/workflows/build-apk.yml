@@ -89,7 +89,8 @@ jobs:
         sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
         grep -n "versionName\|versionCode" android/app/build.gradle | head -2
 
-    - name: Create mock google-services.json (only if the real one is missing)
+    - name: Create mock google-services.json
+      if: false (only if the real one is missing)
       run: |
         if [ -s android/app/google-services.json ]; then echo "Real google-services.json present - keeping it"; exit 0; fi
         cat << 'JSON_EOF' > android/app/google-services.json
