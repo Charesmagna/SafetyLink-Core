@@ -1,3 +1,5 @@
+import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
+import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -631,6 +633,26 @@ app.get('/webhook/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webho
 app.post('/api/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/api/rl/sms', async (c) => handlePcmWebhook(c));
 app.post('/webhook/rl', async (c) => handlePcmWebhook(c));
+
+// Superadmin login (email + strong password from the server, returns a session)
+app.post('/api/admin/login', async (c) => {
+  if (!c.env.DB) return c.json({ error: 'database unavailable' }, 503 as any);
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
+  if (await tooManyFailures(c.env.DB, ip)) return c.json({ error: 'Too many attempts. Try again in 15 minutes.' }, 429 as any);
+  const b = (await c.req.json().catch(() => ({}))) as any;
+  const ok = await checkCredentials(c.env, b.email, b.password);
+  await recordAttempt(c.env.DB, ip, ok);
+  if (!ok) return c.json({ error: 'Email or password is incorrect' }, 401 as any);
+  return c.json({ token: await makeSession(c.env), expiresInHours: 8 });
+});
+app.get('/api/admin/summary', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  return c.json(await adminSummary(c.env.DB));
+});
+app.get('/api/admin/users', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  return c.json({ users: await adminUsers(c.env.DB) });
+});
 
 app.post('/api/profile/sync', async (c) => {
   const body = await c.req.json().catch(() => ({}));
