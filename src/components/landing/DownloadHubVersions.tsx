@@ -28,8 +28,15 @@ export const DownloadHubVersions: React.FC = () => {
         <h3 className="font-bold text-amber-400">Download SafetyLink Version 2 Experimental Phase</h3>
         <p className="text-xs text-slate-400 mt-1">Newer features in testing. Adds to Version 1; does not replace it.</p>
         <p className="text-xs text-slate-500 mt-2">{v2 ? 'Build ' + v2.version + ' ' + mb(v2.size) : 'Build not published yet'}</p>
-        <a className="inline-block mt-4 rounded bg-amber-600 px-4 py-2 text-sm font-bold text-white" href={WORKER + '/download/v2/safetylink.apk'}>Download Version 2 Experimental Phase</a>
+        <a className="inline-block mt-4 rounded bg-amber-600 px-4 py-2 text-sm font-bold text-white" href={WORKER + '/download/v2/safetylink.apk'}>Download beta Experimental Phase</a>
       </div>
     </div>
   );
 };
+
+/** Older versions line, shown under the download cards. */
+export const OlderVersionsLine: React.FC = () => (
+  <p className="text-sm text-slate-400 mt-4">
+    Older versions: <a className="underline" href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk">SafetyLink 1.x (legacy)</a>
+  </p>
+);
