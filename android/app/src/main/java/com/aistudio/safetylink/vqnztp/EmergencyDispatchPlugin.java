@@ -100,44 +100,6 @@ public class EmergencyDispatchPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void saveNativeProfile(PluginCall call) {
-        try {
-            android.content.Context ctx = getContext();
-            android.content.SharedPreferences.Editor profileEditor = ctx.getSharedPreferences("safetylink_prefs", android.content.Context.MODE_PRIVATE).edit();
-            
-            String name = call.getString("name");
-            if (name != null) profileEditor.putString("sl_name", name);
-            
-            String phone = call.getString("phone");
-            if (phone != null) profileEditor.putString("sl_phone", phone);
-            
-            String alertNote = call.getString("alertNote");
-            if (alertNote != null) profileEditor.putString("sl_alert_note", alertNote);
-            
-            Double lat = call.getDouble("lat");
-            Double lng = call.getDouble("lng");
-            if (lat != null && lng != null) {
-                profileEditor.putLong("sl_lat", Double.doubleToRawLongBits(lat));
-                profileEditor.putLong("sl_lng", Double.doubleToRawLongBits(lng));
-            }
-            profileEditor.apply();
-
-            JSArray contactsArr = call.getArray("contacts");
-            if (contactsArr != null) {
-                ctx.getSharedPreferences("sl_contacts_store", android.content.Context.MODE_PRIVATE).edit()
-                    .putString("list", contactsArr.toString())
-                    .apply();
-            }
-
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            call.resolve(ret);
-        } catch (Exception e) {
-            call.reject("Failed to save native profile: " + e.getMessage(), e);
-        }
-    }
-
-    @PluginMethod
     public void sendUssd(PluginCall call) {
         String code = call.getString("code");
         if (code == null || code.trim().isEmpty()) {
