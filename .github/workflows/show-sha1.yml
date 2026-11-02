@@ -11,4 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Print SHA-1 and SHA-256 of the release signing key
         run: |
-          keytool -list -v -keystore android/app/safetylink-release.keystore -alias safetylink -storepass 'SafetyLink2024!' 2>/dev/null | grep -E "SHA1|SHA256" | sed 's/^/::notice::/'
+          base64 -d .github/secrets/release-keystore.b64 > /tmp/rel.keystore
+          keytool -list -v -keystore /tmp/rel.keystore -alias safetylink -storepass 'SafetyLink2024!' > /tmp/out.txt 2>&1
+          grep -E "SHA1|SHA256" /tmp/out.txt | sed 's/^/::notice::/' || true
+          tail -n 3 /tmp/out.txt | sed 's/^/::notice::/'
