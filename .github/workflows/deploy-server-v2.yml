@@ -26,3 +26,4 @@ jobs:
         run: |
           sleep 20
           curl -s -m 30 -o /dev/null -w "admin login HTTP %{http_code}\n" -X POST https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/admin/login -H 'Content-Type: application/json' -d '{"email":"safetylink","password":"wrong"}' | sed 's/^/::notice::/'
+# redeploy 1793603669
