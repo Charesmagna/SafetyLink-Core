@@ -387,15 +387,11 @@ const handleRegisterOrg = async (c: any) => {
   if (!email || !password || !orgName || !contactName) return c.json({ error: 'All fields required' }, 400);
   const cleanName = orgName.toUpperCase().replace(/[^A-Z0-9]/g, '');
   const abbrev = cleanName.length >= 3 ? cleanName.slice(0, 9) : (cleanName || 'ORG');
-  let orgId = body.id || body.org_code || body.orgCode;
-  if (!orgId) {
-    try {
-      const existing = (await c.env.DB!.prepare("SELECT COUNT(*) as count FROM organisations WHERE id LIKE ?").bind(`SL-${abbrev}-%`).first() as any)?.count || 0;
-      orgId = `SL-${abbrev}-${String(existing + 1).padStart(3, '0')}`;
-    } catch {
-      orgId = `SL-${abbrev}-001`;
-    }
-  }
+  // The server always issues the code. Any code sent by the phone is ignored.
+  // Format: SL-<NAME>-001, 002, ... numbered from the highest existing number, so codes never repeat.
+  const last = await c.env.DB!.prepare("SELECT id FROM organisations WHERE id LIKE ? ORDER BY id DESC LIMIT 1").bind(`SL-${abbrev}-%`).first() as any;
+  const lastNum = last?.id ? parseInt(String(last.id).split('-').pop() || '0', 10) : 0;
+  const orgId = `SL-${abbrev}-${String((isNaN(lastNum) ? 0 : lastNum) + 1).padStart(3, '0')}`;
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   try {
     await c.env.DB!.prepare(
