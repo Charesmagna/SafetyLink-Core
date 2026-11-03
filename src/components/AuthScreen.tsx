@@ -246,6 +246,10 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
+    // Sign straight in with the new details, then open the dashboard (no return to the login screen).
+    const autoIn = await login(orgContactName, orgPassword, newOrg.id);
+    if (autoIn?.success) { setOrgError(''); return; }
+
     if (newOrg.approved === false) {
       setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Awaiting registry approval from Super Admin...`);
       const prefillContactName = orgContactName;
