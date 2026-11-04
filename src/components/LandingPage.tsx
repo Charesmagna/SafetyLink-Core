@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import './landing/brand-refresh.css';
 import { Header } from './landing/Header';
 import { Home } from './landing/Home';
 import { Hardware } from './landing/Hardware';
