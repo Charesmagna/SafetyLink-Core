@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ASSETS } from '../utils/cloudinary';
-import { R2_MEDIA } from '../utils/r2Assets';
 import { Header } from './landing/Header';
 import { Home } from './landing/Home';
 import { Hardware } from './landing/Hardware';
@@ -36,7 +34,6 @@ const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
 
 export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingPageProps) {
   const [page, setPage] = useState<Page>('home');
-  const [menuOpen, setMenuOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   // Check for updates on mount (will only render banner in APK)
@@ -51,12 +48,11 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   // Sync with browser hash for direct links
   useEffect(() => {
     const hash = window.location.hash.replace('#', '') as Page;
-    if (NAV_ITEMS.find(n => n.id === hash) || hash === 'payment-success') setPage(hash as Page);
+    if (NAV_ITEMS.find(n => n.id === hash) || hash === 'payment-success' || hash === 'privacy') setPage(hash);
   }, []);
 
   const navigate = (p: Page) => {
     setPage(p);
-    setMenuOpen(false);
     window.location.hash = p;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -70,49 +66,12 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white font-sans relative overflow-x-hidden">
-      {/* ── Ambient Website-Wide Video Backdrop ── */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0 overflow-hidden" 
-        aria-hidden="true"
-        style={{ opacity: 0.18 }}
-      >
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'cover',
-            filter: 'contrast(1.2) brightness(0.75)',
-          }}
-        >
-          <source src="/splash-video.mp4" type="video/mp4" />
-          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
-          <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
-          <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
-        </video>
-        <div 
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(circle at center, rgba(2,6,23,0.35) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)',
-          }} 
-        />
-      </div>
-      {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
+    <div className="safetylink-public-site min-h-screen bg-[#020617] text-white font-sans relative overflow-x-hidden">
+      {/* Public-site motion is intentionally kept inside the home hero.
+          This avoids stacking multiple full-screen videos behind every page,
+          reduces mobile data use, and keeps product content readable. */}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
 
-      {/* ── Top Nav ── */}
       <Header
         onLogin={onLogin}
         onRegisterOrg={onRegisterOrg}
@@ -120,8 +79,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         activePage={page}
       />
 
-      {/* ── Page Content ── */}
-      <div>
+      <main id="main-content" className="relative z-[1]">
         {page === 'home'       && <Home       {...sharedProps} />}
         {page === 'hardware'   && <Hardware   {...sharedProps} />}
         {page === 'store'      && <SafetyWareStore />}
@@ -131,29 +89,47 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         {page === 'usecases'   && <UseCases   {...sharedProps} />}
         {page === 'enterprise' && <Enterprise {...sharedProps} />}
         {page === 'privacy'    && <PrivacyPolicy />}
-        {page === 'payment-success' && <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}><h1 style={{ fontSize: '32px', color: '#10b981', marginBottom: '16px' }}>Payment Successful!</h1><p style={{ color: '#94a3b8', marginBottom: '24px' }}>Your subscription has been activated.</p><button onClick={() => navigate('home')} style={{ padding: '12px 24px', background: '#0f172a', color: 'white', borderRadius: '8px' }}>Return to Home</button></div>}
-      </div>
+        {page === 'payment-success' && (
+          <section className="min-h-[70vh] flex items-center justify-center flex-col px-6 text-center">
+            <h1 className="text-3xl md:text-4xl font-black text-emerald-400 mb-4">Payment Successful</h1>
+            <p className="text-slate-300 mb-6">Your subscription status is being confirmed.</p>
+            <button
+              onClick={() => navigate('home')}
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors"
+            >
+              Return to SafetyLink
+            </button>
+          </section>
+        )}
+      </main>
 
-      {/* ── CONTINUOUS TOPOLOGY OVERVIEW (PAGE-ADAPTIVE) ── */}
-      <section style={{ padding: '0 20px', maxWidth: '1240px', margin: '70px auto 0' }}>
+      <section className="relative z-[1] px-5 sm:px-6 max-w-[1240px] mx-auto mt-12 md:mt-16">
         <ContinuousTopologyOverview activePage={page} />
       </section>
-      {/* ── Footer ── */}
-      <footer className="border-t border-slate-800 px-6 py-8 text-center space-y-3 mt-12">
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500 font-mono">
+
+      <footer className="relative z-[1] border-t border-slate-800/80 px-5 sm:px-6 py-10 text-center space-y-5 mt-12 bg-slate-950/70">
+        <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-5 gap-y-3 text-xs text-slate-400">
           {NAV_ITEMS.map(n => (
-            <button key={n.id} onClick={() => navigate(n.id)} className="hover:text-slate-300 transition-colors uppercase tracking-wider">{n.label}</button>
+            <button
+              key={n.id}
+              onClick={() => navigate(n.id)}
+              className="hover:text-emerald-300 transition-colors uppercase tracking-wider"
+            >
+              {n.label}
+            </button>
           ))}
+        </nav>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-3 text-xs">
+          <a href="mailto:info@safetylink.online" className="text-sky-400 hover:text-sky-300">info@safetylink.online</a>
+          <button onClick={() => navigate('privacy')} className="text-slate-400 hover:text-slate-200">Privacy Policy</button>
+          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">WhatsApp Support</a>
+          <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">Updates Channel</a>
+          <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">Community</a>
+          <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300">Facebook</a>
         </div>
-        <div className="flex flex-wrap justify-center gap-4 text-xs">
-          <a href="mailto:info@safetylink.online" className="text-blue-400 hover:text-blue-300 font-mono">✉️ info@safetylink.online</a>
-          <button onClick={() => navigate('privacy')} className="text-slate-400 hover:text-slate-300 font-mono">Privacy Policy</button>
-          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp Support (+27 68 009 911)</a>
-          <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">📢 Channel</a>
-          <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">👥 Community Group</a>
-          <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 font-mono">📘 Facebook</a>
-        </div>
-        <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">© TM Media Solutions · Reg 2018/500191/07 · safetylink.online</p>
+        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">
+          © TM Media Solutions · Reg 2018/500191/07 · safetylink.online
+        </p>
       </footer>
     </div>
   );
