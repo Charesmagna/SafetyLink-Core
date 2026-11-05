@@ -189,7 +189,12 @@ jobs:
         SIZE=$(stat -c%s "$APK")
         DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         BASE="https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects"
-        if [ "$BRANCH" = "main" ]; then LATEST=safetylink-latest.apk; DIR=versions; else LATEST=safetylink-v2-latest.apk; DIR=versions-v2; fi
+        case "$BRANCH" in
+          main) LATEST=safetylink-latest.apk; DIR=versions ;;          # stable 2.0
+          beta) LATEST=safetylink-beta-latest.apk; DIR=versions-beta ;; # beta (testing)
+          version-1-archive) LATEST=safetylink-v1-latest.apk; DIR=versions-v1 ;; # legacy 1.x
+          *) LATEST=safetylink-dev-latest.apk; DIR=versions-dev ;;
+        esac
         for KEY in "$LATEST" "$DIR/$NAME"; do
           curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" "$BASE/$KEY" > /dev/null
           echo "published $KEY"

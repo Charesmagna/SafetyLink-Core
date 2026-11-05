@@ -310,6 +310,20 @@ async function fireAllAlerts(
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 // Latest APK, served from R2 (the repo can stay private)
+// Three downloads: stable 2.0 (/download/safetylink.apk), beta (/download/beta/...), legacy 1.x (/download/v1/...)
+const dl = (key, file) => async (c) => {
+  const obj = await (c.env as any).RELEASES?.get(key);
+  if (!obj) return c.json({ error: 'Not published yet' }, 404);
+  return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': `attachment; filename="${file}"`, 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
+};
+app.get('/download/beta/safetylink.apk', dl('safetylink-beta-latest.apk', 'SafetyLink-beta.apk'));
+app.get('/download/v1/safetylink.apk', dl('safetylink-v1-latest.apk', 'SafetyLink-1.x-legacy.apk'));
+app.get('/api/app/beta/versions', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('versions-beta/index.json');
+  const list = obj ? await obj.json().catch(() => []) : [];
+  return c.json({ versions: Array.isArray(list) ? list : [] });
+});
+
 app.get('/download/safetylink.apk', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
   if (!obj) return c.json({ error: 'No release available yet' }, 404 as any);
