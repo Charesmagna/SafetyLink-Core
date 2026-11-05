@@ -1268,6 +1268,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return newOrg;
     } catch (e) {
       console.warn('Network unavailable. Falling back to local offline vault for Org Registration.', e);
+      return { success: false, error: 'No connection to the SafetyLink server. The organisation was not created. Try again when you are online.' } as any;
       const randomHex = Math.floor(1000 + Math.random() * 9000);
       const abbrev = getOrgAbbreviation(org.name);
       const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
@@ -1547,6 +1548,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
         }
       } catch (_fbErr) {}
       console.warn('Network unavailable. Falling back to local offline vault for Login.', e);
+      return { success: false, error: 'No connection to the SafetyLink server. Check your internet and try again.', role: 'USER' } as any;
       const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
       const matchedUser = realUsers.find(u => u.username.toLowerCase() === normUsername);
       if (matchedUser) {

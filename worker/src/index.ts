@@ -399,6 +399,11 @@ const handleRegisterOrg = async (c: any) => {
     await c.env.DB!.prepare(
       'INSERT INTO organisations (id, name, contact_name, contact_email, password_hash, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(orgId, orgName, contactName, email.toLowerCase(), hash, Date.now()).run();
+
+    // 14-day trial. The server records it; the admin decides later whether an expired trial is blocked.
+    const trialEndsAt = new Date(Date.now() + 14*24*60*60*1000).toISOString();
+    await c.env.DB?.prepare('CREATE TABLE IF NOT EXISTS org_trials (org_id TEXT PRIMARY KEY, trial_ends_at TEXT NOT NULL)').run().catch(() => {});
+    await c.env.DB?.prepare('INSERT OR REPLACE INTO org_trials (org_id, trial_ends_at) VALUES (?, ?)').bind(orgId, trialEndsAt).run().catch(() => {});
     const token = makeToken({ orgId, email });
     return c.json({
       success: true,
