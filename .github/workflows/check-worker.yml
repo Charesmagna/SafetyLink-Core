@@ -1,5 +1,11 @@
 name: Check Worker
 on:
+  push:
+    branches: [beta]
+    paths:
+      - 'worker/src/index.ts'
+      - 'worker/src/zero-airtime.ts'
+      - '.github/workflows/check-worker.yml'
   workflow_dispatch:
 
 jobs:
@@ -16,5 +22,17 @@ jobs:
           echo "::notice title=api.safetylink.online pcm::$(curl -s -m 20 -X POST -w ' HTTP %{http_code}' https://api.safetylink.online/webhook/pcm | cut -c1-200)"
           BODY='{"from":"test","text":"connection test, no number","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
           SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM_WEBHOOK_SECRET" | awk '{print $NF}')
-          echo "::notice title=signed webhook workers.dev::$(curl -s -m 20 -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" -w ' HTTP %{http_code}' $W/webhook/pcm | cut -c1-300)"
-          echo "::notice title=unsigned webhook workers.dev::$(curl -s -m 20 -X POST -d '{}' -w ' HTTP %{http_code}' $W/webhook/pcm | cut -c1-200)"
+          SIGNED_CODE=$(curl -sS -m 20 -o /tmp/pcm-signed-body -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" "$W/webhook/pcm")
+          SIGNED_BODY=$(cat /tmp/pcm-signed-body)
+          echo "::notice title=signed webhook workers.dev::HTTP $SIGNED_CODE ${SIGNED_BODY:0:240}"
+          if [ "$SIGNED_CODE" != "200" ]; then
+            echo "::error::Signed PCM no-number test failed. Check GitHub PCM_WEBHOOK_SECRET against the active Worker secret and inspect Worker auth diagnostics."
+            exit 1
+          fi
+          UNSIGNED_CODE=$(curl -sS -m 20 -o /tmp/pcm-unsigned-body -w '%{http_code}' -X POST -d '{}' "$W/webhook/pcm")
+          UNSIGNED_BODY=$(cat /tmp/pcm-unsigned-body)
+          echo "::notice title=unsigned webhook workers.dev::HTTP $UNSIGNED_CODE ${UNSIGNED_BODY:0:180}"
+          if [ "$UNSIGNED_CODE" != "401" ]; then
+            echo "::error::Unsigned PCM request was not rejected as expected."
+            exit 1
+          fi
