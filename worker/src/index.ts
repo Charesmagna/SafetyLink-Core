@@ -717,15 +717,30 @@ async function handlePcmWebhookInner(c: any) {
   if (!expected && hmacSecrets.length === 0) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
   const raw = await c.req.text();
   const givenTok = (c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
-  const givenSig = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').toLowerCase().trim();
+  const signatureHeader = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').trim();
+  // SMS Forwarder sends a plain hex HMAC-SHA256 in X-Signature.
+  // Also accept the conventional "sha256=" prefix without changing the signed bytes.
+  const givenSig = signatureHeader.replace(/^sha256=/i, '').trim();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
   let sigOk = false;
   if (givenSig) {
     for (const candidate of hmacSecrets) {
-      if (safeEq(givenSig, await hexHmac(candidate, raw))) { sigOk = true; break; }
+      if (safeEq(givenSig.toLowerCase(), await hexHmac(candidate, raw))) { sigOk = true; break; }
     }
   }
-  if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);
+  if (!tokenOk && !sigOk) {
+    // Diagnostic metadata only. Never log secrets, signatures, or message contents.
+    console.warn('[PCM] authentication rejected', {
+      tokenConfigured: !!expected,
+      hmacSecretCount: hmacSecrets.length,
+      tokenProvided: !!givenTok,
+      signatureProvided: !!signatureHeader,
+      signatureLength: signatureHeader.length,
+      signaturePrefix: /^sha256=/i.test(signatureHeader) ? 'sha256=' : 'none',
+      bodyLength: raw.length,
+    });
+    return c.json({ error: 'Unauthorized' }, 401 as any);
+  }
   let body: any = {};
   try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
 
@@ -761,7 +776,8 @@ async function handlePcmWebhookInner(c: any) {
     return c.json({ ok: true, msisdn: localMsisdn, status: 'DISPATCHED_SIMULATED', isDemo: true });
   }
 
-  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, (tokenOk || sigOk) ? (c.env.PCM_WEBHOOK_SECRET || '') : (c.req.header('x-safetylink-gateway') || ''));
+  // Authentication has already been completed against the raw request body above.
+  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender);
   return c.json(outcome.json, outcome.status as any);
 }
 
