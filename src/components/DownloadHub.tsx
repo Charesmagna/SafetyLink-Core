@@ -65,6 +65,13 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
                 </a>
               )}
 
+              <a href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk"
+                className="w-full flex flex-col items-center justify-center gap-1 bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg"
+                aria-label="Download SafetyLink beta for testing">
+                <span>🧪 Download SafetyLink Beta APK</span>
+                <span className="text-[10px] font-medium normal-case tracking-normal text-amber-100">Testing build · Separate from stable version</span>
+              </a>
+
               {exeUrl ? (
                 <a href={exeUrl} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
                   💻 Download Windows EXE
