@@ -703,7 +703,7 @@ async function handlePcmWebhook(c: any) {
     return await handlePcmWebhookInner(c);
   } catch (e: any) {
     console.error('[PCM] crash', e);
-    return c.json({ ok: false, error: 'server error', detail: String(e?.message || e).slice(0, 300) }, 200 as any);
+    return c.json({ ok: false, error: 'temporary server error' }, 500 as any);
   }
 }
 
@@ -711,13 +711,20 @@ async function handlePcmWebhookInner(c: any) {
   // AUTH: every request must carry the secret token (?token= or x-pcm-token header),
   // or a valid HMAC signature. Without this anyone could trigger alerts.
   const expected = (c.env.PCM_WEBHOOK_TOKEN || '').trim();
-  const secret = (c.env.PCM_WEBHOOK_SECRET || '').trim();
-  if (!expected && !secret) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
+  // SMS Forwarder signs with HMAC. Some existing deployments stored the same
+  // shared value as PCM_WEBHOOK_TOKEN, so accept either configured secret.
+  const hmacSecrets = [c.env.PCM_WEBHOOK_SECRET, c.env.PCM_WEBHOOK_TOKEN].map((v: string) => (v || '').trim()).filter(Boolean);
+  if (!expected && hmacSecrets.length === 0) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
   const raw = await c.req.text();
   const givenTok = (c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
   const givenSig = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').toLowerCase().trim();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
-  const sigOk = !!secret && !!givenSig && safeEq(givenSig, await hexHmac(secret, raw));
+  let sigOk = false;
+  if (givenSig) {
+    for (const candidate of hmacSecrets) {
+      if (safeEq(givenSig, await hexHmac(candidate, raw))) { sigOk = true; break; }
+    }
+  }
   if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);
   let body: any = {};
   try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
