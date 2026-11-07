@@ -16,6 +16,11 @@ export interface ZeroEnv {
   AT_USERNAME?: string;
   RESPONSE_CENTRE_NUMBER?: string;
   PCM_WEBHOOK_SECRET?: string;
+  SMSGATE_USERNAME?: string;
+  SMSGATE_PASSWORD?: string;
+  SMSGATE_BASE_URL?: string;
+  SMSGATE_DEVICE_ID?: string;
+  SMSGATE_SIM_NUMBER?: string;
   RAIN_GATEWAY_MSISDN?: string;
 }
 
@@ -40,15 +45,16 @@ export function extractMsisdn(rawText: string, sender: string): string {
 }
 
 export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
-  await (db as any).prepare('ALTER TABLE sl_profiles ADD COLUMN alert_note TEXT').run().catch(() => {});
   const statements = [
-    `CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, updated_at INTEGER)`,
-    `CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
+    `CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, alert_note TEXT, updated_at INTEGER)`,
+    `CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, name TEXT, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
     `CREATE TABLE IF NOT EXISTS sl_pcm_events (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, created_at INTEGER NOT NULL, located INTEGER DEFAULT 0)`,
   ];
-  for (const sql of statements) {
-    await db.prepare(sql).run();
-  }
+  for (const sql of statements) await db.prepare(sql).run();
+
+  // Backward-compatible migrations for databases created by earlier beta builds.
+  await db.prepare('ALTER TABLE sl_profiles ADD COLUMN alert_note TEXT').run().catch(() => {});
+  await db.prepare('ALTER TABLE sl_contacts ADD COLUMN name TEXT').run().catch(() => {});
 }
 
 export async function syncProfile(env: ZeroEnv, body: any, presentedToken: string): Promise<{ status: number; json: any }> {
@@ -133,16 +139,38 @@ async function notifyContacts(env: ZeroEnv, opts: {
       results.push({ to, channel: 'WHATSAPP', ok: !!r?.ok, status: r?.status });
     }
     let smsOk = false;
-    // 1) Free route first: Rain SIM through SMSGate (200 SMS a month included)
-    const sgU = (env as any).SMSGATE_USERNAME, sgP = (env as any).SMSGATE_PASSWORD;
+    // Primary route: SMS-Gate Cloud delivers through the registered Rain Android gateway.
+    const sgU = env.SMSGATE_USERNAME, sgP = env.SMSGATE_PASSWORD;
     if (sgU && sgP) {
-      const r = await fetch('https://api.sms-gate.app/3rdparty/v1/messages', {
-        method: 'POST',
-        headers: { Authorization: 'Basic ' + btoa(`${sgU}:${sgP}`), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textMessage: { text: smsBody }, phoneNumbers: [to] }),
-      }).catch(() => null);
-      smsOk = !!r?.ok;
-      results.push({ to, channel: 'SMS', provider: 'smsgate', ok: smsOk, status: r?.status });
+      const base = (env.SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\\/+$/, '');
+      const simNumber = Math.max(1, Math.min(2, Number(env.SMSGATE_SIM_NUMBER || 1) || 1));
+      try {
+        const r = await fetch(`${base}/3rdparty/v1/messages`, {
+          method: 'POST',
+          headers: { Authorization: 'Basic ' + btoa(`${sgU}:${sgP}`), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            textMessage: { text: smsBody },
+            phoneNumbers: [to],
+            ...(env.SMSGATE_DEVICE_ID ? { deviceId: env.SMSGATE_DEVICE_ID } : {}),
+            simNumber,
+            ttl: 1800,
+            priority: 100,
+          }),
+        });
+        const responseText = (await r.text().catch(() => '')).slice(0, 500);
+        let responseBody: any = {};
+        try { responseBody = responseText ? JSON.parse(responseText) : {}; } catch { /* retain response text */ }
+        smsOk = r.ok;
+        results.push({
+          to, channel: 'SMS', provider: 'smsgate',
+          ok: smsOk, status: r.status,
+          state: smsOk ? 'QUEUED' : 'REJECTED',
+          messageId: responseBody.id || responseBody.messageId || undefined,
+          detail: smsOk ? undefined : responseText,
+        });
+      } catch (error: any) {
+        results.push({ to, channel: 'SMS', provider: 'smsgate', ok: false, state: 'ERROR', detail: String(error?.message || error).slice(0, 200) });
+      }
     }
     // 2) Backups only if the Rain route did not work
     if (!smsOk && env.AT_API_KEY && env.AT_USERNAME) {
