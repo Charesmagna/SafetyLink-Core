@@ -10,7 +10,7 @@ jobs:
         env:
           PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
         run: |
-          W=https://safetylink-api.d089bef8b0b58c5d9506b512ec2f63dc.workers.dev
+          W=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
           echo "::notice title=health workers.dev::$(curl -s -m 20 -w ' HTTP %{http_code}' $W/api/health/providers | cut -c1-300)"
           echo "::notice title=api.safetylink.online health::$(curl -s -m 20 -w ' HTTP %{http_code}' https://api.safetylink.online/api/health/providers | cut -c1-200)"
           echo "::notice title=api.safetylink.online pcm::$(curl -s -m 20 -X POST -w ' HTTP %{http_code}' https://api.safetylink.online/webhook/pcm | cut -c1-200)"
