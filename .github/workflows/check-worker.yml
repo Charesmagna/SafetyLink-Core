@@ -15,18 +15,25 @@ jobs:
       - name: Test Worker and webhook
         env:
           PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+          PCM_WEBHOOK_TOKEN: ${{ secrets.PCM_WEBHOOK_TOKEN }}
         run: |
           W=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
           echo "::notice title=health workers.dev::$(curl -s -m 20 -w ' HTTP %{http_code}' $W/api/health/providers | cut -c1-300)"
           echo "::notice title=api.safetylink.online health::$(curl -s -m 20 -w ' HTTP %{http_code}' https://api.safetylink.online/api/health/providers | cut -c1-200)"
           echo "::notice title=api.safetylink.online pcm::$(curl -s -m 20 -X POST -w ' HTTP %{http_code}' https://api.safetylink.online/webhook/pcm | cut -c1-200)"
           BODY='{"from":"test","text":"connection test, no number","sentStamp":1,"receivedStamp":1,"sim":"sim1"}'
-          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$PCM_WEBHOOK_SECRET" | awk '{print $NF}')
-          SIGNED_CODE=$(curl -sS -m 20 -o /tmp/pcm-signed-body -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" "$W/webhook/pcm")
-          SIGNED_BODY=$(cat /tmp/pcm-signed-body)
-          echo "::notice title=signed webhook workers.dev::HTTP $SIGNED_CODE ${SIGNED_BODY:0:240}"
+          SIGNED_CODE=000
+          MATCHED_SECRET=none
+          for HMAC_SECRET in "$PCM_WEBHOOK_SECRET" "$PCM_WEBHOOK_TOKEN"; do
+            [ -z "$HMAC_SECRET" ] && continue
+            SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $NF}')
+            SIGNED_CODE=$(curl -sS -m 20 -o /tmp/pcm-signed-body -w '%{http_code}' -X POST -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY" "$W/webhook/pcm")
+            if [ "$SIGNED_CODE" = "200" ]; then MATCHED_SECRET=one-configured-GitHub-secret; break; fi
+          done
+          SIGNED_BODY=$(cat /tmp/pcm-signed-body 2>/dev/null || true)
+          echo "::notice title=signed webhook workers.dev::HTTP $SIGNED_CODE secret_match=$MATCHED_SECRET ${SIGNED_BODY:0:200}"
           if [ "$SIGNED_CODE" != "200" ]; then
-            echo "::error::Signed PCM no-number test failed. Check GitHub PCM_WEBHOOK_SECRET against the active Worker secret and inspect Worker auth diagnostics."
+            echo "::error::Neither configured GitHub PCM secret authenticated against the active Worker. Compare secret configuration without printing values."
             exit 1
           fi
           UNSIGNED_CODE=$(curl -sS -m 20 -o /tmp/pcm-unsigned-body -w '%{http_code}' -X POST -d '{}' "$W/webhook/pcm")
