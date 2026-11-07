@@ -216,6 +216,48 @@ export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate 
               </div>
             </div>
 
+            {/* SafetyLink Beta — separate development channel; never aliases Version 2 */}
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)', fontSize: '10px', fontWeight: 800, padding: '4px 10px', borderRadius: '999px', fontFamily: "'JetBrains Mono',monospace" }}>
+                BETA · TESTING ONLY
+              </div>
+              <div style={{ fontSize: '2.5rem' }}>🧪</div>
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Download SafetyLink Beta (Development Channel)</h3>
+                <p style={{ fontSize: '12px', color: '#f59e0b', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
+                  Latest Beta build · Separate from Version 1 and Version 2
+                </p>
+              </div>
+              <p style={{ fontSize: '13px', color: '#8892a4', lineHeight: 1.6, flex: 1 }}>
+                The dedicated beta channel for testing new SafetyLink features before promotion to a stable release. This package is not Version 1 or Version 2 and may contain unfinished features.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <a
+                  href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk"
+                  download
+                  style={{
+                    background: '#f59e0b',
+                    color: '#020617',
+                    fontWeight: 800,
+                    fontSize: '12px',
+                    letterSpacing: '.06em',
+                    padding: '14px 20px',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 16px rgba(245,158,11,0.25)',
+                    transition: 'opacity .2s',
+                  }}
+                >
+                  <span>🧪</span> DOWNLOAD SAFETYLINK BETA APK
+                </a>
+              </div>
+            </div>
+
             {/* Windows Control Room */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
               <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(14,165,233,0.15)', color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.3)', fontSize: '10px', fontWeight: 800, padding: '4px 10px', borderRadius: '999px', fontFamily: "'JetBrains Mono',monospace" }}>
