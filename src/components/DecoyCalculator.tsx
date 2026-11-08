@@ -6,7 +6,7 @@ export const DecoyCalculator: React.FC = () => {
   const { 
     decoyCode, 
     decoyDistressCode, 
-    triggerPanic, 
+    startMultiStagePanic, 
     addToast,
     logout
   } = useAppStore();
@@ -49,7 +49,7 @@ export const DecoyCalculator: React.FC = () => {
 
       if (codeTyped === decoyDistressCode) {
         // Trigger covert alert!
-        triggerPanic('Covert distress activated via Decoy Calculator.');
+        startMultiStagePanic('Covert distress activated via Decoy Calculator.');
         addToast('Secure connection established (Covert Mode).', 'success');
         setDisplay('0');
         setEquation('');

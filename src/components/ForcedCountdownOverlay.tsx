@@ -240,7 +240,7 @@ export const ForcedCountdownOverlay: React.FC = () => {
                   onClick={() => {
                     cancelSOS();
                     useAppStore.getState().addAuditLog('DISPATCH', 'SEVERE', 'Preset Triggered: ' + preset.name, `Immediate route to ${preset.route} initiated.`);
-                    useAppStore.getState().triggerPanic(`${preset.name}: Emergency routing to ${preset.route}`);
+                    useAppStore.getState().startMultiStagePanic(`${preset.name}: Emergency routing to ${preset.route}`);
                   }}
                   className="p-2.5 bg-slate-900/80 hover:bg-slate-850 border border-slate-800 rounded-xl flex items-center justify-between gap-3 text-left transition-all hover:border-slate-500/40 group cursor-pointer"
                 >

@@ -5,7 +5,7 @@ import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AndroidWidgetSimulator: React.FC = () => {
   const { 
-    triggerPanic, 
+    startMultiStagePanic, 
     addAuditLog, 
     activeSOSState, 
     userLocation,
@@ -46,7 +46,7 @@ export const AndroidWidgetSimulator: React.FC = () => {
     addAuditLog('DISPATCH', 'SEVERE', 'Widget 10s grace period expired. Broadcasting SOS!', 'Transmitting cellular telemetry');
     
     try {
-      await triggerPanic('Emergency SOS triggered from Capacitor Android Home Widget.');
+      await startMultiStagePanic('Emergency SOS triggered from Capacitor Android Home Widget.');
     } catch (e) {
       console.error(e);
     }

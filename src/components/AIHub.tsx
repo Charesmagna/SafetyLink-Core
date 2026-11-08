@@ -4,7 +4,7 @@ import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 
 export const AIHub: React.FC = () => {
-  const { addAuditLog, triggerPanic } = useAppStore();
+  const { addAuditLog, startMultiStagePanic } = useAppStore();
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'voice' | 'image' | 'surveillance' | 'lyria' | 'research'>('chat');
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export const AIHub: React.FC = () => {
       if (latestResult.isFinal) {
         const transcript = latestResult[0].transcript.trim().toLowerCase();
         if (transcript.includes('execute emergency protocol') || transcript.includes('help me now')) {
-           triggerPanic('Triggered via Voice Command');
+           startMultiStagePanic('Triggered via Voice Command');
            addAuditLog('SYSTEM', 'SEVERE', 'Emergency protocol initiated via covert voice command');
         }
       }
@@ -43,7 +43,7 @@ export const AIHub: React.FC = () => {
         recognition.stop();
       } catch(e) {}
     };
-  }, [triggerPanic, addAuditLog]);
+  }, [startMultiStagePanic, addAuditLog]);
 
   // Chat states
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; timestamp: number }>>([

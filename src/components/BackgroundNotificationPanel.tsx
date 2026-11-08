@@ -11,7 +11,7 @@ export const BackgroundNotificationPanel: React.FC = () => {
     bleDevices,
     thingsBoardToken,
     activeSOSState,
-    triggerPanic,
+    startMultiStagePanic,
     addAuditLog,
     addNotificationPanelLog,
     isAppMinimized,
@@ -255,7 +255,7 @@ export const BackgroundNotificationPanel: React.FC = () => {
                             details: 'Emergency SOS activated from Android Notification Panel Mini-App.',
                             coordinates: userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : undefined
                           });
-                          await triggerPanic('SOS emergency broadcast activated from persistent Android notification shade.');
+                          await startMultiStagePanic('SOS emergency broadcast activated from persistent Android notification shade.');
                         }}
                         disabled={activeSOSState !== 'IDLE'}
                         className="py-2.5 col-span-2 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 disabled:bg-slate-800 disabled:text-slate-500 text-white font-black uppercase tracking-wider rounded-xl transition-all border border-red-500/30 shadow-lg text-center flex items-center justify-center gap-1.5 active:scale-95"
