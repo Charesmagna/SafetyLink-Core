@@ -2343,7 +2343,8 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
         // Stage 3: Direct Telephony Emergency Voice Call
         get().addAuditLog('SYSTEM', 'INFO', 'Stage 3: Direct Voice Call Channel', `Initiating voice call channel to ${effectivePrimaryPhone}`);
-        const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP' || c.channelType === 'GROUP') || get().contacts[0];
+        // WhatsApp only when a contact has WhatsApp set. No fallback to the first contact.
+        const waContact = get().contacts.find(c => c.channelType === 'WHATSAPP');
         if (waContact && waContact.phone) {
           const waMsg = `🚨 SAFETYLINK SOS: ${emergencyPayload.callerName} needs help! Location: [${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}] | Map: https://maps.google.com/?q=${coords.lat},${coords.lng}`;
           NativeDispatchService.openWhatsApp(waContact.phone, waMsg).catch(err => {
