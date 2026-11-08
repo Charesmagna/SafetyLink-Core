@@ -40,7 +40,6 @@ export function extractMsisdn(rawText: string, sender: string): string {
 }
 
 export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
-  await (db as any).prepare('ALTER TABLE sl_profiles ADD COLUMN alert_note TEXT').run().catch(() => {});
   const statements = [
     `CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, updated_at INTEGER)`,
     `CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`,
@@ -49,6 +48,9 @@ export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
   for (const sql of statements) {
     await db.prepare(sql).run();
   }
+  // Additive migrations, run after the tables exist. Errors are ignored when the column is already there.
+  await (db as any).prepare('ALTER TABLE sl_profiles ADD COLUMN alert_note TEXT').run().catch(() => {});
+  await (db as any).prepare('ALTER TABLE sl_contacts ADD COLUMN name TEXT').run().catch(() => {});
 }
 
 export async function syncProfile(env: ZeroEnv, body: any, presentedToken: string): Promise<{ status: number; json: any }> {
