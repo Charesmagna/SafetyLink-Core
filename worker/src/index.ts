@@ -640,6 +640,13 @@ app.get('/pcm/:token', (c) => {
   return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
 });
 app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
+// Gateway heartbeat: the Rain phone pings this. Only a matching secret token is accepted.
+app.on(['GET', 'POST'], '/webhook/heartbeat/:token', async (c) => {
+  const expected = String((c.env as any).HEARTBEAT_TOKEN || '');
+  if (!expected || c.req.param('token') !== expected) return c.json({ error: 'not_found' }, 404 as any);
+  return c.json({ ok: true, at: Date.now() });
+});
+
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
