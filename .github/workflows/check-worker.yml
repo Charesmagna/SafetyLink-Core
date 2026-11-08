@@ -12,6 +12,20 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Beta
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install locked Worker dependencies
+        working-directory: worker
+        run: npm ci
+      - name: TypeScript compile check
+        working-directory: worker
+        run: npx tsc --noEmit
       - name: Test Worker and webhook
         env:
           PCM_WEBHOOK_SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
