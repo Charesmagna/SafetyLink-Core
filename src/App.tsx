@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import SituationalAwareness from './components/SituationalAwareness';
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
@@ -1010,7 +1011,7 @@ const App: React.FC = () => {
       </main>
 
       {/* Collapsible Left Side Hamburger Drawer */}
-      <AnimatePresence>
+      {createPortal(<AnimatePresence>
         {isDrawerOpen && (
           <>
             {/* Backdrop */}
@@ -1354,7 +1355,7 @@ const App: React.FC = () => {
             </motion.div>
           </>
         )}
-      </AnimatePresence>
+      </AnimatePresence>, document.body)}
     </div>
     );
   };
