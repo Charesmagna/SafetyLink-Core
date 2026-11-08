@@ -311,7 +311,7 @@ async function fireAllAlerts(
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 // Latest APK, served from R2 (the repo can stay private)
 // Three downloads: stable 2.0 (/download/safetylink.apk), beta (/download/beta/...), legacy 1.x (/download/v1/...)
-const dl = (key, file) => async (c) => {
+const dl = (key: string, file: string) => async (c: any) => {
   const obj = await (c.env as any).RELEASES?.get(key);
   if (!obj) return c.json({ error: 'Not published yet' }, 404);
   return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': `attachment; filename="${file}"`, 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
