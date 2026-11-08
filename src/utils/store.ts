@@ -906,7 +906,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     { id: 'a2', name: 'Tor Browser Client', packageName: 'org.torproject.torbrowser' }
   ]),
   silenceAlerts: getStoredJSON<boolean>('sl_silence_alerts', false),
-  sosCountdownDuration: getStoredJSON<number>('sl_sos_countdown_duration', 5),
+  sosCountdownDuration: getStoredJSON<number>('sl_sos_countdown_duration', 10),
   sosSoundSetup: getStoredJSON<string>('sl_sos_sound_setup', 'Standard Siren'),
   firestoreSync: getStoredJSON<boolean>('sl_firestore_sync', false),
 
