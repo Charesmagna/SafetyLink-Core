@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 export const ForcedCountdownOverlay: React.FC = () => {
   const { 
     panicCountdown, 
-    cancelSOS, 
+    cancelSOS, attemptCancelSOS, 
     userLocation, 
     currentUser,
     silenceAlerts
@@ -142,7 +142,14 @@ export const ForcedCountdownOverlay: React.FC = () => {
     }
   }, [panicCountdown]);
 
-    if (panicCountdown === null) return null;
+    // The overlay only closes after the correct PIN. Wrong PIN keeps it locked.
+  const pinCancel = () => {
+    const p = window.prompt('Enter your SafetyLink PIN to cancel the alert');
+    if (p !== null && attemptCancelSOS(p)) return;
+    if (p !== null) window.alert('Wrong PIN. The alert is still active.');
+  };
+
+  if (panicCountdown === null) return null;
 
           
   return (
@@ -197,7 +204,7 @@ export const ForcedCountdownOverlay: React.FC = () => {
             <button
               id="forced-disarm-trigger"
               type="button"
-              onClick={cancelSOS}
+              onClick={pinCancel}
               className="absolute inset-6 rounded-full bg-red-650 hover:bg-red-500 border border-red-400/30 flex flex-col items-center justify-center text-white transition-all duration-300 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(239,68,68,0.4)] cursor-pointer focus:outline-none"
             >
               <span className="text-6xl font-black font-mono leading-none tracking-tight">
@@ -238,7 +245,7 @@ export const ForcedCountdownOverlay: React.FC = () => {
                   type="button"
                   id={preset.id}
                   onClick={() => {
-                    cancelSOS();
+                    pinCancel();
                     useAppStore.getState().addAuditLog('DISPATCH', 'SEVERE', 'Preset Triggered: ' + preset.name, `Immediate route to ${preset.route} initiated.`);
                     useAppStore.getState().startMultiStagePanic(`${preset.name}: Emergency routing to ${preset.route}`);
                   }}
