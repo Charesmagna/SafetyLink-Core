@@ -164,7 +164,7 @@ async function notifyContacts(env: ZeroEnv, opts: {
     // Primary route: SMS-Gate Cloud delivers through the registered Rain Android gateway.
     const sgU = env.SMSGATE_USERNAME, sgP = env.SMSGATE_PASSWORD;
     if (sgU && sgP) {
-      const base = (env.SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\\/+$/, '');
+      const base = (env.SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '');
       const simNumber = Math.max(1, Math.min(2, Number(env.SMSGATE_SIM_NUMBER || 1) || 1));
       try {
         const r = await fetch(`${base}/3rdparty/v1/messages`, {
