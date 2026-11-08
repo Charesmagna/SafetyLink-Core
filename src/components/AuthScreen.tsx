@@ -633,7 +633,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 <div className="flex-grow border-t border-slate-900"></div>
               </div>
 
-              <button
+              {false && <button
                 type="button"
                 onClick={async () => {
                   const res = await signInWithGoogle();
@@ -655,7 +655,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   <path d="M1 1h22v22H1z" fill="none"/>
                 </svg>
                 Sign In with Google
-              </button>
+              </button>}
 
               <div className="flex justify-between text-[10px] pt-4 border-t border-slate-900 font-mono font-bold uppercase tracking-wider">
                 <button
@@ -939,7 +939,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 <div className="flex-grow border-t border-slate-900"></div>
               </div>
 
-              <button
+              {false && <button
                 type="button"
                 onClick={async () => {
                   const res = await signInWithGoogle();
@@ -957,7 +957,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   <path d="M1 1h22v22H1z" fill="none"/>
                 </svg>
                 Sign Up with Google
-              </button>
+              </button>}
 
               <div className="text-center pt-2">
                 <button
