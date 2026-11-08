@@ -27,9 +27,8 @@ export const DownloadHubVersions: React.FC = () => {
 
   return (
     <div className="grid gap-4 md:grid-cols-3 my-6">
-      {card('SafetyLink 2.0 (Stable)', 'Latest tested version. Recommended for everyone.', WORKER + '/download/safetylink.apk', 'Download stable', 'border-emerald-700', v1 ? 'Version ' + v1.version : '')}
-      {card('SafetyLink 1.x (Legacy)', 'Older version, kept for anyone who needs it.', WORKER + '/download/v1/safetylink.apk', 'Download 1.x', 'border-slate-700', 'Older release')}
-      {card('SafetyLink Beta (Testing)', 'Newest changes, still being tested. Expect rough edges.', WORKER + '/download/beta/safetylink.apk', 'Download beta', 'border-amber-600', 'Work in progress')}
+      {card('SafetyLink Version 1 (Stable)', 'The tested, recommended version. Works for everyone.', WORKER + '/download/safetylink.apk', 'Download Version 1', 'border-emerald-700', v1 ? 'Version ' + v1.version : '')}
+      {card('SafetyLink Version 1 Beta', 'Newest changes, still being tested. Expect rough edges.', WORKER + '/download/beta/safetylink.apk', 'Download Version 1 Beta', 'border-amber-600', 'Work in progress')}
     </div>
   );
 };
