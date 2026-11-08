@@ -91,16 +91,25 @@ export async function syncProfile(env: ZeroEnv, body: any, presentedToken: strin
   ).bind(phone, String(body?.name || '').slice(0, 80), Number.isFinite(lat) ? lat : null, Number.isFinite(lng) ? lng : null, token, now).run();
   const note = String(body?.alertNote || '').replace(/\s+/g, ' ').trim().slice(0, 140);
   await env.DB.prepare('UPDATE sl_profiles SET alert_note=? WHERE phone=?').bind(note || null, phone).run().catch(() => {});
-  await env.DB.prepare('DELETE FROM sl_contacts WHERE owner_phone=?').bind(phone).run();
+  // Replace the contact set atomically. A failed insert must not leave the user
+  // with an empty/partially-written emergency contact list.
+  const contactStatements: D1PreparedStatement[] = [
+    env.DB.prepare('DELETE FROM sl_contacts WHERE owner_phone=?').bind(phone),
+  ];
+  const seen = new Set<string>();
+  let savedContactCount = 0;
   for (let i = 0; i < contacts.length; i++) {
-    const c = contacts[i] || {};
-    const contactPhone = toE164(c.phone || '');
-    if (!contactPhone || contactPhone === phone) continue;
-    await env.DB.prepare(
+    const contact = contacts[i] || {};
+    const contactPhone = toE164(contact.phone || '');
+    if (!contactPhone || contactPhone === phone || seen.has(contactPhone)) continue;
+    seen.add(contactPhone);
+    contactStatements.push(env.DB.prepare(
       'INSERT INTO sl_contacts (id, owner_phone, name, contact_phone, sort_order) VALUES (?, ?, ?, ?, ?)'
-    ).bind(crypto.randomUUID(), phone, String(c.name || '').slice(0, 80), contactPhone, i).run();
+    ).bind(crypto.randomUUID(), phone, String(contact.name || '').slice(0, 80), contactPhone, savedContactCount));
+    savedContactCount++;
   }
-  return { status: 200, json: { ok: true, phone, token, contacts: contacts.length } };
+  await env.DB.batch(contactStatements);
+  return { status: 200, json: { ok: true, phone, token, contacts: savedContactCount } };
 }
 
 async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string; contacts: string[]; lat?: number; lng?: number; note?: string }> {
