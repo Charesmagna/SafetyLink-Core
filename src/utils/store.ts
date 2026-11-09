@@ -866,7 +866,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   })(),
   currentUser: getStoredJSON<UserProfile | null>('sl_current_user', null),
   currentOrg: getStoredJSON<Organization | null>('sl_current_org', null),
-  superAdminActive: getStoredJSON<boolean>('sl_super_admin', false),
+  // PBKDF2 admin sessions are memory-only; never restore an admin role from local storage.
+  superAdminActive: false,
   isTrialEnabled: getStoredJSON<boolean>('sl_trial_enabled', true),
   setTrialEnabled: (enabled: boolean) => {
     setStoredJSON('sl_trial_enabled', enabled);
