@@ -24,7 +24,7 @@ export interface ZeroEnv {
   RAIN_GATEWAY_MSISDN?: string;
 }
 
-const DEDUPE_MS = 120_000;
+const DEDUPE_MS = 90_000; // same caller, 90 seconds
 
 export function toE164(raw: string): string {
   let n = String(raw || '').replace(/[^0-9+]/g, '');
