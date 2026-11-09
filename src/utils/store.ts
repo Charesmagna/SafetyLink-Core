@@ -107,6 +107,7 @@ interface AppState {
   superAdminActive: boolean;
   /** PBKDF2 session used only by /api/admin/* endpoints. */
   adminSessionToken: string | null;
+  lastAuthError: string | null;
   token: string | null;
   customTools: CustomTool[];
 
@@ -873,6 +874,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   token: getStoredJSON<string | null>('sl_jwt_token', null),
   adminSessionToken: null,
+  lastAuthError: null,
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
 
   // Floating widget states
@@ -1054,6 +1056,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   registerUser: async (user) => {
     try {
+      set({ lastAuthError: null });
       const result = await safetyLinkAuth.registerUser({
         username: user.username,
         password: user.password || '',
@@ -1091,6 +1094,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { success: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'User registration failed.';
+      set({ lastAuthError: message });
       get().addAuditLog('SECURITY', 'WARN', 'User Registration Failed', message);
       return { success: false, error: message };
     }
@@ -1098,6 +1102,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   registerOrganization: async (org) => {
     try {
+      set({ lastAuthError: null });
       const result = await safetyLinkAuth.registerOrganization({
         name: org.name,
         contactName: org.contactName,
@@ -1128,6 +1133,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       return createdOrg;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Organization registration failed.';
+      set({ lastAuthError: message });
       get().addAuditLog('SECURITY', 'WARN', 'Organization Registration Failed', message);
       return null;
     }
