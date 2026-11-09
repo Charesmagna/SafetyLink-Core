@@ -1,0 +1,48 @@
+name: Auth Remediation Verification
+
+on:
+  push:
+    branches:
+      - copilot/auth-remediation-handoff
+    paths:
+      - "src/utils/store.ts"
+      - "src/components/AuthScreen.tsx"
+      - "src/services/SafetyLinkAuthClient.ts"
+      - "src/tests/SafetyLinkAuthClient.test.ts"
+      - "worker/src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "worker/package.json"
+      - "worker/package-lock.json"
+      - ".github/workflows/auth-remediation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install app dependencies
+        run: npm ci
+      - name: Auth contract tests
+        run: npm run test:auth
+      - name: App typecheck
+        run: npm run lint
+      - name: App production build
+        run: npm run build
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci
+      - name: Worker TypeScript check
+        working-directory: worker
+        run: npx tsc --noEmit -p tsconfig.json
