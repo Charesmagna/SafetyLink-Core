@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SafetyLinkAuthClient } from './SafetyLinkAuthClient';
+import { SafetyLinkAuthClient } from '../services/SafetyLinkAuthClient.ts';
 
 function response(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
