@@ -184,15 +184,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     });
 
     if (res.success) {
-      setUserSuccessMsg('Profile created successfully! Accessing your SafetyLink Console...');
-      const tempUsername = userUsername.trim();
-      const tempPassword = effectivePassword;
-      const tempOrg = effectiveOrgCode;
-
-      setTimeout(async () => {
-        await login(tempUsername, tempPassword, tempOrg);
-        setUserSuccessMsg('');
-      }, 400);
+      setUserSuccessMsg('Profile created and authenticated by SafetyLink. Opening your console...');
     } else {
       setUserError(res.error || 'Registration failed.');
     }
@@ -242,42 +234,10 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
-    // Sign straight in with the new details, then open the dashboard (no return to the login screen).
-    const autoIn = await login(orgContactName, orgPassword, newOrg.id);
-    if (autoIn?.success) { setOrgError(''); return; }
+    // The store has already installed the Worker-issued token and server-generated org code.
+    setOrgSuccessMsg(`Organization registered and authenticated. Server-issued code: ${newOrg.id}.`);
+    setOrgError('');
 
-    if (newOrg.approved === false) {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Awaiting registry approval from Super Admin...`);
-      const prefillContactName = orgContactName;
-      const prefillOrgId = generatedOrgId;
-      setTimeout(() => {
-        setView('LOGIN');
-        setLoginUsername(prefillContactName);
-        setLoginOrgCode(prefillOrgId);
-        setOrgSuccessMsg('');
-        setOrgName('');
-        setOrgContactName('');
-        setOrgEmail('');
-        setOrgPassword('');
-        setOrgPassword('');
-        setGeneratedOrgId('');
-        setShowIdApplication(false);
-      }, 4000);
-    } else {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Logging you in...`);
-      const registeredContactName = orgContactName;
-      const registeredOrgId = generatedOrgId;
-
-      setTimeout(async () => {
-        await login(registeredContactName, orgPassword, registeredOrgId);
-        setOrgSuccessMsg('');
-        setOrgName('');
-        setOrgContactName('');
-        setOrgEmail('');
-        setGeneratedOrgId('');
-        setShowIdApplication(false);
-      }, 1500);
-    }
   };
 
   return (
