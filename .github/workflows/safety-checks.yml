@@ -1,0 +1,32 @@
+name: Safety checks (run on every change to beta)
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Web app builds
+        run: |
+          npm install --no-audit --no-fund --legacy-peer-deps >/dev/null 2>&1
+          npm run build
+      - name: Server compiles
+        working-directory: worker
+        run: |
+          npm install --no-audit --no-fund --legacy-peer-deps >/dev/null 2>&1
+          npx --yes -p typescript tsc --noEmit
+      - name: Live endpoints respond
+        run: |
+          B=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
+          a=$(curl -s -m 30 -o /dev/null -w "%{http_code}" $B/download/safetylink.apk)
+          test "$a" = "200" || { echo "::error::stable APK download is $a"; exit 1; }
+          s=$(curl -s -m 30 -o /dev/null -w "%{http_code}" -X POST $B/api/admin/login -H 'Content-Type: application/json' -d '{"email":"safetylink","password":"wrong"}')
+          test "$s" = "401" || { echo "::error::superadmin login endpoint is $s"; exit 1; }
+          o=$(curl -s -m 30 -X POST $B/api/login -H 'Content-Type: application/json' -d '{"username":"x","password":"y"}' -o /dev/null -w "%{http_code}")
+          test "$o" != "500" || { echo "::error::login endpoint is failing"; exit 1; }
+          echo "::notice::all live checks passed"
