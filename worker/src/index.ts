@@ -470,9 +470,10 @@ const handleLogin = async (c: any) => {
   if (!username || !password) return c.json({ error: 'Credentials required' }, 400);
 
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
+  // The login form accepts either the account username or its registered email.
   const user = await c.env.DB!.prepare(
-    'SELECT id, username, org_id, role, email, phone FROM users WHERE username = ? AND password_hash = ?'
-  ).bind(username, hash).first().catch(() => null) as any;
+    'SELECT id, username, org_id, role, email, phone FROM users WHERE (username = ? OR email = ?) AND password_hash = ?'
+  ).bind(username, username, hash).first().catch(() => null) as any;
   if (!user) {
     // Try org login
     const targetOrgCode = (orgCode || username || '').toUpperCase();
