@@ -228,16 +228,12 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
-    if (!generatedOrgId) {
-      setOrgError('Please expand the menu below and generate a unique organization ID first.');
-      return;
-    }
 
     const newOrg = await registerOrganization({
       name: orgName,
       contactName: orgContactName,
       contactEmail: orgEmail,
-      id: generatedOrgId,
+      id: '', // the server issues the code
       password: orgPassword
     });
 
@@ -251,7 +247,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     if (autoIn?.success) { setOrgError(''); return; }
 
     if (newOrg.approved === false) {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Awaiting registry approval from Super Admin...`);
+      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Awaiting registry approval from Super Admin...`);
       const prefillContactName = orgContactName;
       const prefillOrgId = generatedOrgId;
       setTimeout(() => {
@@ -268,7 +264,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
         setShowIdApplication(false);
       }, 4000);
     } else {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${generatedOrgId}. Logging you in...`);
+      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Logging you in...`);
       const registeredContactName = orgContactName;
       const registeredOrgId = generatedOrgId;
 
