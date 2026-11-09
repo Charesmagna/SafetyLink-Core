@@ -62,7 +62,7 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 app.use('*', cors({
-  origin: ['https://safetylink.online', 'http://localhost:5173', 'capacitor://localhost', 'http://localhost'],
+  origin: ['https://safetylink.online', 'http://localhost:5173', 'capacitor://localhost', 'http://localhost', 'https://localhost'],
   credentials: true,
 }));
 
