@@ -160,14 +160,14 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     setUserError('');
     setUserSuccessMsg('');
 
-    if (!userUsername.trim() || !userEmail.trim()) {
-      setUserError('Username and Email are required.');
+    if (!userUsername.trim() || !userEmail.trim() || !userPassword) {
+      setUserError('Username, email, and password are required.');
       return;
     }
 
     const effectiveFullName = userFullName.trim() || userUsername.trim();
-    const effectivePhone = userPhone.trim() || '+27 00 000 0000';
-    const effectivePassword = userPassword || 'demo123';
+    const effectivePhone = userPhone.trim();
+    const effectivePassword = userPassword;
     const effectiveOrgCode = userOrgCode.trim();
 
     const res = await registerUser({
