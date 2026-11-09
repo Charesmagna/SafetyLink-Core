@@ -8,6 +8,9 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
+import { SafetyLinkAuthClient } from '../services/SafetyLinkAuthClient';
+
+const safetyLinkAuth = new SafetyLinkAuthClient(import.meta.env.VITE_API_URL || undefined);
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 import { UpdateInfo } from '../services/UpdateService';
@@ -102,6 +105,8 @@ interface AppState {
   currentUser: UserProfile | null;
   currentOrg: Organization | null;
   superAdminActive: boolean;
+  /** PBKDF2 session used only by /api/admin/* endpoints. */
+  adminSessionToken: string | null;
   token: string | null;
   customTools: CustomTool[];
 
@@ -867,6 +872,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isTrialEnabled: enabled });
   },
   token: getStoredJSON<string | null>('sl_jwt_token', null),
+  adminSessionToken: null,
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
 
   // Floating widget states
@@ -1047,557 +1053,153 @@ export const useAppStore = create<AppState>((set, get) => ({
   downloadedLanguages: getStoredJSON<string[]>('sl_downloaded_languages', ['en', 've']),
 
   registerUser: async (user) => {
-    const shouldAutoLogin = user.autoLogin !== false;
-    // 1. If in demo mode, do the local mock registration
-    if (get().demoMode) {
-      const users = get().users;
-      const exists = users.some(u => u.username.toLowerCase() === user.username.toLowerCase());
-      if (exists) {
-        return { success: false, error: 'Username is already taken.' };
-      }
-      const newUser = {
-        ...user,
-        id: `USR-${(users.length + 1).toString().padStart(3, '0')}`,
-        createdAt: Date.now(), subscriptionStatus: "trial"
-      };
-      const updatedUsers = [...users, newUser];
-      set({ 
-        users: updatedUsers as any,
-        ...(shouldAutoLogin ? { currentUser: newUser as any, superAdminActive: false } : {})
-      });
-      setStoredJSON('sl_users', updatedUsers);
-      if (shouldAutoLogin) {
-        setStoredJSON('sl_current_user', newUser);
-      }
-      const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-      setStoredJSON('sl_real_users', [...realUsers, newUser]);
-      get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Demo)', `Username: ${newUser.username}`);
-      return { success: true };
-    }
-
-    // 2. Call backend /api/register (supports individual and org-linked accounts)
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-      const regRes = await fetch(`${baseUrl}/api/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.username,
-          fullName: user.fullName || user.username,
-          name: user.fullName || user.username,
-          phone: user.phone || '',
-          email: user.email || '',
-          password: user.password || 'demo123',
-          role: user.role || 'Community Member',
-          org_code: user.orgCode || ''
-        })
+      const result = await safetyLinkAuth.registerUser({
+        username: user.username,
+        password: user.password || '',
+        fullName: user.fullName || user.username,
+        email: user.email || '',
+        phone: user.phone || '',
+        role: user.role || 'Community Member',
+        orgCode: user.orgCode || '',
       });
-
-      if (regRes.ok) {
-        const data = await regRes.json();
-        const createdUser: UserProfile = {
-          id: data.user?.id || `USR-${Date.now().toString().slice(-6)}`,
-          username: user.username,
-          fullName: user.fullName || user.username,
-          phone: user.phone || '',
-          email: user.email || '',
-          role: user.role || 'Community Member',
-          orgCode: user.orgCode || '',
-          avatarUrl: user.avatarUrl,
-          createdAt: Date.now(),
-          subscriptionStatus: 'trial',
-          password: user.password
-        } as any;
-
-        const updatedUsers = [...get().users.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), createdUser];
+      const createdUser = {
+        ...result.user,
+        avatarUrl: user.avatarUrl,
+        whatsapp: user.whatsapp,
+        subscriptionStatus: 'trial',
+      } as UserProfile;
+      if (user.autoLogin !== false) {
         set({
-          ...(shouldAutoLogin ? { currentUser: createdUser, token: data.token || 'user-live-jwt-token', superAdminActive: false, demoMode: false } : {}),
-          users: updatedUsers
+          currentUser: createdUser,
+          currentOrg: null,
+          superAdminActive: false,
+          adminSessionToken: null,
+          token: result.token,
+          demoMode: false,
         });
-        if (shouldAutoLogin) {
-          setStoredJSON('sl_jwt_token', data.token || 'user-live-jwt-token');
-          setStoredJSON('sl_current_user', createdUser);
-          setStoredJSON('sl_demo_mode', false);
-        }
-        setStoredJSON('sl_users', updatedUsers);
-        const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-        setStoredJSON('sl_real_users', [...realUsers.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), createdUser]);
-
-        get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Live Backend)', `Username: ${createdUser.username}`);
-        return { success: true };
+        setStoredJSON('sl_current_user', createdUser);
+        setStoredJSON('sl_current_org', null);
+        setStoredJSON('sl_super_admin', false);
+        setStoredJSON('sl_jwt_token', result.token);
+        setStoredJSON('sl_demo_mode', false);
       }
-    } catch (netErr) {
-      console.warn('Backend register call failed, continuing to Firebase & Vault fallback:', netErr);
+      const updatedUsers = [...get().users.filter(u => u.username.toLowerCase() !== createdUser.username.toLowerCase()), createdUser];
+      set({ users: updatedUsers });
+      setStoredJSON('sl_users', updatedUsers);
+      get().addAuditLog('SECURITY', 'INFO', 'User Registered (Worker)', `Username: ${createdUser.username}`);
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'User registration failed.';
+      get().addAuditLog('SECURITY', 'WARN', 'User Registration Failed', message);
+      return { success: false, error: message };
     }
-
-    // 3. Firebase Auth registration (if online and configured)
-    if (user.email && user.password) {
-      try {
-        const userCred = await createUserWithEmailAndPassword(auth, user.email, user.password);
-        const newUser = {
-          id: userCred.user.uid,
-          username: user.username,
-          email: user.email,
-          phone: user.phone || '',
-          fullName: user.fullName || user.username,
-          orgCode: user.orgCode || '',
-          role: user.role || 'Community Member',
-          createdAt: Date.now(),
-          subscriptionStatus: 'trial'
-        };
-        try {
-          await setDoc(doc(db, 'users', userCred.user.uid), newUser);
-        } catch (dbErr) {
-          console.warn('Firestore setDoc note:', dbErr);
-        }
-        
-        const token = await userCred.user.getIdToken();
-        const updatedUsers = [...get().users.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), newUser as any];
-        set({
-          ...(shouldAutoLogin ? { currentUser: newUser as any, token, superAdminActive: false } : {}),
-          users: updatedUsers
-        });
-        if (shouldAutoLogin) {
-          setStoredJSON('sl_jwt_token', token);
-          setStoredJSON('sl_current_user', newUser);
-        }
-        setStoredJSON('sl_users', updatedUsers);
-        const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-        setStoredJSON('sl_real_users', [...realUsers.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), newUser as any]);
-        
-        get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Firebase)', `Username: ${newUser.username}`);
-        return { success: true };
-      } catch (fbErr: any) {
-        if (fbErr.code === 'auth/email-already-in-use') {
-          return { success: false, error: 'An account with this email already exists. Please log in.' };
-        }
-        console.warn('Firebase registration notice, using resilient offline vault:', fbErr);
-      }
-    }
-
-    // 4. Resilient Secure Local Vault Fallback (Guaranteed to create individual account)
-    const fallbackId = `USR-${Date.now().toString().slice(-6)}`;
-    const fallbackUser: UserProfile = {
-      id: fallbackId,
-      username: user.username,
-      fullName: user.fullName || user.username,
-      phone: user.phone || '',
-      email: user.email || '',
-      role: user.role || 'Community Member',
-      orgCode: user.orgCode || '',
-      avatarUrl: user.avatarUrl,
-      createdAt: Date.now(),
-      subscriptionStatus: 'trial',
-      password: user.password
-    } as any;
-
-    const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-    const updatedRealUsers = [...realUsers.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), fallbackUser];
-    const updatedUsers = [...get().users.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), fallbackUser];
-
-    set({
-      ...(shouldAutoLogin ? { currentUser: fallbackUser, token: `sl-vault-jwt-${fallbackId}`, superAdminActive: false } : {}),
-      users: updatedUsers
-    });
-    if (shouldAutoLogin) {
-      setStoredJSON('sl_jwt_token', `sl-vault-jwt-${fallbackId}`);
-      setStoredJSON('sl_current_user', fallbackUser);
-    }
-    setStoredJSON('sl_users', updatedUsers);
-    setStoredJSON('sl_real_users', updatedRealUsers);
-
-    get().addAuditLog('SECURITY', 'INFO', 'New User Registered (Vault)', `Username: ${fallbackUser.username}`);
-    return { success: true };
   },
 
   registerOrganization: async (org) => {
-    // 1. If in demo mode, do the local mock registration
-    if (get().demoMode) {
-      const orgs = get().organizations;
-      const isFamily = org.name.toLowerCase().includes('family') || org.name.toLowerCase().includes('home');
-      const prefix = isFamily ? 'SL-FAM' : 'SL-ORG';
-      const existing = orgs.filter(o => o.id.startsWith(prefix));
-      const nextNum = existing.length + 1;
-      const numericId = `${prefix}-${nextNum.toString().padStart(3, '0')}`;
-      const generatedId = org.id || numericId;
-
-      const newOrg: Organization = {
-        name: org.name,
-        contactName: org.contactName,
-        contactEmail: org.contactEmail,
-        id: generatedId,
-        createdAt: Date.now(), subscriptionStatus: "trial",
-        approved: true,
-        password: (org as any).password
-      } as any;
-
-      const updatedOrgs = [...orgs, newOrg];
-      set({ organizations: updatedOrgs });
-      setStoredJSON('sl_organizations', updatedOrgs);
-      const realOrgs = getStoredJSON<Organization[]>('sl_real_organizations', []);
-      setStoredJSON('sl_real_organizations', [...realOrgs, newOrg]);
-      get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (Demo)`, `Name: ${newOrg.name}, Code: ${generatedId}`);
-      return newOrg;
-    }
-
-    // 2. Otherwise, make a real network request
     try {
-      const res = await fetch(get().customBackendUrl ? get().customBackendUrl + '/api/register-org' : get().customBackendUrl ? get().customBackendUrl + '/api' : '/api/register-org', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: org.name,
-          contactName: org.contactName,
-          contactEmail: org.contactEmail,
-          controlRoomNumber: '+27829110000',
-          password: (org as any).password,
-          id: org.id
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Organization registration failed');
-      }
-
-      const newOrg = data.organization;
-      set({
-        organizations: [...get().organizations, newOrg]
-      });
-      get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (Live)`, `Name: ${newOrg.name}, Code: ${newOrg.id}`);
-      return newOrg;
-    } catch (e) {
-      console.warn('Network unavailable. Falling back to local offline vault for Org Registration.', e);
-      return { success: false, error: 'No connection to the SafetyLink server. The organisation was not created. Try again when you are online.' } as any;
-      const randomHex = Math.floor(1000 + Math.random() * 9000);
-      const abbrev = getOrgAbbreviation(org.name);
-      const generatedId = org.id || `SL-${abbrev}-${randomHex}`;
-
-      const newOrg = {
+      const result = await safetyLinkAuth.registerOrganization({
         name: org.name,
         contactName: org.contactName,
         contactEmail: org.contactEmail,
-        id: generatedId,
-        createdAt: Date.now(), subscriptionStatus: "trial",
-        approved: true,
-        password: (org as any).password
-      };
-
-      set({
-        organizations: [...get().organizations, newOrg as Organization]
+        password: (org as any).password || '',
       });
-      const realOrgs = getStoredJSON('sl_real_orgs', []);
-      setStoredJSON('sl_real_orgs', [...realOrgs, newOrg]);
-      
-      get().addAuditLog('SECURITY', 'INFO', 'New Organization Provisioned (Offline Vault)', `Name: ${newOrg.name}, Code: ${newOrg.id}`);
-      return newOrg as Organization;
+      const createdOrg = {
+        ...result.organization,
+        subscriptionStatus: 'trial',
+      } as Organization;
+      const updatedOrganizations = [...get().organizations.filter(item => item.id !== createdOrg.id), createdOrg];
+      set({
+        organizations: updatedOrganizations,
+        currentUser: null,
+        currentOrg: createdOrg,
+        superAdminActive: false,
+        adminSessionToken: null,
+        token: result.token,
+        demoMode: false,
+      });
+      setStoredJSON('sl_organizations', updatedOrganizations);
+      setStoredJSON('sl_current_user', null);
+      setStoredJSON('sl_current_org', createdOrg);
+      setStoredJSON('sl_super_admin', false);
+      setStoredJSON('sl_jwt_token', result.token);
+      setStoredJSON('sl_demo_mode', false);
+      get().addAuditLog('SECURITY', 'INFO', 'Organization Registered and Authenticated (Worker)', `Organization: ${createdOrg.name}; code: ${result.orgCode}`);
+      return createdOrg;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Organization registration failed.';
+      get().addAuditLog('SECURITY', 'WARN', 'Organization Registration Failed', message);
+      return null;
     }
   },
 
-  login: async (username, password, orgCode = '', skipPasswordCheck = false) => {
+  login: async (username, password, orgCode = '', _skipPasswordCheck = false) => {
     const rawUsername = (username || '').trim();
-    const rawOrgCode = (orgCode || '').trim();
-    const rawPassword = (password || '').trim();
+    const rawPassword = password || '';
+    if (!rawUsername || !rawPassword) {
+      return { success: false, error: 'Username and password are required.', role: 'USER' as const };
+    }
 
-    // Superadmin: username "safetylink" is checked on the server against the saved strong password.
-    if (rawUsername.toLowerCase() === 'safetylink') {
-      try {
-        const base = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-        const adminRes = await fetch(`${base}/api/admin/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'safetylink', password: rawPassword }),
+    try {
+      if (rawUsername.toLowerCase() === 'safetylink') {
+        const sessionToken = await safetyLinkAuth.loginSuperAdmin(rawUsername, rawPassword);
+        set({
+          currentUser: null,
+          currentOrg: null,
+          superAdminActive: true,
+          adminSessionToken: sessionToken,
+          token: null,
+          demoMode: false,
         });
-        if (adminRes.ok) {
-          const adminData = await adminRes.json();
-          setStoredJSON('sl_super_admin', true);
-          setStoredJSON('sl_jwt_token', adminData.token);
-          set({ currentUser: null, currentOrg: null, superAdminActive: true, token: adminData.token });
-          return { success: true };
-        }
-        return { success: false, error: 'Invalid credentials. Please verify username and password.' };
-      } catch (e) {
-        return { success: false, error: 'No connection to the SafetyLink server. Try again when you are online.' };
-      }
-    }
-
-    const normUsername = rawUsername.toLowerCase();
-    const normOrgCode = rawOrgCode.toLowerCase();
-    const cleanPassword = rawPassword.toLowerCase();
-
-    // Stripped without spaces for resilient matching
-    const compactUsername = normUsername.replace(/\s+/g, '');
-    const compactOrgCode = normOrgCode.replace(/\s+/g, '');
-    const compactPassword = cleanPassword.replace(/\s+/g, '');
-
-    // 1. Super Admin check:
-    // Username: "SafetyLink" / "safety link" / "SL-admin-0000" / "SL-ADMIN-0000"
-    // Mesh Code: "SL-ADMIN-0000" / "SL-admin-0000" / blank / "000"
-    // Password: "000" / "0000" / "SL-admin-0000" / "SL-ADMIN-0000" / "safetylink"
-    const isSuperAdminIdentifier = 
-      compactUsername === 'safetylink' || 
-      compactUsername === 'sl-admin-0000' || 
-      compactUsername === 'sl-admin-000' ||
-      compactOrgCode === 'sl-admin-0000' || 
-      compactOrgCode === 'sl-admin-000';
-
-    const isSuperAdminPasswordMatch = (compactPassword === '000' || 
-      compactPassword === '0000' || 
-      compactPassword === 'sl-admin-0000' || 
-      compactPassword === 'sl-admin-000' || 
-      compactPassword === 'safetylink' ||
-      skipPasswordCheck);
-
-    const isSuperAdmin = isSuperAdminIdentifier && isSuperAdminPasswordMatch;
-
-    if (isSuperAdmin) {
-      const superAdminToken = btoa(JSON.stringify({ superAdmin: true, exp: Date.now() + 7 * 86400000 }));
-      set({ currentUser: null, currentOrg: null, superAdminActive: true, token: superAdminToken });
-      setStoredJSON('sl_current_user', null);
-      setStoredJSON('sl_current_org', null);
-      setStoredJSON('sl_super_admin', true);
-      setStoredJSON('sl_jwt_token', superAdminToken);
-
-      get().addAuditLog('SECURITY', 'SEVERE', 'Super Admin Authenticated', `Access granted to ${username}.`);
-      // Trigger super admin data fetch to populate users and orgs immediately
-      setTimeout(() => {
-        get().fetchSuperAdminData();
-      }, 50);
-      return { success: true, role: 'ADMIN' };
-    }
-
-    // 2. Demo Profiles / In-Memory Mock Profiles (Always accessible, whether demoMode is true or false)
-    const matchedUser = get().users.find(u => u.username.toLowerCase() === normUsername || (u.email && u.email.toLowerCase() === normUsername));
-    if (matchedUser) {
-      const userOrg = matchedUser.orgCode || '';
-      if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
-        return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
-      }
-      
-      const userPassword = (matchedUser as any).password;
-      if (!skipPasswordCheck && userPassword && userPassword !== password) {
-        return { success: false, error: 'Incorrect password.', role: 'USER' };
-      }
-      
-      const isOrgRole = ['Organization Administrator', 'Control Room Operator', 'Dispatcher', 'Responder', 'Guard'].includes(matchedUser.role || '');
-      const assignedOrg = isOrgRole && matchedUser.orgCode ? get().organizations.find(o => o.id.toLowerCase() === (matchedUser.orgCode as string).toLowerCase()) || null : null;
-      
-      set({ currentUser: matchedUser, currentOrg: assignedOrg, superAdminActive: false, token: 'sl-demo-jwt-token' });
-      setStoredJSON('sl_current_user', matchedUser);
-      setStoredJSON('sl_current_org', assignedOrg);
-      setStoredJSON('sl_super_admin', false);
-      setStoredJSON('sl_jwt_token', 'sl-demo-jwt-token');
-
-      get().addAuditLog('SECURITY', 'INFO', 'User Authenticated', `User: ${matchedUser.username}`);
-      return { success: true, role: 'USER' };
-    }
-
-    // Check organization profile login
-    if (normOrgCode || normUsername.startsWith('sl-') || normUsername.includes('deepsouth') || normUsername.includes('deep south')) {
-      const targetOrgId = normOrgCode || normUsername;
-      const matchedOrg = get().organizations.find(o => 
-        o.id.toLowerCase() === targetOrgId || 
-        o.name.toLowerCase() === normUsername ||
-        o.contactEmail?.toLowerCase() === normUsername ||
-        (normUsername.includes('deepsouth') && o.id.includes('DEEP'))
-      );
-      if (matchedOrg) {
-        const orgPassword = (matchedOrg as any).password;
-        if (!skipPasswordCheck && orgPassword && orgPassword !== password) {
-          return { success: false, error: 'Incorrect password.', role: 'ORG' };
-        }
-        set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false, token: 'sl-org-jwt-token' });
         setStoredJSON('sl_current_user', null);
-        setStoredJSON('sl_current_org', matchedOrg);
-        setStoredJSON('sl_super_admin', false);
-        setStoredJSON('sl_jwt_token', 'sl-org-jwt-token');
-
-        get().addAuditLog('SECURITY', 'INFO', 'Organization Authenticated', `Org: ${matchedOrg.name}`);
-        return { success: true, role: 'ORG' };
-      }
-    }
-
-    // 3. Backend /api/login endpoint
-    try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-      const loginRes = await fetch(`${baseUrl}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, org_code: orgCode })
-      });
-
-      if (loginRes.ok) {
-        const data = await loginRes.json();
-        if (data.token) {
-          if (data.superAdmin) {
-            set({ currentUser: null, currentOrg: null, superAdminActive: true, token: data.token });
-            setStoredJSON('sl_current_user', null);
-            setStoredJSON('sl_current_org', null);
-            setStoredJSON('sl_super_admin', true);
-            setStoredJSON('sl_jwt_token', data.token);
-            return { success: true, role: 'ADMIN' };
-          }
-
-          if (data.user) {
-            const userObj: UserProfile = {
-              id: data.user.id,
-              username: data.user.username || username,
-              fullName: data.user.fullName || data.user.name || username,
-              phone: data.user.phone || '',
-              email: data.user.email || '',
-              role: data.user.role || 'Community Member',
-              orgCode: data.user.orgCode || data.user.org_code || '',
-              createdAt: Date.now(),
-              subscriptionStatus: 'trial'
-            };
-            const assignedOrg = userObj.orgCode ? get().organizations.find(o => o.id.toLowerCase() === userObj.orgCode.toLowerCase()) || { id: userObj.orgCode, name: userObj.orgCode } as any : null;
-            set({ currentUser: userObj, currentOrg: assignedOrg, superAdminActive: false, demoMode: false, token: data.token });
-            setStoredJSON('sl_current_user', userObj);
-            setStoredJSON('sl_current_org', assignedOrg);
-            setStoredJSON('sl_super_admin', false);
-            setStoredJSON('sl_demo_mode', false);
-            setStoredJSON('sl_jwt_token', data.token);
-            get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Backend)', `User: ${userObj.username}`);
-            return { success: true, role: 'USER' };
-          }
-
-          const orgObj: Organization = {
-            id: data.org_code || orgCode,
-            name: data.org_name || orgCode,
-            contactName: username,
-            contactEmail: `${(data.org_code || orgCode).toLowerCase()}@safetylink.app`,
-            createdAt: Date.now(),
-            approved: true
-          };
-
-          set({ currentUser: null, currentOrg: orgObj, superAdminActive: false, demoMode: false, token: data.token });
-          setStoredJSON('sl_current_user', null);
-          setStoredJSON('sl_current_org', orgObj);
-          setStoredJSON('sl_super_admin', false);
-          setStoredJSON('sl_demo_mode', false);
-          setStoredJSON('sl_jwt_token', data.token);
-          return { success: true, role: 'ORG' };
-        }
-      }
-    } catch (apiErr) {
-      console.warn('Backend /api/login request failed, continuing cascade:', apiErr);
-    }
-
-    // 4. Local Offline Vault Fallback
-    const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-    const localUser = realUsers.find(u => u.username.toLowerCase() === normUsername || (u.email && u.email.toLowerCase() === normUsername));
-    if (localUser) {
-      const userPassword = (localUser as any).password;
-      if (!skipPasswordCheck && userPassword && userPassword !== password) {
-        return { success: false, error: 'Incorrect password.', role: 'USER' };
-      }
-      set({ currentUser: localUser, currentOrg: null, superAdminActive: false, token: 'offline-jwt-token' });
-      setStoredJSON('sl_current_user', localUser);
-      setStoredJSON('sl_current_org', null);
-      setStoredJSON('sl_super_admin', false);
-      setStoredJSON('sl_jwt_token', 'offline-jwt-token');
-      return { success: true, role: 'USER' };
-    }
-
-    // 5. Firebase Authentication Fallback
-    try {
-      const emailToUse = username.includes('@') ? username : `${username}@safetylink.app`;
-      const userCred = await signInWithEmailAndPassword(auth, emailToUse, password || '');
-      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
-      const userData = userDoc.exists() ? userDoc.data() : { username, orgCode };
-      const token = await userCred.user.getIdToken();
-
-      set({
-        currentUser: userData as any,
-        token,
-        superAdminActive: false,
-        currentOrg: userData.orgCode ? { id: userData.orgCode } as any : null
-      });
-      setStoredJSON('sl_jwt_token', token);
-      setStoredJSON('sl_current_user', userData);
-      setStoredJSON('sl_super_admin', false);
-      return { success: true, role: 'USER' };
-    } catch (e: any) {
-      if (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
-        return { success: false, error: 'Invalid credentials. Please verify username and password.', role: 'USER' };
-      }
-      return { success: false, error: e.message || 'Authentication failed. Please verify credentials.', role: 'USER' };
-    }
-    /*
-      // Try Firebase Auth as fallback
-      try {
-        const emailToTry = username.includes('@') ? username : username + '@safetylink.local';
-        if (emailToTry && password) {
-const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).substring(2, 9), role: "User", orgCode: "SL-TEST", email: emailToTry, orgName: "Test Org" };
-          if (fbResult.success) {
-            const isOrgAdmin = fbResult.role === 'Organization Administrator';
-            const currentUserObj = { username, role: fbResult.role || 'User', orgCode: fbResult.orgCode, email: fbResult.email, id: fbResult.uid };
-            const currentOrgObj = isOrgAdmin && fbResult.orgCode ? { id: fbResult.orgCode, name: fbResult.orgName || fbResult.orgCode } : null;
-            set({
-              currentUser: currentUserObj as any,
-              token: fbResult.uid || null,
-              currentOrg: currentOrgObj as any,
-              superAdminActive: false
-            });
-            setStoredJSON('sl_jwt_token', fbResult.uid || null);
-            setStoredJSON('sl_current_user', currentUserObj);
-            setStoredJSON('sl_current_org', currentOrgObj);
-            setStoredJSON('sl_super_admin', false);
-            return { success: true, role: isOrgAdmin ? 'ORG' : 'USER' };
-          }
-        }
-      } catch (_fbErr) {}
-      console.warn('Network unavailable. Falling back to local offline vault for Login.', e);
-      return { success: false, error: 'No connection to the SafetyLink server. Check your internet and try again.', role: 'USER' } as any;
-      const realUsers = getStoredJSON<UserProfile[]>('sl_real_users', []);
-      const matchedUser = realUsers.find(u => u.username.toLowerCase() === normUsername);
-      if (matchedUser) {
-        const userOrg = matchedUser.orgCode || '';
-        if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
-          return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
-        }
-        
-        const userPassword = (matchedUser as any).password;
-        if (userPassword && userPassword !== password) {
-          return { success: false, error: 'Incorrect password.', role: 'USER' };
-        }
-
-        set({ currentUser: matchedUser, currentOrg: null, superAdminActive: false, token: 'offline-jwt-token' });
-        setStoredJSON('sl_current_user', matchedUser);
         setStoredJSON('sl_current_org', null);
+        setStoredJSON('sl_super_admin', true);
+        // Admin sessions are deliberately memory-only and are never stored as Worker JWTs.
+        setStoredJSON('sl_jwt_token', null);
+        get().addAuditLog('SECURITY', 'INFO', 'Superadmin Authenticated', 'PBKDF2 admin session established.');
+        await get().fetchSuperAdminData();
+        return { success: true, role: 'ADMIN' as const };
+      }
+
+      const session = await safetyLinkAuth.login(rawUsername, rawPassword, orgCode);
+      if (session.role === 'USER' && session.user) {
+        const user = session.user as UserProfile;
+        const assignedOrg = user.orgCode
+          ? get().organizations.find(item => item.id.toLowerCase() === user.orgCode.toLowerCase()) || ({ id: user.orgCode, name: user.orgCode } as Organization)
+          : null;
+        set({
+          currentUser: user,
+          currentOrg: assignedOrg,
+          superAdminActive: false,
+          adminSessionToken: null,
+          token: session.token,
+          demoMode: false,
+        });
+        setStoredJSON('sl_current_user', user);
+        setStoredJSON('sl_current_org', assignedOrg);
         setStoredJSON('sl_super_admin', false);
-        setStoredJSON('sl_jwt_token', 'offline-jwt-token');
-
-        get().addAuditLog('SECURITY', 'INFO', 'User Authenticated (Offline Vault)', `User: ${matchedUser.username}`);
-        return { success: true, role: 'USER' };
+      } else if (session.organization) {
+        set({
+          currentUser: null,
+          currentOrg: session.organization as Organization,
+          superAdminActive: false,
+          adminSessionToken: null,
+          token: session.token,
+          demoMode: false,
+        });
+        setStoredJSON('sl_current_user', null);
+        setStoredJSON('sl_current_org', session.organization);
+        setStoredJSON('sl_super_admin', false);
       }
-
-      const realOrgs = getStoredJSON<Organization[]>('sl_real_orgs', []);
-      if (normOrgCode) {
-        const matchedOrg = realOrgs.find(o => o.id.toLowerCase() === normOrgCode);
-        if (matchedOrg) {
-          const matchName = matchedOrg.name.toLowerCase();
-          const matchContact = matchedOrg.contactName.toLowerCase();
-          if (matchName === normUsername || matchContact === normUsername) {
-            const orgPassword = (matchedOrg as any).password;
-            if (!skipPasswordCheck && orgPassword && orgPassword !== password) {
-              return { success: false, error: 'Incorrect password.', role: 'USER' };
-            }
-            set({ currentUser: null, currentOrg: matchedOrg, superAdminActive: false, token: 'offline-jwt-token' });
-            setStoredJSON('sl_current_user', null);
-            setStoredJSON('sl_current_org', matchedOrg);
-            setStoredJSON('sl_super_admin', false);
-            setStoredJSON('sl_jwt_token', 'offline-jwt-token');
-
-            get().addAuditLog('SECURITY', 'INFO', 'Organization Logged In (Offline Vault)', `Org Name: ${matchedOrg.name}`);
-            return { success: true, role: 'ORG' };
-          }
-        }
-      }
-
-      return { success: false, error: 'Connection failure to auth server, and no local offline account found.', role: 'USER' };
+      setStoredJSON('sl_jwt_token', session.token);
+      setStoredJSON('sl_demo_mode', false);
+      get().addAuditLog('SECURITY', 'INFO', 'Authenticated with SafetyLink Worker', `Account: ${rawUsername}`);
+      return { success: true, role: session.role };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Authentication failed.';
+      get().addAuditLog('SECURITY', 'WARN', 'Authentication Failed', message);
+      return { success: false, error: message, role: 'USER' as const };
     }
-    // End commented out section */
   },
 
   signInWithGoogle: async () => {
@@ -1693,103 +1295,33 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   },
 
   fetchSuperAdminData: async () => {
-    if (!get().superAdminActive) return;
+    const sessionToken = get().adminSessionToken;
+    if (!get().superAdminActive || !sessionToken) return;
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
-      const headers: Record<string, string> = {
-        'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
-      };
-
-      // 1. Fetch backend organizations and merge with local organizations
-      try {
-        const orgsRes = await fetch(`${baseUrl}/api/super-admin/orgs`, { headers });
-        if (orgsRes.ok) {
-          const { orgs } = await orgsRes.json();
-          if (orgs && Array.isArray(orgs)) {
-            const formattedOrgs = orgs.map((o: any) => ({
-              id: o.org_code || o.id,
-              name: o.org_name || o.name || o.org_code || 'Organization',
-              contactName: o.contact_name || o.name || 'Admin',
-              contactEmail: o.contact_email || `${(o.org_code || o.id || '').toLowerCase()}@safetylink.app`,
-              controlRoomNumber: o.control_room_number || '+27829110000',
-              address: o.address || 'Headquarters',
-              createdAt: o.created_at ? new Date(o.created_at).getTime() : Date.now(),
-              approved: true,
-              trialActive: Boolean(o.trial_active),
-              trialExpiresAt: o.trial_expires_at
-            }));
-
-            // Merge with local orgs
-            const currentOrgs = [...get().organizations];
-            for (const fo of formattedOrgs) {
-              const idx = currentOrgs.findIndex(co => co.id.toLowerCase() === fo.id.toLowerCase());
-              if (idx >= 0) {
-                currentOrgs[idx] = { ...currentOrgs[idx], ...fo };
-              } else {
-                currentOrgs.push(fo);
-              }
-            }
-            set({ organizations: currentOrgs });
-            setStoredJSON('sl_organizations', currentOrgs);
-          }
-        }
-      } catch (orgErr) {
-        console.warn('Super admin org fetch note:', orgErr);
-      }
-
-      // 2. Fetch backend users and merge seamlessly with all existing user records
-      try {
-        const usersRes = await fetch(`${baseUrl}/api/super-admin/users`, { headers });
-        if (usersRes.ok) {
-          const { users } = await usersRes.json();
-          if (users && Array.isArray(users)) {
-            const currentUsers = [...get().users];
-            
-            for (const u of users) {
-              const formattedUser: UserProfile = {
-                id: String(u.id || u.phone || `USR-${Date.now()}`),
-                username: u.username || u.name || 'User',
-                fullName: u.fullName || u.name || u.full_name || 'User',
-                email: u.email || `${u.phone || u.id}@safetylink.app`,
-                role: u.role || 'Community Member',
-                orgCode: u.orgCode || u.org_code || u.org_id || '',
-                phone: u.phone || '',
-                whatsapp: u.whatsapp || u.phone || '',
-                createdAt: u.createdAt || (u.created_at ? new Date(u.created_at).getTime() : Date.now()),
-                homeAddress: u.homeAddress || u.address || '',
-                workAddress: u.workAddress || '',
-                preferredHospital: u.preferredHospital || '',
-                medicalInfo: u.medicalInfo || '',
-                medicalProfile: u.medicalProfile,
-                emergencyContactsList: u.emergencyContactsList || '',
-                subscriptionStatus: u.subscriptionStatus || 'active'
-              };
-
-              const existingIdx = currentUsers.findIndex(cu => 
-                (cu.id && cu.id === formattedUser.id) || 
-                (cu.username && cu.username.toLowerCase() === formattedUser.username.toLowerCase()) ||
-                (cu.phone && formattedUser.phone && cu.phone === formattedUser.phone)
-              );
-
-              if (existingIdx >= 0) {
-                currentUsers[existingIdx] = { ...currentUsers[existingIdx], ...formattedUser };
-              } else {
-                currentUsers.push(formattedUser);
-              }
-            }
-
-            set({ users: currentUsers });
-            setStoredJSON('sl_users', currentUsers);
-          }
-        }
-      } catch (userErr) {
-        console.warn('Super admin users fetch note:', userErr);
-      }
-
-      // 3. Refresh telemetry & client database records
-      get().refreshClientDatabase();
-    } catch (e) {
-      console.error('Failed to fetch super admin data', e);
+      const [summary, adminUsers] = await Promise.all([
+        safetyLinkAuth.getAdminSummary(sessionToken),
+        safetyLinkAuth.getAdminUsers(sessionToken),
+      ]);
+      const mappedUsers = adminUsers.map((item: any): UserProfile => ({
+        id: String(item.id || item.phone || ''),
+        username: String(item.name || item.id || 'Registered user'),
+        fullName: String(item.name || 'Registered user'),
+        email: '',
+        phone: String(item.phone || ''),
+        role: 'Community Member',
+        orgCode: '',
+        createdAt: item.lastSync ? new Date(item.lastSync).getTime() : Date.now(),
+        subscriptionStatus: 'active',
+      }));
+      set({ users: mappedUsers });
+      setStoredJSON('sl_users', mappedUsers);
+      get().addAuditLog('SYSTEM', 'INFO', 'Superadmin Data Refreshed', `Accounts: ${summary.totalAccounts ?? 0}; contacts: ${summary.contacts ?? 0}`);
+      // Keep the admin summary in memory for the admin dashboard without persisting its session.
+      set({ superAdminSummary: summary } as any);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load superadmin data.';
+      get().addAuditLog('SECURITY', 'WARN', 'Superadmin Data Request Failed', message);
+      get().addToast(message, 'error');
     }
   },
 
@@ -1806,7 +1338,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   },
 
   logout: () => {
-    set({ currentUser: null, currentOrg: null, superAdminActive: false, token: null });
+    set({ currentUser: null, currentOrg: null, superAdminActive: false, adminSessionToken: null, token: null });
     setStoredJSON('sl_current_user', null);
     setStoredJSON('sl_current_org', null);
     setStoredJSON('sl_super_admin', false);
