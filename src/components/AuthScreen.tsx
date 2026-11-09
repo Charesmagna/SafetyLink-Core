@@ -215,8 +215,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     setOrgError('');
     setOrgSuccessMsg('');
 
-    if (!orgName || !orgContactName || !orgEmail) {
-      setOrgError('Please fill in contact details and organization name.');
+    if (!orgName || !orgContactName || !orgEmail || !orgPassword) {
+      setOrgError('Organization name, contact details, and password are required.');
       return;
     }
 
@@ -230,7 +230,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     });
 
     if (!newOrg) {
-      setOrgError('Failed to register organization.');
+      setOrgError(useAppStore.getState().lastAuthError || 'Failed to register organization.');
       return;
     }
 
