@@ -1370,9 +1370,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const matchedUser = get().users.find(u => u.username.toLowerCase() === normUsername || (u.email && u.email.toLowerCase() === normUsername));
     if (matchedUser) {
       const userOrg = matchedUser.orgCode || '';
-      if (orgCode.trim() && userOrg.toLowerCase() !== normOrgCode) {
-        return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
-      }
+      // The server decides organisation membership. A local copy must not block a correct login.
       
       const userPassword = (matchedUser as any).password;
       if (!skipPasswordCheck && userPassword && userPassword !== password) {
