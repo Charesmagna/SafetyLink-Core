@@ -1,3 +1,4 @@
+import { verifyForwarderSignature } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 // SafetyLink Cloudflare Worker — Full Backend
@@ -718,16 +719,8 @@ async function handlePcmWebhookInner(c: any) {
   const raw = await c.req.text();
   const givenTok = (c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
   const signatureHeader = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').trim();
-  // SMS Forwarder sends a plain hex HMAC-SHA256 in X-Signature.
-  // Also accept the conventional "sha256=" prefix without changing the signed bytes.
-  const givenSig = signatureHeader.replace(/^sha256=/i, '').trim();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
-  let sigOk = false;
-  if (givenSig) {
-    for (const candidate of hmacSecrets) {
-      if (safeEq(givenSig.toLowerCase(), await hexHmac(candidate, raw))) { sigOk = true; break; }
-    }
-  }
+  const sigOk = await verifyForwarderSignature(raw, signatureHeader, hmacSecrets);
   if (!tokenOk && !sigOk) {
     // Diagnostic metadata only. Never log secrets, signatures, or message contents.
     console.warn('[PCM] authentication rejected', {
