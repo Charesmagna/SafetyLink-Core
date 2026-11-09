@@ -8,7 +8,7 @@
     "build": "vite build",
     "start": "tsx server.ts",
     "lint": "tsc --noEmit",
-    "test:auth": "tsx --test src/services/SafetyLinkAuthClient.test.ts"
+    "test:auth": "tsx --test src/tests/SafetyLinkAuthClient.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1141.0",
