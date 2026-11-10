@@ -251,7 +251,14 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
   const saved = await loadContacts(env, phone);
   if (!saved.contacts.length && saved.name === phone) {
     const known = await env.DB.prepare('SELECT phone FROM sl_profiles WHERE phone=?').bind(phone).first();
-    if (!known) return { status: 200, json: { ok: true, status: 'IGNORED_UNKNOWN', msisdn: phone } };
+    if (!known) {
+      // Unknown caller: never alert strangers. Send the command centre a single SMS so a person can act.
+      const centre = toE164(env.RESPONSE_CENTRE_NUMBER || '');
+      if (centre) {
+        await notifyContacts(env, { ownerPhone: phone, ownerName: 'Unregistered caller', contacts: [centre], voice: false, smsPrefix: 'UNKNOWN CALLER' });
+      }
+      return { status: 200, json: { ok: true, status: 'UNKNOWN_FORWARDED_TO_COMMAND', msisdn: phone } };
+    }
   }
 
   // Suppress accepted/in-flight events, but never let a failed dispatch block a retry.
