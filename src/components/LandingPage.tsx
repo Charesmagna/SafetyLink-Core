@@ -134,19 +134,6 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         {page === 'payment-success' && <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}><h1 style={{ fontSize: '32px', color: '#10b981', marginBottom: '16px' }}>Payment Successful!</h1><p style={{ color: '#94a3b8', marginBottom: '24px' }}>Your subscription has been activated.</p><button onClick={() => navigate('home')} style={{ padding: '12px 24px', background: '#0f172a', color: 'white', borderRadius: '8px' }}>Return to Home</button></div>}
       </div>
 
-      {/* Public redesign preview: deliberately separate from the current production experience. */}
-      <div className="relative z-10 flex justify-center px-6 pt-8 pb-2">
-        <a
-          href="/preview/"
-          aria-label="Open the refreshed SafetyLink website preview"
-          className="group inline-flex items-center gap-2 rounded-full border border-slate-500/30 bg-slate-900/45 px-3 py-1.5 text-[10px] font-semibold tracking-wide text-slate-300 shadow-sm backdrop-blur-md transition hover:border-emerald-400/50 hover:bg-slate-900/70 hover:text-white"
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-emerald-400/50 bg-emerald-400/10 text-[10px] font-black text-emerald-300">P</span>
-          <span>Explore the refreshed SafetyLink website</span>
-          <span aria-hidden="true" className="text-emerald-300 transition-transform group-hover:translate-x-0.5">↗</span>
-        </a>
-      </div>
-
       {/* ── CONTINUOUS TOPOLOGY OVERVIEW (PAGE-ADAPTIVE) ── */}
       <section style={{ padding: '0 20px', maxWidth: '1240px', margin: '70px auto 0' }}>
         <ContinuousTopologyOverview activePage={page} />

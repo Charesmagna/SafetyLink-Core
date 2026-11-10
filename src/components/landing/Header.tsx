@@ -659,6 +659,26 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               </div>
             </div>
 
+            {!Capacitor.isNativePlatform() && (
+              <a
+                href="/preview/"
+                aria-label="Open the refreshed SafetyLink website preview"
+                title="Explore the refreshed website"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '7px',
+                  padding: '7px 11px', borderRadius: '999px',
+                  border: isLight ? '1px solid rgba(15,139,141,.35)' : '1px solid rgba(45,212,191,.35)',
+                  background: isLight ? 'rgba(15,139,141,.08)' : 'rgba(15,139,141,.13)',
+                  color: isLight ? '#0f766e' : '#99f6e4',
+                  fontSize: '10px', fontWeight: 800, letterSpacing: '.04em',
+                  textDecoration: 'none', whiteSpace: 'nowrap',
+                }}
+              >
+                <span style={{ display: 'grid', placeItems: 'center', width: '17px', height: '17px', borderRadius: '50%', background: '#0f8b8d', color: '#fff', fontSize: '10px' }}>P</span>
+                Preview
+              </a>
+            )}
+
             {/* CTA */}
             <a
               href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
