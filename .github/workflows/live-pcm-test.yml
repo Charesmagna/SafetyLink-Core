@@ -1,0 +1,19 @@
+name: Live Please Call Me test (one signed message)
+on:
+  push:
+    branches: [beta]
+    paths: ['.github/workflows/live-pcm-test.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: sign and send one Please Call Me from the test victim
+        env:
+          SECRET: ${{ secrets.PCM_WEBHOOK_SECRET }}
+        run: |
+          test -n "$SECRET" || { echo "::error::PCM_WEBHOOK_SECRET missing"; exit 1; }
+          BODY='{"from":"+27680079911","text":"Please call me","sentStamp":1762300000000,"receivedStamp":1762300000500,"sim":"sim1"}'
+          SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
+          C=$(curl -s -m 60 -o /tmp/r.txt -w "%{http_code}" -X POST https://safetylink-api.tshilidzi-mukwevho54.workers.dev/webhook/pcm -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY")
+          echo "::notice::server replied HTTP $C"
+          echo "::notice::server body: $(head -c 300 /tmp/r.txt | tr -d '\n' | sed 's/+27[0-9]*/[number]/g')"
