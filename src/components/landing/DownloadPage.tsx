@@ -22,7 +22,7 @@ export function DownloadPage(_props: Props) {
             <span style={{ color: '#00e676', fontStyle: 'italic' }}>Verified native software packages.</span>
           </h1>
           <p style={{ fontSize: '15px', color: '#8892a4', maxWidth: '640px', lineHeight: 1.7, marginBottom: '24px' }}>
-            Direct access to official production builds for Android mobile devices and Windows Dispatch Control rooms.
+            Choose the official Version 1 stable Android release, the separate Version 1 Beta testing build, or the supported desktop and web options.
             All production builds are compiled with hardware BLE listeners, background keepalive workers, and sequential SOS dispatch.
           </p>
 
@@ -48,7 +48,7 @@ export function DownloadPage(_props: Props) {
             // RECOMMENDED TARGET ARCHITECTURES
           </div>
           <h2 style={{ fontSize: 'clamp(24px,4vw,40px)', fontWeight: 900, marginBottom: '36px' }}>
-            Latest Official Production Releases
+            Choose Your Release Channel
           </h2>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
@@ -61,7 +61,7 @@ export function DownloadPage(_props: Props) {
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Download SafetyLink Version 1 (Stable)</h3>
                 <p style={{ fontSize: '12px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
-                  {latestRelease?.version || 'latest'} · Full Hardware Bundle ({latestRelease?.sizeMb || '94.4'} MB)
+                  Official stable release · Version 1
                 </p>
               </div>
               <p style={{ fontSize: '13px', color: '#8892a4', lineHeight: 1.6, flex: 1 }}>
@@ -69,7 +69,7 @@ export function DownloadPage(_props: Props) {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <a
-                  href={latestRelease?.apkUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'}
+                  href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk"
                   download
                   style={{
                     background: '#00e676',
