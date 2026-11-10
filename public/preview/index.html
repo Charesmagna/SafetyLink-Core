@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b49">
+  <meta name="description" content="Explore the refreshed SafetyLink website concept by TM Media Solutions — personal, community and workplace safety connected through one platform.">
+  <title>SafetyLink | Website Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--navy:#102b49;--navy2:#0b2038;--teal:#0f8b8d;--orange:#f36b21;--ink:#14243a;--muted:#64748b;--paper:rgba(255,255,255,.93);--line:rgba(148,163,184,.25);--shadow:0 22px 65px rgba(15,35,60,.13)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:84px}body{margin:0;font-family:"DM Sans",system-ui,sans-serif;color:var(--ink);background:#eef3f8;overflow-x:hidden}
+    .ambient{position:fixed;inset:0;z-index:-3;overflow:hidden;background:#07182b}.ambient video{position:absolute;left:50%;top:50%;width:100%;height:100%;min-width:100%;min-height:100%;object-fit:cover;transform:translate(-50%,-50%);opacity:.34;filter:contrast(1.12) saturate(1.1)}.ambient:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(3,15,30,.65),rgba(7,25,43,.36) 48%,rgba(3,15,30,.68))}
+    .site{position:relative;z-index:1}.wrap{width:min(1180px,calc(100% - 40px));margin:auto}.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(18px);border-bottom:1px solid rgba(148,163,184,.2)}.nav{height:74px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--navy);font-family:Manrope,sans-serif;font-weight:800;font-size:23px;letter-spacing:-.8px}.brand img{width:45px;height:45px;object-fit:contain}.links{display:flex;align-items:center;gap:26px}.links a{font-size:13px;font-weight:700;text-decoration:none;color:#334155}.links a:hover{color:var(--teal)}.nav-actions{display:flex;align-items:center;gap:10px}.theme,.menu{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;padding:10px 13px;font-weight:700;cursor:pointer}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:10px;padding:13px 20px;background:var(--orange);color:white;text-decoration:none;font-weight:800;font-size:14px;box-shadow:0 8px 20px rgba(243,107,33,.2);transition:transform .2s,box-shadow .2s}.btn:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(243,107,33,.28)}.btn.secondary{background:var(--navy);box-shadow:none}.menu{display:none}
+    .preview-note{background:rgba(15,139,141,.11);border-bottom:1px solid rgba(15,139,141,.16);color:#155e63;text-align:center;padding:8px 16px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .hero{padding:64px 0 54px}.hero-grid{display:grid;grid-template-columns:1fr 1.05fr;align-items:center;gap:44px}.eyebrow{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(15,139,141,.24);background:rgba(255,255,255,.78);padding:8px 12px;border-radius:999px;color:#087477;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.eyebrow i{width:7px;height:7px;border-radius:50%;background:#16a085}.hero h1{font-family:Manrope,sans-serif;font-size:clamp(38px,5.4vw,66px);line-height:1.04;letter-spacing:-2.7px;color:#fff;margin:20px 0 18px;text-shadow:0 3px 24px rgba(0,0,0,.38)}.hero h1 span{color:#ff9a58}.hero-copy{max-width:550px;color:rgba(255,255,255,.9);font-size:17px;line-height:1.7;text-shadow:0 2px 16px rgba(0,0,0,.42)}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.hero-actions .secondary{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(10px)}.hero-media{position:relative;min-height:440px;border-radius:26px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.48)}.hero-media img{position:absolute;width:100%;height:100%;object-fit:cover}.hero-media:after{content:"";position:absolute;inset:45% 0 0;background:linear-gradient(transparent,rgba(5,20,36,.65))}.hero-caption{position:absolute;z-index:1;left:24px;right:24px;bottom:22px;color:#fff}.hero-caption strong{font:800 20px Manrope,sans-serif}.hero-caption p{margin:5px 0 0;font-size:13px;color:rgba(255,255,255,.86)}
+    .feature-wrap{position:relative;z-index:2;margin-top:-18px}.features{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.8);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}.feature{padding:27px 28px;display:flex;gap:16px;align-items:flex-start}.feature+.feature{border-left:1px solid var(--line)}.feature-icon{width:46px;height:46px;flex:none;border-radius:14px;background:#e7f5f4;color:var(--teal);display:grid;place-items:center;font-size:22px}.feature h3{margin:1px 0 5px;font:800 15px Manrope,sans-serif}.feature p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+    section.content{padding:82px 0}.section-head{max-width:700px;margin:0 auto 38px;text-align:center}.kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:800}.section-head h2{font:800 clamp(29px,4vw,43px)/1.12 Manrope,sans-serif;letter-spacing:-1.5px;color:var(--navy);margin:12px 0}.section-head p{font-size:15px;line-height:1.7;color:#52647a;margin:0}.surface{background:var(--paper);border:1px solid rgba(255,255,255,.85);border-radius:22px;box-shadow:var(--shadow);backdrop-filter:blur(16px)}
+    .solutions{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.solution{overflow:hidden}.solution img{width:100%;height:170px;object-fit:cover;display:block}.solution-body{padding:19px}.solution h3{font:800 16px Manrope,sans-serif;color:var(--navy);margin:0 0 8px}.solution p{font-size:12px;line-height:1.6;color:var(--muted);margin:0 0 13px}.solution a{font-size:12px;font-weight:800;color:var(--teal);text-decoration:none}
+    .how-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:34px;align-items:center}.how-copy{padding:34px}.how-copy h2{font:800 clamp(28px,3.6vw,42px)/1.12 Manrope,sans-serif;color:var(--navy);letter-spacing:-1px;margin:12px 0}.how-copy>p{color:#52647a;line-height:1.7;font-size:14px}.steps{display:grid;gap:14px;margin-top:26px}.step{display:flex;gap:13px;align-items:flex-start}.step-no{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:10px;background:#e8f5f4;color:var(--teal);font-weight:900;font-size:12px}.step strong{display:block;font-size:13px;color:var(--navy);margin:2px 0 4px}.step span{font-size:12px;color:var(--muted);line-height:1.5}.dashboard-shot{overflow:hidden}.dashboard-shot img{width:100%;display:block;object-fit:cover;min-height:330px}.shot-caption{padding:15px 19px;color:#52647a;font-size:12px}
+    .gallery-shell{padding:22px}.gallery-main{position:relative;overflow:hidden;border-radius:16px;height:390px;background:#dbe5ee}.gallery-main img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity .3s}.gallery-overlay{position:absolute;left:0;right:0;bottom:0;padding:30px 25px 22px;background:linear-gradient(transparent,rgba(3,18,33,.8));color:#fff}.gallery-overlay strong{font:800 21px Manrope,sans-serif}.gallery-overlay p{margin:5px 0 0;font-size:12px;color:rgba(255,255,255,.85)}.gallery-controls{display:flex;align-items:center;justify-content:space-between;margin-top:14px}.dots{display:flex;gap:7px}.dot{width:7px;height:7px;border-radius:50%;border:0;background:#cbd5e1;padding:0;cursor:pointer}.dot.active{width:22px;border-radius:9px;background:var(--teal)}.arrow{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:999px;width:38px;height:38px;cursor:pointer;font-size:18px}
+    .enterprise-band{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden}.enterprise-copy{padding:42px;background:var(--navy);color:#fff}.enterprise-copy h2{font:800 clamp(27px,3.4vw,39px)/1.1 Manrope,sans-serif;margin:14px 0}.enterprise-copy p{font-size:13px;line-height:1.7;color:#d5e1ee}.enterprise-copy ul{padding-left:18px;color:#e2eaf3;font-size:12px;line-height:2}.enterprise-image img{width:100%;height:100%;min-height:340px;object-fit:cover;display:block}
+    .contact-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:22px}.contact-info{padding:30px}.contact-info h3{font:800 23px Manrope,sans-serif;color:var(--navy);margin:12px 0}.contact-item{display:flex;gap:12px;margin-top:20px;color:#52647a;font-size:13px;line-height:1.55}.contact-item b{display:block;color:var(--navy);margin-bottom:2px}.contact-item a{color:var(--teal);font-weight:700;text-decoration:none}.map{width:100%;height:220px;border:0;border-radius:14px;margin-top:22px;filter:saturate(.75)}.form{padding:30px;display:grid;grid-template-columns:1fr 1fr;gap:14px}.form h3{grid-column:1/-1;font:800 23px Manrope,sans-serif;color:var(--navy);margin:0 0 6px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:800;color:#334155}.field input,.field textarea,.field select{width:100%;padding:12px 13px;border:1px solid #d7e0e9;border-radius:9px;background:#fff;color:#14243a;font:13px "DM Sans",sans-serif;outline:none}.field input:focus,.field textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,139,141,.12)}.field textarea{min-height:105px;resize:vertical}.form-note{grid-column:1/-1;font-size:11px;color:#64748b;line-height:1.5;margin:0}
+    footer{margin-top:70px;background:rgba(9,31,53,.96);color:#dce7f2;padding:48px 0 24px;border-top:5px solid var(--teal)}.footer-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:30px}.footer-brand img{width:58px;height:58px;object-fit:contain;filter:brightness(0) invert(1)}footer h4{font:800 12px Manrope,sans-serif;color:#fff;margin:0 0 15px;text-transform:uppercase;letter-spacing:.08em}footer p,footer a{font-size:12px;line-height:1.8;color:#bdcbd9;text-decoration:none}footer a:hover{color:#fff}footer .footer-links{display:grid;gap:5px}.copyright{border-top:1px solid rgba(255,255,255,.15);margin-top:32px;padding-top:18px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:10px;color:#9fb0c2}
+    .light-mode .ambient video{opacity:.18}.light-mode .ambient:after{background:linear-gradient(120deg,rgba(3,15,30,.38),rgba(7,25,43,.2) 48%,rgba(3,15,30,.42))}.light-mode .hero h1{color:#fff}
+    @media(max-width:900px){.hero-grid,.how-grid,.contact-grid{grid-template-columns:1fr}.hero{padding-top:38px}.hero-media{min-height:350px}.solutions{grid-template-columns:repeat(2,1fr)}.features{grid-template-columns:1fr}.feature+.feature{border-left:0;border-top:1px solid var(--line)}.enterprise-band{grid-template-columns:1fr}.enterprise-image img{min-height:260px}.footer-grid{grid-template-columns:repeat(2,1fr)}.links{gap:14px}.links a{font-size:12px}}
+    @media(max-width:640px){.wrap{width:min(100% - 28px,1180px)}.nav{height:64px}.brand{font-size:19px}.brand img{width:38px;height:38px}.links{display:none}.menu{display:inline-flex}.nav-actions .btn{display:none}.hero{padding:34px 0 46px}.hero-grid{gap:25px}.hero h1{font-size:42px;letter-spacing:-1.8px}.hero-copy{font-size:14px}.hero-media{min-height:300px;border-radius:18px}.hero-actions .btn{width:100%}.feature{padding:20px}.content{padding:58px 0!important}.solutions{grid-template-columns:1fr}.solution img{height:200px}.how-copy{padding:24px}.gallery-shell{padding:12px}.gallery-main{height:290px}.gallery-overlay strong{font-size:17px}.enterprise-copy{padding:28px}.contact-info,.form{padding:22px}.form{grid-template-columns:1fr}.field.full,.form h3,.form-note{grid-column:1}.footer-grid{grid-template-columns:1fr 1fr;gap:24px}.copyright{display:block}.copyright span{display:block;margin-top:8px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
+  </style>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <video autoplay muted loop playsinline preload="auto">
+      <source src="/splash-video.mp4" type="video/mp4">
+      <source src="/media/videos/hero_background.mp4" type="video/mp4">
+      <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4">
+      <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="site">
+    <div class="preview-note">Website concept preview · Public feedback welcome · Existing SafetyLink service remains available</div>
+    <header class="topbar">
+      <div class="wrap nav">
+        <a class="brand" href="/" aria-label="SafetyLink home"><img src="/logos/Safety_Link_Logo_Transparent.png" alt=""><span>SafetyLink</span></a>
+        <nav class="links" aria-label="Main navigation">
+          <a href="#how">How it works</a><a href="#solutions">Solutions</a><a href="#platform">Platform</a><a href="#contact">Contact</a>
+        </nav>
+        <div class="nav-actions">
+          <button class="theme" id="themeToggle" type="button" aria-label="Switch colour theme">◐ Theme</button>
+          <a class="btn" href="/#home">Get started</a>
+          <button class="menu" id="menuButton" type="button" aria-label="Open navigation">☰</button>
+        </div>
+      </div>
+      <div id="mobileNav" hidden style="padding:0 18px 16px;background:#fff">
+        <div style="display:grid;gap:12px"><a href="#how">How it works</a><a href="#solutions">Solutions</a><a href="#platform">Platform</a><a href="#contact">Contact</a></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <span class="eyebrow"><i></i> Connected safety for South Africa</span>
+            <h1>Peace of mind,<br><span>always connected.</span></h1>
+            <p class="hero-copy">A connected safety platform for individuals, families, communities and organisations. Bring alerts, location sharing and coordinated response tools into one place.</p>
+            <div class="hero-actions">
+              <a class="btn" href="/#download">Explore SafetyLink</a>
+              <a class="btn secondary" href="/#enterprise">Explore enterprise</a>
+            </div>
+          </div>
+          <div class="hero-media">
+            <img src="/api/r2/stream/Safetylink/Gemini_Generated_Image_1eu4fz1eu4fz1eu4.png" alt="SafetyLink community safety in an outdoor setting" fetchpriority="high">
+            <div class="hero-caption"><strong>Protection for everyday life.</strong><p>Personal safety and connected response, designed around people.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="wrap feature-wrap">
+        <div class="features">
+          <article class="feature"><div class="feature-icon">⌖</div><div><h3>Location sharing</h3><p>Share relevant location information with designated contacts during an incident.</p></div></article>
+          <article class="feature"><div class="feature-icon">◉</div><div><h3>Emergency alerts</h3><p>Access configured alert tools from your SafetyLink application and supported devices.</p></div></article>
+          <article class="feature"><div class="feature-icon">⇄</div><div><h3>Connected response</h3><p>Bring trusted contacts, authorised responders and organisation teams into one workflow.</p></div></article>
+        </div>
+      </div>
+
+      <section class="content" id="solutions">
+        <div class="wrap">
+          <div class="section-head"><span class="kicker">One connected ecosystem</span><h2>Safety that fits the way people live and work.</h2><p>Different environments need different safety workflows. SafetyLink brings them together through a shared platform.</p></div>
+          <div class="solutions">
+            <article class="surface solution"><img loading="lazy" src="/api/r2/stream/Safetylink/Gemini_Generated_Image_1eu4fz1eu4fz1eu4.png" alt="Residential community"><div class="solution-body"><h3>Personal & family</h3><p>Emergency access, trusted contacts and location sharing for everyday protection.</p><a href="/#home">Explore personal safety →</a></div></article>
+            <article class="surface solution"><img loading="lazy" src="/api/r2/stream/Safetylink/Gemini_Generated_Image_41892s41892s4189.png" alt="Corporate campus"><div class="solution-body"><h3>Estates & communities</h3><p>Coordinate residents, security teams and incident information across a community.</p><a href="/#usecases">Explore community safety →</a></div></article>
+            <article class="surface solution"><img loading="lazy" src="/api/r2/stream/Safetylink/Gemini_Generated_Image_48euet48euet48eu.png" alt="Workplace safety"><div class="solution-body"><h3>Workplace safety</h3><p>Support staff protection and incident coordination in operational environments.</p><a href="/#enterprise">Explore workplace safety →</a></div></article>
+            <article class="surface solution"><img loading="lazy" src="/api/r2/stream/Safetylink/Gemini_Generated_Image_k2mcd9k2mcd9k2mc.png" alt="School and university environment"><div class="solution-body"><h3>Schools & institutions</h3><p>Connect authorised staff, safety contacts and response processes.</p><a href="/#usecases">Explore institutional safety →</a></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="content" id="how">
+        <div class="wrap how-grid">
+          <div class="surface how-copy">
+            <span class="kicker">How it works</span><h2>From alert to coordinated action.</h2>
+            <p>SafetyLink connects the people, devices and operational tools involved in an emergency workflow. The exact channels depend on device support, permissions, network availability and organisation configuration.</p>
+            <div class="steps">
+              <div class="step"><div class="step-no">01</div><div><strong>Set up your safety network</strong><span>Configure your profile, trusted contacts or organisation membership.</span></div></div>
+              <div class="step"><div class="step-no">02</div><div><strong>Trigger an alert</strong><span>Use the application or a supported paired device to initiate an alert.</span></div></div>
+              <div class="step"><div class="step-no">03</div><div><strong>Coordinate the response</strong><span>Configured contacts and authorised teams receive the incident information available to the system.</span></div></div>
+            </div>
+          </div>
+          <div class="surface dashboard-shot"><img loading="lazy" src="/api/r2/stream/Safetylink/IMG_20260914_221811.png" alt="SafetyLink organisation command dashboard"><div class="shot-caption">A look inside the SafetyLink operational interface. Product screens shown are illustrative; availability depends on deployment and permissions.</div></div>
+        </div>
+      </section>
+
+      <section class="content" id="platform">
+        <div class="wrap">
+          <div class="section-head"><span class="kicker">The platform in context</span><h2>Designed around real operational environments.</h2><p>Explore selected imagery from the SafetyLink media library. The gallery rotates automatically and can also be browsed manually.</p></div>
+          <div class="surface gallery-shell">
+            <div class="gallery-main"><img id="galleryImage" src="/api/r2/stream/Safetylink/Gemini_Generated_Image_6iikvx6iikvx6iik.png" alt="SafetyLink in a healthcare environment"><div class="gallery-overlay"><strong id="galleryTitle">Safety across healthcare environments</strong><p id="galleryText">Connected safety workflows for staff and institutions.</p></div></div>
+            <div class="gallery-controls"><button class="arrow" id="prevSlide" type="button" aria-label="Previous image">‹</button><div class="dots" id="galleryDots" aria-label="Choose gallery image"></div><button class="arrow" id="nextSlide" type="button" aria-label="Next image">›</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content">
+        <div class="wrap surface enterprise-band">
+          <div class="enterprise-copy"><span class="kicker" style="color:#6ee7df">For organisations</span><h2>One operational view. A connected team.</h2><p>Give authorised teams a clearer way to manage people, incidents, responders and system information across their organisation.</p><ul><li>Organisation and member management</li><li>Incident visibility and coordination</li><li>Responder and access workflows</li><li>Reporting and system-health information</li></ul><a class="btn" href="/#enterprise">Explore enterprise solutions</a></div>
+          <div class="enterprise-image"><img loading="lazy" src="/api/r2/stream/Safetylink/IMG_20260914_221811.png" alt="SafetyLink enterprise organisation dashboard"></div>
+        </div>
+      </section>
+
+      <section class="content" id="contact">
+        <div class="wrap">
+          <div class="section-head"><span class="kicker">Talk to TM Media Solutions</span><h2>Let's build a safer connection.</h2><p>Ask about personal safety, an organisation deployment, supported devices or the SafetyLink platform.</p></div>
+          <div class="contact-grid">
+            <div class="surface contact-info">
+              <span class="kicker">Contact information</span><h3>TM Media Solutions</h3>
+              <div class="contact-item"><span>☎</span><div><b>Telephone</b><a href="tel:+27816738186">+27 81 673 8186</a></div></div>
+              <div class="contact-item"><span>◉</span><div><b>WhatsApp</b><a href="https://wa.me/27680079911" target="_blank" rel="noopener">+27 68 007 9911</a></div></div>
+              <div class="contact-item"><span>✉</span><div><b>Email</b><a href="mailto:info@safetylink.online">info@safetylink.online</a></div></div>
+              <div class="contact-item"><span>⌖</span><div><b>Business area</b>Vlakfontein / Lenasia, south of Johannesburg, Gauteng, South Africa<br><span style="font-size:11px">Near the Moira Park Hospital Hills area. Contact us to confirm an appointment or exact meeting location.</span></div></div>
+              <iframe class="map" title="TM Media Solutions business area map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=TM%20Media%20Solutions%20Vlakfontein%20Lenasia%20Johannesburg&output=embed"></iframe>
+              <a class="btn secondary" href="https://www.google.com/maps/search/?api=1&query=TM%20Media%20Solutions%20Vlakfontein%20Lenasia%20Johannesburg" target="_blank" rel="noopener">Open directions</a>
+            </div>
+            <form class="surface form" id="contactForm">
+              <h3>Send an enquiry</h3>
+              <div class="field"><label for="name">Full name</label><input id="name" name="name" autocomplete="name" required></div>
+              <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+              <div class="field"><label for="phone">Telephone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+              <div class="field"><label for="organisation">Organisation (optional)</label><input id="organisation" name="organisation" autocomplete="organization"></div>
+              <div class="field full"><label for="topic">What can we help with?</label><select id="topic" name="topic"><option>Personal safety</option><option>Organisation / enterprise deployment</option><option>Devices and hardware</option><option>Technical support</option><option>General enquiry</option></select></div>
+              <div class="field full"><label for="message">Message</label><textarea id="message" name="message" required></textarea></div>
+              <div class="field full"><button class="btn" type="submit">Prepare email enquiry →</button></div>
+              <p class="form-note">Submitting opens your email application with the enquiry details addressed to info@safetylink.online. No information is sent until you send that email.</p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="footer-grid">
+          <div class="footer-brand"><img src="/logos/Safety_Link_Logo_Transparent.png" alt="SafetyLink"><h4>SafetyLink</h4><p>Connected safety technology by TM Media Solutions.</p><p>Stay connected. Stay protected. Stay in control.</p></div>
+          <div><h4>Explore</h4><div class="footer-links"><a href="/#home">Home</a><a href="/#platform">Platform</a><a href="/#usecases">Solutions</a><a href="/#pricing">Pricing</a><a href="/#download">Download the app</a></div></div>
+          <div><h4>Company</h4><div class="footer-links"><a href="#contact">Contact us</a><a href="mailto:info@safetylink.online">Email</a><a href="tel:+27816738186">Telephone</a><a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener">Facebook</a><a href="https://www.instagram.com/tmmediasolutions/" target="_blank" rel="noopener">Instagram</a></div></div>
+          <div><h4>TM Media Solutions</h4><p>Media production and technology company based in the Lenasia / Vlakfontein area, Johannesburg, South Africa.</p><p>Powered by TM Media Solutions · Reg: 2018/500191/07</p></div>
+        </div>
+        <div class="copyright"><span>© 2026 SafetyLink. All rights reserved.</span><span>Concept preview · The existing SafetyLink website and app remain accessible.</span><a href="/">Return to current website ↑</a></div>
+      </div>
+    </footer>
+  </div>
+  <script>
+    (function(){
+      var body=document.body;
+      var themeButton=document.getElementById('themeToggle');
+      var saved=localStorage.getItem('safetylink-preview-theme');
+      if(saved==='light') body.classList.add('light-mode');
+      themeButton.addEventListener('click',function(){
+        body.classList.toggle('light-mode');
+        localStorage.setItem('safetylink-preview-theme',body.classList.contains('light-mode')?'light':'dark');
+      });
+      var menuButton=document.getElementById('menuButton');
+      var mobileNav=document.getElementById('mobileNav');
+      menuButton.addEventListener('click',function(){mobileNav.hidden=!mobileNav.hidden;});
+      var slides=[
+        {src:'/api/r2/stream/Safetylink/Gemini_Generated_Image_6iikvx6iikvx6iik.png',title:'Safety across healthcare environments',text:'Connected safety workflows for staff and institutions.'},
+        {src:'/api/r2/stream/Safetylink/Gemini_Generated_Image_41892s41892s4189.png',title:'Community and campus coordination',text:'Bringing people, places and response teams together.'},
+        {src:'/api/r2/stream/Safetylink/Gemini_Generated_Image_48euet48euet48eu.png',title:'Workplace and field safety',text:'Safety visibility for teams operating beyond the office.'},
+        {src:'/api/r2/stream/Safetylink/Gemini_Generated_Image_9uad6r9uad6r9uad.png',title:'Transport and logistics',text:'Connected alerts and location context for mobile teams.'},
+        {src:'/api/r2/stream/Safetylink/Gemini_Generated_Image_k2mcd9k2mcd9k2mc.png',title:'Schools and institutions',text:'Safety workflows for learning environments.'}
+      ];
+      var index=0,image=document.getElementById('galleryImage'),title=document.getElementById('galleryTitle'),copy=document.getElementById('galleryText'),dots=document.getElementById('galleryDots'),timer;
+      function showSlide(next){index=(next+slides.length)%slides.length;image.style.opacity='0.25';window.setTimeout(function(){image.src=slides[index].src;title.textContent=slides[index].title;copy.textContent=slides[index].text;image.style.opacity='1';},160);Array.prototype.forEach.call(dots.children,function(dot,i){dot.classList.toggle('active',i===index);});}
+      slides.forEach(function(_,i){var dot=document.createElement('button');dot.type='button';dot.className='dot'+(i===0?' active':'');dot.setAttribute('aria-label','Show gallery image '+(i+1));dot.addEventListener('click',function(){showSlide(i);restart();});dots.appendChild(dot);});
+      function restart(){window.clearInterval(timer);timer=window.setInterval(function(){showSlide(index+1);},6000);}
+      document.getElementById('prevSlide').addEventListener('click',function(){showSlide(index-1);restart();});
+      document.getElementById('nextSlide').addEventListener('click',function(){showSlide(index+1);restart();});
+      restart();
+      var form=document.getElementById('contactForm');
+      form.addEventListener('submit',function(event){
+        event.preventDefault();
+        var data=new FormData(form);
+        var lines=['Name: '+data.get('name'),'Email: '+data.get('email'),'Telephone: '+data.get('phone'),'Organisation: '+data.get('organisation'),'Enquiry: '+data.get('topic'),'Message: '+data.get('message')];
+        window.location.href='mailto:info@safetylink.online?subject='+encodeURIComponent('SafetyLink website enquiry')+'&body='+encodeURIComponent(lines.join('\n\n'));
+      });
+    })();
+  </script>
+</body>
+</html>
