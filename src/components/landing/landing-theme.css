@@ -1,0 +1,142 @@
+/* SafetyLink landing experience — shared global theme layer.
+   The theme is driven by useAppStore().globalTheme and persisted by the existing store. */
+.landing-page-root {
+  --sl-page-bg: #020617;
+  --sl-section-bg: rgba(7, 10, 15, .56);
+  --sl-surface: #0f172a;
+  --sl-surface-raised: #111820;
+  --sl-text: #f0f4f8;
+  --sl-muted: #8892a4;
+  --sl-border: rgba(255,255,255,.10);
+  min-height: 100vh;
+  background: var(--sl-page-bg) !important;
+  color: var(--sl-text) !important;
+  transition: background-color .22s ease, color .22s ease;
+}
+.landing-page-root[data-theme="dark"] {
+  color-scheme: dark;
+}
+.landing-page-root[data-theme="light"] {
+  color-scheme: light;
+  --sl-page-bg: #f4f7fa;
+  --sl-section-bg: #f4f7fa;
+  --sl-surface: #ffffff;
+  --sl-surface-raised: #eaf0f4;
+  --sl-text: #10243a;
+  --sl-muted: #526579;
+  --sl-border: #dce5e9;
+}
+.landing-page-root .landing-ambient-video-layer { transition: opacity .25s ease; }
+.landing-page-root .landing-ambient-video { opacity: .18 !important; }
+.landing-page-root .landing-ambient-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(2,6,23,.35) 0%, rgba(2,6,23,.85) 75%, #020617 100%);
+  transition: background .25s ease;
+}
+.landing-page-root[data-theme="light"] .landing-ambient-video { opacity: .045 !important; }
+.landing-page-root[data-theme="light"] .landing-ambient-overlay {
+  background: radial-gradient(circle at center, rgba(244,247,250,.70) 0%, rgba(244,247,250,.90) 72%, #f4f7fa 100%);
+}
+.landing-page-content { position: relative; z-index: 1; color: var(--sl-text); }
+.landing-page-content > div { color: var(--sl-text); }
+.landing-page-content section { transition: background-color .22s ease, color .22s ease, border-color .22s ease; }
+.landing-page-root[data-theme="light"] .landing-page-content > div > section {
+  background-color: var(--sl-section-bg) !important;
+  color: var(--sl-text) !important;
+  border-color: var(--sl-border) !important;
+}
+.landing-page-root[data-theme="light"] .landing-page-content > div > section h1,
+.landing-page-root[data-theme="light"] .landing-page-content > div > section h2,
+.landing-page-root[data-theme="light"] .landing-page-content > div > section h3,
+.landing-page-root[data-theme="light"] .landing-page-content > div > section h4 {
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-page-content > div > section p,
+.landing-page-root[data-theme="light"] .landing-page-content > div > section li,
+.landing-page-root[data-theme="light"] .landing-page-content > div > section td {
+  color: var(--sl-muted) !important;
+}
+.landing-page-root[data-theme="light"] .landing-page-content > div > section [style*="rgba(255,255,255"],
+.landing-page-root[data-theme="light"] .landing-page-content > div > section [style*="rgba(255, 255, 255"],
+.landing-page-root[data-theme="light"] .landing-page-content > div > section [style*="#111820"],
+.landing-page-root[data-theme="light"] .landing-page-content > div > section [style*="#0d1117"],
+.landing-page-root[data-theme="light"] .landing-page-content > div > section [style*="#070a0f"] {
+  background-color: var(--sl-surface) !important;
+  border-color: var(--sl-border) !important;
+}
+.landing-page-root[data-theme="light"] .landing-home-page .hero,
+.landing-page-root[data-theme="light"] .landing-home-page section:first-of-type {
+  background-color: transparent !important;
+  color: #f0f4f8 !important;
+}
+.landing-page-root[data-theme="light"] .landing-home-page section:first-of-type h1,
+.landing-page-root[data-theme="light"] .landing-home-page section:first-of-type h2,
+.landing-page-root[data-theme="light"] .landing-home-page section:first-of-type p {
+  color: #f0f4f8 !important;
+}
+.landing-page-root[data-theme="light"] .landing-home-page .features,
+.landing-page-root[data-theme="light"] .landing-home-page .pricing,
+.landing-page-root[data-theme="light"] .landing-home-page .download,
+.landing-page-root[data-theme="light"] .landing-home-page .gallery,
+.landing-page-root[data-theme="light"] .landing-home-page .klev,
+.landing-page-root[data-theme="light"] .landing-home-page .dispatch {
+  background: var(--sl-section-bg) !important;
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-home-page .feat-card,
+.landing-page-root[data-theme="light"] .landing-home-page .price-card,
+.landing-page-root[data-theme="light"] .landing-home-page .dl-card,
+.landing-page-root[data-theme="light"] .landing-home-page .uc-card,
+.landing-page-root[data-theme="light"] .landing-home-page .panel {
+  background: var(--sl-surface) !important;
+  color: var(--sl-text) !important;
+  border-color: var(--sl-border) !important;
+}
+.landing-page-root[data-theme="light"] .landing-home-page .feat-title,
+.landing-page-root[data-theme="light"] .landing-home-page .price-amt,
+.landing-page-root[data-theme="light"] .landing-home-page .cta-band h2 {
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-download-page,
+.landing-page-root[data-theme="light"] .landing-download-page section {
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-download-page section:not(:first-of-type) {
+  background: var(--sl-section-bg) !important;
+  border-color: var(--sl-border) !important;
+}
+.landing-page-root[data-theme="light"] .landing-download-page section:not(:first-of-type) h1,
+.landing-page-root[data-theme="light"] .landing-download-page section:not(:first-of-type) h2,
+.landing-page-root[data-theme="light"] .landing-download-page section:not(:first-of-type) h3 {
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-download-page section:not(:first-of-type) p {
+  color: var(--sl-muted) !important;
+}
+.landing-page-root[data-theme="light"] .landing-topology-section > div {
+  background: var(--sl-surface) !important;
+  color: var(--sl-text) !important;
+  border-color: var(--sl-border) !important;
+}
+.landing-page-root[data-theme="light"] .landing-topology-section h2,
+.landing-page-root[data-theme="light"] .landing-topology-section h3 {
+  color: var(--sl-text) !important;
+}
+.landing-page-root[data-theme="light"] .landing-topology-section p,
+.landing-page-root[data-theme="light"] .landing-topology-section span {
+  color: var(--sl-muted) !important;
+}
+.landing-page-root[data-theme="light"] .landing-site-footer {
+  background: var(--sl-surface) !important;
+  border-color: var(--sl-border) !important;
+  color: var(--sl-muted) !important;
+}
+.landing-page-root[data-theme="light"] .landing-site-footer button,
+.landing-page-root[data-theme="light"] .landing-site-footer p,
+.landing-page-root[data-theme="light"] .landing-site-footer a {
+  color: var(--sl-muted) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-page-root, .landing-page-root * { transition-duration: .01ms !important; }
+}

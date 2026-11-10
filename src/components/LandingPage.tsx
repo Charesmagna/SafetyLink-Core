@@ -13,6 +13,8 @@ import SafetyWareStore from './SafetyWareStore';
 import { DownloadPage } from './landing/DownloadPage';
 import { ContinuousTopologyOverview } from './landing/ContinuousTopologyOverview';
 import { UpdateBanner } from './UpdateBanner';
+import { useAppStore } from '../utils/store';
+import './landing-theme.css';
 import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 
 type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
@@ -38,6 +40,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   const [page, setPage] = useState<Page>('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const { globalTheme } = useAppStore();
 
   // Check for updates on mount (will only render banner in APK)
   useEffect(() => {
@@ -70,14 +73,15 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white font-sans relative overflow-x-hidden">
+    <div className="landing-page-root min-h-screen font-sans relative overflow-x-hidden" data-theme={globalTheme}>
       {/* ── Ambient Website-Wide Video Backdrop ── */}
       <div 
-        className="fixed inset-0 pointer-events-none z-0 overflow-hidden" 
+        className="landing-ambient-video-layer fixed inset-0 pointer-events-none z-0 overflow-hidden" 
         aria-hidden="true"
         style={{ opacity: 0.18 }}
       >
         <video
+          className="landing-ambient-video"
           autoPlay
           loop
           muted
@@ -101,13 +105,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
           <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
           <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
         </video>
-        <div 
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(circle at center, rgba(2,6,23,0.35) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)',
-          }} 
-        />
+        <div className="landing-ambient-overlay" />
       </div>
       {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
@@ -121,7 +119,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       />
 
       {/* ── Page Content ── */}
-      <div>
+      <div className="landing-page-content">
         {page === 'home'       && <Home       {...sharedProps} />}
         {page === 'hardware'   && <Hardware   {...sharedProps} />}
         {page === 'store'      && <SafetyWareStore />}
@@ -135,11 +133,11 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       </div>
 
       {/* ── CONTINUOUS TOPOLOGY OVERVIEW (PAGE-ADAPTIVE) ── */}
-      <section style={{ padding: '0 20px', maxWidth: '1240px', margin: '70px auto 0' }}>
+      <section className="landing-topology-section" style={{ padding: '0 20px', maxWidth: '1240px', margin: '70px auto 0' }}>
         <ContinuousTopologyOverview activePage={page} />
       </section>
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-800 px-6 py-8 text-center space-y-3 mt-12">
+      <footer className="landing-site-footer border-t border-slate-800 px-6 py-8 text-center space-y-3 mt-12">
         <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500 font-mono">
           {NAV_ITEMS.map(n => (
             <button key={n.id} onClick={() => navigate(n.id)} className="hover:text-slate-300 transition-colors uppercase tracking-wider">{n.label}</button>
