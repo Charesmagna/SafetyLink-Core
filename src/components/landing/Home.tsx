@@ -152,7 +152,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   }, []);
 
   return (
-    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div className="landing-home-page" style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HERO ──────────────────────────────────────────────────── */}
       <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: 'transparent' }}>

@@ -14,7 +14,7 @@ import { DownloadPage } from './landing/DownloadPage';
 import { ContinuousTopologyOverview } from './landing/ContinuousTopologyOverview';
 import { UpdateBanner } from './UpdateBanner';
 import { useAppStore } from '../utils/store';
-import './landing-theme.css';
+import './landing/landing-theme.css';
 import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 
 type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
