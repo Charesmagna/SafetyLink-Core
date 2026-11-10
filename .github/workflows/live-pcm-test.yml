@@ -17,3 +17,4 @@ jobs:
           C=$(curl -s -m 60 -o /tmp/r.txt -w "%{http_code}" -X POST https://safetylink-api.tshilidzi-mukwevho54.workers.dev/webhook/pcm -H 'Content-Type: application/json' -H "X-Signature: $SIG" -d "$BODY")
           echo "::notice::server replied HTTP $C"
           echo "::notice::server body: $(head -c 300 /tmp/r.txt | tr -d '\n' | sed 's/+27[0-9]*/[number]/g')"
+# 1794341837
