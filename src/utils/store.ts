@@ -1739,7 +1739,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
       // 2. Fetch backend users and merge seamlessly with all existing user records
       try {
-        const usersRes = await fetch(`${baseUrl}/api/super-admin/users`, { headers });
+        const usersRes = await fetch(`${baseUrl}/api/admin/users`, { headers });
         if (usersRes.ok) {
           const { users } = await usersRes.json();
           if (users && Array.isArray(users)) {
