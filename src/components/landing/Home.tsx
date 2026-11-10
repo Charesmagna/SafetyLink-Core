@@ -75,7 +75,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [tick, setTick] = useState(0);
   const [rotationTick, setRotationTick] = useState(0);
   const [apkDownloadUrl, setApkDownloadUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk');
-  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk');
+  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [releaseVersion, setReleaseVersion] = useState('latest');
   const [heroClipMuted, setHeroClipMuted] = useState(true);
   const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
@@ -769,7 +769,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 transition: 'all .2s',
               }}
             >
-              <span>📦</span> VIEW ALL PREVIOUS RELEASES & PACKAGES IN DOWNLOAD HUB →
+              <span>📦</span> VIEW OFFICIAL DOWNLOAD OPTIONS →
             </a>
           </div>
         </div>
