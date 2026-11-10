@@ -20,6 +20,9 @@ jobs:
         run: |
           npm install --no-audit --no-fund --legacy-peer-deps >/dev/null 2>&1
           npx --yes -p typescript tsc --noEmit
+      - name: Worker unit tests
+        working-directory: worker
+        run: npx --yes tsx@4.23.13 --test tests/*.test.ts
       - name: Live endpoints respond
         run: |
           B=https://safetylink-api.tshilidzi-mukwevho54.workers.dev
