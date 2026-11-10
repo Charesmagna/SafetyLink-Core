@@ -46,6 +46,12 @@
   color: var(--sl-text) !important;
   border-color: var(--sl-border) !important;
 }
+.landing-page-root[data-theme="light"] .landing-page-content > div > section:first-of-type {
+  background-image: none !important;
+}
+.landing-page-root[data-theme="light"] .landing-page-content > div > section:first-of-type > div[style*="linear-gradient"] {
+  background: transparent !important;
+}
 .landing-page-root[data-theme="light"] .landing-page-content > div > section h1,
 .landing-page-root[data-theme="light"] .landing-page-content > div > section h2,
 .landing-page-root[data-theme="light"] .landing-page-content > div > section h3,
