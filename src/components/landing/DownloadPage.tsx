@@ -7,17 +7,7 @@ interface Props {
   navigate?: (p: string) => void;
 }
 
-interface ReleaseItem {
-  version: string;
-  name: string;
-  publishedAt: string;
-  sizeMb: string;
-  apkUrl: string;
-  exeUrl?: string;
-  isLatest?: boolean;
-}
-
-export function DownloadPage({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
+export function DownloadPage(_props: Props) {
   return (
     <div style={{ background: 'transparent', color: '#f0f4f8', fontFamily: "'Inter',system-ui,sans-serif", minHeight: '100vh' }}>
       
