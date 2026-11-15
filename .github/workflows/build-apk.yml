@@ -3,6 +3,17 @@ name: Build Android APK
 on:
   push:
     branches: [ "master", "main", "beta" ]
+    # Do not rebuild or republish the production APK for website-only changes.
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.*'
+      - 'vite.config.*'
+      - '!src/components/LandingPage.tsx'
+      - '!public/preview/**'
   workflow_dispatch:
 
 jobs:

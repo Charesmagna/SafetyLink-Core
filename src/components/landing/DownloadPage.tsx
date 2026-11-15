@@ -9,7 +9,7 @@ interface Props {
 
 export function DownloadPage(_props: Props) {
   return (
-    <div className="landing-download-page" style={{ background: 'transparent', color: '#f0f4f8', fontFamily: "'Inter',system-ui,sans-serif", minHeight: '100vh' }}>
+    <div style={{ background: 'transparent', color: '#f0f4f8', fontFamily: "'Inter',system-ui,sans-serif", minHeight: '100vh' }}>
       
       {/* ── HEADER ── */}
       <section style={{ padding: '80px 40px 60px', background: 'rgba(7,10,15,0.65)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,.07)' }}>
@@ -94,47 +94,6 @@ export function DownloadPage(_props: Props) {
               </div>
             </div>
 
-            {/* SafetyLink Beta — separate development channel; never aliases Version 2 */}
-            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(245,158,11,0.45)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.4)', fontSize: '10px', fontWeight: 800, padding: '4px 10px', borderRadius: '999px', fontFamily: "'JetBrains Mono',monospace" }}>
-                BETA · TESTING ONLY
-              </div>
-              <div style={{ fontSize: '2.5rem' }}>🧪</div>
-              <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>Download SafetyLink Version 1 Beta</h3>
-                <p style={{ fontSize: '12px', color: '#f59e0b', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
-                  Version 1 Beta · Development and testing channel
-                </p>
-              </div>
-              <p style={{ fontSize: '13px', color: '#8892a4', lineHeight: 1.6, flex: 1 }}>
-                The development build for testing new changes before they are approved for the stable Version 1 release. It is separate from the stable APK and may contain unfinished features.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <a
-                  href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk"
-                  download
-                  style={{
-                    background: '#f59e0b',
-                    color: '#020617',
-                    fontWeight: 800,
-                    fontSize: '12px',
-                    letterSpacing: '.06em',
-                    padding: '14px 20px',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 16px rgba(245,158,11,0.25)',
-                    transition: 'opacity .2s',
-                  }}
-                >
-                  <span>🧪</span> DOWNLOAD SAFETYLINK BETA APK
-                </a>
-              </div>
-            </div>
 
             {/* Windows Control Room */}
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>

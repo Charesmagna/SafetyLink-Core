@@ -1077,7 +1077,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 2. Call backend /api/register (supports individual and org-linked accounts)
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+      const baseUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       const regRes = await fetch(`${baseUrl}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1302,7 +1302,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Superadmin: username "safetylink" is checked on the server against the saved strong password.
     if (rawUsername.toLowerCase() === 'safetylink') {
       try {
-        const base = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+        const base = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
         const adminRes = await fetch(`${base}/api/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1419,7 +1419,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     // 3. Backend /api/login endpoint
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+      const baseUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       const loginRes = await fetch(`${baseUrl}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1695,7 +1695,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
   fetchSuperAdminData: async () => {
     if (!get().superAdminActive) return;
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+      const baseUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       const headers: Record<string, string> = {
         'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
       };
@@ -2141,7 +2141,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
     const csvContent = headers + rows;
 
     try {
-      const baseUrl = get().customBackendUrl ? get().customBackendUrl.replace(/\/$/, '') : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+      const baseUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       await fetch(`${baseUrl}/api/super-admin/export-drive`, {
         method: 'POST',
         headers: {
@@ -2477,7 +2477,7 @@ const fbResult: any = { success: true, uid: "usr-" + Math.random().toString(36).
 
     // Check if worker endpoint is available for bulk sync
     try {
-      const baseUrl = get().customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
+      const baseUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
       const bulkRes = await fetch(`${baseUrl}/api/sync/offline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
