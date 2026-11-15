@@ -10,17 +10,39 @@ Each phase needs a passing gate before the next phase starts. Tick a box only wh
 - One phase at a time. No phase starts until the previous phase gate is ticked.
 
 ## Phase 0: Baseline and safety
-- [ ] Record current SHAs of `main`, `beta` and the roadmap branch in this file.
-- [ ] Verify a usable production database backup exists (export of D1 tables `users`, `organisations`, `sl_profiles`, `sl_contacts`, `sl_pcm_events`), with the backup file location and date recorded here. Backup verified by a read-back row count.
-- [ ] Record the current production Worker version and the secret names configured (names only, never values).
-- **Gate 0:** backup verified, baseline recorded, no production change made.
+Baseline record (fill in, do not leave blank):
+- Branch SHAs: main `____`, beta `____`, roadmap branch `____`
+- Production Worker version / deployment ID: `____`
+- Production D1 database name and ID: `____` (ID is not a secret)
+- Production R2 buckets used: `____`
+- Secret NAMES configured (names only, never values): `____`
+- Backup location (e.g. file path or export ID): `____`
+- Backup timestamp (UTC): `____`
+- Backup scope (tables): `users`, `organisations`, `sl_profiles`, `sl_contacts`, `sl_pcm_events`
 
-## Phase 2: Beta infrastructure isolation
-- [ ] Create a separate Beta Worker and a separate Beta D1 database. Record their names and IDs (not secrets).
-- [ ] Point Beta builds and the Beta test workflows at the Beta Worker only.
-- [ ] Confirm the Beta deploy workflow cannot deploy to the production Worker.
-- [ ] Confirm the production Worker URL is not used by any Beta test.
-- **Gate 2:** Beta Worker answers its health route; production Worker unchanged (version recorded in Phase 0); automated checks pass.
+Checkboxes:
+- [ ] Baseline record above is complete.
+- [ ] Backup exported from production (read-only export; production unchanged).
+- [ ] Backup RESTORED into a separate temporary D1 database (name recorded). Restored row counts match the production counts recorded at backup time.
+- [ ] Temporary restore database deleted or marked as test-only after verification.
+**Gate 0:** a restore test passed with recorded counts. A backup that has not been restored is NOT a valid backup. No production change made.
+
+## Phase 1: Repository and release hygiene
+- [ ] Protected branch rules on `main` confirmed (no direct pushes to production).
+- [ ] Production-deploy workflows confirmed to trigger only on approved refs.
+- [ ] No secrets in tracked files (scan result recorded, names and locations only).
+- [ ] Stale release metadata references removed (recorded by commit).
+**Gate 1:** scan and rule checks recorded with evidence.
+
+## Phase 2: Beta infrastructure isolation (starts only after Gate 1)
+Isolation must be proven at configuration and deployment level, not by name alone.
+- [ ] Beta Worker has its own name, route and deployment target.
+- [ ] Beta Worker's D1 binding points to a Beta database ID, NOT the production ID (config file and live binding checked).
+- [ ] Beta Worker's R2 bindings point to Beta buckets, NOT production buckets.
+- [ ] Beta Worker's secrets are Beta-specific values (verified by a Beta-only test secret, never by printing values).
+- [ ] Beta deploy workflow cannot target the production Worker (workflow reviewed and recorded).
+- [ ] No Beta test uses the production Worker URL.
+**Gate 2:** each isolation item above has recorded evidence. Automated checks pass. Production Worker version unchanged from the Phase 0 record.
 
 ## Phase 3: Authentication and authorization (starts only after Gate 2)
 - [ ] Sign-up, login, logout and re-login work against the Beta Worker (automated test).
@@ -49,7 +71,7 @@ Each phase needs a passing gate before the next phase starts. Tick a box only wh
 - [ ] Promotion to `main` happens only after owner approval.
 - **Gate 6:** owner approval recorded.
 
-## Website preview requirements (separate workstream)
+## Website preview requirements (separate workstream, not part of Gates 0 to 6)
 - [ ] Standalone realistic preview website stays at `/preview/`.
 - [ ] "Preview" link removed from the header.
 - [ ] Discreet P icon near the bottom of the landing content, blended into the design, not directly under the footer, not labelled "Preview".
