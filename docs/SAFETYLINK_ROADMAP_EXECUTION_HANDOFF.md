@@ -71,6 +71,30 @@ Isolation must be proven at configuration and deployment level, not by name alon
 - [ ] Promotion to `main` happens only after owner approval.
 - **Gate 6:** owner approval recorded.
 
+
+## Workstreams A to H (added; all start only after Gate 2, each with its own gate)
+
+Standing rules for every workstream:
+- Telemetry is disclosed to users, minimal, encrypted, retention-defined under POPIA. No hidden tracking, no IMEI or serial collection.
+- Offline-created accounts are marked PROVISIONAL and are never shown as verified server accounts until synchronised.
+- Emergency status is tracked as QUEUED, SENT, PROVIDER_ACCEPTED, DELIVERED or CONFIRMED. Provider acceptance is never reported as delivery.
+- Legacy demo and bypass login routes are removed, not replaced.
+
+- [ ] **A. Platform intelligence:** server-side user, installation and device records (installation ID, model, OS, app version, first-seen, last-seen, status). Tests for every field.
+- [ ] **B. Account governance:** super-admin activate, deactivate, suspend (with reason), revoke sessions, audit history (who, when, which account, why). Deactivated accounts rejected on protected APIs (test with an old session).
+- [ ] **C. Registration repair:** online sign-up, login and organisation owner auto-login work against Beta (automated and phone tests). Diagnostics separate DNS, timeout, Worker unavailable, bad credentials, expired session, validation and server errors.
+- [ ] **D. Offline identity:** provisional local profile, secure storage, queued sync, reconciliation on reconnect. Tests for queue, retry and conflict.
+- [ ] **E. Release accountability:** every client reports app version and build; outdated versions detected; missing heartbeat flagged; architecture test fails if telemetry or version reporting is removed.
+- [ ] **F. Backup and audit:** scheduled encrypted Cloudflare archive (R2) with restore test (Gate 0 method). Google Drive backup only after owner approves and POPIA review of what is copied.
+- [ ] **G. Zero-data dispatch:** SMS path, Please Call Me path and offline native fallback, each independently tested. Network, SIM location and carrier confirmed by owner before any carrier-specific build (see Open Decisions).
+- [ ] **H. Super-admin dashboard:** users by status and version, active counts (24h, 7d, 30d), failed logins, connectivity errors. Reads only from the authoritative server records.
+**Gates A to H:** each workstream has recorded evidence (tests, phone results, restore results where relevant) before it is ticked.
+
+## Open decisions (owner must answer; nothing is built on these until answered)
+- [ ] Mobile network of the emergency SIM: RAIN / Vodacom / MTN / Telkom / Cell C / Other.
+- [ ] Where the SIM sits: inside the SafetyLink phone / separate always-on phone / dedicated gateway device.
+- [ ] Whether Google Drive backups are wanted, and what data may be copied to it.
+
 ## Website preview requirements (separate workstream, not part of Gates 0 to 6)
 - [ ] Standalone realistic preview website stays at `/preview/`.
 - [ ] "Preview" link removed from the header.
