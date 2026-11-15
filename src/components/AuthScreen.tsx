@@ -266,10 +266,11 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     } else {
       setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Logging you in...`);
       const registeredContactName = orgContactName;
-      const registeredOrgId = generatedOrgId;
+      const registeredOrgId = newOrg.id; // the server-issued code, not the removed generator
 
       setTimeout(async () => {
-        await login(registeredContactName, orgPassword, registeredOrgId);
+        const signedIn = await login(registeredContactName, orgPassword, registeredOrgId);
+        if (signedIn && (signedIn as any).success === false) setOrgError((signedIn as any).error || 'Organisation created, but sign-in failed. Use the sign-in screen with your code.');
         setOrgSuccessMsg('');
         setOrgName('');
         setOrgContactName('');
