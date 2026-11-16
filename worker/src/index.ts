@@ -1,3 +1,4 @@
+import { verifyForwarderSignature, hexHmac, safeEq } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 // SafetyLink Cloudflare Worker — Full Backend
@@ -73,12 +74,23 @@ const hashPassword = async (password: string, salt: string) => {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-const makeToken = (payload: object) => btoa(JSON.stringify({ ...payload, exp: Date.now() + 7 * 86400_000 }));
 
-const verifyToken = (token: string) => {
+
+const makeToken = async (payload: object, secret: string | undefined) => {
+  if (!secret) throw new Error('signing secret not configured');
+  const body = btoa(JSON.stringify({ ...payload, exp: Date.now() + 7 * 86400_000 }));
+  return body + '.' + (await hexHmac(secret, body));
+};
+
+// Accepts only tokens whose signature matches the server secret. Unsigned or forged tokens return null.
+const verifyToken = async (token: string, secret: string | undefined) => {
+  if (!secret) return null;
   try {
-    const p = JSON.parse(atob(token));
-    if (p.exp < Date.now()) throw new Error('expired');
+    const [body, sig] = String(token || '').split('.');
+    if (!body || !sig) return null;
+    if (!safeEq(sig.toLowerCase(), await hexHmac(secret, body))) return null;
+    const p = JSON.parse(atob(body));
+    if (p.exp < Date.now()) return null;
     return p;
   } catch { return null; }
 };
@@ -93,7 +105,7 @@ const checkTrialExpired = async (db: D1Database, orgId: string) => {
 const authMiddleware = async (c: any, next: any) => {
   const auth = c.req.header('Authorization');
   if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401 as any);
-  const payload = verifyToken(auth.slice(7));
+  const payload = await verifyToken(auth.slice(7), c.env.JWT_SECRET);
   if (!payload) return c.json({ error: 'Invalid or expired token' }, 401);
   if (await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
   c.set('orgId', payload.orgId);
@@ -311,7 +323,7 @@ async function fireAllAlerts(
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 // Latest APK, served from R2 (the repo can stay private)
 // Three downloads: stable 2.0 (/download/safetylink.apk), beta (/download/beta/...), legacy 1.x (/download/v1/...)
-const dl = (key, file) => async (c) => {
+const dl = (key: string, file: string) => async (c: any) => {
   const obj = await (c.env as any).RELEASES?.get(key);
   if (!obj) return c.json({ error: 'Not published yet' }, 404);
   return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': `attachment; filename="${file}"`, 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
@@ -418,7 +430,7 @@ const handleRegisterOrg = async (c: any) => {
     const trialEndsAt = new Date(Date.now() + 14*24*60*60*1000).toISOString();
     await c.env.DB?.prepare('CREATE TABLE IF NOT EXISTS org_trials (org_id TEXT PRIMARY KEY, trial_ends_at TEXT NOT NULL)').run().catch(() => {});
     await c.env.DB?.prepare('INSERT OR REPLACE INTO org_trials (org_id, trial_ends_at) VALUES (?, ?)').bind(orgId, trialEndsAt).run().catch(() => {});
-    const token = makeToken({ orgId, email });
+    const token = await makeToken({ orgId, email }, c.env.JWT_SECRET);
     return c.json({
       success: true,
       token,
@@ -438,7 +450,7 @@ const handleRegisterOrg = async (c: any) => {
 app.post('/api/auth/register-org', handleRegisterOrg);
 app.post('/api/register-org', handleRegisterOrg);
 
-app.post('/api/auth/register-user', async (c) => {
+app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
   const body: any = await c.req.json();
   const username = body.username;
   const password = body.password;
@@ -453,7 +465,7 @@ app.post('/api/auth/register-user', async (c) => {
     await c.env.DB!.prepare(
       'INSERT INTO users (id, org_id, username, email, phone, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?,?)'
     ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, Date.now()).run();
-    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username, role }), userId: id, username, role });
+    return c.json({ token: await makeToken({ userId: id, orgId: orgCode || null, username, role }, c.env.JWT_SECRET), userId: id, username, role });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
@@ -480,11 +492,11 @@ const handleLogin = async (c: any) => {
     ).bind(targetOrgCode, hash).first().catch(() => null) as any;
     if (!org) return c.json({ error: 'Invalid credentials' }, 401);
     if (await checkTrialExpired(c.env.DB, org.id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-    const token = makeToken({ orgId: org.id, username });
+    const token = await makeToken({ orgId: org.id, username }, c.env.JWT_SECRET);
     return c.json({ token, orgId: org.id, org_code: org.id, orgName: org.name, org_name: org.name });
   }
   if (user.org_id && await checkTrialExpired(c.env.DB, user.org_id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-  const token = makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role });
+  const token = await makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role }, c.env.JWT_SECRET);
   return c.json({ token, userId: user.id, orgId: user.org_id, org_code: user.org_id, username: user.username, role: user.role || 'User', email: user.email, phone: user.phone });
 };
 
@@ -640,13 +652,6 @@ app.get('/pcm/:token', (c) => {
   return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
 });
 app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
-// Gateway heartbeat: the Rain phone pings this. Only a matching secret token is accepted.
-app.on(['GET', 'POST'], '/webhook/heartbeat/:token', async (c) => {
-  const expected = String((c.env as any).HEARTBEAT_TOKEN || '');
-  if (!expected || c.req.param('token') !== expected) return c.json({ error: 'not_found' }, 404 as any);
-  return c.json({ ok: true, at: Date.now() });
-});
-
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
@@ -710,7 +715,7 @@ async function handlePcmWebhook(c: any) {
     return await handlePcmWebhookInner(c);
   } catch (e: any) {
     console.error('[PCM] crash', e);
-    return c.json({ ok: false, error: 'server error', detail: String(e?.message || e).slice(0, 300) }, 200 as any);
+    return c.json({ ok: false, error: 'temporary server error' }, 500 as any);
   }
 }
 
@@ -718,14 +723,28 @@ async function handlePcmWebhookInner(c: any) {
   // AUTH: every request must carry the secret token (?token= or x-pcm-token header),
   // or a valid HMAC signature. Without this anyone could trigger alerts.
   const expected = (c.env.PCM_WEBHOOK_TOKEN || '').trim();
-  const secret = (c.env.PCM_WEBHOOK_SECRET || '').trim();
-  if (!expected && !secret) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
+  // SMS Forwarder signs with HMAC. Some existing deployments stored the same
+  // shared value as PCM_WEBHOOK_TOKEN, so accept either configured secret.
+  const hmacSecrets = [c.env.PCM_WEBHOOK_SECRET, c.env.PCM_WEBHOOK_TOKEN].map((v: string) => (v || '').trim()).filter(Boolean);
+  if (!expected && hmacSecrets.length === 0) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
   const raw = await c.req.text();
   const givenTok = (c.req.param('token') || c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
-  const givenSig = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').toLowerCase().trim();
+  const signatureHeader = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').trim();
   const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
-  const sigOk = !!secret && !!givenSig && safeEq(givenSig, await hexHmac(secret, raw));
-  if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);
+  const sigOk = await verifyForwarderSignature(raw, signatureHeader, hmacSecrets);
+  if (!tokenOk && !sigOk) {
+    // Diagnostic metadata only. Never log secrets, signatures, or message contents.
+    console.warn('[PCM] authentication rejected', {
+      tokenConfigured: !!expected,
+      hmacSecretCount: hmacSecrets.length,
+      tokenProvided: !!givenTok,
+      signatureProvided: !!signatureHeader,
+      signatureLength: signatureHeader.length,
+      signaturePrefix: /^sha256=/i.test(signatureHeader) ? 'sha256=' : 'none',
+      bodyLength: raw.length,
+    });
+    return c.json({ error: 'Unauthorized' }, 401 as any);
+  }
   let body: any = {};
   try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
 
@@ -761,7 +780,8 @@ async function handlePcmWebhookInner(c: any) {
     return c.json({ ok: true, msisdn: localMsisdn, status: 'DISPATCHED_SIMULATED', isDemo: true });
   }
 
-  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender, (tokenOk || sigOk) ? (c.env.PCM_WEBHOOK_SECRET || '') : (c.req.header('x-safetylink-gateway') || ''));
+  // Authentication has already been completed against the raw request body above.
+  const outcome = await inboundPcm(c.env, rawText, extractedPhone || gatewaySender);
   return c.json(outcome.json, outcome.status as any);
 }
 
