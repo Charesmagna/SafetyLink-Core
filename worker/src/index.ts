@@ -1,4 +1,4 @@
-import { verifyForwarderSignature } from './pcm-auth';
+import { verifyForwarderSignature, hexHmac, safeEq } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 // SafetyLink Cloudflare Worker — Full Backend
@@ -74,12 +74,23 @@ const hashPassword = async (password: string, salt: string) => {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-const makeToken = (payload: object) => btoa(JSON.stringify({ ...payload, exp: Date.now() + 7 * 86400_000 }));
 
-const verifyToken = (token: string) => {
+
+const makeToken = async (payload: object, secret: string | undefined) => {
+  if (!secret) throw new Error('signing secret not configured');
+  const body = btoa(JSON.stringify({ ...payload, exp: Date.now() + 7 * 86400_000 }));
+  return body + '.' + (await hexHmac(secret, body));
+};
+
+// Accepts only tokens whose signature matches the server secret. Unsigned or forged tokens return null.
+const verifyToken = async (token: string, secret: string | undefined) => {
+  if (!secret) return null;
   try {
-    const p = JSON.parse(atob(token));
-    if (p.exp < Date.now()) throw new Error('expired');
+    const [body, sig] = String(token || '').split('.');
+    if (!body || !sig) return null;
+    if (!safeEq(sig.toLowerCase(), await hexHmac(secret, body))) return null;
+    const p = JSON.parse(atob(body));
+    if (p.exp < Date.now()) return null;
     return p;
   } catch { return null; }
 };
@@ -94,7 +105,7 @@ const checkTrialExpired = async (db: D1Database, orgId: string) => {
 const authMiddleware = async (c: any, next: any) => {
   const auth = c.req.header('Authorization');
   if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401 as any);
-  const payload = verifyToken(auth.slice(7));
+  const payload = await verifyToken(auth.slice(7), c.env.JWT_SECRET);
   if (!payload) return c.json({ error: 'Invalid or expired token' }, 401);
   if (await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
   c.set('orgId', payload.orgId);
@@ -419,7 +430,7 @@ const handleRegisterOrg = async (c: any) => {
     const trialEndsAt = new Date(Date.now() + 14*24*60*60*1000).toISOString();
     await c.env.DB?.prepare('CREATE TABLE IF NOT EXISTS org_trials (org_id TEXT PRIMARY KEY, trial_ends_at TEXT NOT NULL)').run().catch(() => {});
     await c.env.DB?.prepare('INSERT OR REPLACE INTO org_trials (org_id, trial_ends_at) VALUES (?, ?)').bind(orgId, trialEndsAt).run().catch(() => {});
-    const token = makeToken({ orgId, email });
+    const token = await makeToken({ orgId, email }, c.env.JWT_SECRET);
     return c.json({
       success: true,
       token,
@@ -454,7 +465,7 @@ app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
     await c.env.DB!.prepare(
       'INSERT INTO users (id, org_id, username, email, phone, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?,?)'
     ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, Date.now()).run();
-    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username, role }), userId: id, username, role });
+    return c.json({ token: await makeToken({ userId: id, orgId: orgCode || null, username, role }, c.env.JWT_SECRET), userId: id, username, role });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
@@ -481,11 +492,11 @@ const handleLogin = async (c: any) => {
     ).bind(targetOrgCode, hash).first().catch(() => null) as any;
     if (!org) return c.json({ error: 'Invalid credentials' }, 401);
     if (await checkTrialExpired(c.env.DB, org.id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-    const token = makeToken({ orgId: org.id, username });
+    const token = await makeToken({ orgId: org.id, username }, c.env.JWT_SECRET);
     return c.json({ token, orgId: org.id, org_code: org.id, orgName: org.name, org_name: org.name });
   }
   if (user.org_id && await checkTrialExpired(c.env.DB, user.org_id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-  const token = makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role });
+  const token = await makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role }, c.env.JWT_SECRET);
   return c.json({ token, userId: user.id, orgId: user.org_id, org_code: user.org_id, username: user.username, role: user.role || 'User', email: user.email, phone: user.phone });
 };
 
