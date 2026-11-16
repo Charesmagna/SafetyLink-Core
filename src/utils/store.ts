@@ -1,3 +1,4 @@
+const WORKER_BASE_URL = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
 import { auth, db } from '../lib/firebase';
@@ -986,24 +987,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('BLE', 'INFO', `iTag Renamed`, `Device ${macAddress} friendly name updated to "${newFriendlyName}"`);
   },
   requestJoinOrganization: (userId, orgCode, selectedRole) => {
-    const matchedOrg = get().organizations.find(o => o.id.toUpperCase() === orgCode.toUpperCase());
-    if (!matchedOrg) {
-      return { success: false, error: 'Organization code not found.' };
-    }
-    const updatedUsers = get().users.map(u => 
-      u.id === userId ? { ...u, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole as import("../types").UserRole } : u
-    );
-    set({ users: updatedUsers });
-    setStoredJSON('sl_users', updatedUsers);
-    
-    const currUser = get().currentUser;
-    if (currUser && currUser.id === userId) {
-      const nextUser = { ...currUser, pendingOrgCode: matchedOrg.id, pendingRole: selectedRole as import("../types").UserRole };
-      set({ currentUser: nextUser });
-      setStoredJSON('sl_current_user', nextUser);
-    }
-    get().addAuditLog('SECURITY', 'INFO', 'Join Organization Requested', `User requested to join ${matchedOrg.name} (${matchedOrg.id}) as ${selectedRole}`);
-    return { success: true };
+    // The server decides. The phone sends the request and shows the server's answer; it does not approve locally.
+    const token = getStoredJSON<string>('sl_jwt_token', '');
+    fetch(`${WORKER_BASE_URL}/api/org/join-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orgCode: String(orgCode || '').trim().toUpperCase(), role: selectedRole }),
+    })
+      .then(async r => {
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) {
+          get().addToast(`Join request sent to ${j.orgId}. Waiting for the organisation owner to approve.`, 'success');
+        } else {
+          get().addToast(j.error || 'The join request was not accepted by the server.', 'error');
+        }
+      })
+      .catch(() => get().addToast('Could not reach the SafetyLink server. Check your connection and try again.', 'error'));
+    return { success: true, pending: true, userId };
   },
   approvePendingUser: (userId) => {
     const userToApprove = get().users.find(u => u.id === userId);

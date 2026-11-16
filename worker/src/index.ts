@@ -652,6 +652,55 @@ app.get('/pcm/:token', (c) => {
   return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
 });
 app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
+// ── Organisation join through the server (signed token required) ─────────────
+const ensureJoinTable = async (db: D1Database) => {
+  await db.prepare("CREATE TABLE IF NOT EXISTS sl_join_requests (id TEXT PRIMARY KEY, org_id TEXT NOT NULL, user_id TEXT NOT NULL, username TEXT, status TEXT NOT NULL DEFAULT 'PENDING', created_at INTEGER NOT NULL)").run();
+};
+
+const authedUser = async (c: any) => {
+  const auth = c.req.header('Authorization');
+  if (!auth || !auth.startsWith('Bearer ')) return null;
+  return await verifyToken(auth.slice(7), c.env.JWT_SECRET);
+};
+
+// A signed-in user asks to join an organisation. The server decides; the phone only shows the result.
+app.post('/api/org/join-request', async (c) => {
+  const me = await authedUser(c);
+  if (!me?.userId) return c.json({ error: 'Sign in again' }, 401);
+  const body: any = await c.req.json().catch(() => ({}));
+  const orgId = String(body.orgCode || body.org_code || '').trim().toUpperCase();
+  if (!orgId) return c.json({ error: 'Organisation code required' }, 400);
+  const org = await c.env.DB!.prepare('SELECT id FROM organisations WHERE id = ?').bind(orgId).first();
+  if (!org) return c.json({ error: 'Organisation code not found' }, 404);
+  await ensureJoinTable(c.env.DB!);
+  const id = crypto.randomUUID();
+  await c.env.DB!.prepare('INSERT INTO sl_join_requests (id, org_id, user_id, username, status, created_at) VALUES (?,?,?,?,?,?)')
+    .bind(id, orgId, me.userId, me.username || '', 'PENDING', Date.now()).run();
+  return c.json({ ok: true, requestId: id, status: 'PENDING', orgId });
+});
+
+// The organisation owner sees pending requests for their own organisation only.
+app.get('/api/org/join-requests', async (c) => {
+  const me = await authedUser(c);
+  if (!me?.orgId) return c.json({ error: 'Sign in again' }, 401);
+  await ensureJoinTable(c.env.DB!);
+  const rows = await c.env.DB!.prepare("SELECT id, user_id, username, status, created_at FROM sl_join_requests WHERE org_id = ? ORDER BY created_at DESC").bind(me.orgId).all();
+  return c.json({ requests: rows.results || [] });
+});
+
+// The owner approves or declines a request for their own organisation only.
+app.post('/api/org/join-requests/:id/decision', async (c) => {
+  const me = await authedUser(c);
+  if (!me?.orgId) return c.json({ error: 'Sign in again' }, 401);
+  const body: any = await c.req.json().catch(() => ({}));
+  const decision = body.decision === 'APPROVED' ? 'APPROVED' : 'DECLINED';
+  await ensureJoinTable(c.env.DB!);
+  const res = await c.env.DB!.prepare('UPDATE sl_join_requests SET status = ? WHERE id = ? AND org_id = ?')
+    .bind(decision, c.req.param('id'), me.orgId).run();
+  if (!res.meta?.changes) return c.json({ error: 'Request not found for this organisation' }, 404);
+  return c.json({ ok: true, status: decision });
+});
+
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
