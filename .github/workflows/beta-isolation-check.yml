@@ -1,0 +1,25 @@
+name: Beta isolation check
+on:
+  push:
+    branches: [beta]
+  workflow_dispatch:
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Beta must not point at production resources
+        run: |
+          fail=0
+          for f in worker/wrangler.toml wrangler.toml; do
+            [ -f "$f" ] || continue
+            if grep -qE 'safetylink-core|9daa8cbf-861f-4483-92e5-9f03541c6e71|safetylink-releases|ENVIRONMENT *= *"production"' "$f"; then
+              echo "::error file=$f::Beta config points at production resources (D1 safetylink-core, production ID, safetylink-releases, or ENVIRONMENT=production)."
+              fail=1
+            fi
+          done
+          if [ "$fail" = "1" ]; then
+            echo "::error::Beta is NOT isolated. Create a Beta D1 database, Beta bucket and Beta Worker name, then update the config."
+            exit 1
+          fi
+          echo "Beta config is isolated."
