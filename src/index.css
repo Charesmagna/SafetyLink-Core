@@ -69,3 +69,19 @@ body.barcode-scanner-active #root {
 .theme-light .shadow-2xl {
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
 }
+
+/* Global light theme: the whole app follows globalTheme, not only the header and footer. */
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='light'] body,
+:root[data-theme='light'] #root { background: #f8fafc !important; color: #0f172a !important; }
+:root[data-theme='light'] .bg-slate-950,
+:root[data-theme='light'] .bg-slate-900,
+:root[data-theme='light'] .bg-black,
+:root[data-theme='light'] .bg-zinc-950 { background-color: #ffffff !important; }
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .text-slate-100,
+:root[data-theme='light'] .text-slate-200 { color: #0f172a !important; }
+:root[data-theme='light'] .text-slate-400,
+:root[data-theme='light'] .text-slate-500 { color: #475569 !important; }
+:root[data-theme='light'] .border-slate-800,
+:root[data-theme='light'] .border-slate-900 { border-color: #e2e8f0 !important; }

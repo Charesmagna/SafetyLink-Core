@@ -144,6 +144,10 @@ const TrialReminderModal = () => {
 };
 
 const App: React.FC = () => {
+  const globalThemeValue = useAppStore((st: any) => st.globalTheme);
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', globalThemeValue || 'dark');
+  }, [globalThemeValue]);
   // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
   // Check if running in a desktop EXE (Electron) environment
   const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
