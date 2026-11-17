@@ -127,6 +127,14 @@ jobs:
         }
         JSON_EOF
 
+    - name: Cache Gradle downloads
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
@@ -147,9 +155,16 @@ jobs:
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
-        ./gradlew assembleRelease \
+        for attempt in 1 2 3 4 5; do
+          echo "Gradle attempt $attempt"
+          if ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
-          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
+          -PKEYSTORE_PASSWORD="SafetyLink2024!" \ ; then
+            echo "::notice::Build succeeded on attempt $attempt"; break
+          fi
+          if [ "$attempt" = "5" ]; then echo "::error::Build failed after 5 attempts"; exit 1; fi
+          echo "Maven rate-limited or failed; waiting 90s before retry"; sleep 90
+        done
           -PKEY_ALIAS="safetylink" \
           -PKEY_PASSWORD="SafetyLink2024!" \
           --init-script ../init.gradle \
