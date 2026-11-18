@@ -177,42 +177,8 @@ export const BLEScanner: React.FC = () => {
         const store = useAppStore.getState();
         store.addAuditLog('BLE', 'SEVERE', 'NATIVE PHYSICAL BUTTON PRESS', `Signal byte 0x${val.toString(16)} received from ${address} (Click Code: ${val})`);
 
-        // Medium vibration to acknowledge every iTAG press
-        if (navigator.vibrate) { try { navigator.vibrate(120); } catch(e) {} }
-
-        const lizzyFollowUp = (alertType: string) => {
-          // Lizzy AI voice follow-up after dispatch confirmation
-          setTimeout(() => {
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              try {
-                window.speechSynthesis.cancel();
-                const msg = new SpeechSynthesisUtterance(
-                  `${alertType} alert dispatched. This is Lizzy from SafetyLink. Are you okay? Please respond if you can hear me.`
-                );
-                msg.rate = 0.9;
-                msg.pitch = 1.1;
-                window.speechSynthesis.speak(msg);
-              } catch(e) {}
-            }
-          }, 3500);
-        };
-
-        // Single, standardized action on any click code: 10s countdown SOS
-        store.addAuditLog('BLE', 'SEVERE', 'iTAG Physical Button Press', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-        store.startMultiStagePanic("SOS triggered via iTAG button", 10);
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-          try {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency countdown initiated. 10 seconds to cancel."));
-          } catch (e) {}
-        }
-        // Long vibration + beep on countdown complete
-        setTimeout(() => {
-          if (store.activeSOSState !== 'IDLE') {
-            if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
-            lizzyFollowUp('SOS');
-          }
-        }, 10500);
+        // Brief haptic pulse confirming hardware packet reached SafetyLink; PanicService drives the 10s countdown natively
+        if (navigator.vibrate) { try { navigator.vibrate(120); } catch (e) {} }
       },
       (battery) => {
         useAppStore.setState(state => ({

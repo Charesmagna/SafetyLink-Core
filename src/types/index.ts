@@ -36,6 +36,13 @@ export interface UserProfile {
   password?: string;
   lat?: number;
   lng?: number;
+  accountStatus?: 'active' | 'deactivated' | 'suspended';
+  lastSeen?: number;
+  appVersion?: string;
+  deviceModel?: string;
+  provisionalOffline?: boolean;
+  pinCode?: string;
+  unlockMethod?: 'BIOMETRIC' | 'PIN' | 'DURESS';
   customTwilioConfig?: {
     accountSid?: string;
     authToken?: string;
@@ -181,6 +188,7 @@ export interface Contact {
   relation?: string;
   template?: string;
   channelType?: 'CALL' | 'SMS' | 'WHATSAPP' | 'GROUP' | 'POLICE';
+  hasWhatsApp?: boolean;
   priority: number;
   triggerTypes?: EmergencyProfileType[];
 }
@@ -301,5 +309,32 @@ export interface ClientDatabaseRecord {
   batteryLevel?: number;
   source: 'APP_USER' | 'SERVER_FETCH' | 'ADMIN_INSERT' | 'DRIVE_SYNC';
   extraFields?: Record<string, any>;
+}
+
+export type CameraBrand = 'HIKVISION' | 'HILOOK' | 'ONVIF_GENERIC';
+export type CameraDeployMode = 'HIK_CONNECT_P2P' | 'LAN_ISAPI' | 'WHEP_HLS_RELAY';
+export type CameraStatus = 'UNVERIFIED' | 'ONLINE' | 'OFFLINE' | 'ERROR';
+
+export interface CameraDevice {
+  id: string;
+  name: string;
+  brand: CameraBrand;
+  mode: CameraDeployMode;
+  orgId: string;
+  ownerUid: string;
+  serialNumber?: string;
+  host?: string;
+  httpPort?: number;
+  rtspPort?: number;
+  channel: number;
+  relayUrl?: string;
+  softIoTriggerId: number;
+  triggerOnPanic: boolean;
+  status: CameraStatus;
+  lastError?: string;
+  lastSnapshotBase64?: string;
+  lastCheckedAt?: number;
+  createdAt: number;
+  updatedAt?: number;
 }
 

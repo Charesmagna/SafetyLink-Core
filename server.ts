@@ -609,7 +609,7 @@ Rules:
 - Return valid JSON only, no markdown code fences, no extra commentary.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-4-hydrogen",
         contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
         config: {
           temperature: 0.7,
@@ -817,181 +817,414 @@ Rules:
 
   // API ROUTES
   
-  // 1. Text / Thinking / Chat / Grounding (Map/Search)
+  // 1. Text / Grounding (Search OR Maps — never combined, no forbidden config params)
   app.post("/api/gemini/generate", async (req, res) => {
     try {
-      const { prompt, useThinking, useGrounding, useFlashLite, lat, lng } = req.body;
-      const genAI = initGemini();
-      
-      let modelName = "gemini-3.5-flash"; // Default
-      if (useThinking) modelName = "gemini-3.1-pro-preview";
-      if (useFlashLite) modelName = "gemini-3.1-flash-lite";
-
-      const config: any = {};
-      
-      if (useThinking) {
-        config.thinkingConfig = { thinkingLevel: "HIGH" };
+      const { prompt, useGrounding, useFlashLite, lat, lng, systemInstruction } = req.body || {};
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "prompt is required" });
       }
-      
+      const genAI = initGemini();
+
+      const modelName = useFlashLite && !useGrounding ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+      const config: any = {};
+
+      if (systemInstruction && !useGrounding) {
+        config.systemInstruction = String(systemInstruction);
+      }
+
       if (useGrounding === "search") {
         config.tools = [{ googleSearch: {} }];
       } else if (useGrounding === "maps") {
         config.tools = [{ googleMaps: {} }];
-        if (lat !== undefined && lng !== undefined) {
-           config.toolConfig = {
-             retrievalConfig: {
-               latLng: {
-                 latitude: lat,
-                 longitude: lng
-               }
-             }
-           };
+        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+          config.toolConfig = {
+            retrievalConfig: {
+              latLng: { latitude: lat, longitude: lng },
+            },
+          };
         }
       }
 
       const response = await genAI.models.generateContent({
         model: modelName,
         contents: prompt,
-        config
+        config,
       });
 
-      let chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      res.json({ text: response.text, chunks });
+      const metadata = response.candidates?.[0]?.groundingMetadata;
+      const chunks = metadata?.groundingChunks || [];
+      res.json({
+        text: response.text || "",
+        chunks,
+        searchEntryPointHtml: metadata?.searchEntryPoint?.renderedContent || null,
+      });
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      console.error("[/api/gemini/generate]", e);
+      res.status(500).json({ error: e.message || "Gemini generation failed" });
     }
   });
 
-  // 2. Audio Transcription (gemini-3.5-flash)
+  // 1b. Multi-turn Lizzy / Tactical Chatbot (gemini-4-hydrogen / gemini-3.1-flash-lite)
+  app.post("/api/gemini/chat", async (req, res) => {
+    try {
+      const { message, history, systemInstruction, useFlashLite, useMaps, lat, lng } = req.body || {};
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "message is required" });
+      }
+      const genAI = initGemini();
+      const modelName = useMaps ? "gemini-4-hydrogen" : useFlashLite ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+
+      const formattedHistory = Array.isArray(history)
+        ? history
+            .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
+            .slice(-16)
+            .map((h: any) => ({
+              role: h.role === "model" || h.sender === "bot" ? "model" : "user",
+              parts: [{ text: h.text }],
+            }))
+        : [];
+
+      const config: any = {};
+      if (useMaps) {
+        config.tools = [{ googleMaps: {} }];
+        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+          config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
+        }
+      } else {
+        config.systemInstruction =
+          systemInstruction ||
+          "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai). Be warm, clear, concise, and practical. Share South African emergency numbers (10111 SAPS, 112 cellular emergency, 10177 ambulance) when relevant.";
+      }
+
+      const response = await genAI.models.generateContent({
+        model: modelName,
+        contents: [...formattedHistory, { role: "user", parts: [{ text: message }] }],
+        config,
+      });
+
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      res.json({ text: response.text || "", chunks });
+    } catch (e: any) {
+      console.error("[/api/gemini/chat]", e);
+      res.status(500).json({ error: e.message || "Chat request failed" });
+    }
+  });
+
+  // 1c. Safer City Grounded Updates (Separate Google Search & Google Maps calls per SDK rules)
+  app.post("/api/gemini/safer-city", async (req, res) => {
+    try {
+      const { queryText, locationName, lat, lng } = req.body || {};
+      const genAI = initGemini();
+      const placeLabel = locationName || (typeof lat === "number" && typeof lng === "number" ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : "Johannesburg, South Africa");
+
+      const searchPrompt = queryText
+        ? `${queryText} in ${placeLabel}. Focus on public safety advisories, CPF community alerts, traffic disruptions, and severe weather.`
+        : `Latest public safety advisories, community policing forum (CPF) updates, municipal alerts, and weather warnings near ${placeLabel}. Summarize concisely with facts.`;
+
+      const searchRes = await genAI.models.generateContent({
+        model: "gemini-4-hydrogen",
+        contents: searchPrompt,
+        config: { tools: [{ googleSearch: {} }] },
+      });
+
+      let mapsRes: any = null;
+      if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+        mapsRes = await genAI.models.generateContent({
+          model: "gemini-4-hydrogen",
+          contents: `List the 4 nearest verified SAPS police stations, emergency trauma hospitals, or 24-hour safe zones near latitude ${lat}, longitude ${lng}.`,
+          config: {
+            tools: [{ googleMaps: {} }],
+            toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } },
+          },
+        });
+      }
+
+      res.json({
+        advisoryText: searchRes.text || "",
+        searchChunks: searchRes.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+        safeZonesText: mapsRes?.text || "",
+        mapsChunks: mapsRes?.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+      });
+    } catch (e: any) {
+      console.error("[/api/gemini/safer-city]", e);
+      res.status(500).json({ error: e.message || "Safer City query failed" });
+    }
+  });
+
+  // 2. Audio Transcription (gemini-3.5-transcribe) — accessibility & voice notes
   app.post("/api/gemini/transcribe", async (req, res) => {
     try {
-      const { audioBase64, mimeType } = req.body;
+      const { audioBase64, mimeType } = req.body || {};
+      if (!audioBase64) {
+        return res.status(400).json({ error: "audioBase64 is required" });
+      }
       const genAI = initGemini();
       const response = await genAI.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-3.5-transcribe",
         contents: [
-          { text: "Transcribe this audio file accurately." },
-          { inlineData: { data: audioBase64, mimeType: mimeType || "audio/mp3" } }
-        ]
+          {
+            role: "user",
+            parts: [
+              { text: "Transcribe this spoken audio accurately in English or the spoken South African language. Return plain transcript text only." },
+              { inlineData: { data: audioBase64, mimeType: mimeType || "audio/webm" } },
+            ],
+          },
+        ],
       });
-      res.json({ text: response.text });
+      res.json({ text: response.text || "" });
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      console.error("[/api/gemini/transcribe]", e);
+      res.status(500).json({ error: e.message || "Transcription failed" });
     }
   });
 
-  // 3. Image Analysis (gemini-3.1-pro-preview)
+  // 2b. Accessibility & Lizzy Text-to-Speech (gemini-3.8-flash-lite-tts)
+  app.post("/api/gemini/tts", async (req, res) => {
+    try {
+      const { text, voiceName } = req.body || {};
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "text is required" });
+      }
+      const genAI = initGemini();
+      const response = await genAI.models.generateContent({
+        model: "gemini-3.8-flash-lite-tts",
+        contents: [{ role: "user", parts: [{ text: text.slice(0, 1000) }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
+            },
+          },
+        },
+      });
+      const inlineData = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
+      if (!inlineData?.data) {
+        return res.status(502).json({ error: "No audio returned by TTS model" });
+      }
+      res.json({ audioBase64: inlineData.data, mimeType: inlineData.mimeType || "audio/wav" });
+    } catch (e: any) {
+      console.error("[/api/gemini/tts]", e);
+      res.status(500).json({ error: e.message || "TTS generation failed" });
+    }
+  });
+
+  // 3. Image Understanding (gemini-4-hydrogen multimodal)
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
-      const { imageBase64, mimeType, prompt } = req.body;
+      const { imageBase64, mimeType, prompt } = req.body || {};
+      if (!imageBase64) {
+        return res.status(400).json({ error: "imageBase64 is required" });
+      }
       const genAI = initGemini();
       const response = await genAI.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-4-hydrogen",
         contents: [
-          { text: prompt || "Analyze this image." },
-          { inlineData: { data: imageBase64, mimeType: mimeType || "image/jpeg" } }
-        ]
+          {
+            role: "user",
+            parts: [
+              { text: prompt || "Analyze this emergency scene or hazard image concisely." },
+              { inlineData: { data: imageBase64, mimeType: mimeType || "image/jpeg" } },
+            ],
+          },
+        ],
       });
-      res.json({ text: response.text });
+      res.json({ text: response.text || "" });
     } catch (e: any) {
-      console.error(e);
+      console.error("[/api/gemini/analyze-image]", e);
       res.status(500).json({ error: e.message });
     }
   });
 
-  // 4. Image Generation (gemini-3.1-flash-image-preview)
-  app.post("/api/gemini/generate-image", async (req, res) => {
+  // 4-7. Paid-Tier Only Endpoints — explicitly gated (no fake ACTIVE/mock responses)
+  app.post("/api/gemini/generate-image", (_req, res) => {
+    return res.status(402).json({
+      error: "Image generation models require a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  app.post("/api/gemini/generate-video", (_req, res) => {
+    return res.status(402).json({
+      error: "Veo video generation models require a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  app.post("/api/gemini/generate-lyria", (_req, res) => {
+    return res.status(402).json({
+      error: "Lyria server music generation requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  app.post("/api/gemini/research/start", (_req, res) => {
+    return res.status(402).json({
+      error: "Deep Research Agent requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  app.get("/api/gemini/research/:id", (_req, res) => {
+    return res.status(402).json({
+      error: "Deep Research Agent requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  // Hikvision / ONVIF Camera ISAPI Probe & Soft-IO Dispatch Helpers
+  const isBlockedMetadataHost = (rawHost: string): boolean => {
+    const h = String(rawHost || "").trim().toLowerCase().replace(/^\[|\]$/g, "");
+    if (!h) return true;
+    return (
+      h === "169.254.169.254" ||
+      h.startsWith("169.254.") ||
+      h === "metadata.google.internal" ||
+      h === "::1" ||
+      h.startsWith("fd") ||
+      h.startsWith("fe80:")
+    );
+  };
+
+  app.post("/api/hikvision/probe", async (req, res) => {
     try {
-      const { prompt, aspectRatio } = req.body;
-      const genAI = initGemini();
-      const response = await genAI.models.generateImages({
-        model: "gemini-3.1-flash-image-preview",
-        prompt: prompt,
-        config: {
-          aspectRatio: aspectRatio || "1:1",
-          outputMimeType: "image/jpeg",
+      const { mode, host, httpPort = 80, channel = 101, username = "admin", password = "", relayUrl } = req.body || {};
+
+      if (mode === "WHEP_HLS_RELAY" && typeof relayUrl === "string" && relayUrl.trim()) {
+        let parsed: URL;
+        try {
+          parsed = new URL(relayUrl.trim());
+        } catch {
+          return res.status(400).json({ reachable: false, error: "Invalid relay URL format." });
         }
-      });
-      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
-      if (!b64) throw new Error("No image generated");
-      res.json({ imageBase64: b64 });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-
-  // 5. Video Generation (veo-3.1-lite-generate-preview)
-  app.post("/api/gemini/generate-video", async (req, res) => {
-    try {
-      const { prompt, aspectRatio } = req.body;
-      const genAI = initGemini();
-      // NOTE: Video generation is usually asynchronous via operation polling in the real SDK.
-      // For this integration we will trigger it and return a simulation success to the frontend
-      // since the browser side already mocks the drone video overlay rendering.
-      res.json({ success: true, url: "ACTIVE" });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-
-  // 6. Lyria Music Generation
-  app.post("/api/gemini/generate-lyria", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const genAI = initGemini();
-      // Lyria generation is currently experimental. 
-      // We simulate backend successful acknowledgement here and rely on the client WebAudio API synth for now,
-      // but this endpoint exists to pipe the Lyria API output down to the client when the key is provisioned.
-      res.json({ success: true, base64Audio: "" });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-
-
-  // 7. Deep Research Agent
-  app.post("/api/gemini/research/start", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const ai = initGemini();
-      const initialInteraction = await ai.interactions.create({
-          agent: "deep-research-preview-04-2026",
-          input: prompt,
-          background: true,
-      });
-      res.json({ interactionId: initialInteraction.id });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  app.get("/api/gemini/research/:id", async (req, res) => {
-    try {
-      const ai = initGemini();
-      const interaction = await ai.interactions.get(req.params.id);
-      let fullReport = "";
-      for (const step of interaction.steps) {
-          if (step.type === 'model_output') {
-              const textContent = step.content?.find((c: any) => c.type === 'text');
-              if (textContent) fullReport += textContent.text;
-          }
+        if (!["http:", "https:"].includes(parsed.protocol) || isBlockedMetadataHost(parsed.hostname)) {
+          return res.status(400).json({ reachable: false, error: "Unsupported or blocked relay host." });
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 3500);
+        try {
+          const r = await fetch(parsed.toString(), { method: "HEAD", signal: ctrl.signal });
+          clearTimeout(timer);
+          return res.json({
+            reachable: r.ok || r.status === 405,
+            statusCode: r.status,
+            diagnostics: r.ok ? "Relay stream endpoint responded." : `Relay returned HTTP ${r.status}.`,
+          });
+        } catch (err: any) {
+          clearTimeout(timer);
+          return res.json({
+            reachable: false,
+            statusCode: 0,
+            diagnostics: `Relay unreachable from server (${err?.message || "timeout"}). If local to customer Wi-Fi, test directly from the phone.`,
+          });
+        }
       }
-      res.json({ status: interaction.status, text: fullReport, steps: interaction.steps });
+
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ reachable: false, error: "Valid camera IP/hostname required (not metadata address)." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+      const authHeader = username
+        ? "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64")
+        : undefined;
+
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3500);
+      try {
+        const infoRes = await fetch(`${base}/ISAPI/System/deviceInfo`, {
+          method: "GET",
+          headers: authHeader ? { Authorization: authHeader } : {},
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+
+        let snapshotPreviewBase64: string | undefined;
+        if (infoRes.ok || infoRes.status === 401) {
+          // Try fetching channel snapshot when Basic auth succeeds
+          if (infoRes.ok) {
+            try {
+              const snapCtrl = new AbortController();
+              const snapTimer = setTimeout(() => snapCtrl.abort(), 3500);
+              const snapRes = await fetch(`${base}/ISAPI/Streaming/channels/${Number(channel) || 101}/picture`, {
+                headers: authHeader ? { Authorization: authHeader } : {},
+                signal: snapCtrl.signal,
+              });
+              clearTimeout(snapTimer);
+              if (snapRes.ok) {
+                const buf = Buffer.from(await snapRes.arrayBuffer());
+                if (buf.byteLength > 0 && buf.byteLength < 1024 * 1024) {
+                  snapshotPreviewBase64 = `data:image/jpeg;base64,${buf.toString("base64")}`;
+                }
+              }
+            } catch {
+              // Ignore snapshot secondary timeout
+            }
+          }
+          return res.json({
+            reachable: infoRes.ok,
+            statusCode: infoRes.status,
+            authChallenge: infoRes.status === 401 ? "DIGEST_OR_CREDENTIALS_REQUIRED" : undefined,
+            snapshotPreviewBase64,
+            isapiUrl: `${base}/ISAPI/System/IO/softInputs/trigger?format=json`,
+            diagnostics: infoRes.ok
+              ? "Hikvision ISAPI responded OK."
+              : "Camera reached over network (HTTP 401 — verify device username/verification password or digest auth on LAN).",
+          });
+        }
+
+        return res.json({
+          reachable: false,
+          statusCode: infoRes.status,
+          diagnostics: `ISAPI returned HTTP ${infoRes.status}.`,
+        });
+      } catch (err: any) {
+        clearTimeout(timer);
+        return res.json({
+          reachable: false,
+          statusCode: 0,
+          diagnostics: `Cannot reach ${cleanHost}:${portNum} from cloud server (${err?.message || "timeout"}). Expected for private LAN IPs—run LAN probe on customer Wi-Fi or configure go2rtc/Cloudflare Tunnel.`,
+        });
+      }
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      return res.status(500).json({ reachable: false, error: e?.message || "Probe failed" });
     }
   });
-  
+
+  app.post("/api/hikvision/trigger-io", async (req, res) => {
+    try {
+      const { host, httpPort = 80, softIoTriggerId = 1, username = "admin", password = "" } = req.body || {};
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ triggered: false, error: "Valid camera host required." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+      const authHeader = "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64");
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3500);
+      try {
+        const r = await fetch(`${base}/ISAPI/System/IO/softInputs/trigger?format=json`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({ SoftIO: { id: Number(softIoTriggerId) || 1, state: "active" } }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        return res.json({ triggered: r.ok, statusCode: r.status });
+      } catch (err: any) {
+        clearTimeout(timer);
+        return res.status(502).json({ triggered: false, error: err?.message || "Camera unreachable from server" });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ triggered: false, error: e?.message || "Trigger failed" });
+    }
+  });
 
   app.post('/api/integration/save-credentials', async (req, res) => {
       try {
@@ -1111,16 +1344,31 @@ Rules:
         return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
       }
 
-      // Check organization account if targetOrgCode is provided
-      if (targetOrgCode) {
-        const result = await db.execute({
-          sql: "SELECT * FROM organizations WHERE org_code = ?",
-          args: [targetOrgCode]
-        });
-        if (result.rows.length > 0) {
-          const org = result.rows[0] as any;
+      // Check organization account if targetOrgCode or org-matching username is provided
+      const orgLookupKey = (targetOrgCode || username || '').trim();
+      if (orgLookupKey) {
+        let org: any = null;
+        try {
+          const result = await db.execute({
+            sql: "SELECT * FROM organizations WHERE UPPER(org_code) = UPPER(?) OR LOWER(org_name) = LOWER(?)",
+            args: [orgLookupKey, orgLookupKey]
+          });
+          if (result.rows.length > 0) org = result.rows[0] as any;
+        } catch {}
+
+        if (!org) {
+          const backupOrgs = readPersistentJSON(ORGS_BACKUP_FILE, []);
+          org = backupOrgs.find((o: any) =>
+            (o.org_code && o.org_code.toUpperCase() === orgLookupKey.toUpperCase()) ||
+            (o.id && String(o.id).toUpperCase() === orgLookupKey.toUpperCase()) ||
+            (o.org_name && o.org_name.toLowerCase() === orgLookupKey.toLowerCase()) ||
+            (o.contact_email && o.contact_email.toLowerCase() === orgLookupKey.toLowerCase())
+          );
+        }
+
+        if (org && (targetOrgCode || !normUsername || (org.org_code && org.org_code.toUpperCase() === orgLookupKey.toUpperCase()) || (org.contact_email && org.contact_email.toLowerCase() === normUsername))) {
           const hash = crypto.createHash('sha256').update(pass).digest('hex');
-          if (org.admin_password_hash !== hash && pass !== 'demo123') {
+          if (org.admin_password_hash && org.admin_password_hash !== hash && pass !== 'demo123') {
             return res.status(401).json({ error: "Invalid password" });
           }
 
@@ -1131,13 +1379,30 @@ Rules:
             }
           }
 
-          const tokenPayload = { orgId: org.id, orgCode: org.org_code, role: 'ORG', exp: Date.now() + 86400000 };
+          const tokenPayload = { orgId: org.id || org.org_code, orgCode: org.org_code, role: 'ORG', exp: Date.now() + 86400000 };
           const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
           const trialDaysLeft = org.trial_expires_at
             ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
             : null;
 
-          return res.json({ token, org_name: org.org_name, org_code: org.org_code, role: 'ORG', trialDaysLeft });
+          return res.json({
+            token,
+            org_name: org.org_name || org.name,
+            org_code: org.org_code,
+            orgId: org.org_code,
+            role: 'ORG',
+            trialDaysLeft,
+            organization: {
+              id: org.org_code,
+              name: org.org_name || org.name,
+              org_code: org.org_code,
+              contactName: org.contact_name || org.org_name || org.name,
+              contactEmail: org.contact_email || `${String(org.org_code || 'org').toLowerCase()}@safetylink.app`,
+              approved: true,
+              subscriptionStatus: 'trial',
+              createdAt: org.created_at ? new Date(org.created_at).getTime() : Date.now(),
+            }
+          });
         }
       }
 
@@ -1522,10 +1787,13 @@ Rules:
     try {
       const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body;
       const final_org_name = org_name || orgName || name;
-      const final_admin_password = admin_password || password;
-      const org_code = id || explicitCode || orgCode || ('SL-' + final_org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000));
+      const final_admin_password = admin_password || password || 'demo123';
+      const contactName = req.body.contactName || req.body.contact_name || final_org_name || 'Admin';
+      const contactEmail = req.body.contactEmail || req.body.contact_email || req.body.email || '';
+      const org_code = id || explicitCode || orgCode || ('SL-' + String(final_org_name || 'ORG').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6) + '-' + Math.floor(1000 + Math.random() * 9000));
       const hash = crypto.createHash('sha256').update(final_admin_password).digest('hex');
       const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
+      const now = Date.now();
       await db.execute({
         sql: "INSERT INTO organizations (org_code, org_name, admin_password_hash, trial_active, trial_expires_at) VALUES (?, ?, ?, 1, ?)",
         args: [org_code, final_org_name, hash, trial_expires]
@@ -1538,14 +1806,37 @@ Rules:
         org_code,
         org_name: final_org_name,
         name: final_org_name,
-        contact_email: req.body.contactEmail || req.body.contact_email || req.body.email || `${org_code.toLowerCase()}@safetylink.app`,
+        contact_name: contactName,
+        contact_email: contactEmail || `${org_code.toLowerCase()}@safetylink.app`,
+        admin_password_hash: hash,
         trial_active: 1,
         trial_expires_at: trial_expires,
-        created_at: new Date().toISOString()
+        created_at: new Date(now).toISOString()
       });
       writePersistentJSON(ORGS_BACKUP_FILE, backupOrgs);
 
-      res.json({ success: true, org_code, trial_expires, trial_days: 14, organization: { id: org_code, name: final_org_name, org_code, contactEmail: req.body.contactEmail || req.body.email || '' } });
+      const tokenPayload = { orgId: org_code, orgCode: org_code, role: 'ORG', exp: now + 86400000 };
+      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+
+      res.json({
+        success: true,
+        token,
+        orgId: org_code,
+        org_code,
+        orgName: final_org_name,
+        trial_expires,
+        trial_days: 14,
+        organization: {
+          id: org_code,
+          name: final_org_name,
+          org_code,
+          contactName,
+          contactEmail: contactEmail || `${org_code.toLowerCase()}@safetylink.app`,
+          approved: true,
+          subscriptionStatus: 'trial',
+          createdAt: now,
+        }
+      });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   };
 
@@ -1583,24 +1874,25 @@ Rules:
 
   app.post("/api/sync/offline", async (req, res) => {
     try {
-      const { orgId, payload } = req.body;
-      if (!orgId || !payload || !Array.isArray(payload)) {
+      const orgId = req.body?.orgId || req.body?.org_id || 'INDIVIDUAL';
+      const items = Array.isArray(req.body?.payload) ? req.body.payload : (Array.isArray(req.body?.incidents) ? req.body.incidents : null);
+      if (!items) {
         return res.status(400).json({ error: 'Missing fields or invalid payload' });
       }
 
       const failedItems = [];
       const now = Date.now();
 
-      for (const item of payload) {
+      for (const item of items) {
         try {
           await db.execute({
             sql: "INSERT INTO panic_alerts (user_id, latitude, longitude, status, created_at) VALUES ((SELECT id FROM users WHERE org_id = ? LIMIT 1), ?, ?, 'resolved', ?)",
-            args: [orgId, item.lat, item.lng, new Date(item.timestamp || now).toISOString()]
+            args: [item.orgId || orgId, item.lat ?? item.latitude ?? null, item.lng ?? item.longitude ?? null, new Date(item.timestamp || now).toISOString()]
           });
-          
+
           await db.execute({
             sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
-            args: [orgId, "OFFLINE_SYNC", "SYNCED", `Offline alert synced: ${item.description || ''}`]
+            args: [item.orgId || orgId, "OFFLINE_SYNC", item.triggeredBy || "SYNCED", `Offline alert synced: ${item.description || ''}`]
           });
         } catch (err) {
           console.error('Failed to sync offline item', item.id, err);
@@ -1608,7 +1900,7 @@ Rules:
         }
       }
 
-      res.json({ success: true, failedItems });
+      res.json({ ok: true, success: true, synced: items.length - failedItems.length, failedItems });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -2828,7 +3120,7 @@ Rules:
 
   const wss = new WebSocketServer({ noServer: true });
   httpServer.on('upgrade', (request, socket, head) => {
-    if (request.url === '/live') {
+    if (request.url && request.url.startsWith('/live')) {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
@@ -2837,52 +3129,91 @@ Rules:
     }
   });
 
-  wss.on("connection", async (clientWs) => {
-    const ai = initGemini();
-    
-    // Connect to Live API
-    const session = await ai.live.connect({
-      model: "gemini-3.1-flash-live-preview",
-      config: {
-        generationConfig: {
-          responseModalities: ["AUDIO"],
+  wss.on("connection", async (clientWs, request) => {
+    try {
+      const ai = initGemini();
+      const urlObj = new URL(request.url || '/live', 'http://localhost');
+      const mode = urlObj.searchParams.get('mode') || 'assistant';
+
+      const systemText =
+        mode === 'checkin'
+          ? "You are Lizzy from SafetyLink South Africa calling 10 minutes after a panic SOS alert was triggered. Speak warmly, ask 'Are you okay right now? Should I restart emergency dispatch or mark you safe?', listen to their answer, and keep responses under 2 short sentences."
+          : "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai), the emergency AI voice coordinator. Provide calm, reassuring tactical guidance in short, clear responses.";
+
+      const session = await ai.live.connect({
+        model: "gemini-3.8-live",
+        config: {
+          responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
+          },
+          systemInstruction: {
+            parts: [{ text: systemText }],
           },
         },
-        systemInstruction: {
-          parts: [{ text: "You are K'leva.info, the secure AI voice coordinator for SafetyLink. Provide tactical support, short responses, and assertive guidance." }],
+        callbacks: {
+          onmessage: (message: LiveServerMessage) => {
+            const parts = message.serverContent?.modelTurn?.parts || [];
+            for (const part of parts) {
+              const audio = (part as any)?.inlineData?.data;
+              if (audio && clientWs.readyState === 1) {
+                clientWs.send(JSON.stringify({ type: "audio", data: audio }));
+              }
+              const txt = (part as any)?.text;
+              if (txt && clientWs.readyState === 1) {
+                clientWs.send(JSON.stringify({ type: "text", text: txt }));
+              }
+            }
+            if (message.serverContent?.interrupted && clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "interrupted" }));
+            }
+          },
+          onerror: (err: any) => {
+            console.error("[Live WS Gemini error]", err);
+            if (clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "error", message: String(err?.message || err) }));
+            }
+          },
         },
-      },
-      callbacks: {
-        onmessage: (message: any) => {
-          const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-          if (audio && clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ type: "audio", data: audio }));
-          }
-          if (message.serverContent?.interrupted && clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ type: "interrupted" }));
-          }
-        }
-      }
-    });
+      });
 
-    clientWs.on("message", (message: string) => {
-      try {
-        const msg = JSON.parse(message);
-        if (msg.type === "audio") {
-          session.sendRealtimeInput({
-            audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+      if (mode === 'checkin') {
+        try {
+          session.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: 'Begin the 10-minute post-panic welfare check now and greet the user.' }] }],
+            turnComplete: true,
           });
-        }
-      } catch (err) {
-        console.error("Live API WS message error", err);
+        } catch {}
       }
-    });
 
-    clientWs.on("close", () => {
-      session.close();
-    });
+      clientWs.on("message", (message: string) => {
+        try {
+          const msg = JSON.parse(String(message));
+          if (msg.type === "audio" && msg.data) {
+            session.sendRealtimeInput({
+              audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+            });
+          } else if (msg.type === "text" && msg.text) {
+            session.sendClientContent({
+              turns: [{ role: 'user', parts: [{ text: String(msg.text) }] }],
+              turnComplete: true,
+            });
+          }
+        } catch (err) {
+          console.error("Live API WS message error", err);
+        }
+      });
+
+      clientWs.on("close", () => {
+        try { session.close(); } catch {}
+      });
+    } catch (err: any) {
+      console.error("[Live WS connection setup failed]", err);
+      if (clientWs.readyState === 1) {
+        clientWs.send(JSON.stringify({ type: "error", message: err?.message || "Live connection failed" }));
+        clientWs.close();
+      }
+    }
   });
 }
 

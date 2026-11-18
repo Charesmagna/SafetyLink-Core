@@ -45,8 +45,23 @@ public class MainActivity extends BridgeActivity {
             }
         } catch (Exception ignored) { }
         requestEmergencyPermissions();
+        startSentinelServices();
 
         setupOAuthPopupSupport();
+    }
+
+    private void startSentinelServices() {
+        try {
+            android.content.Intent serviceIntent = new android.content.Intent(this, SafelinkForegroundService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+            WatchdogAlarmReceiver.scheduleWatchdog(this);
+        } catch (Exception e) {
+            android.util.Log.w("MainActivity", "Sentinel startup note: " + e.getMessage());
+        }
     }
 
     private void setupOAuthPopupSupport() {
@@ -106,12 +121,13 @@ public class MainActivity extends BridgeActivity {
                     popupWebView.setWebViewClient(new WebViewClient() {
                         @Override
                         public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
-                            return false;
+                            String scheme = request != null && request.getUrl() != null ? request.getUrl().getScheme() : "";
+                            return !"https".equalsIgnoreCase(scheme);
                         }
 
                         @Override
                         public boolean shouldOverrideUrlLoading(WebView v, String url) {
-                            return false;
+                            return url == null || !url.toLowerCase().startsWith("https://");
                         }
                     });
 
@@ -148,9 +164,23 @@ public class MainActivity extends BridgeActivity {
         for (String perm : wanted) {
             if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) need.add(perm);
         }
+        if (Build.VERSION.SDK_INT >= 31) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                need.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                need.add(Manifest.permission.BLUETOOTH_CONNECT);
+            }
+        }
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, "android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
             need.add("android.permission.POST_NOTIFICATIONS");
         }
         if (!need.isEmpty()) ActivityCompat.requestPermissions(this, need.toArray(new String[0]), 7001);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        ITagGattManager.reconnectBondedDevices(this);
     }
 }

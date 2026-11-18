@@ -84,6 +84,23 @@ public class OfflineSyncWorker extends Worker {
         }
     }
 
+    public static void queuePcmLocation(Context context, String phone, double lat, double lng) {
+        try {
+            SharedPreferences prefs = context.getSharedPreferences(PREF_OFFLINE_QUEUE, Context.MODE_PRIVATE);
+            String key = "PCM-" + System.currentTimeMillis();
+            JSONObject json = new JSONObject();
+            json.put("id", key);
+            json.put("phone", phone != null ? phone : "");
+            json.put("latitude", lat);
+            json.put("longitude", lng);
+            json.put("description", "Offline PCM Location Queued");
+            json.put("sync_type", "OFFLINE_PCM");
+            prefs.edit().putString(key, json.toString()).apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to queue offline PCM location: " + e.getMessage());
+        }
+    }
+
     private boolean syncIncidentToBackend(String jsonPayload) {
         String[] targets = new String[]{ BACKEND_BASE_URL, BACKEND_FALLBACK_URL };
         for (String baseUrl : targets) {

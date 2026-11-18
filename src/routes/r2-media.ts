@@ -112,7 +112,7 @@ r2Router.get('/download/apk', async (req: Request, res: Response) => {
  * Streams any media asset (supports byte-range for MP4 videos and audio)
  */
 r2Router.get('/stream/{*key}', async (req: Request, res: Response) => {
-  const paramVal = req.params.key;
+  const paramVal = (req.params as any).key;
   if (!paramVal) return res.status(400).json({ error: 'Missing object key' });
 
   let rawKey = Array.isArray(paramVal) ? paramVal.join('/') : String(paramVal);
@@ -183,7 +183,7 @@ r2Router.get('/stream/{*key}', async (req: Request, res: Response) => {
  * Forces download attachment header for any R2 object
  */
 r2Router.get('/download/{*key}', async (req: Request, res: Response) => {
-  const paramVal = req.params.key;
+  const paramVal = (req.params as any).key;
   if (!paramVal) return res.status(400).json({ error: 'Missing object key' });
 
   let rawKey = Array.isArray(paramVal) ? paramVal.join('/') : String(paramVal);

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../utils/store';
-import { BatteryIndicator } from '../common/BatteryIndicator';
 
 interface HeaderProps {
   onLogin?: () => void;
@@ -11,7 +9,7 @@ interface HeaderProps {
 }
 
 const T_LANG: Record<string, { h1a: string; h1b: string; sub: string }> = {
-  en:  { h1a:'SAFETY FOR YOUR FAMILY AND', h1b:'HOUSE HOLD',    sub:'Peace of mind STARTS AT HOME. Protect what matters most – your family and your home.' },
+  en:  { h1a:'SAFETY FOR YOUR FAMILY AND', h1b:'HOUSEHOLD',     sub:'Peace of mind STARTS AT HOME. Protect what matters most — your family, estate, and team.' },
   zu:  { h1a:'UKUPHEPHA KOMNDENI WAKHO',   h1b:'IKHAYA',        sub:'Ukuthula kwengqondo kuQALA EKHAYA. Vikela okukubalulekile.' },
   af:  { h1a:'VEILIGHEID VIR JOU GESIN EN',h1b:'HUISHOUDING',   sub:'Gemoedsrus BEGIN TUIS. Beskerm wat die meeste saakmaak.' },
   xh:  { h1a:'UKHUSELEKO LOSAPHO LWAKHO',  h1b:'IKHAYA',        sub:'Ukuzola kwengqondo kuQALA EKHAYA. Khusela okubalulekileyo.' },
@@ -24,11 +22,11 @@ const T_LANG: Record<string, { h1a: string; h1b: string; sub: string }> = {
   nso: { h1a:'TSHIRELETSO YA LELOKO',      h1b:'LAPENG',        sub:'Kgotso ya kelelo e thoma lapeng. Sireletsa seo se hlokegago.' },
 };
 
-export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home' }: HeaderProps) {
+export function Header({ onLogin, onNavigate, activePage = 'home' }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [whatsappMenuOpen, setWhatsappMenuOpen] = useState(false);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [mobileView, setMobileView] = useState(false);
   const [selectedLang, setSelectedLang] = useState('en');
   const { globalTheme, setGlobalTheme } = useAppStore();
 
@@ -39,27 +37,6 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const toggleView = () => {
-    const nextView = !mobileView;
-    setMobileView(nextView);
-    const body = document.body;
-    if (nextView) {
-      body.style.maxWidth = '390px';
-      body.style.margin = '60px auto 0';
-      body.style.boxShadow = '0 0 0 1px #e2e8f0, 0 8px 48px rgba(0,0,0,0.15)';
-      body.style.borderRadius = '20px';
-      body.style.overflow = 'hidden';
-      body.style.position = 'relative';
-    } else {
-      body.style.maxWidth = '';
-      body.style.margin = '';
-      body.style.boxShadow = '';
-      body.style.borderRadius = '';
-      body.style.overflow = '';
-      body.style.position = '';
-    }
-  };
 
   const handleLanguageChange = (lang: string) => {
     setSelectedLang(lang);
@@ -85,7 +62,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
     setMobileMenuOpen(false);
   };
 
-  const isLight = globalTheme === 'light';
+  const isLight = globalTheme !== 'dark';
 
   return (
     <>
@@ -97,13 +74,13 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
           left: 0,
           right: 0,
           zIndex: 1000,
-          background: isLight ? 'rgba(255, 255, 255, 0.85)' : 'rgba(2, 6, 23, 0.75)',
+          background: isLight ? 'rgba(255, 255, 255, 0.94)' : 'rgba(2, 6, 23, 0.88)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: isLight ? '1px solid rgba(226, 232, 240, 0.5)' : '1px solid rgba(30, 41, 59, 0.5)',
+          borderBottom: isLight ? '1px solid #d1fae5' : '1px solid rgba(30, 41, 59, 0.7)',
           transition: 'box-shadow .3s, background .3s',
           boxShadow: scrolled
-            ? (isLight ? '0 4px 24px rgba(0,0,0,.08)' : '0 4px 24px rgba(0,0,0,.5)')
+            ? (isLight ? '0 4px 24px rgba(5,150,105,.08)' : '0 4px 24px rgba(0,0,0,.5)')
             : 'none',
         }}
       >
@@ -364,44 +341,85 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               </svg>
             </div>
 
-            {/* Desktop / Mobile view toggle (hidden on native app) */}
-            {!Capacitor.isNativePlatform() && (
+            {/* Download Panel Button (Replaces Battery Meter & Desktop/Mobile Toggle) */}
+            <div style={{ position: 'relative' }}>
               <button
-                className="view-toggle"
-                onClick={toggleView}
-                id="view-btn"
-                title="Toggle mobile/desktop view"
+                type="button"
+                onClick={() => setDownloadMenuOpen(prev => !prev)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px',
-                  background: isLight ? '#f8fafc' : '#0f172a',
-                  border: isLight ? '1px solid #e2e8f0' : '1px solid #334155',
+                  background: '#059669',
+                  color: '#ffffff',
+                  border: 'none',
                   borderRadius: '7px',
-                  padding: '6px 10px',
+                  padding: '6px 11px',
                   cursor: 'pointer',
                   fontSize: '11px',
-                  fontWeight: 600,
-                  color: isLight ? '#475569' : '#cbd5e1',
+                  fontWeight: 700,
                   fontFamily: 'inherit',
-                  transition: 'background .2s',
                 }}
+                title="Download SafetyLink APK or Windows EXE"
               >
-                {!mobileView ? (
-                  <svg id="icon-desktop" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-                  </svg>
-                ) : (
-                  <svg id="icon-mobile" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/>
-                  </svg>
-                )}
-                <span id="view-label" className="view-toggle-text">{!mobileView ? 'Desktop' : 'Mobile'}</span>
+                <span>⬇</span>
+                <span>Download</span>
               </button>
-            )}
-
-            {/* Hardware Real-time Battery Indicator */}
-            <BatteryIndicator theme={isLight ? 'light' : 'dark'} />
+              {downloadMenuOpen && (
+                <div
+                  onMouseLeave={() => setDownloadMenuOpen(false)}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: '100%',
+                    marginTop: '6px',
+                    width: '240px',
+                    padding: '10px',
+                    borderRadius: '12px',
+                    background: isLight ? '#ffffff' : '#0f172a',
+                    border: isLight ? '1px solid #d1fae5' : '1px solid #334155',
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
+                    zIndex: 1060,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <a
+                    href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk"
+                    download
+                    onClick={() => setDownloadMenuOpen(false)}
+                    style={{ padding: '8px 10px', borderRadius: '8px', background: isLight ? '#ecfdf5' : 'rgba(16,185,129,0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    📱 Version 1 Android APK
+                  </a>
+                  <a
+                    href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk"
+                    download
+                    onClick={() => setDownloadMenuOpen(false)}
+                    style={{ padding: '8px 10px', borderRadius: '8px', background: isLight ? '#fffbeb' : 'rgba(245,158,11,0.12)', color: '#d97706', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    🧪 Version 1.1 Beta APK
+                  </a>
+                  <a
+                    href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setDownloadMenuOpen(false)}
+                    style={{ padding: '8px 10px', borderRadius: '8px', background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.05)', color: isLight ? '#0f172a' : '#e2e8f0', fontSize: '11px', fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    💻 Windows Command EXE
+                  </a>
+                  <button
+                    type="button"
+                    onClick={(e) => { setDownloadMenuOpen(false); handleLinkClick(e as any, 'download'); }}
+                    style={{ padding: '8px 10px', borderRadius: '8px', border: isLight ? '1px solid #e2e8f0' : '1px solid #334155', background: 'transparent', color: isLight ? '#475569' : '#94a3b8', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    📦 Open Download Hub →
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Theme Toggle (Moon / Sun) */}
             <button
@@ -659,26 +677,6 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               </div>
             </div>
 
-            {!Capacitor.isNativePlatform() && (
-              <a
-                href="/preview/"
-                aria-label="Open the refreshed SafetyLink website preview"
-                title="Explore the refreshed website"
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '7px',
-                  padding: '7px 11px', borderRadius: '999px',
-                  border: isLight ? '1px solid rgba(15,139,141,.35)' : '1px solid rgba(45,212,191,.35)',
-                  background: isLight ? 'rgba(15,139,141,.08)' : 'rgba(15,139,141,.13)',
-                  color: isLight ? '#0f766e' : '#99f6e4',
-                  fontSize: '10px', fontWeight: 800, letterSpacing: '.04em',
-                  textDecoration: 'none', whiteSpace: 'nowrap',
-                }}
-              >
-                <span style={{ display: 'grid', placeItems: 'center', width: '17px', height: '17px', borderRadius: '50%', background: '#0f8b8d', color: '#fff', fontSize: '10px' }}>P</span>
-                Preview
-              </a>
-            )}
-
             {/* CTA */}
             <a
               href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+get+SafetyLink"
@@ -732,7 +730,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
           </div>
         </div>
 
-        {/* Mobile dropdown menu */}
+        {/* Mobile dropdown menu (Full viewport height) */}
         <div
           id="mob-menu"
           className={mobileMenuOpen ? 'open' : ''}
@@ -740,6 +738,8 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             display: mobileMenuOpen ? 'flex' : 'none',
             flexDirection: 'column',
             gap: 0,
+            height: 'calc(100vh - 60px)',
+            overflowY: 'auto',
             background: isLight ? '#ffffff' : '#020617',
             borderTop: isLight ? '1px solid #e2e8f0' : '1px solid #1e293b',
             boxShadow: '0 12px 32px rgba(0,0,0,0.15)',

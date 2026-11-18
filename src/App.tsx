@@ -26,7 +26,6 @@ import { translate, SA_LANGUAGES } from './utils/translations';
 import { FloatingPanicWidget } from './components/FloatingPanicWidget';
 import { SimulatedDesktop } from './components/SimulatedDesktop';
 import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
-import { SosCountdownOverlay } from './components/SosCountdownOverlay';
 import { PermissionsOnboardingModal } from './components/PermissionsOnboardingModal';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
@@ -35,7 +34,6 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
-import { BatteryIndicator } from './components/common/BatteryIndicator';
 import { startProfileSync } from './services/ProfileSync';
 
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
@@ -144,44 +142,134 @@ const TrialReminderModal = () => {
 };
 
 const App: React.FC = () => {
-  const globalThemeValue = useAppStore((st: any) => st.globalTheme);
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', globalThemeValue || 'dark');
-  }, [globalThemeValue]);
   // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
   // Check if running in a desktop EXE (Electron) environment
   const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
   // Only show landing page initially on actual web browsers
   const [showLanding, setShowLanding] = useState(() => !isDesktopExe && (Capacitor.getPlatform() === 'web' || typeof window !== 'undefined' && !Capacitor.isNativePlatform()));
+  useEffect(() => {
+    const openPreview = () => {
+      setAuthInitialView('LOGIN');
+      setShowLanding(false);
+    };
+    window.addEventListener('sl-open-preview', openPreview);
+    if (typeof window !== 'undefined' && window.location.hash === '#preview') {
+      openPreview();
+    }
+    return () => window.removeEventListener('sl-open-preview', openPreview);
+  }, []);
   const [authInitialView, setAuthInitialView] = useState<'LOGIN' | 'REGISTER_ORG' | 'REGISTER_USER'>('LOGIN');
   const [trialExpired, setTrialExpired] = useState(false);
+  const [mapsQuotaError, setMapsQuotaError] = useState<string | null>(null);
+  const isLizzyOpen = useAppStore((s) => s.isLizzyOpen);
+  const setIsLizzyOpen = useAppStore((s) => s.setIsLizzyOpen);
 
+  useEffect(() => {
+    const onQuota = (ev: Event) => {
+      const detail = (ev as CustomEvent)?.detail;
+      setMapsQuotaError(detail?.reason || 'Google Maps API Quota Exceeded. Interactive map tiles may be degraded.');
+    };
+    window.addEventListener('gmp-quota-exceeded', onQuota);
+    return () => window.removeEventListener('gmp-quota-exceeded', onQuota);
+  }, []);
 
-
-  const [isSosActive, setIsSosActive] = useState(false);
-
-  // The custom hook catches the Native Kotlin BLE Broadcast
+  // The custom hook catches the Native Android PanicService status transitions & real DispatchResult
   const {   } = useTacticalSensors();
-  useEmergencyListener(() => {
-    setIsSosActive(true); // Wakes up the React overlay
+  const { startNativeScanner } = useEmergencyListener((info) => {
+    const store = useAppStore.getState();
+    const status = String(info?.status || '').toUpperCase();
+
+    if (status === 'TRIGGERED' || status === 'COUNTDOWN') {
+      useAppStore.setState({
+        panicCountdown: typeof info.countdownSeconds === 'number' && info.countdownSeconds > 0 ? info.countdownSeconds : 10,
+      });
+      return;
+    }
+
+    if (status === 'DISPATCHING') {
+      useAppStore.setState({ panicCountdown: null, activeSOSState: 'ESCALATING' });
+      store.addAuditLog('DISPATCH', 'SEVERE', 'Native EmergencyService Executing', `Source: ${info.source || 'NATIVE_PANIC_SERVICE'}`);
+      return;
+    }
+
+    if (status === 'CANCELLED') {
+      useAppStore.setState({ panicCountdown: null, activeSOSState: 'IDLE' });
+      store.addToast('Emergency SOS disarmed cleanly.', 'info');
+      return;
+    }
+
+    if (status === 'DISPATCHED' || status === 'PARTIAL_SUCCESS' || status === 'FAILED') {
+      // Schedule 10-minute post-panic Lizzy AI voice check-in on native dispatch too
+      if (status !== 'FAILED' && typeof window !== 'undefined') {
+        const existingTimer = (window as any).__SL_CHECKIN_TIMER__;
+        if (existingTimer) clearTimeout(existingTimer);
+        (window as any).__SL_CHECKIN_TIMER__ = setTimeout(() => {
+          const cur = useAppStore.getState();
+          if (cur.activeSOSState !== 'IDLE') {
+            cur.setShowLizzyPopup(true);
+          }
+        }, 10 * 60 * 1000);
+      }
+      const coords = store.userLocation || { lat: 0, lng: 0 };
+      const incidentId = info.incidentId || `INC-${Date.now()}`;
+      const smsStatus = info.smsStatus || 'UNKNOWN';
+      const callStatus = info.callStatus || 'UNKNOWN';
+      const backendSyncStatus = info.backendSyncStatus || 'UNKNOWN';
+      const pcmStatus = info.pcmStatus || 'NOT_REQUIRED';
+
+      const newEvent = {
+        id: incidentId,
+        status: (status === 'FAILED' ? 'FAILED' : status === 'PARTIAL_SUCCESS' ? 'PARTIAL' : 'DISPATCHED') as 'FAILED' | 'PARTIAL' | 'DISPATCHED',
+        severity: 'CRITICAL' as const,
+        lat: coords.lat,
+        lng: coords.lng,
+        timestamp: Date.now(),
+        assignedResponder: store.currentUser?.orgCode || store.currentOrg?.id || 'Escalated Patrol Unit',
+        description: `Native Dispatch (${status}) — SMS: ${smsStatus}, Call: ${callStatus}, Sync: ${backendSyncStatus}`,
+        timelineData: [
+          `Incident ${incidentId} processed at ${new Date().toLocaleTimeString()}`,
+          `SMS Result: ${smsStatus}`,
+          `Voice Call Result: ${callStatus}`,
+          `Backend Sync: ${backendSyncStatus}`,
+          `PCM/USSD: ${pcmStatus}`,
+        ],
+      };
+
+      const nextEvents = [newEvent, ...store.panicEvents.filter((ev) => ev.id !== incidentId)];
+      useAppStore.setState({
+        panicCountdown: null,
+        activeSOSState: status === 'FAILED' ? 'IDLE' : 'DISPATCHED',
+        panicEvents: nextEvents,
+      });
+      try {
+        localStorage.setItem('sl_panic_events', JSON.stringify(nextEvents));
+      } catch {}
+
+      store.addDispatchLog({
+        channel: 'SMS',
+        target: store.contacts?.[0]?.phone || store.currentUser?.phone || 'Emergency Contacts',
+        status: smsStatus === 'SENT' ? 'SENT' : 'FAILED',
+        unitId: store.currentUser?.id || 'SL-NATIVE',
+        coordinates: coords.lat || coords.lng ? coords : undefined,
+        details: `Incident ${incidentId} · SMS=${smsStatus} Call=${callStatus} Sync=${backendSyncStatus} PCM=${pcmStatus}`,
+      });
+
+      store.addAuditLog(
+        'DISPATCH',
+        status === 'FAILED' ? 'SEVERE' : 'INFO',
+        `Native Dispatch Result: ${status}`,
+        `ID=${incidentId} SMS=${smsStatus} Call=${callStatus} Backend=${backendSyncStatus} PCM=${pcmStatus}`
+      );
+
+      if (status === 'DISPATCHED') {
+        store.addToast(`SOS Dispatched (${incidentId}): SMS ${smsStatus}, Sync ${backendSyncStatus}`, 'success');
+      } else if (status === 'PARTIAL_SUCCESS') {
+        store.addToast(`Partial SOS Dispatch (${incidentId}): SMS ${smsStatus}, Call ${callStatus}, Sync ${backendSyncStatus}`, 'warn');
+      } else {
+        store.addToast(`SOS Dispatch Failed (${incidentId}): queued offline if unreachable.`, 'error');
+      }
+    }
   });
-
-  const handleTrueCancel = () => {
-    console.log("SOS Canceled cleanly.");
-    setIsSosActive(false);
-  };
-
-  const handleDuressTrigger = () => {
-    console.warn("DURESS PROTOCOL ACTIVATED");
-    setIsSosActive(false); // Make it look like it was canceled to the attacker
-    useAppStore.getState().addAuditLog('SYSTEM', 'SEVERE', 'Duress Protocol Activated', 'Duress PIN used. Silent escalation.');
-  };
-
-  const handleFinalDispatch = () => {
-    console.error("TIMER EXPIRED. DISPATCHING PAYLOAD.");
-    setIsSosActive(false); // Close the overlay
-    useAppStore.getState().triggerPanic('Emergency SOS: Timer expired via BLE/Hardware button.', true);
-  };
   const { 
     isAppMinimized,
     setMinimized,
@@ -209,7 +297,10 @@ const App: React.FC = () => {
     updateInfo,
     setUpdateInfo,
     globalTheme,
-    setGlobalTheme
+    setGlobalTheme,
+    profileCreatedSummary,
+    setProfileCreatedSummary,
+    addToast
   } = useAppStore();
 
   useEffect(() => {
@@ -225,6 +316,15 @@ const App: React.FC = () => {
 
     initFirebaseSync();
     startProfileSync();
+    if (Capacitor.isNativePlatform()) {
+      startNativeScanner().catch(() => {});
+    }
+
+    const handleOnlineReconnect = () => {
+      import('./services/ProfileSync').then(({ syncProfile }) => syncProfile()).catch(() => {});
+      useAppStore.getState().syncOfflineQueue(true);
+    };
+    window.addEventListener('online', handleOnlineReconnect);
 
     // Persistent BLE iTAG Auto-Reconnect on App Launch & Wake
     const autoReconnectBondedITags = () => {
@@ -284,7 +384,9 @@ const App: React.FC = () => {
     window.addEventListener('trial_expired', handleTrialExpired);
     return () => { 
       clearInterval(updateInterval);
+      clearTimeout(itagTimer);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnlineReconnect);
       window.removeEventListener('trial_expired', handleTrialExpired);
       if (cleanupSync) cleanupSync(); 
       unsub(); 
@@ -383,8 +485,7 @@ const App: React.FC = () => {
 
       try {
         backButtonListenerPromise = CapacitorApp.addListener('backButton', () => {
-          // 4. Block Back Button during SOS
-          if (isSosActive) {
+          if (useAppStore.getState().panicCountdown !== null) {
             console.warn("Back button blocked: SOS Countdown is active.");
             return;
           }
@@ -393,9 +494,7 @@ const App: React.FC = () => {
           } else if (activeTab !== 'home') {
             setActiveTab('home');
           } else {
-            if (true) {
-              setShowExitConfirm(true);
-            }
+            setShowExitConfirm(true);
           }
         });
       } catch (e) {
@@ -409,7 +508,7 @@ const App: React.FC = () => {
         backButtonListenerPromise.then(listener => listener.remove());
       }
     };
-  }, [isDrawerOpen, activeTab, isSosActive]);
+  }, [isDrawerOpen, activeTab]);
  
    useEffect(() => {
     const geoService = GeolocationService.getInstance();
@@ -517,7 +616,7 @@ const App: React.FC = () => {
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
-    if (!currentUser) {
+    if (!currentUser && !currentOrg && !superAdminActive) {
       if (showLanding) {
         return <LandingPage 
           onLogin={() => {
@@ -554,6 +653,10 @@ const App: React.FC = () => {
 
     if (currentOrg || (currentUser && currentUser.orgCode && ['Organization Administrator', 'Control Room Operator', 'Dispatcher'].includes(currentUser.role || ''))) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dashboard...</div>}><OrgDashboard /></Suspense>;
+    }
+
+    if (!currentUser) {
+      return null;
     }
 
 
@@ -717,8 +820,25 @@ const App: React.FC = () => {
             {t(`tab.${activeTab}`)}
           </span>
 
-          {/* Hardware Real-time Battery Indicator */}
-          <BatteryIndicator theme={globalTheme} />
+          {/* Quick Download APK / Hub Button */}
+          <a
+            href={
+              Capacitor.getPlatform() === 'android'
+                ? 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'
+                : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`px-2 py-1.5 rounded-xl border text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
+              globalTheme === 'light'
+                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+                : 'bg-emerald-950/50 hover:bg-emerald-900/60 border-emerald-500/30 text-emerald-400'
+            }`}
+            title="Download SafetyLink Version 1 APK"
+          >
+            <span>⬇</span>
+            <span className="hidden sm:inline">Download</span>
+          </a>
 
           {/* Theme Toggle (Sun / Moon) */}
           <button
@@ -1257,6 +1377,17 @@ const App: React.FC = () => {
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Configure device DNS protection</p>
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => { setIsLizzyOpen(true); setIsDrawerOpen(false); }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border bg-blue-500/10 border-blue-500/20 text-blue-300 hover:bg-blue-500/20"
+                  >
+                    <span className="text-sm shrink-0">🤖</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Lizzy AI</p>
+                      <p className="text-[7.5px] font-mono text-blue-400/80 mt-0.5">Voice check-in & safety assistant</p>
+                    </div>
+                  </button>
                 </div>
 
                 {/* Language preloader inside drawer */}
@@ -1378,34 +1509,135 @@ const App: React.FC = () => {
       
       
 
-      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
-      {/* Background Video */}
-      {(activeTab === 'home' && !currentOrg) && (
-        <>
-          
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/50 px-4 py-2 rounded-2xl text-[9px] font-mono tracking-widest text-white/70 backdrop-blur-sm border border-white/10 text-center flex flex-col leading-relaxed">
-            <span>EXPERIMENTAL LIVE MODE • SIMULATED</span><span>BROADCAST LINKS</span>
-          </div>
-        </>
+      {mapsQuotaError && (
+        <div className="sticky top-0 z-[99998] w-full bg-amber-950/95 border-b border-amber-500/40 px-4 py-2 text-amber-200 text-xs font-mono flex items-center justify-between gap-3">
+          <span>⚠️ {mapsQuotaError} (Emergency dispatch remains unaffected.)</span>
+          <button onClick={() => setMapsQuotaError(null)} className="text-amber-400 hover:text-white font-bold px-2">Dismiss</button>
+        </div>
       )}
 
-      {/* Persistent System Status Bar & Background Notification Tray */}
+      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
 
-      {/* Unified High-Priority Emergency Overlay */}
+      {/* Single Canonical Emergency Countdown Overlay (replaces duplicate double countdowns) */}
       <TrialBanner />
-      {!isSosActive && <ForcedCountdownOverlay />}
-      <SosCountdownOverlay 
-        isActive={isSosActive}
-        onTrueCancel={handleTrueCancel}
-        onDuressTrigger={handleDuressTrigger}
-        onDispatchSOS={handleFinalDispatch}
-      />
+      <ForcedCountdownOverlay />
 
       {/* Critical Wearable Device Alert Sentinel Overlay */}
       <DeviceAlertOverlay />
       <PermissionsOnboardingModal />
       <LizzyPopup />
       {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
+
+      {/* Minimum Supported Version Enforcement Gate */}
+      {updateInfo?.updateRequiredBlocked && (
+        <div className="fixed inset-0 z-[9999999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-slate-900 border-2 border-red-500/50 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-14 h-14 mx-auto rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-2xl">⚠️</div>
+            <h2 className="text-lg font-black font-mono text-white uppercase tracking-wider">Update Required</h2>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {updateInfo.releaseNotes || `Your app version is below the minimum supported release (v${updateInfo.minSupportedVersion}). Please update to continue using SafetyLink.`}
+            </p>
+            <div className="flex flex-col gap-2 pt-2">
+              {updateInfo.apkUrl && (
+                <a
+                  href={updateInfo.apkUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs uppercase tracking-wider text-center"
+                >
+                  Download Updated APK (v{updateInfo.version})
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs uppercase"
+              >
+                Reload After Updating
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post-Registration Profile Summary & Org Code Copy Popup */}
+      {profileCreatedSummary && (
+        <div className="fixed inset-0 z-[999998] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 space-y-5 shadow-2xl font-mono text-left">
+            <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl font-black">✓</div>
+              <div>
+                <h3 className="text-sm font-black text-emerald-300 uppercase tracking-wider">{profileCreatedSummary.title}</h3>
+                <p className="text-[10px] text-slate-400">
+                  {profileCreatedSummary.provisionalOffline
+                    ? 'Saved offline — automatic server sync queued'
+                    : 'Signed in automatically to your active session'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs bg-slate-950/70 border border-slate-800 rounded-2xl p-4">
+              {profileCreatedSummary.fullName && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Name:</span>
+                  <span className="text-slate-100 font-bold">{profileCreatedSummary.fullName}</span>
+                </div>
+              )}
+              {profileCreatedSummary.username && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Username:</span>
+                  <span className="text-slate-200">@{profileCreatedSummary.username}</span>
+                </div>
+              )}
+              {profileCreatedSummary.email && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Email:</span>
+                  <span className="text-slate-200 truncate">{profileCreatedSummary.email}</span>
+                </div>
+              )}
+              {profileCreatedSummary.role && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Role:</span>
+                  <span className="text-cyan-300 font-bold">{profileCreatedSummary.role}</span>
+                </div>
+              )}
+              {profileCreatedSummary.pinConfigured && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Safety PIN:</span>
+                  <span className="text-emerald-400 font-bold">Armed (4 digits)</span>
+                </div>
+              )}
+            </div>
+
+            {profileCreatedSummary.orgCode && (
+              <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-[9px] text-emerald-400 uppercase font-bold block">Organization ID / Mesh Code</span>
+                  <span className="text-sm font-black text-white tracking-widest select-all">{profileCreatedSummary.orgCode}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(profileCreatedSummary.orgCode || '').catch(() => {});
+                    addToast(`Copied Organization Code: ${profileCreatedSummary.orgCode}`, 'success');
+                  }}
+                  className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase cursor-pointer"
+                >
+                  Copy Code
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setProfileCreatedSummary(null)}
+              className="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-widest cursor-pointer shadow-lg"
+            >
+              Go to Dashboard →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Primary Dynamic App Screen Container */}
       <div className="flex-1 relative flex flex-col z-10">
@@ -1455,8 +1687,8 @@ const App: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Floating Lizzy - K'lev.ai South African Safety Assistant Bot */}
-      <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Bot...</div>}><KlevaBot /></Suspense>
+      {/* Lizzy AI Safety Assistant Drawer/Modal (launched from Hamburger Menu) */}
+      <Suspense fallback={null}><KlevaBot isOpen={isLizzyOpen} onClose={() => setIsLizzyOpen(false)} /></Suspense>
 
       {/* Sizable Movable Deployed Floating Panic Button Widget */}
       <FloatingPanicWidget />

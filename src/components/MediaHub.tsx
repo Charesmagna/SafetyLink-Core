@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import fallbackManifest from '../utils/r2AssetManifest.json';
+import { fetchR2Assets, normalizeR2AssetUrls } from '../utils/r2Assets';
 
 export interface R2Asset {
   key: string;
@@ -14,8 +15,10 @@ export interface R2Asset {
   downloadUrl: string;
 }
 
+const INITIAL_FALLBACK_ASSETS: R2Asset[] = (fallbackManifest as R2Asset[]).map((asset) => normalizeR2AssetUrls(asset));
+
 export const MediaHub: React.FC = () => {
-  const [assets, setAssets] = useState<R2Asset[]>(fallbackManifest as R2Asset[]);
+  const [assets, setAssets] = useState<R2Asset[]>(INITIAL_FALLBACK_ASSETS);
   const [loading, setLoading] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<R2Asset | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -23,7 +26,7 @@ export const MediaHub: React.FC = () => {
   const [r2Status, setR2Status] = useState<{ connected: boolean; bucket: string; count: number }>({
     connected: true,
     bucket: 'media',
-    count: fallbackManifest.length,
+    count: INITIAL_FALLBACK_ASSETS.length,
   });
 
   // Fetch live R2 assets from backend API
@@ -32,17 +35,14 @@ export const MediaHub: React.FC = () => {
     const fetchAssets = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/r2/assets');
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
-            setAssets(data.assets);
-            setR2Status({
-              connected: true,
-              bucket: data.bucket || 'media',
-              count: data.totalCount || data.assets.length,
-            });
-          }
+        const data = await fetchR2Assets('Safetylink/');
+        if (isMounted && data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+          setAssets(data.assets);
+          setR2Status({
+            connected: true,
+            bucket: data.bucket || 'media',
+            count: data.totalCount || data.assets.length,
+          });
         }
       } catch (err) {
         console.warn('[MediaHub] Using verified local R2 fallback manifest:', err);

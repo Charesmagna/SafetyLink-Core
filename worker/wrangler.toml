@@ -19,3 +19,8 @@ database_id = "9daa8cbf-861f-4483-92e5-9f03541c6e71"
 [[r2_buckets]]
 binding = "RELEASES"
 bucket_name = "safetylink-releases"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "media"
+

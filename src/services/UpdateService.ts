@@ -57,7 +57,8 @@ export async function getCurrentAppVersion(): Promise<string> {
 
 const GITHUB_RELEASES_API = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest';
 const APK_DOWNLOAD_BASE = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download';
-const LIVE_VERSION_ENDPOINT = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest';
+const VERSION_POLICY_URL = 'https://api.safetylink.online/api/app/version-policy';
+const FALLBACK_VERSION_POLICY_URL = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/version-policy';
 
 export interface UpdateInfo {
   available: boolean;
@@ -66,6 +67,51 @@ export interface UpdateInfo {
   exeUrl?: string;
   releaseNotes?: string;
   isLiveUpdate?: boolean; // true = instant web OTA update without downloading full APK
+  updateRequiredBlocked?: boolean;
+  minSupportedVersion?: string;
+}
+
+export function isVersionBelow(current: string, minRequired: string): boolean {
+  try {
+    const parse = (v: string) => v.replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
+    const [cMaj = 0, cMin = 0, cPat = 0] = parse(current);
+    const [mMaj = 0, mMin = 0, mPat = 0] = parse(minRequired);
+    if (cMaj !== mMaj) return cMaj < mMaj;
+    if (cMin !== mMin) return cMin < mMin;
+    return cPat < mPat;
+  } catch {
+    return false;
+  }
+}
+
+export async function checkVersionPolicy(currentVersion?: string): Promise<{
+  blocked: boolean;
+  minSupportedVersion: string;
+  latestVersion: string;
+  updateUrl: string;
+}> {
+  const cur = currentVersion || (await getCurrentAppVersion());
+  for (const url of [VERSION_POLICY_URL, FALLBACK_VERSION_POLICY_URL]) {
+    try {
+      const policy = await xhrGet(url);
+      if (policy?.minSupportedVersion) {
+        return {
+          blocked: isVersionBelow(cur, String(policy.minSupportedVersion)),
+          minSupportedVersion: String(policy.minSupportedVersion),
+          latestVersion: String(policy.latestVersion || policy.minSupportedVersion),
+          updateUrl: String(policy.updateUrl || 'https://safetylink.online/#/download'),
+        };
+      }
+    } catch {
+      // try next
+    }
+  }
+  return {
+    blocked: false,
+    minSupportedVersion: '1.0.0',
+    latestVersion: cur,
+    updateUrl: 'https://safetylink.online/#/download',
+  };
 }
 
 function xhrGet(url: string): Promise<any> {
@@ -96,7 +142,21 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     const currentVersion = await getCurrentAppVersion();
     console.log(`[UpdateService] Checking updates. Current: ${currentVersion}`);
 
-    // 1. Always ask GitHub for the newest release first (never stale)
+    // 0. Check server minimum supported version policy
+    const policy = await checkVersionPolicy(currentVersion);
+    if (policy.blocked) {
+      return {
+        available: true,
+        updateRequiredBlocked: true,
+        minSupportedVersion: policy.minSupportedVersion,
+        version: policy.latestVersion,
+        apkUrl: `${APK_DOWNLOAD_BASE}/safetylink.apk`,
+        releaseNotes: `Version ${currentVersion} is below the minimum supported version (v${policy.minSupportedVersion}). Please update to continue.`,
+        isLiveUpdate: false,
+      };
+    }
+
+    // 1. Always ask GitHub/Worker for the newest release first
     try {
       const release = await xhrGet(GITHUB_RELEASES_API);
       const latestVersion = (release.tag_name || '').replace(/^v/, '');
@@ -115,32 +175,11 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
       // GitHub unreachable - fall back to the website's version file
     }
 
-    // 2. Fallback: website version file
-    try {
-      const liveMeta: any = null; // stale static file removed: version comes from the server only
-      if (liveMeta?.version && isNewerVersion(liveMeta.version, currentVersion)) {
-        return {
-          available: true,
-          version: liveMeta.version,
-          apkUrl: liveMeta.apkUrl || `${APK_DOWNLOAD_BASE}/SafetyLink-v${liveMeta.version}-Signed.apk`,
-          releaseNotes: liveMeta.features?.join(' • ') || 'New release available.',
-          isLiveUpdate: false
-        };
-      }
-    } catch {
-      // ignore
-    }
-
-    // 3. Final GitHub query (kept for the asset lookup below)
+    // 2. Final query fallback
     const release = await xhrGet(GITHUB_RELEASES_API);
     const latestVersion = (release.tag_name || '').replace(/^v/, '');
 
-    if (!latestVersion) {
-      return { available: false };
-    }
-
-    if (!isNewerVersion(latestVersion, currentVersion)) {
-      console.log('[UpdateService] Up to date');
+    if (!latestVersion || !isNewerVersion(latestVersion, currentVersion)) {
       return { available: false };
     }
 

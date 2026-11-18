@@ -107,19 +107,33 @@ public class EmergencyDispatchPlugin extends Plugin {
             
             String name = call.getString("name");
             if (name != null) profileEditor.putString("sl_name", name);
-            
+
             String phone = call.getString("phone");
             if (phone != null) profileEditor.putString("sl_phone", phone);
-            
+
             String alertNote = call.getString("alertNote");
             if (alertNote != null) profileEditor.putString("sl_alert_note", alertNote);
-            
+
+            String orgId = call.getString("orgCode");
+            if (orgId == null) orgId = call.getString("orgId");
+            if (orgId != null) profileEditor.putString("sl_org_id", orgId);
+
+            String userId = call.getString("userId");
+            if (userId != null) profileEditor.putString("sl_user_id", userId);
+
             Double lat = call.getDouble("lat");
             Double lng = call.getDouble("lng");
             if (lat != null && lng != null) {
                 profileEditor.putLong("sl_lat", Double.doubleToRawLongBits(lat));
                 profileEditor.putLong("sl_lng", Double.doubleToRawLongBits(lng));
             }
+            if (call.hasOption("ussdEnabled")) {
+                profileEditor.putBoolean("ussd_enabled", Boolean.TRUE.equals(call.getBoolean("ussdEnabled", false)));
+            }
+            String userPin = call.getString("userPin");
+            if (userPin != null) profileEditor.putString("sl_user_pin", userPin);
+            String duressPin = call.getString("duressPin");
+            if (duressPin != null) profileEditor.putString("sl_duress_pin", duressPin);
             profileEditor.apply();
 
             JSArray contactsArr = call.getArray("contacts");
@@ -320,8 +334,10 @@ public class EmergencyDispatchPlugin extends Plugin {
                 EmergencyService.applyPreferredSim(getContext(), dialIntent);
                 getContext().startActivity(dialIntent);
                 JSObject ret = new JSObject();
-                ret.put("dialed", true);
+                ret.put("dialed", false);
                 ret.put("dialerFallback", true);
+                ret.put("status", "UNAVAILABLE");
+                ret.put("error", "CALL_PHONE permission missing; opened dialer without placing call");
                 call.resolve(ret);
             } catch (Exception ex) {
                 JSObject ret = new JSObject();

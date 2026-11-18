@@ -1,10 +1,8 @@
-import { ASSETS } from '../../utils/cloudinary';
-import { R2_MEDIA } from '../../utils/r2Assets';
-import { useEditorialStore } from '../../utils/editorialStore';
-import { R2MediaShowcase } from './R2MediaShowcase';
-
 // @ts-nocheck
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getR2StreamUrl } from '../../utils/r2Assets';
+import { useAppStore } from '../../utils/store';
+import { R2MediaShowcase } from './R2MediaShowcase';
 import './Home.css';
 
 interface HomeProps {
@@ -14,502 +12,204 @@ interface HomeProps {
   navigate?: (page: string) => void;
 }
 
-const TRANSLATIONS = {
-  en:  { h1a:'EMERGENCY DISPATCH,', h1b:'ENGINEERED FOR THE WORST DAY.', sub:'SafetyLink routes panic alerts across WhatsApp, SMS and voice — coordinating BLE keyfobs, responder rosters and evidence trails. Built for South Africa.' },
-  zu:  { h1a:'UKULAWULWA KWEZIMO', h1b:'EZIPHUTHUMAYO, YAKHIWE NGENHLOSO.', sub:'SafetyLink ithumela izexwayiso zesandisi nge-WhatsApp, i-SMS kanye nezwi — esebenzisa izinkinobho ze-BLE.' },
-  af:  { h1a:'NOODREAKSIE,', h1b:'BETROUBAAR GEBOU.', sub:'SafetyLink stuur paniekseine oor WhatsApp, SMS en stem — vir Suid-Afrika gebou.' },
-  xh:  { h1a:'IMPENDULO YEXESHA', h1b:'ELIBUHLUNGU, YAKHELWE INJONGO.', sub:'SafetyLink ithuma izisilumkiso zexhala nge-WhatsApp, i-SMS kunye nezwi.' },
-  st:  { h1a:'KARABELO EA TŠOHANYETSO', h1b:'E HAHILOE MOLAONG.', sub:'SafetyLink e romela melaetsa ea tšohanyetso ka WhatsApp, SMS le lentsoe.' },
-  tn:  { h1a:'KARABELO YA TSHOGANYETSO', h1b:'E HAILWE KA MAIKAELELO.', sub:'SafetyLink e romela melaetsa ya tshoganyetso ka WhatsApp, SMS le lentswe.' },
+const TRANSLATIONS: Record<string, { h1a: string; h1b: string; sub: string }> = {
+  en:  { h1a: 'EMERGENCY DISPATCH,', h1b: 'BUILT FOR SOUTH AFRICA.', sub: 'SafetyLink coordinates BLE iTAG keyfobs, native SMS & Voice dispatch, and multi-tenant responder command — working cleanly across mobile, desktop, and web.' },
+  zu:  { h1a: 'UKULAWULWA KWEZIMO', h1b: 'EZIPHUTHUMAYO.', sub: 'SafetyLink ithumela izexwayiso ngokushesha nge-SMS, ucingo, ne-WhatsApp usebenzisa izinkinobho ze-BLE.' },
+  af:  { h1a: 'NOODREAKSIE,', h1b: 'VIR SUID-AFRIKA GEBOU.', sub: 'SafetyLink koördineer BLE-knoppies, SMS, stemoproepe en noodspanne in een betroubare platform.' },
+  xh:  { h1a: 'IMPENDULO YEXESHA', h1b: 'ELIBUHLUNGU.', sub: 'SafetyLink ithuma izilumkiso nge-SMS, umnxeba kunye ne-WhatsApp ngokukhawuleza.' },
+  st:  { h1a: 'KARABELO EA TŠOHANYETSO', h1b: 'E TSEPEHANG.', sub: 'SafetyLink e romela melaetsa ea tšohanyetso ka SMS, mohala le WhatsApp.' },
+  tn:  { h1a: 'KARABELO YA TSHOGANYETSO', h1b: 'E IKANYEGANG.', sub: 'SafetyLink e romela melaetsa ya tshoganyetso ka SMS, mogala le WhatsApp.' },
 };
 
-const LOG_EVENTS = [
-  { t:'07:46:39', ch:'BLE',       c:'#00e676', cr:'0,230,118',  tag:'TRIGGERED', ev:'unit-A-114 — panic press registered' },
-  { t:'07:46:40', ch:'GPS',       c:'#0ea5e9', cr:'14,165,233', tag:'LOCK',      ev:'-26.2041°S 28.0473°E — accuracy 3m' },
-  { t:'07:46:41', ch:'WhatsApp',  c:'#25d366', cr:'37,211,102', tag:'SENT',      ev:'Contact 1 → delivered ✓' },
-  { t:'07:46:44', ch:'SMS',       c:'#f5a623', cr:'245,166,35', tag:'SENT',      ev:'Africa\'s Talking → 2 recipients' },
-  { t:'07:46:48', ch:'VAPI',      c:'#a78bfa', cr:'167,139,250',tag:'DIALING',   ev:'AI voice call → +2773... ringing' },
-  { t:'07:47:02', ch:'ACK',       c:'#00e676', cr:'0,230,118',  tag:'RESOLVED',  ev:'Responder confirmed on scene' },
+const HERO_SLIDES = [
+  {
+    src: '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg',
+    fallback: '/panic-button-smooth.png',
+    title: 'Mobile SOS Trigger & 10s Disarm Lock',
+    caption: 'Single canonical countdown with PIN & silent duress protection',
+  },
+  {
+    src: '/multi-buttons-smooth.png',
+    fallback: '/panic-button-smooth.png',
+    title: 'BLE iTAG Wearable Buttons',
+    caption: 'Pocket panic triggers wired into the native Android PanicService',
+  },
+  {
+    src: '/Polish_20260727_023640262.jpg',
+    fallback: '/hand-smooth.png',
+    title: 'Rapid Household & Estate Deployment',
+    caption: 'Unified protection for families, campuses, and security patrols',
+  },
+  {
+    src: '/Polish_20260819_020007723.jpg',
+    fallback: '/safetylink-shield.jpg',
+    title: 'Organization Command Deck',
+    caption: 'Live Google Maps situational view, Street View, & responder routing',
+  },
 ];
 
-const R2_EXPLORE_POOLS: Record<string, string[]> = {
-  platform: [
-    R2_MEDIA.platform.heroBackground,
-    R2_MEDIA.platform.commandDeckDark,
-    R2_MEDIA.platform.networkGrid,
-    R2_MEDIA.architecture.responseOverview,
-    R2_MEDIA.architecture.systemAnatomy
-  ],
-  hardware: [
-    R2_MEDIA.hardware.itagFinderProduct,
-    R2_MEDIA.hardware.itagTeardown,
-    R2_MEDIA.hardware.limxDynamicsRobot,
-    R2_MEDIA.hardware.hardwareAssembly,
-    R2_MEDIA.hardware.ruggedBeacon
-  ],
-  usecases: [
-    R2_MEDIA.usecases.estateCommunity,
-    R2_MEDIA.usecases.corporateCampus,
-    R2_MEDIA.usecases.hospitalHealthcare,
-    R2_MEDIA.usecases.transportLogistics,
-    R2_MEDIA.usecases.nightPatrolOfficer
-  ],
-  pricing: [
-    R2_MEDIA.architecture.securityEcosystem,
-    R2_MEDIA.architecture.universalResilience,
-    R2_MEDIA.architecture.meshPlatformOverview,
-    R2_MEDIA.platform.dispatchControl
-  ],
-  enterprise: [
-    R2_MEDIA.architecture.universalResilience,
-    R2_MEDIA.architecture.systemAnatomy,
-    R2_MEDIA.platform.commandDeckDark,
-    R2_MEDIA.usecases.loneWorkerIndustrial
-  ]
-};
+const GALLERY_ITEMS = [
+  { src: '/panic-button-smooth.png', label: 'Android One-Tap SOS', tag: 'MOBILE APP' },
+  { src: '/multi-buttons-smooth.png', label: 'iTAG Hardware Triggers', tag: 'BLE WEARABLE' },
+  { src: '/Polish_20260819_020134421.jpg', label: 'Estate & Patrol Coordination', tag: 'COMMAND DECK' },
+  { src: '/Polish_20260907_043403519.jpg', label: 'Offline Queue & Zero-Data Fallback', tag: 'RESILIENCE' },
+  { src: '/hand-smooth.png', label: 'Family Safe-Zone Linking', tag: 'HOUSEHOLDS' },
+  { src: getR2StreamUrl('Safetylink/Emergency_Response_System_Architecture.png'), label: 'Dispatch Pipeline Blueprint', tag: 'ARCHITECTURE' },
+];
 
 export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeProps) {
-  const { web } = useEditorialStore();
+  const { globalTheme } = useAppStore();
+  const isLight = globalTheme !== 'dark';
   const [language, setLanguage] = useState('en');
-  const [logRows, setLogRows] = useState<typeof LOG_EVENTS>([]);
-  const [tick, setTick] = useState(0);
-  const [rotationTick, setRotationTick] = useState(0);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [apkDownloadUrl, setApkDownloadUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk');
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [releaseVersion, setReleaseVersion] = useState('latest');
-  const [heroClipMuted, setHeroClipMuted] = useState(true);
-  const t = (TRANSLATIONS as Record<string, any>)[language] || TRANSLATIONS.en;
+  const [releaseVersion, setReleaseVersion] = useState('Version 1');
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
-  // Dynamically resolve latest release APK & EXE from GitHub releases
-  // AdSense: landing page only (never loaded inside the app or emergency screens)
+  // Cycle Hero Slideshow cleanly (every 4.5s)
   useEffect(() => {
-    if (document.getElementById('adsense-loader')) return;
-    const meta = document.createElement('meta');
-    meta.name = 'google-adsense-account';
-    meta.content = 'ca-pub-9698872193899450';
-    document.head.appendChild(meta);
-    const s = document.createElement('script');
-    s.id = 'adsense-loader';
-    s.async = true;
-    s.crossOrigin = 'anonymous';
-    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9698872193899450';
-    document.head.appendChild(s);
+    const timer = setInterval(() => {
+      setSlideIdx(prev => (prev + 1) % HERO_SLIDES.length);
+    }, 4500);
+    return () => clearInterval(timer);
   }, []);
 
+  // Fetch latest verified release URLs
   useEffect(() => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest', true);
-    xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
-    xhr.timeout = 7000;
-    xhr.onload = () => {
-      try {
-        const data = JSON.parse(xhr.responseText);
+    fetch('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
         if (data?.tag_name) setReleaseVersion(data.tag_name);
-        if (data?.assets && Array.isArray(data.assets)) {
-          const apk = data.assets.find((a: any) => a.name && a.name.endsWith('.apk'));
-          const exe = data.assets.find((a: any) => a.name && a.name.endsWith('.exe'));
+        if (Array.isArray(data?.assets)) {
+          const apk = data.assets.find((a: any) => a.name?.endsWith('.apk'));
+          const exe = data.assets.find((a: any) => a.name?.endsWith('.exe'));
           if (apk?.browser_download_url) setApkDownloadUrl(apk.browser_download_url);
           if (exe?.browser_download_url) setExeDownloadUrl(exe.browser_download_url);
         }
-      } catch (e) {
-        console.warn('Failed to parse latest release metadata', e);
-      }
-    };
-    xhr.send();
+      })
+      .catch(() => {});
   }, []);
 
-  const heroH1a = language === 'en' && web.heroTitle1 ? web.heroTitle1 : t.h1a;
-  const heroH1b = language === 'en' && web.heroTitle2 ? web.heroTitle2 : t.h1b;
-  const heroSub = language === 'en' && web.heroSubtitle ? web.heroSubtitle : t.sub;
-  const ctaPrimary = web.heroCtaPrimary || 'GET PROTECTED →';
-  const ctaSecondary = web.heroCtaSecondary || 'DEPLOY FOR MY ORGANISATION';
-
-  // Live log animation
-  useEffect(() => {
-    let i = 0;
-    const add = () => {
-      setLogRows(prev => {
-        const next = [...prev, LOG_EVENTS[i % LOG_EVENTS.length]];
-        return next.slice(-7);
-      });
-      i++;
-    };
-    const iv = setInterval(add, 1800);
-    add();
-    return () => clearInterval(iv);
-  }, []);
-
-  // Counter tick
-  useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  // Continuous R2 Media dynamic rotation tick (7.5s interval)
-  useEffect(() => {
-    const iv = setInterval(() => setRotationTick(t => t + 1), 7500);
-    return () => clearInterval(iv);
-  }, []);
+  const currentSlide = HERO_SLIDES[slideIdx];
+  const cardBg = isLight ? '#ffffff' : 'rgba(15, 23, 42, 0.85)';
+  const softBg = isLight ? '#f8fafc' : 'rgba(15, 23, 42, 0.55)';
+  const borderCol = isLight ? '#d1fae5' : 'rgba(51, 65, 85, 0.7)';
+  const headingCol = isLight ? '#0f172a' : '#f8fafc';
+  const mutedCol = isLight ? '#475569' : '#94a3b8';
 
   return (
-    <div className="landing-home-page" style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
-
-      {/* ── HERO ──────────────────────────────────────────────────── */}
-      <section style={{ position:'relative', minHeight:'100vh', display:'flex', alignItems:'center', paddingTop:'80px', overflow:'hidden', backgroundColor: 'transparent' }}>
-        {/* Hero Background Video Layer */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              minWidth: '100%',
-              minHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              objectFit: 'cover',
-              opacity: 0.28,
-              filter: 'brightness(0.85) contrast(1.15)',
-            }}
-          >
-            <source src="/splash-video.mp4" type="video/mp4" />
-            <source src="/media/videos/hero_background.mp4" type="video/mp4" />
-            <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
-            <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
-          </video>
-          {/* High-tech Vignette & Radial Darkening Overlays */}
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(2,6,23,0.3) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(2,6,23,0.6) 0%, transparent 20%, transparent 80%, #020617 100%)' }} />
-        </div>
-        {/* Scanline */}
-        <div style={{ position:'absolute', inset:0, opacity:0.03, pointerEvents:'none', overflow:'hidden', zIndex:1 }}>
-          <div style={{ position:'absolute', left:0, right:0, height:'2px', background:'linear-gradient(transparent,rgba(232,50,30,.8),transparent)', animation:'scanline 8s linear infinite' }}/>
-        </div>
-
-        {/* Counter bar */}
-        <div style={{ position:'absolute', top:'70px', left:0, right:0, display:'flex', justifyContent:'space-between', padding:'0 40px', fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', color:'rgba(136,146,164,.4)', letterSpacing:'.1em', zIndex:2, pointerEvents:'none' }}>
-          <span>{String(tick).padStart(8,'0')}</span>
-          <span style={{ color:'rgba(232,50,30,.7)' }}>SAFETYLINK CORE</span>
-          <span>00:00:{String(tick%60).padStart(2,'0')}.00</span>
-        </div>
-
-        <div style={{ position:'relative', zIndex:3, width:'100%', maxWidth:'1160px', margin:'0 auto', padding:'0 40px', display:'grid', gridTemplateColumns:'1fr 340px', gap:'64px', alignItems:'center' }}>
-          {/* Left */}
+    <div style={{ background: 'transparent', color: headingCol, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      {/* ── HERO COLLAGE ── */}
+      <section style={{ padding: '56px 24px 72px', background: isLight ? 'linear-gradient(180deg, rgba(236,253,245,0.72) 0%, rgba(255,255,255,0.92) 100%)' : 'transparent' }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '40px', alignItems: 'center' }}>
+          {/* Hero Copy */}
           <div>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', letterSpacing:'.18em', color:'#ff3b2f', marginBottom:'20px', padding:'5px 12px', border:'1px solid rgba(232,50,30,.3)', borderRadius:'3px', background:'rgba(232,50,30,.06)' }}>
-              ◆ MISSION-CRITICAL &nbsp;//&nbsp; MULTI-TENANT &nbsp;//&nbsp; OFFLINE-FIRST
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '.14em', color: '#059669', background: isLight ? '#ecfdf5' : 'rgba(16,185,129,0.12)', border: '1px solid #a7f3d0', padding: '5px 12px', borderRadius: '999px', marginBottom: '18px' }}>
+              ● SOUTH AFRICAN EMERGENCY NETWORK · POPIA COMPLIANT
             </div>
 
-            {/* Language selector */}
-            <select value={language} onChange={e => setLanguage(e.target.value)}
-              style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.1)', borderRadius:'6px', padding:'6px 12px', fontSize:'11px', fontWeight:700, color:'#f0f4f8', cursor:'pointer', outline:'none', marginBottom:'20px', fontFamily:'inherit' }}>
-              {[['en','🌐 ENGLISH'],['zu','🌐 ZULU'],['af','🌐 AFRIKAANS'],['xh','🌐 XHOSA'],['st','🌐 SESOTHO'],['tn','🌐 SETSWANA'],['ts','🌐 TSONGA'],['ss','🌐 SWATI'],['ve','🌐 VENDA'],['nr','🌐 NDEBELE'],['nso','🌐 SEPEDI']].map(([v,l]) => (
-                <option key={v} value={v} style={{ background:'#0d1117' }}>{l}</option>
-              ))}
-            </select>
+            <div style={{ marginBottom: '16px' }}>
+              <select
+                value={language}
+                onChange={e => setLanguage(e.target.value)}
+                aria-label="Hero language selector"
+                style={{ background: cardBg, border: `1px solid ${borderCol}`, borderRadius: '8px', padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: headingCol, cursor: 'pointer' }}
+              >
+                <option value="en">🌐 English</option>
+                <option value="zu">🌐 isiZulu</option>
+                <option value="af">🌐 Afrikaans</option>
+                <option value="xh">🌐 isiXhosa</option>
+                <option value="st">🌐 Sesotho</option>
+                <option value="tn">🌐 Setswana</option>
+              </select>
+            </div>
 
-            <h1 style={{ fontSize:'clamp(42px,7vw,80px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.95, marginBottom:'28px' }}>
-              {heroH1a}<br/>
-              <span style={{ color: web.primaryColor || '#e8321e', fontStyle:'italic' }}>{heroH1b}</span>
+            <h1 id="hero-h1" style={{ fontSize: 'clamp(36px, 5.5vw, 62px)', fontWeight: 900, letterSpacing: '-.04em', lineHeight: 1.0, marginBottom: '20px', color: headingCol }}>
+              {t.h1a}<br />
+              <span style={{ color: '#059669' }}>{t.h1b}</span>
             </h1>
-            <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'460px', marginBottom:'36px' }}>{heroSub}</p>
 
-            <div style={{ display:'flex', alignItems:'center', gap:'16px', flexWrap:'wrap' }}>
-              <div style={{ position: 'relative', display: 'inline-flex' }}>
-                <button onClick={onRegisterUser}
-                  style={{ background: web.primaryColor || '#e8321e', color:'#fff', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', padding:'14px 28px', borderRadius:'8px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px' }}>
-                  REGISTER AS INDIVIDUAL →
-                </button>
-                <span style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  right: '-8px',
-                  backgroundColor: '#10b981',
-                  color: '#020617',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  letterSpacing: '0.12em',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.5)',
-                  pointerEvents: 'none',
-                  textTransform: 'uppercase'
-                }}>
-                  FREE
-                </span>
-              </div>
-              <button onClick={onRegisterOrg}
-                style={{ fontSize:'12px', fontWeight:600, color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', cursor:'pointer' }}>
-                {ctaSecondary}
-              </button>
-              <a href="https://wa.me/message/YIEA73M7H3P5M1?text=Hi+I+want+to+talk+to+SafetyLink"
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize:'11px', fontWeight:700, color:'#25d366', background:'rgba(37,211,102,0.1)', border:'1px solid rgba(37,211,102,0.3)', padding:'12px 18px', borderRadius:'8px', textDecoration:'none', display:'inline-flex', alignItems:'center', gap:'6px', letterSpacing:'.05em' }}>
-                💬 TALK TO US ON WHATSAPP
-              </a>
-            </div>
-          </div>
-
-          {/* Live Hero Clip & Telemetry Panel */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              background: 'rgba(5, 8, 15, 0.72)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: '18px',
-              overflow: 'hidden',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(232, 50, 30, 0.15)',
-            }}>
-              {/* Header */}
-              <div style={{
-                padding: '12px 16px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff3b2f', boxShadow: '0 0 8px #ff3b2f', display: 'inline-block', animation: 'blink 1.2s infinite' }} />
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 800, color: '#f8fafc', letterSpacing: '.1em' }}>
-                    LIVE SYSTEM SIMULATION
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setHeroClipMuted(m => !m)}
-                  style={{
-                    background: heroClipMuted ? 'rgba(255,255,255,0.06)' : 'rgba(16,185,129,0.2)',
-                    border: '1px solid rgba(255,255,255,0.15)',
-                    color: heroClipMuted ? '#94a3b8' : '#10b981',
-                    borderRadius: '6px',
-                    padding: '3px 8px',
-                    fontSize: '10px',
-                    fontFamily: "'JetBrains Mono',monospace",
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  title={heroClipMuted ? 'Unmute video' : 'Mute video'}
-                >
-                  {heroClipMuted ? '🔇 MUTED' : '🔊 AUDIO'}
-                </button>
-              </div>
-
-              {/* Embedded Video Clip */}
-              <div style={{ position: 'relative', width: '100%', height: '190px', background: '#000', overflow: 'hidden' }}>
-                <video
-                  autoPlay
-                  loop
-                  muted={heroClipMuted}
-                  playsInline
-                  controls={false}
-                  preload="auto"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                >
-                  <source src="/splash-video.mp4" type="video/mp4" />
-                  <source src="/media/videos/hero_background.mp4" type="video/mp4" />
-                  <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
-                  <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
-                  <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
-                </video>
-
-                {/* Video HUD Overlays */}
-                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(0,230,118,0.4)', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 800, color: '#00e676' }}>
-                  LATENCY &lt; 0.3s
-                </div>
-                <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#e2e8f0', letterSpacing: '.06em' }}>
-                  ◆ BLE ➔ VOIP ➔ SMS ➔ MAP
-                </div>
-              </div>
-
-              {/* Caption */}
-              <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#ffffff', marginBottom: '3px' }}>
-                  Emergency Escalation Pipelines
-                </div>
-                <div style={{ fontSize: '11px', color: '#8892a4', lineHeight: 1.4 }}>
-                  Automatic distress routing across responders, family rings, and command centers.
-                </div>
-              </div>
-
-              {/* Live Event Stream snippet */}
-              <div style={{ padding: '8px 12px', background: 'rgba(0,0,0,0.4)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#64748b', letterSpacing: '.08em' }}>TELEMETRY STREAM</span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '8.5px', color: '#00e676' }}>ONLINE</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {logRows.slice(-3).map((r, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', padding: '3px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>
-                      <span style={{ color: r.c, fontWeight: 700 }}>{r.ch}</span>
-                      <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>{r.ev}</span>
-                      <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px' }}>{r.t.split(':').slice(1).join(':')}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── OPERATIONAL STATUS TICKER ──────────────────────────── */}
-      <div style={{ background:'rgba(2,6,23,0.25)', backdropFilter:'blur(4px)', borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', padding:'16px 40px', display:'flex', alignItems:'center', gap:'32px', overflow:'hidden' }}>
-        <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', letterSpacing:'.16em', color:'#e8321e', flexShrink:0, display:'flex', alignItems:'center', gap:'6px' }}>
-          <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', animation:'blink 1.2s infinite', display:'inline-block' }}/>OPERATIONAL STATUS
-        </span>
-        <div style={{ display:'flex', gap:'48px', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', color:'#8892a4', whiteSpace:'nowrap', animation:'marquee 24s linear infinite' }}>
-          {['BLE GATEWAY ● LIVE','WHATSAPP RELAY ● LIVE','SMS GATEWAY ● LIVE','VAPI VOICE ● LIVE','USSD CALLBACK ● LIVE','AUDIT CHAIN ● SEALED','TENANTS ACTIVE ● 14','INCIDENTS TODAY ● 3',
-            'BLE GATEWAY ● LIVE','WHATSAPP RELAY ● LIVE','SMS GATEWAY ● LIVE','VAPI VOICE ● LIVE'].map((item, i) => (
-            <span key={i} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-              <span style={{ color: item.includes('3') ? '#f5a623' : '#00e676' }}>{item}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── ARMOURING COMMUNITIES ──────────────────────────────── */}
-      <section style={{ padding:'100px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'60px', alignItems:'center' }}>
-          <div>
-            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SOUTH AFRICAN PLATFORM</div>
-            <h2 style={{ fontSize:'clamp(52px,10vw,112px)', fontWeight:900, letterSpacing:'-.05em', lineHeight:.88, textTransform:'uppercase', marginBottom:'28px' }}>
-              ARMOURING<br/>COMMUNITIES.
-            </h2>
-            <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'440px', marginBottom:'32px' }}>
-              Emergency response platform designed for mission-critical safety in South Africa. From 2-second panic alerts to advanced AI dispatch, we secure your community.
+            <p id="hero-sub" style={{ fontSize: '15px', lineHeight: 1.7, color: mutedCol, maxWidth: '520px', marginBottom: '28px' }}>
+              {t.sub}
             </p>
-            <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
-              <button onClick={onRegisterUser} style={{ background:'#e8321e', color:'#fff', padding:'14px 28px', borderRadius:'8px', fontWeight:700, fontSize:'11px', letterSpacing:'.1em', border:'none', cursor:'pointer' }}>START PROTECTION →</button>
-              <button onClick={() => navigate?.('platform')} style={{ color:'#8892a4', padding:'13px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', background:'transparent', fontSize:'12px', cursor:'pointer', fontWeight:600 }}>LEARN MORE</button>
-            </div>
-            <div style={{ position: 'relative', marginTop: '40px', maxWidth: '400px' }}>
-              <img 
-                src="/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg" 
-                alt="SafetyLink App SOS" 
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = ASSETS.appLogin || '/panic-button-smooth.png';
-                }}
-                style={{ 
-                  width: '100%', 
-                  borderRadius: '16px', 
-                  border: '1px solid rgba(16,185,129,0.3)',
-                  boxShadow: '0 25px 60px rgba(0,0,0,0.85), 0 0 25px rgba(16,185,129,0.15)',
-                  display: 'block'
-                }} 
-              />
-              <img 
-                src="/multi-buttons-smooth.png" 
-                alt="SafetyLink iTAG" 
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/panic-button-smooth.png';
-                }}
-                style={{ 
-                  position: 'absolute', 
-                  bottom: '-25px', 
-                  left: '-35px', 
-                  width: '160px', 
-                  borderRadius: '12px', 
-                  transform: 'rotate(-12deg)', 
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.75), 0 0 20px rgba(0,230,118,0.25)',
-                  border: '1px solid rgba(0,230,118,0.3)',
-                  display: 'block'
-                }} 
-              />
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+              <button
+                onClick={onRegisterUser}
+                style={{ background: '#059669', color: '#ffffff', fontSize: '12px', fontWeight: 800, letterSpacing: '.06em', padding: '14px 24px', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 8px 20px rgba(5,150,105,0.22)' }}
+              >
+                CREATE PERSONAL ACCOUNT →
+              </button>
+              <button
+                onClick={onRegisterOrg}
+                style={{ background: cardBg, color: '#059669', fontSize: '12px', fontWeight: 700, padding: '13px 20px', borderRadius: '10px', border: '1px solid #10b981', cursor: 'pointer' }}
+              >
+                REGISTER ORGANIZATION
+              </button>
+              <button
+                onClick={onLogin}
+                style={{ background: 'transparent', color: mutedCol, fontSize: '12px', fontWeight: 700, padding: '13px 16px', borderRadius: '10px', border: `1px solid ${borderCol}`, cursor: 'pointer' }}
+              >
+                SIGN IN
+              </button>
             </div>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
-            {[
-              { icon:'⚡', title:'2-Second Hold Panic', desc:'Instantly trigger emergency alerts via BLE keyfob, on-screen SOS, or duress code.' },
-              { icon:'📡', title:'Multi-Channel Dispatch', desc:'Sequential WhatsApp → SMS → Voice → USSD. Every step logged with cryptographic chain-of-custody.' },
-              { icon:'🧠', title:'VAPI AI Voice Follow-Up', desc:'AI voice agent calls every contact in sequence until live acknowledgement is received.' },
-              { icon:'🔒', title:'AES-256-GCM Encryption', desc:'Every data point secured end-to-end. ZK Evidence Vault with Cloudinary-backed storage.' },
-            ].map((f, i) => (
-              <div key={i} style={{ padding:'18px 0', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'flex-start', gap:'16px' }}>
-                <div style={{ width:'36px', height:'36px', borderRadius:'8px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', background:'rgba(232,50,30,.1)' }}>{f.icon}</div>
-                <div>
-                  <div style={{ fontSize:'14px', fontWeight:700, marginBottom:'4px' }}>{f.title}</div>
-                  <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55 }}>{f.desc}</div>
-                </div>
+
+          {/* Interactive Hero Image Slideshow (Opaque card — video backdrop excluded inside) */}
+          <div style={{ background: cardBg, border: `1px solid ${borderCol}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 48px rgba(5, 150, 105, 0.10)' }}>
+            <div style={{ position: 'relative', height: '320px', background: '#f1f5f9', overflow: 'hidden' }}>
+              <img
+                src={currentSlide.src}
+                alt={currentSlide.title}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = currentSlide.fallback;
+                }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 20px', background: 'linear-gradient(to top, rgba(15,23,42,0.88), transparent)', color: '#ffffff' }}>
+                <div style={{ fontSize: '14px', fontWeight: 800 }}>{currentSlide.title}</div>
+                <div style={{ fontSize: '11px', color: '#d1fae5', marginTop: '2px' }}>{currentSlide.caption}</div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS BAR ──────────────────────────────────────────── */}
-      <section style={{ borderTop:'1px solid rgba(255,255,255,.07)', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(2,6,23,0.18)', backdropFilter:'blur(2px)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)' }}>
-          {[
-            { val:'< 3s', lbl:'Dispatch Latency' },
-            { val:'4×',   lbl:'Fallback Channels' },
-            { val:'IP65', lbl:'BLE Keyfob Rating' },
-            { val:'POPIA',lbl:'+ GDPR Compliant' },
-          ].map((s, i) => (
-            <div key={i} style={{ padding:'44px 40px', borderRight: i < 3 ? '1px solid rgba(255,255,255,.07)' : 'none' }}>
-              <div style={{ fontSize:'clamp(36px,5vw,56px)', fontWeight:900, letterSpacing:'-.04em', color:'#e8321e', lineHeight:1, marginBottom:'10px' }}>{s.val}</div>
-              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9.5px', letterSpacing:'.14em', color:'#8892a4', textTransform:'uppercase' }}>{s.lbl}</div>
+              <button
+                type="button"
+                onClick={() => setSlideIdx((slideIdx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)}
+                aria-label="Previous slide"
+                style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', color: '#0f172a', border: 'none', fontWeight: 900, cursor: 'pointer' }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlideIdx((slideIdx + 1) % HERO_SLIDES.length)}
+                aria-label="Next slide"
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', color: '#0f172a', border: 'none', fontWeight: 900, cursor: 'pointer' }}
+              >
+                ›
+              </button>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── ESCALATION CHAIN ───────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// 03 OFFLINE-FIRST</div>
-          <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Queue locally.<br/>Fire on reconnect.</h2>
-          <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'560px', marginBottom:'48px' }}>Every SOS survives blackouts, load-shedding and zero-data scenarios. Encrypted local queue drains automatically when signal returns.</p>
-
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'56px', alignItems:'start' }}>
-            <div>
-              {[
-                { icon:'📡', label:'BLE Trigger', desc:'No airtime, no data — fires locally from wearable. < 200ms.', step:'STEP_1', c:'#00e676' },
-                { icon:'💬', label:'WhatsApp (Twilio)', desc:'Rich message with GPS link + map. 30s delivery-receipt window before advance.', step:'STEP_2', c:'#25d366' },
-                { icon:'📱', label:'SMS via Africa\'s Talking', desc:'BCC to estate admin and control-room supervisor. USSD callback registered.', step:'STEP_3', c:'#f5a623' },
-                { icon:'📞', label:'VAPI AI Voice Dial', desc:'Dials each responder in sequence until live acknowledgement.', step:'STEP_4', c:'#a78bfa' },
-                { icon:'📟', label:'USSD + Please Call Me', desc:'Zero-airtime fallback for uncontacted residents. Africa\'s Talking USSD.', step:'STEP_5', c:'#e8321e' },
-                { icon:'✅', label:'Incident Resolved', desc:'Audit trail sealed. Evidence uploaded to Cloudinary. Tenant report generated.', step:'STEP_6', c:'#8892a4' },
-              ].map((s, i) => (
-                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'16px', padding:'16px 0', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-                  <div style={{ width:'36px', height:'36px', borderRadius:'8px', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', background:`rgba(${s.c === '#00e676' ? '0,230,118' : s.c === '#f5a623' ? '245,166,35' : s.c === '#e8321e' ? '232,50,30' : '167,139,250'},.1)` }}>{s.icon}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:'13px', fontWeight:700, marginBottom:'3px' }}>{s.label}</div>
-                    <div style={{ fontSize:'11px', color:'#8892a4', lineHeight:1.5 }}>{s.desc}</div>
-                  </div>
-                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'8.5px', color:s.c, letterSpacing:'.1em', flexShrink:0 }}>{s.step}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Live audit log */}
-            <div style={{ background:'rgba(0,0,0,.35)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,.07)', background:'rgba(0,0,0,.3)' }}>
-                <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#00e676', display:'inline-block', animation:'blink 1.2s infinite' }}/>
-                <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.1em' }}>INCIDENT AUDIT LOG</span>
-                <span style={{ marginLeft:'auto', fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#00e676' }}>ACTIVE</span>
-              </div>
-              <div style={{ padding:'4px 0', minHeight:'220px' }}>
-                {logRows.map((row, i) => (
-                  <div key={i} style={{ display:'grid', gridTemplateColumns:'68px 72px 108px 1fr', gap:'8px', padding:'6px 16px', fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', borderBottom:'1px solid rgba(255,255,255,.025)' }}>
-                    <span style={{ color:'rgba(136,146,164,.5)' }}>{row.t}</span>
-                    <span style={{ color:row.c, fontWeight:700, fontSize:'9.5px' }}>{row.ch}</span>
-                    <span style={{ fontSize:'8.5px', fontWeight:700, letterSpacing:'.08em', padding:'1px 6px', borderRadius:'3px', background:`rgba(${row.cr},.1)`, color:row.c, border:`1px solid rgba(${row.cr},.3)` }}>{row.tag}</span>
-                    <span style={{ color:'#8892a4', fontSize:'9.5px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{row.ev}</span>
-                  </div>
+            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: cardBg }}>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, color: '#059669' }}>
+                CANONICAL SEQUENCE: SERVER → SMS → CALL → USSD
+              </span>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {HERO_SLIDES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSlideIdx(idx)}
+                    aria-label={`Slide ${idx + 1}`}
+                    style={{
+                      width: idx === slideIdx ? '18px' : '8px',
+                      height: '8px',
+                      borderRadius: '999px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: idx === slideIdx ? '#059669' : '#cbd5e1',
+                      transition: 'all .2s',
+                    }}
+                  />
                 ))}
               </div>
             </div>
@@ -517,309 +217,174 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         </div>
       </section>
 
-      {/* ── SECTORS ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
-          <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'48px' }}>Every sector.<br/>One platform.</h2>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1px', background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'14px', overflow:'hidden' }}>
+      {/* ── COLLAGE ARCHITECTURE & VERIFIED CAPABILITIES ── */}
+      <section style={{ padding: '64px 24px', background: softBg, borderTop: `1px solid ${borderCol}`, borderBottom: `1px solid ${borderCol}` }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', maxWidth: '680px', margin: '0 auto 44px' }}>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '.16em', color: '#059669', marginBottom: '10px' }}>
+              // BUILT FOR RELIABILITY UNDER PRESSURE
+            </div>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-.03em', marginBottom: '12px', color: headingCol }}>
+              One Unified Emergency Engine
+            </h2>
+            <p style={{ fontSize: '14px', color: mutedCol, lineHeight: 1.6 }}>
+              Every trigger — software button, physical BLE iTAG, home-screen widget, or quick tile — converges on the native Android PanicService with offline persistence and real dispatch tracking.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
             {[
-              { tag:'RESIDENTIAL', title:'ESTATES & COMPLEXES', desc:'Real-time panic alerts, visitor tracking, perimeter alerts and armed response dispatch for gated communities.' },
-              { tag:'ENTERPRISE', title:'CORPORATES & CAMPUSES', desc:'Lone-worker protection, duress code activation, multi-floor responder routing and evidence capture.' },
-              { tag:'MUNICIPAL', title:'MUNICIPALITIES', desc:'Community safety networks, neighborhood watch coordination and integration with SAPS dispatch protocols.' },
-              { tag:'EDUCATION', title:'SCHOOLS & CAMPUSES', desc:'Pupil tracking, parent notification, lockdown protocols and dedicated support staff escalation chains.' },
-              { tag:'HEALTHCARE', title:'CLINICS & HOSPITALS', desc:'Staff duress alerts, patient elopement detection and code-blue dispatch for healthcare facilities.' },
-              { tag:'LOGISTICS', title:'TRANSPORT & FIELD OPS', desc:'Driver SOS, route deviation alerts, cargo protection and real-time fleet situational awareness.' },
-            ].map((s, i) => (
-              <div key={i} style={{ background:'rgba(13,17,23,0.35)', backdropFilter:'blur(8px)', padding:'28px', cursor:'default', transition:'background .2s' }}
-                onMouseOver={e => e.currentTarget.style.background = 'rgba(232,50,30,.12)'}
-                onMouseOut={e => e.currentTarget.style.background = 'rgba(13,17,23,0.35)'}>
-                <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'8.5px', letterSpacing:'.16em', color:'#8892a4', marginBottom:'10px', textTransform:'uppercase' }}>{s.tag}</div>
-                <div style={{ fontSize:'16px', fontWeight:800, marginBottom:'8px', textTransform:'uppercase', letterSpacing:'.02em' }}>{s.title}</div>
-                <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55 }}>{s.desc}</div>
+              { icon: '⏱️', title: '10-Second Single Countdown', desc: 'Instant cancellation lock requiring your Safety PIN, fingerprint/device passcode, or silent duress PIN.' },
+              { icon: '📶', title: 'Sequential Carrier Dispatch', desc: 'Coordinates backend API sync first, then native GSM SMS, direct cellular voice call, optional USSD, and WhatsApp for WhatsApp contacts.' },
+              { icon: '📡', title: 'BLE iTAG Wearable Mesh', desc: 'Native GATT scanning, automatic reconnect after screen-off, and programmable single/double/triple click triggers.' },
+              { icon: '🗺️', title: 'Google Maps & Street View', desc: 'Live situational mapping, satellite layers, traffic telemetry, and responder turn-by-turn routing decoupled from SOS dispatch.' },
+              { icon: '🔐', title: 'AES-GCM Encrypted Vault', desc: 'On-device encrypted password manager and document storage unlocked with your vault password or biometrics.' },
+              { icon: '🎙️', title: 'Lizzy AI Voice Check-In', desc: 'Free-tier Gemini check-in prompts 10 minutes after panic dispatch plus accessibility audio transcription.' },
+            ].map((card, i) => (
+              <div key={i} style={{ background: cardBg, border: `1px solid ${borderCol}`, borderRadius: '16px', padding: '24px', boxShadow: '0 4px 16px rgba(15,23,42,0.03)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isLight ? '#ecfdf5' : 'rgba(16,185,129,0.12)', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', marginBottom: '14px' }}>
+                  {card.icon}
+                </div>
+                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '8px', color: headingCol }}>{card.title}</h3>
+                <p style={{ fontSize: '12.5px', color: mutedCol, lineHeight: 1.6, margin: 0 }}>{card.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── QUICK NAV CARDS ────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)', position:'relative', overflow:'hidden' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center', position:'relative', zIndex:2 }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// EXPLORE MORE</div>
-          <h2 style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, marginBottom:'48px' }}>Everything you need to know</h2>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'20px' }}>
-            {[
-              { 
-                emoji:'📱', 
-                label:'Platform', 
-                sub:'How it works & architecture', 
-                page:'platform', 
-                bg: R2_MEDIA.platform.heroBackground,
-                badge: 'ARCHITECTURE'
-              },
-              { 
-                emoji:'📡', 
-                label:'Hardware', 
-                sub:'BLE tags & sensors', 
-                page:'hardware', 
-                bg: R2_MEDIA.hardware.itagFinderProduct,
-                badge: 'BLUETOOTH 5.0'
-              },
-              { 
-                emoji:'🎯', 
-                label:'Use Cases', 
-                sub:'Estates, fleets & teams', 
-                page:'usecases', 
-                bg: R2_MEDIA.usecases.estateCommunity,
-                badge: 'FIELD READY'
-              },
-              { 
-                emoji:'💎', 
-                label:'Pricing', 
-                sub:'Transparent tiers', 
-                page:'pricing', 
-                bg: R2_MEDIA.architecture.securityEcosystem,
-                badge: 'ZAR PRICING'
-              },
-              { 
-                emoji:'🏢', 
-                label:'Enterprise', 
-                sub:'For large organisations', 
-                page:'enterprise', 
-                bg: R2_MEDIA.architecture.universalResilience,
-                badge: 'MULTI-TENANT'
-              },
-            ].map(c => (
-              <button 
-                key={c.page} 
-                onClick={() => navigate?.(c.page)}
-                style={{ 
-                  position: 'relative',
-                  background: 'rgba(255,255,255,.03)', 
-                  border: '1px solid rgba(255,255,255,.08)', 
-                  borderRadius: '16px', 
-                  padding: '24px 18px', 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  gap: '12px', 
-                  overflow: 'hidden',
-                  transition: 'all .25s ease',
-                  textAlign: 'center',
-                  minHeight: '230px',
-                  justifyContent: 'space-between',
-                }}
-                onMouseOver={e => { 
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.borderColor = 'rgba(0,230,118,.4)';
-                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.6)';
-                }}
-                onMouseOut={e => { 
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                {/* Visual Backdrop Overlay with Continuous Rotating R2 Image */}
-                {(() => {
-                  const pool = R2_EXPLORE_POOLS[c.page] || [c.bg];
-                  const activeBg = pool[rotationTick % pool.length];
-                  return (
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        backgroundImage: `linear-gradient(to bottom, rgba(13,17,23,0.78), rgba(13,17,23,0.95)), url("${activeBg}")`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        opacity: 0.7,
-                        zIndex: 0,
-                        transition: 'all 0.8s ease-in-out',
-                      }}
-                    />
-                  );
-                })()}
-
-                <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '1.8rem', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '6px' }}>{c.emoji}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 800, color: '#00e676', background: 'rgba(0,230,118,0.12)', border: '1px solid rgba(0,230,118,0.25)', padding: '3px 8px', borderRadius: '4px' }}>
-                    {c.badge}
-                  </span>
-                </div>
-
-                <div style={{ position: 'relative', zIndex: 1, width: '100%', marginTop: 'auto' }}>
-                  <div style={{ fontWeight: 900, fontSize: '15px', color: '#ffffff', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '4px' }}>
-                    {c.label}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>
-                    {c.sub}
-                  </div>
-                </div>
-
-                <div style={{ position: 'relative', zIndex: 1, width: '100%', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#00e676', fontFamily: "'JetBrains Mono',monospace", letterSpacing: '.05em' }}>
-                    OPEN VIEW →
-                  </span>
-                </div>
-              </button>
-            ))}
+      {/* ── VISUAL GALLERY (NAMED PRODUCT ASSETS) ── */}
+      <section style={{ padding: '64px 24px', background: cardBg }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
+            <div>
+              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '.16em', color: '#059669', marginBottom: '8px' }}>
+                // PRODUCT GALLERY
+              </div>
+              <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 900, color: headingCol, margin: 0 }}>
+                Hardware, Mobile &amp; Control Room
+              </h2>
+            </div>
+            <button
+              onClick={() => navigate?.('platform')}
+              style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #059669', background: 'transparent', color: '#059669', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Explore Platform Architecture →
+            </button>
           </div>
-        </div>
-      </section>
 
-      {/* ── CLOUDFLARE R2 MEDIA & TECHNICAL BLUEPRINTS ───────────── */}
-      <R2MediaShowcase />
-
-      {/* ── DOWNLOAD ────────────────────────────────────────────── */}
-      <section style={{ padding:'88px 40px', background:'transparent', backdropFilter:'blur(1px)', borderTop:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET SAFETYLINK</div>
-          <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Available on every<br/>platform.</h2>
-          <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'560px', marginBottom:'48px' }}>Android APK, Windows Command Deck, and Progressive Web App. One account, all devices.</p>
-
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
-            {[
-              {
-                icon: '📱',
-                label: `Android APK (${releaseVersion})`,
-                sub: 'Signed release APK with background monitoring & BLE keyfob integration.',
-                href: apkDownloadUrl || `https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk`,
-                btn: `Download Official APK (${releaseVersion})`,
-                c: '#00e676',
-                cr: '0,230,118',
-                img: ASSETS.appLogin,
-                download: true,
-              },
-              {
-                icon: '💻',
-                label: 'Windows EXE',
-                sub: 'SafetyLink Dispatch & Control Room Desktop executable for Windows 10/11.',
-                href: exeDownloadUrl,
-                btn: 'Download Windows EXE',
-                c: '#0ea5e9',
-                cr: '14,165,233',
-                img: ASSETS.dashboardDark,
-                download: true,
-              },
-              {
-                icon: '🌐',
-                label: 'Web App (PWA)',
-                sub: 'Open in browser on any device. Tap Add to Home Screen.',
-                href: 'https://safetylink.online',
-                btn: 'Open Web App',
-                c: '#a78bfa',
-                cr: '167,139,250',
-                download: false,
-              },
-            ].map((d, i) => (
-              <div key={i} style={{ background:'rgba(255,255,255,.05)', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,.08)', borderRadius:'14px', padding:'32px', display:'flex', flexDirection:'column', gap:'12px' }}>
-                {d.img && (
-                  <img 
-                    src={d.img} 
-                    alt={d.label} 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
+            {GALLERY_ITEMS.map((item, idx) => (
+              <div key={idx} style={{ borderRadius: '16px', overflow: 'hidden', border: `1px solid ${borderCol}`, background: softBg }}>
+                <div style={{ height: '180px', background: '#e2e8f0', overflow: 'hidden' }}>
+                  <img
+                    src={item.src}
+                    alt={item.label}
+                    loading="lazy"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.src = '/panic-button-smooth.png';
                     }}
-                    style={{ width:'100%', height:'120px', objectFit:'cover', borderRadius:'8px', marginBottom:'12px' }} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
-                )}
-                <div style={{ fontSize:'2.5rem' }}>{d.icon}</div>
-                <div style={{ fontSize:'16px', fontWeight:800, textTransform:'uppercase', letterSpacing:'.02em' }}>{d.label}</div>
-                <div style={{ fontSize:'12px', color:'#8892a4', lineHeight:1.55, flex:1 }}>{d.sub}</div>
-                <a
-                  href={d.href}
-                  target={d.download ? undefined : "_blank"}
-                  rel="noreferrer"
-                  download={d.download ? true : undefined}
-                  style={{ display:'block', textAlign:'center', padding:'13px', borderRadius:'8px', fontSize:'11px', fontWeight:700, letterSpacing:'.1em', background:`rgba(${d.cr},.1)`, color:d.c, border:`1px solid rgba(${d.cr},.3)`, textDecoration:'none', transition:'all .2s' }}
-                >
-                  {d.btn}
-                </a>
+                </div>
+                <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: headingCol }}>{item.label}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 800, color: '#059669', background: isLight ? '#ecfdf5' : 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: '999px' }}>
+                    {item.tag}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div style={{ marginTop:'32px', textAlign:'center' }}>
-            <a
-              href="#download"
-              onClick={(e) => {
-                if (navigate) {
-                  e.preventDefault();
-                  navigate('download');
-                }
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '12px 24px',
-                background: 'rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(6px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '8px',
-                color: '#f0f4f8',
-                fontSize: '12px',
-                fontWeight: 700,
-                fontFamily: "'JetBrains Mono',monospace",
-                letterSpacing: '.06em',
-                textDecoration: 'none',
-                transition: 'all .2s',
-              }}
+      {/* ── CLOUDFLARE R2 MEDIA SHOWCASE ── */}
+      <R2MediaShowcase />
+
+      {/* ── DOWNLOAD VERSION 1 & VERSION 1.1 BETA ── */}
+      <section style={{ padding: '64px 24px', background: softBg, borderTop: `1px solid ${borderCol}` }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '.16em', color: '#059669', marginBottom: '10px' }}>
+            // OFFICIAL PACKAGES
+          </div>
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, marginBottom: '28px', color: headingCol }}>
+            Download SafetyLink
+          </h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+            <div style={{ background: cardBg, border: `1px solid ${borderCol}`, borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <span style={{ fontSize: '28px' }}>📱</span>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: headingCol }}>Android Version 1 ({releaseVersion})</h3>
+              <p style={{ fontSize: '12.5px', color: mutedCol, lineHeight: 1.5, flex: 1, margin: 0 }}>
+                Official stable Android release with foreground protection, BLE iTAG support, and SMS/Voice fallback.
+              </p>
+              <a href={apkDownloadUrl} download style={{ background: '#059669', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', textDecoration: 'none' }}>
+                Download Version 1 APK
+              </a>
+            </div>
+
+            <div style={{ background: cardBg, border: '1px solid #fde68a', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <span style={{ fontSize: '28px' }}>🧪</span>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: headingCol }}>Android Version 1.1 Beta</h3>
+              <p style={{ fontSize: '12.5px', color: mutedCol, lineHeight: 1.5, flex: 1, margin: 0 }}>
+                Pre-release beta build for testing upcoming enhancements before promotion to Version 1.
+              </p>
+              <a href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk" download style={{ background: '#f59e0b', color: '#0f172a', textAlign: 'center', padding: '12px', borderRadius: '8px', fontWeight: 800, fontSize: '12px', textDecoration: 'none' }}>
+                Download Version 1.1 Beta
+              </a>
+            </div>
+
+            <div style={{ background: cardBg, border: `1px solid ${borderCol}`, borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <span style={{ fontSize: '28px' }}>💻</span>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: headingCol }}>Windows Control Deck EXE</h3>
+              <p style={{ fontSize: '12.5px', color: mutedCol, lineHeight: 1.5, flex: 1, margin: 0 }}>
+                Desktop application for security control rooms, estate reception desks, and dispatch supervisors.
+              </p>
+              <a href={exeDownloadUrl} target="_blank" rel="noreferrer" style={{ background: '#0f172a', color: '#fff', textAlign: 'center', padding: '12px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', textDecoration: 'none' }}>
+                Get Windows EXE
+              </a>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', textAlign: 'center' }}>
+            <button
+              onClick={() => navigate?.('download')}
+              style={{ background: 'transparent', border: `1px solid ${borderCol}`, color: '#059669', padding: '10px 20px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
             >
-              <span>📦</span> VIEW OFFICIAL DOWNLOAD OPTIONS →
-            </a>
+              Open Full Download Hub →
+            </button>
           </div>
         </div>
       </section>
 
-      {/* ── CTA BAND ────────────────────────────────────────────── */}
-      <section style={{ padding:'80px 40px', background:'rgba(2,6,23,0.22)', backdropFilter:'blur(3px)', borderTop:'1px solid rgba(255,255,255,.07)', textAlign:'center' }}>
-        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// GET STARTED</div>
-        <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, marginBottom:'16px' }}>Ready to protect<br/>your community?</h2>
-        <p style={{ color:'#8892a4', marginBottom:'36px', fontSize:'15px' }}>Message us on WhatsApp — your estate or complex set up within 48 hours.</p>
-        <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap', alignItems:'center' }}>
-          <a href="tel:0816738186"
-            style={{ background:'rgba(255,255,255,0.06)', color:'#00e676', border:'1px solid rgba(0,230,118,0.3)', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            📞 TEL. 081 673 8186
-          </a>
-          <a href="tel:+27680079911"
-            style={{ background:'rgba(255,255,255,0.06)', color:'#0ea5e9', border:'1px solid rgba(14,165,233,0.3)', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            📲 CEL. +27 68 007 9911
-          </a>
-          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer"
-            style={{ background:'#25d366', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            💬 CHAT ON WHATSAPP (+27 68 007 9911)
-          </a>
-          <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noreferrer"
-            style={{ background:'#128c7e', color:'#fff', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            📢 FOLLOW CHANNEL
-          </a>
-          <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noreferrer"
-            style={{ background:'#075e54', color:'#fff', padding:'12px 20px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', textDecoration:'none', display:'flex', alignItems:'center', gap:'8px' }}>
-            👥 JOIN COMMUNITY
-          </a>
-          <button onClick={onRegisterOrg}
-            style={{ background:'#e8321e', color:'#fff', padding:'12px 24px', borderRadius:'8px', fontWeight:700, fontSize:'12px', letterSpacing:'.08em', border:'none', cursor:'pointer' }}>
-            START 14-DAY FREE TRIAL →
-          </button>
-          <a href="mailto:info@safetylink.online"
-            style={{ color:'#8892a4', padding:'12px 20px', border:'1px solid rgba(255,255,255,.12)', borderRadius:'8px', fontWeight:600, fontSize:'12px', textDecoration:'none' }}>
-            ✉️ info@safetylink.online
-          </a>
+      {/* ── VERIFIED SOUTH AFRICAN CONTACT & POPIA BAND ── */}
+      <section style={{ padding: '56px 24px', background: isLight ? '#ecfdf5' : 'rgba(6,78,59,0.25)', borderTop: `1px solid ${borderCol}` }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '28px', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', fontWeight: 700, color: '#059669', marginBottom: '8px' }}>
+              // SOUTH AFRICA HEADQUARTERS &amp; SUPPORT
+            </div>
+            <h2 style={{ fontSize: '26px', fontWeight: 900, marginBottom: '10px', color: headingCol }}>
+              TM Media Solutions (Pty) Ltd
+            </h2>
+            <p style={{ fontSize: '13px', color: mutedCol, lineHeight: 1.6, margin: 0 }}>
+              Reg: 2018/500191/07 · Johannesburg, Gauteng, South Africa<br />
+              Voice Dispatch Line: <strong>081 673 8186</strong> · Cell / WhatsApp: <strong>+27 68 007 9911</strong><br />
+              Email: <a href="mailto:info@safetylink.online" style={{ color: '#059669', fontWeight: 700 }}>info@safetylink.online</a>
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'flex-start' }}>
+            <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noreferrer" style={{ background: '#059669', color: '#fff', padding: '12px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', textDecoration: 'none' }}>
+              💬 Chat on WhatsApp
+            </a>
+            <button onClick={() => navigate?.('privacy')} style={{ background: cardBg, color: headingCol, border: `1px solid ${borderCol}`, padding: '12px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>
+              🛡️ View POPIA Privacy Policy
+            </button>
+          </div>
         </div>
       </section>
-
-      <style>{`
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.12} }
-        @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
-        @keyframes marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-        @media(max-width:960px){
-          section > div { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,24 +1,38 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const WORKER = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
 
-/** Public download choices: stable Version 1 and the separate Version 1 Beta testing channel. */
-export const DownloadHubVersions: React.FC = () => (
-  <div className="grid gap-4 md:grid-cols-2 my-6">
-    <div className="rounded-2xl border border-emerald-700 bg-slate-950 p-5">
-      <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Stable release</span>
-      <h3 className="mt-2 font-bold text-slate-100">SafetyLink Version 1</h3>
-      <p className="mt-1 text-xs text-slate-400">The official stable release recommended for everyday use.</p>
-      <a className="mt-4 inline-block rounded bg-emerald-600 px-4 py-2 text-sm font-bold text-white" href={WORKER + '/download/safetylink.apk'}>Download Version 1</a>
+type Entry = { version: string; size?: number; date?: string };
+
+/** Download hub: Version 1 (stable) and Version 1.1 Beta only. */
+export const DownloadHubVersions: React.FC = () => {
+  const [v1, setV1] = useState<Entry | null>(null);
+
+  useEffect(() => {
+    fetch(WORKER + '/api/app/versions').then(r => r.json()).then(j => setV1((j.versions || [])[0] || null)).catch(() => {});
+  }, []);
+
+  const card = (title: string, note: string, href: string, label: string, colour: string, extra: string) => (
+    <div className={`rounded-2xl border ${colour} bg-white p-5 shadow-sm`}>
+      <h3 className="font-bold text-slate-900">{title}</h3>
+      <p className="text-xs text-slate-600 mt-1">{note}</p>
+      <p className="text-xs text-emerald-700 font-mono mt-2">{extra}</p>
+      <a className="inline-block mt-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition-colors" href={href}>{label}</a>
     </div>
-    <div className="rounded-2xl border border-amber-600 bg-slate-950 p-5">
-      <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Development · Testing only</span>
-      <h3 className="mt-2 font-bold text-slate-100">SafetyLink Version 1 Beta</h3>
-      <p className="mt-1 text-xs text-slate-400">The separate development build for testing changes before stable release approval.</p>
-      <a className="mt-4 inline-block rounded bg-amber-500 px-4 py-2 text-sm font-bold text-slate-950" href={WORKER + '/download/beta/safetylink.apk'}>Download Version 1 Beta</a>
+  );
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 my-6">
+      {card('SafetyLink Version 1 (Stable)', 'Verified production build recommended for households, estates, and responders.', WORKER + '/download/safetylink.apk', 'Download Version 1 APK', 'border-emerald-200', v1 ? 'Version ' + v1.version : 'Production Channel')}
+      {card('SafetyLink Version 1.1 Beta', 'Testing release with upcoming features before promotion to Version 1.', WORKER + '/download/beta/safetylink.apk', 'Download Version 1.1 Beta', 'border-amber-200', 'Beta Channel')}
     </div>
-  </div>
+  );
+};
+
+/** Older versions line, shown under the download cards. */
+export const OlderVersionsLine: React.FC = () => (
+  <p className="text-sm text-slate-600 mt-4">
+    Production channel: <a className="underline text-emerald-700" href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk">SafetyLink Version 1 (APK)</a>
+  </p>
 );
 
-/** Legacy versions are intentionally not promoted as current download choices. */
-export const OlderVersionsLine: React.FC = () => null;

@@ -99,6 +99,105 @@ export const ConfidentialVault: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // AES-GCM Password Manager state
+  interface EncryptedCredential {
+    id: string;
+    label: string;
+    username: string;
+    ciphertext: string;
+    iv: string;
+    salt: string;
+    createdAt: number;
+  }
+  const [credentials, setCredentials] = useState<EncryptedCredential[]>(() => {
+    try {
+      const raw = localStorage.getItem('sl_vault_passwords');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [credLabel, setCredLabel] = useState('');
+  const [credUsername, setCredUsername] = useState('');
+  const [credPassword, setCredPassword] = useState('');
+  const [credNotes, setCredNotes] = useState('');
+  const [credSearch, setCredSearch] = useState('');
+  const [revealedCreds, setRevealedCreds] = useState<Record<string, { password: string; notes: string }>>({});
+
+  const persistCredentials = (next: EncryptedCredential[]) => {
+    setCredentials(next);
+    try {
+      localStorage.setItem('sl_vault_passwords', JSON.stringify(next));
+    } catch {
+      // ignore storage quota errors
+    }
+  };
+
+  const handleAddCredential = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!credLabel.trim() || !credPassword.trim()) {
+      addToast('Credential label and password are required.', 'warn');
+      return;
+    }
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ password: credPassword, notes: credNotes.trim() })
+      );
+      const { ciphertext, iv, salt } = await encryptFileData(payload.buffer, vaultPassword || 'sl-vault-session');
+      const entry: EncryptedCredential = {
+        id: 'cred-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        label: credLabel.trim(),
+        username: credUsername.trim(),
+        ciphertext,
+        iv,
+        salt,
+        createdAt: Date.now()
+      };
+      persistCredentials([entry, ...credentials]);
+      setCredLabel('');
+      setCredUsername('');
+      setCredPassword('');
+      setCredNotes('');
+      addToast(`Credential "${entry.label}" encrypted with AES-GCM-256.`, 'success');
+      addAuditLog('SECURITY', 'INFO', `Password Manager entry sealed: ${entry.label}`, 'Encrypted locally with Web Crypto AES-GCM.');
+    } catch (err: any) {
+      addToast(`Failed to encrypt credential: ${err?.message || 'Error'}`, 'error');
+    }
+  };
+
+  const handleRevealCredential = async (cred: EncryptedCredential) => {
+    if (revealedCreds[cred.id]) {
+      setRevealedCreds(prev => {
+        const copy = { ...prev };
+        delete copy[cred.id];
+        return copy;
+      });
+      return;
+    }
+    try {
+      const buf = await decryptFileData(cred.ciphertext, cred.iv, cred.salt, vaultPassword || 'sl-vault-session');
+      const parsed = JSON.parse(new TextDecoder().decode(buf));
+      setRevealedCreds(prev => ({ ...prev, [cred.id]: parsed }));
+    } catch {
+      addToast('Unable to decrypt credential with active vault key.', 'error');
+    }
+  };
+
+  const handleCopyCredentialPassword = async (cred: EncryptedCredential) => {
+    try {
+      let secret = revealedCreds[cred.id]?.password;
+      if (!secret) {
+        const buf = await decryptFileData(cred.ciphertext, cred.iv, cred.salt, vaultPassword || 'sl-vault-session');
+        const parsed = JSON.parse(new TextDecoder().decode(buf));
+        secret = parsed.password;
+      }
+      await navigator.clipboard?.writeText(secret || '');
+      addToast(`Copied password for ${cred.label}.`, 'success');
+    } catch {
+      addToast('Failed to decrypt & copy password.', 'error');
+    }
+  };
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -651,6 +750,125 @@ export const ConfidentialVault: React.FC = () => {
             className="col-span-2 py-2 bg-slate-900/60 hover:bg-slate-850 text-slate-300 border border-slate-800 text-[8px] font-mono font-bold uppercase tracking-widest rounded-lg transition-all"
           >
             Add Hidden App Target
+          </button>
+        </form>
+      </div>
+
+      {/* AES-GCM Encrypted Password Manager */}
+      <div className="p-5 midnight-glass text-left space-y-4">
+        <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
+          <div>
+            <h3 className="text-xs font-mono font-black uppercase text-emerald-400 tracking-wider">🔐 Encrypted Password Manager</h3>
+            <p className="text-[8px] font-mono text-slate-500">Zero-Knowledge AES-256-GCM Credential Storage (On-Device)</p>
+          </div>
+          <span className="text-[8px] font-mono bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold px-2 py-0.5 rounded uppercase">
+            {credentials.length} SAVED
+          </span>
+        </div>
+
+        <input
+          type="text"
+          value={credSearch}
+          onChange={e => setCredSearch(e.target.value)}
+          placeholder="Search saved credentials..."
+          className="w-full p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none focus:border-emerald-500/50"
+        />
+
+        <div className="space-y-2 font-mono text-[9px] max-h-56 overflow-y-auto">
+          {credentials
+            .filter(c => !credSearch.trim() || c.label.toLowerCase().includes(credSearch.toLowerCase()) || c.username.toLowerCase().includes(credSearch.toLowerCase()))
+            .map(cred => {
+              const revealed = revealedCreds[cred.id];
+              return (
+                <div key={cred.id} className="p-2.5 bg-slate-950/80 border border-slate-900 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-bold text-slate-200 block truncate">{cred.label}</span>
+                      {cred.username && <span className="text-[8px] text-slate-500 block truncate">{cred.username}</span>}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleRevealCredential(cred)}
+                        className="px-2 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded text-[7.5px] font-bold uppercase"
+                      >
+                        {revealed ? 'Hide' : 'Reveal'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyCredentialPassword(cred)}
+                        className="px-2 py-0.5 bg-emerald-950/50 hover:bg-emerald-950 border border-emerald-500/30 text-emerald-400 rounded text-[7.5px] font-bold uppercase"
+                      >
+                        Copy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          persistCredentials(credentials.filter(c => c.id !== cred.id));
+                          addToast(`Removed credential "${cred.label}".`, 'info');
+                        }}
+                        className="px-1.5 py-0.5 text-red-500 hover:text-red-400 font-bold text-[7.5px] uppercase"
+                      >
+                        Del
+                      </button>
+                    </div>
+                  </div>
+                  {revealed && (
+                    <div className="p-2 bg-slate-900/70 border border-emerald-500/20 rounded-lg text-[8.5px] space-y-0.5">
+                      <div className="text-emerald-300 font-bold break-all">Password: {revealed.password}</div>
+                      {revealed.notes && <div className="text-slate-400 break-words">Notes: {revealed.notes}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          {credentials.length === 0 && (
+            <p className="text-[8.5px] text-slate-600 text-center uppercase tracking-wider py-2">
+              No credentials saved in password manager
+            </p>
+          )}
+        </div>
+
+        <form onSubmit={handleAddCredential} className="space-y-2 pt-2 border-t border-slate-900/50 font-mono">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              placeholder="Service / Site (e.g. Banking)"
+              value={credLabel}
+              onChange={e => setCredLabel(e.target.value)}
+              className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] text-slate-200 outline-none"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Username / Email"
+              value={credUsername}
+              onChange={e => setCredUsername(e.target.value)}
+              className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] text-slate-200 outline-none"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="password"
+              placeholder="Password / Secret PIN"
+              value={credPassword}
+              onChange={e => setCredPassword(e.target.value)}
+              className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] text-slate-200 outline-none"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Optional recovery notes"
+              value={credNotes}
+              onChange={e => setCredNotes(e.target.value)}
+              className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] text-slate-200 outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[8.5px] font-bold uppercase tracking-widest rounded-lg transition-all"
+          >
+            + Encrypt &amp; Save Credential
           </button>
         </form>
       </div>

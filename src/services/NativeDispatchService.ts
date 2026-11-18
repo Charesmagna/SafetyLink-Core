@@ -2,11 +2,25 @@ import { registerPlugin, Capacitor } from '@capacitor/core';
 
 export interface EmergencyDispatchPlugin {
   sendSms(options: { phone: string; message: string }): Promise<{ sent: boolean; error?: string }>;
-  placeCall(options: { phone: string }): Promise<{ dialed: boolean; error?: string }>;
+  placeCall(options: { phone: string }): Promise<{ dialed: boolean; dialerFallback?: boolean; status?: string; error?: string }>;
   openWhatsApp(options: { phone: string; message: string }): Promise<{ opened: boolean; requiresManualSend: boolean; error?: string }>;
   sendUssd(options: { code: string }): Promise<{ dialed: boolean; code?: string; channel?: string; error?: string }>;
   getSimCards(): Promise<{ sims: SimCardInfo[]; preferredSubscriptionId: number; error?: string }>;
   setPreferredSim(options: { subscriptionId: number }): Promise<{ preferredSubscriptionId: number }>;
+  saveNativeProfile(options: {
+    name?: string;
+    phone?: string;
+    alertNote?: string;
+    orgCode?: string;
+    orgId?: string;
+    userId?: string;
+    lat?: number;
+    lng?: number;
+    contacts?: any[];
+    ussdEnabled?: boolean;
+    userPin?: string;
+    duressPin?: string;
+  }): Promise<{ success: boolean }>;
 }
 
 export interface SimCardInfo {
@@ -14,6 +28,28 @@ export interface SimCardInfo {
   slot: number;
   carrier: string;
   label: string;
+}
+
+export interface NativePanicStatusEvent {
+  source: string;
+  countdownSeconds: number;
+  status: string;
+  incidentId?: string;
+  smsStatus?: string;
+  callStatus?: string;
+  backendSyncStatus?: string;
+  pcmStatus?: string;
+  success?: boolean;
+}
+
+export interface NativeDispatchResultSnapshot {
+  hasResult: boolean;
+  incidentId?: string;
+  success?: boolean;
+  smsStatus?: string;
+  callStatus?: string;
+  backendSyncStatus?: string;
+  pcmStatus?: string;
 }
 
 export interface SafetyLinkEmergencyPlugin {
@@ -29,12 +65,16 @@ export interface SafetyLinkEmergencyPlugin {
   }): Promise<{ status: string; countdownSeconds: number }>;
   cancel(): Promise<{ status: string }>;
   getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
+  getLastResult(): Promise<NativeDispatchResultSnapshot>;
+  savePushIdentity(options: { phone: string; profileToken: string }): Promise<{ saved: boolean }>;
+  setButtonConfig(options: any): Promise<{ success: boolean }>;
+  startBleService(): Promise<{ started: boolean }>;
   getDeviceBattery(): Promise<{ level: number; isCharging: boolean; chargingTime?: number; dischargingTime?: number }>;
   enforceHardwareWake(): Promise<void>;
   checkOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
   toggleFloatingWidget(options: { enable: boolean }): Promise<{ enabled: boolean; needsPermission?: boolean }>;
-  addListener(eventName: 'onPanicStatusChange', listenerFunc: (data: { source: string; countdownSeconds: number; status: string }) => void): Promise<any>;
+  addListener(eventName: 'onPanicStatusChange', listenerFunc: (data: NativePanicStatusEvent) => void): Promise<any>;
 }
 
 const NativeEmergencyDispatch = registerPlugin<EmergencyDispatchPlugin>('EmergencyDispatch');
@@ -97,6 +137,18 @@ export class NativeDispatchService {
     } catch (e) {
       console.error('[NativeDispatch] SafetyLinkEmergency.cancel failed:', e);
       throw e;
+    }
+  }
+
+  static async getLastNativeResult(): Promise<NativeDispatchResultSnapshot> {
+    if (!this.isNative) {
+      return { hasResult: false };
+    }
+    try {
+      return await SafetyLinkEmergency.getLastResult();
+    } catch (e) {
+      console.warn('[NativeDispatch] SafetyLinkEmergency.getLastResult failed:', e);
+      return { hasResult: false };
     }
   }
 
@@ -235,14 +287,15 @@ export class NativeDispatchService {
     }
     try {
       const res = await NativeEmergencyDispatch.placeCall({ phone });
-      const status = res.dialed ? 'INITIATED' : 'FAILED';
+      const actuallyDialed = Boolean(res.dialed && !res.dialerFallback);
+      const status = actuallyDialed ? 'INITIATED' : 'FAILED';
       this.logDispatchEntry({
         channel: 'VOICE_CALL',
         target: phone,
         status,
-        details: res.error || (res.dialed ? 'Native call dispatched via CALL_PHONE.' : 'Call failed')
+        details: res.error || (actuallyDialed ? 'Native call dispatched via CALL_PHONE.' : 'Call unavailable (dialer fallback only)')
       });
-      return { success: res.dialed, simulated: false, error: res.error, status };
+      return { success: actuallyDialed, simulated: false, error: res.error, status };
     } catch (e) {
       console.error('[NativeDispatch] placeCall failed', e);
       this.logDispatchEntry({
@@ -453,15 +506,21 @@ export class NativeDispatchService {
     name?: string;
     phone?: string;
     alertNote?: string;
+    orgCode?: string;
+    orgId?: string;
+    userId?: string;
     lat?: number;
     lng?: number;
     contacts?: any[];
+    ussdEnabled?: boolean;
+    userPin?: string;
+    duressPin?: string;
   }): Promise<boolean> {
     if (!this.isNative) {
       return true;
     }
     try {
-      await (NativeEmergencyDispatch as any).saveNativeProfile(payload);
+      await NativeEmergencyDispatch.saveNativeProfile(payload);
       return true;
     } catch (e) {
       console.warn('[NativeDispatch] saveNativeProfile failed:', e);

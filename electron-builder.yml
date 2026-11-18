@@ -1,11 +1,10 @@
 appId: com.safetylink.core
 productName: SafetyLink
 directories:
-  output: electron-dist
+  output: release
 files:
   - "dist/**/*"
   - "electron/**/*"
-  - "electron-main.cjs"
   - "package.json"
 win:
   target: nsis

@@ -1,23 +1,20 @@
-import { GoogleGenAI } from '@google/genai';
-import { env } from '../../config/env';
-
-let ai: GoogleGenAI | null = null;
-
-if (env.GEMINI_API_KEY) {
-  ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-}
-
-export async function summarizeAlertText(text: string) {
-  if (!ai) return text;
-
+/**
+ * Client-safe Gemini text summarization proxy (delegates to /api/gemini/generate on server).
+ */
+export async function summarizeAlertText(text: string): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
-      model: env.GEMINI_MODEL,
-      contents: `Please summarize this alert briefly and formally: ${text}`,
+    const res = await fetch('/api/gemini/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `Please summarize this emergency alert briefly and formally in 1-2 sentences: ${text}`,
+        useFlashLite: true,
+      }),
     });
-    return response.text;
-  } catch (error) {
-    console.error('Gemini fallback to plain text due to error:', error);
+    if (!res.ok) return text;
+    const data = await res.json();
+    return data.text || text;
+  } catch {
     return text;
   }
 }

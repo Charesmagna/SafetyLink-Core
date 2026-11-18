@@ -1,11 +1,11 @@
 import WorkspaceIntegrations from "./WorkspaceIntegrations";
 import OrgWarRoom from "./OrgWarRoom";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
-import { useAppStore } from '../utils/store';
+import { useAppStore, PRIMARY_BACKEND_URL, FALLBACK_BACKEND_URL } from '../utils/store';
 import { UserProfile } from '../types';
 import { LogoSetPart } from './LogoSetPart';
 import { GlowingHeartBackground } from './GlowingHeartBackground';
@@ -17,6 +17,7 @@ import { MotherboardConsole } from './MotherboardConsole';
 import { GeospatialAnalytics } from './GeospatialAnalytics';
 
 import { EvidenceLedger } from './EvidenceLedger';
+import { HikvisionCameraManager } from './HikvisionCameraManager';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -48,6 +49,30 @@ export const OrgDashboard: React.FC = () => {
   const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState('dispatch');
+  const [copiedOrgCode, setCopiedOrgCode] = useState(false);
+  const [serverJoinRequests, setServerJoinRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    const orgId = currentOrg?.id;
+    const token = useAppStore.getState().token;
+    const customUrl = useAppStore.getState().customBackendUrl;
+    if (!orgId || !token || isResponder) return;
+    const bases = [customUrl, PRIMARY_BACKEND_URL, FALLBACK_BACKEND_URL].filter(Boolean) as string[];
+    (async () => {
+      for (const base of bases) {
+        try {
+          const res = await fetch(`${base.replace(/\/$/, '')}/api/org/${encodeURIComponent(orgId)}/join-requests`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setServerJoinRequests(Array.isArray(data?.requests) ? data.requests : []);
+            break;
+          }
+        } catch {}
+      }
+    })();
+  }, [currentOrg?.id, activeSubTab, isResponder]);
   
   // Roster detailed editor state
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -219,11 +244,24 @@ export const OrgDashboard: React.FC = () => {
             <LogoSetPart part="accent" size={68} rounded="2xl" />
           )}
           <div>
-            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex items-center gap-2">
+            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex flex-wrap items-center gap-2">
               {currentOrg.name} 
               <span className="text-[8.5px] px-2 py-0.5 rounded-full text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 font-bold font-mono">
                 ACTIVE COMMAND NODE
               </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(currentOrg.id).catch(() => {});
+                  setCopiedOrgCode(true);
+                  useAppStore.getState().addToast(`Copied Organization Code: ${currentOrg.id}`, 'success');
+                  setTimeout(() => setCopiedOrgCode(false), 2000);
+                }}
+                className="text-[9px] px-2.5 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-mono font-black tracking-wider cursor-pointer transition-colors"
+                title="Copy Organization Code to share with members"
+              >
+                {currentOrg.id} · {copiedOrgCode ? 'COPIED ✓' : 'COPY CODE'}
+              </button>
             </h1>
             <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest mt-0.5">
               Secure Safety Link Dispatcher Deck // <span className="text-amber-500/80 font-black">POWERED BY TM MEDIA SOLUTIONS</span>
@@ -275,6 +313,14 @@ export const OrgDashboard: React.FC = () => {
           >
             🔌 Open Platforms
           </button>}
+          <button
+            onClick={() => setActiveSubTab('cctv')}
+            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
+              activeSubTab === 'cctv' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            📷 CCTV / Hikvision
+          </button>
           <button
             onClick={() => setActiveSubTab('live-gis')}
             className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
@@ -520,33 +566,48 @@ export const OrgDashboard: React.FC = () => {
             
             {/* Pending Membership Approvals Board */}
             {(() => {
-              const pendingUsers = users.filter(u => u.pendingOrgCode === currentOrg?.id);
-              if (pendingUsers.length === 0) return null;
+              const localPending = users.filter(u => u.pendingOrgCode === currentOrg?.id);
+              const mergedPending: any[] = [...localPending];
+              for (const sr of serverJoinRequests) {
+                if (!mergedPending.some(p => p.id === sr.user_id || p.username === sr.username)) {
+                  mergedPending.push({
+                    id: sr.user_id || sr.id,
+                    requestId: sr.id,
+                    fullName: sr.full_name || sr.username || 'Applicant',
+                    username: sr.username || sr.email || sr.user_id,
+                    phone: sr.phone || '',
+                    email: sr.email || '',
+                    pendingRole: sr.requested_role || 'Community Member',
+                    pendingOrgCode: currentOrg?.id,
+                  });
+                }
+              }
+              if (mergedPending.length === 0) return null;
               
               return (
                 <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-2xl text-left space-y-3.5 shadow-md font-mono">
                   <div className="flex justify-between items-center border-b border-amber-500/10 pb-2">
                     <div className="space-y-0.5">
                       <span className="text-amber-400 font-black uppercase text-[10px] tracking-widest block font-display">
-                        ⏳ MEMBERSHIP APPROVAL REQUESTS ({pendingUsers.length})
+                        ⏳ MEMBERSHIP APPROVAL REQUESTS ({mergedPending.length})
                       </span>
                       <p className="text-[9.5px] text-slate-500 font-sans leading-normal">
-                        Subscribers listed below have typed your Organization ID and are waiting for active clearance.
+                        Subscribers listed below have entered your Organization ID ({currentOrg.id}) and are awaiting clearance.
                       </p>
                     </div>
                     <span className="h-5 w-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono text-[10px] font-bold">
-                      {pendingUsers.length}
+                      {mergedPending.length}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {pendingUsers.map(user => (
-                      <div key={user.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
+                    {mergedPending.map((user: any) => (
+                      <div key={user.requestId || user.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
                         <div className="space-y-1 text-xs">
                           <p className="font-extrabold text-slate-200">{user.fullName} <span className="text-[9px] font-mono text-slate-500">(@{user.username})</span></p>
                           <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Requested Role:</span> <span className="font-bold text-amber-400 uppercase">{user.pendingRole || 'Community Member'}</span></p>
-                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Phone:</span> <span className="font-bold text-slate-300">{user.phone}</span></p>
-                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Email:</span> <span className="text-slate-300">{user.email}</span></p>
+                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Phone:</span> <span className="font-bold text-slate-300">{user.phone || '—'}</span></p>
+                          <p className="text-[9px] font-mono text-slate-400 flex justify-between"><span>Email:</span> <span className="text-slate-300">{user.email || '—'}</span></p>
                           {user.medicalInfo && (
                             <p className="text-[8px] font-mono text-amber-400 bg-amber-950/10 border border-amber-500/10 p-1.5 rounded mt-1">
                               🩺 Med notes: {user.medicalInfo}
@@ -563,7 +624,8 @@ export const OrgDashboard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              approvePendingUser(user.id);
+                              approvePendingUser(user.id, user.requestId);
+                              setServerJoinRequests(prev => prev.filter(r => r.id !== user.requestId && r.user_id !== user.id));
                               useAppStore.getState().addToast(`Approved membership for ${user.fullName}!`, "success");
                             }}
                             className="flex-1 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/35 text-cyan-400 border border-cyan-500/20 rounded-lg text-center uppercase tracking-wider cursor-pointer"
@@ -573,7 +635,8 @@ export const OrgDashboard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
-                              rejectPendingUser(user.id);
+                              rejectPendingUser(user.id, user.requestId);
+                              setServerJoinRequests(prev => prev.filter(r => r.id !== user.requestId && r.user_id !== user.id));
                               useAppStore.getState().addToast(`Rejected join request from ${user.fullName}.`, "info");
                             }}
                             className="flex-1 py-1.5 bg-red-950/25 hover:bg-red-950/45 text-red-400 border border-red-500/10 rounded-lg text-center uppercase tracking-wider cursor-pointer"
@@ -1087,6 +1150,12 @@ export const OrgDashboard: React.FC = () => {
         
         {activeSubTab === 'offline-sync' && (
           <AdvancedOfflineSyncManager />
+        )}
+
+        {activeSubTab === 'cctv' && (
+          <div className="glass-panel rounded-2xl p-5 animate-fadeIn">
+            <HikvisionCameraManager scope="ORG" />
+          </div>
         )}
         
         {activeSubTab === 'referrals' && (

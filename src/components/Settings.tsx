@@ -7,6 +7,7 @@ import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
+import { HikvisionCameraManager } from './HikvisionCameraManager';
 
 export const Settings: React.FC = () => {
   const { 
@@ -48,9 +49,15 @@ export const Settings: React.FC = () => {
     availableSims,
     preferredSimId,
     setPreferredSim,
-    loadSimCards
+    loadSimCards,
+    unlockMethod,
+    setUnlockMethod
   } = useAppStore();
 
+  const [activeSection, setActiveSection] = useState<'ALL' | 'DISPATCH' | 'SECURITY' | 'HARDWARE' | 'PRIVACY'>('ALL');
+  const [screenWakeLockEnabled, setScreenWakeLockEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem('sl_screen_wake_lock') !== 'false'; } catch { return true; }
+  });
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
 
   // Biometric gate for sensitive security settings
@@ -75,6 +82,7 @@ export const Settings: React.FC = () => {
     });
     return () => { active = false; };
   }, []);
+  const [showHikvisionManager, setShowHikvisionManager] = useState(false);
 
   const handleUnlockPinSettings = async () => {
     setIsAuthenticatingPin(true);
@@ -175,11 +183,36 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      
+      {/* Section Filter Navigation */}
+      <div className="flex flex-wrap gap-1.5 mt-3 relative z-10 font-mono">
+        {([
+          { id: 'ALL', label: 'All' },
+          { id: 'DISPATCH', label: 'Dispatch' },
+          { id: 'SECURITY', label: 'Security' },
+          { id: 'HARDWARE', label: 'BLE & Fleet' },
+          { id: 'PRIVACY', label: 'Privacy & OS' }
+        ] as const).map(sec => (
+          <button
+            key={sec.id}
+            type="button"
+            onClick={() => setActiveSection(sec.id)}
+            className={`px-2.5 py-1 rounded-lg text-[8.5px] font-bold uppercase tracking-wider border transition-all ${
+              activeSection === sec.id
+                ? 'bg-emerald-600 border-emerald-500 text-white'
+                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {sec.label}
+          </button>
+        ))}
+      </div>
+
       {/* App Preferences */}
+      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
+      <>
       <div className="space-y-3 text-left mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-          🎨 APP PREFERENCES
+          🎨 THEME &amp; APP PREFERENCES
         </h4>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex items-center justify-between">
           <div>
@@ -218,13 +251,21 @@ export const Settings: React.FC = () => {
           </button>
         </div>
       </div>
+      </>
+      )}
 
 
       {/* Alert & Countdown Settings */}
+      {(activeSection === 'ALL' || activeSection === 'DISPATCH') && (
+      <>
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-          🚨 ALERTS & COUNTDOWN
+          🚨 EMERGENCY &amp; DISPATCH ORDER
         </h4>
+        <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-3 text-[8px] font-mono text-emerald-300 space-y-1">
+          <div className="font-bold uppercase tracking-wider text-emerald-400">Canonical Dispatch Sequence</div>
+          <div>1. Server API → 2. Native SMS → 3. Direct Call → 4. Optional USSD → 5. WhatsApp (only contacts with WhatsApp)</div>
+        </div>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-4">
           {/* Floating SOS Overlay Settings (User Golden Spec) */}
           <div className="border-t border-slate-800/50 pt-3 space-y-2">
@@ -340,25 +381,25 @@ export const Settings: React.FC = () => {
               <span>📶</span> Zero-Data USSD "Please Call Me" System
             </h5>
             <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
-              dispatchSettings.ussdEnabled !== false ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
+              Boolean(dispatchSettings.ussdEnabled) ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
             }`}>
-              {dispatchSettings.ussdEnabled !== false ? 'ACTIVE ON PANIC' : 'DISABLED'}
+              {Boolean(dispatchSettings.ussdEnabled) ? 'ACTIVE ON PANIC' : 'DISABLED (DEFAULT)'}
             </span>
           </div>
 
           <p className="text-[7.5px] text-slate-400 leading-relaxed font-sans">
-            Automatically dials your network operator's free USSD Please-Call-Me code to the SafetyLink GSM gateway when panic is pressed. Operates over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
+            Optional carrier USSD fallback dialer. Disabled by default so panic dispatches follow Server → SMS → Call first; enable to dial your carrier USSD code over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
           </p>
 
           <div className="space-y-3 pt-1">
             <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
               <div>
-                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain</span>
-                <span className="text-[7.5px] text-slate-500">Executes hardware USSD dialer immediately as panic is triggered.</span>
+                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain (Optional)</span>
+                <span className="text-[7.5px] text-slate-500">Executes carrier USSD dialer after Call step when enabled.</span>
               </div>
               <input
                 type="checkbox"
-                checked={dispatchSettings.ussdEnabled !== false}
+                checked={Boolean(dispatchSettings.ussdEnabled)}
                 onChange={e => {
                   setDispatchSettings({ ussdEnabled: e.target.checked });
                   useAppStore.getState().addToast(`USSD Auto-Dial ${e.target.checked ? 'Enabled' : 'Disabled'}`, 'info');
@@ -761,9 +802,12 @@ export const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+      </>
+      )}
 
         {/* BLE & iTAG Hardware Button Configuration Card */}
-        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden">
+        {(activeSection === 'ALL' || activeSection === 'HARDWARE') && (
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden mt-4">
           <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
@@ -949,13 +993,14 @@ export const Settings: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
 
-        {/* Security PINs Section */}
-        {currentUser && (
+        {/* Security PINs & Unlock Choice Section */}
+        {currentUser && (activeSection === 'ALL' || activeSection === 'SECURITY') && (
           <div className="space-y-3 border-t border-slate-900/60 pt-4">
             <div className="flex items-center justify-between">
               <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-                🔒 SECURITY PIN SETTINGS
+                🔒 SECURITY &amp; UNLOCK CHOICE
               </h4>
               {hasBiometrics && isPinSettingsUnlocked && (
                 <button
@@ -1052,6 +1097,34 @@ export const Settings: React.FC = () => {
                     placeholder="e.g. 9999"
                   />
                   <p className="text-[7.5px] text-slate-500 mt-1">If forced to cancel by an attacker, enter this to appear like you canceled, but silently escalate to Police.</p>
+                </div>
+
+                {/* Preferred Emergency Unlock Choice */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-900/60">
+                  <label className="text-[9px] font-bold text-slate-400 block uppercase">Primary Unlock Choice</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { id: 'BIOMETRIC', label: 'Biometric / Passcode' },
+                      { id: 'PIN', label: 'SafetyLink PIN' },
+                      { id: 'DURESS', label: 'Duress Priority' }
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setUnlockMethod(opt.id);
+                          useAppStore.getState().addToast(`Unlock preference set to ${opt.label}.`, 'success');
+                        }}
+                        className={`p-2 rounded-xl border text-[8px] font-bold uppercase transition-all ${
+                          unlockMethod === opt.id
+                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1321,21 +1394,32 @@ export const Settings: React.FC = () => {
             </button>
           </div>
 
-          {/* ONVIF Camera Onboarding */}
+          {/* ONVIF / Hikvision Mobile Camera Onboarding */}
           <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1 text-slate-200">
-              <span className="text-xl">📹</span>
-              <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">ONVIF Camera Linking</span>
+            <div className="flex items-center justify-between gap-2 mb-1 text-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📹</span>
+                <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Hikvision &amp; ONVIF Camera Linking</span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400">
+                {useAppStore.getState().cameras.length} Linked
+              </span>
             </div>
             <p className="text-[9px] text-slate-500 leading-normal font-sans">
-              Onboard and link popular South African CCTV networks (e.g. Hikvision, Dahua, Vivotek). Supports ONVIF Profile S/G.
+              Deploy Hikvision, HiLook, or ONVIF cameras straight from your phone via QR / Serial (Hik-Connect P2P), Site Wi-Fi LAN ISAPI, or go2rtc Relay.
             </p>
             <button
-              onClick={() => useAppStore.getState().addToast("ONVIF Discovery protocol scanning local subnets for Hikvision / Dahua IPCs...", "info")}
-              className="w-full py-2 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/20 text-purple-400 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
+              type="button"
+              onClick={() => setShowHikvisionManager((v) => !v)}
+              className="w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-500/20 text-emerald-300 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
             >
-              Scan & Onboard Cameras
+              {showHikvisionManager ? 'Hide Camera Deployment Manager' : 'Open Phone Camera Deployment Manager'}
             </button>
+            {showHikvisionManager && (
+              <div className="pt-3 border-t border-slate-800">
+                <HikvisionCameraManager scope="USER" compact />
+              </div>
+            )}
           </div>
 
           {/* Drone Deployment Environment */}
@@ -1412,34 +1496,36 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Android Device Control & Accessibility Sentinel */}
+      {/* Android Screen Wake, Lock-Screen Overlay & Battery Survival */}
+      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
-            🛡️ DEVICE CONTROL & ACCESSIBILITY
+            🛡️ LOCK-SCREEN OVERLAY &amp; DEVICE SURVIVAL
           </h4>
           <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            ACTIVE SENTINEL
+            {screenWakeLockEnabled ? 'LOCK-SCREEN READY' : 'STANDARD'}
           </span>
         </div>
         <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
-          <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
-            Grant SafetyLink Android accessibility, hardware button interception (volume panic triggers), and background battery saver exemption.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <button
-              type="button"
-              onClick={async () => {
-                if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.SafetyLinkEmergency?.openAccessibilitySettings) {
-                  await (window as any).Capacitor.Plugins.SafetyLinkEmergency.openAccessibilitySettings();
-                } else {
-                  useAppStore.getState().addToast('Accessibility settings is available in the Android APK.', 'info');
-                }
+          <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <div>
+              <span className="text-[9.5px] font-bold text-slate-200 block uppercase">Screen Wake &amp; Display Over Lock Screen</span>
+              <span className="text-[8px] text-slate-400">Wakes screen and locks emergency countdown over lock screen until PIN verified.</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={screenWakeLockEnabled}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setScreenWakeLockEnabled(enabled);
+                try { localStorage.setItem('sl_screen_wake_lock', String(enabled)); } catch {}
+                useAppStore.getState().addToast(`Lock-screen wake overlay ${enabled ? 'enabled' : 'disabled'}.`, 'info');
               }}
-              className="py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
-            >
-              <span>🔑 Accessibility Settings</span>
-            </button>
+              className="accent-emerald-500 w-4 h-4 cursor-pointer"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
             <button
               type="button"
               onClick={async () => {
@@ -1479,6 +1565,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Cloudflare Private DNS Configuration */}
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">

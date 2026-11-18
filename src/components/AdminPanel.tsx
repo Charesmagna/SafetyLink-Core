@@ -47,8 +47,18 @@ export const AdminPanel: React.FC = () => {
     adminUpdateSubscription,
     exportToGoogleDrive,
     refreshClientDatabase,
-    addToast
+    addToast,
+    adminSummaryStats,
+    adminAuditLogs,
+    minSupportedVersion,
+    adminUpdateUserStatus,
+    updateMinSupportedVersion
   } = useAppStore();
+  const [minVerInput, setMinVerInput] = useState(minSupportedVersion || '1.0.0');
+
+  useEffect(() => {
+    if (minSupportedVersion) setMinVerInput(minSupportedVersion);
+  }, [minSupportedVersion]);
 
   const userCountsByOrg = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -445,28 +455,80 @@ export const AdminPanel: React.FC = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="glass-panel p-5 space-y-1">
                 <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Total Residents / Users</span>
-                <span className="text-2xl font-black font-mono text-slate-100">{users.length}</span>
-                <p className="text-[9px] text-slate-400">Offline keyfob enabled</p>
+                <span className="text-2xl font-black font-mono text-slate-100">{adminSummaryStats?.totalAccounts ?? users.length}</span>
+                <p className="text-[9px] text-slate-400">24h Active: {adminSummaryStats?.activeLast24Hours ?? 0}</p>
               </div>
 
               <div className="glass-panel p-5 space-y-1">
-                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Organizations</span>
-                <span className="text-2xl font-black font-mono text-slate-100">{organizations.length}</span>
-                <p className="text-[9px] text-slate-400">University residences & sites</p>
-              </div>
-
-              <div className="glass-panel p-5 space-y-1">
-                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Active Alerts</span>
-                <span className={`text-2xl font-black font-mono ${activePanicEventsCount > 0 ? 'text-red-500 animate-pulse' : 'text-slate-100'}`}>
-                  {activePanicEventsCount}
+                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Active Telemetry Windows</span>
+                <span className="text-xl font-black font-mono text-cyan-400">
+                  {adminSummaryStats?.activeLast24Hours ?? 0} / {adminSummaryStats?.activeLast7Days ?? 0} / {adminSummaryStats?.activeLast30Days ?? 0}
                 </span>
-                <p className="text-[9px] text-slate-400">Real-time GPS tracking</p>
+                <p className="text-[9px] text-slate-400">24h · 7d · 30d active users</p>
               </div>
 
               <div className="glass-panel p-5 space-y-1">
-                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">System Health</span>
-                <span className="text-2xl font-black font-mono text-emerald-400">100%</span>
-                <p className="text-[9px] text-slate-400">Firebase stack connected</p>
+                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Failed Logins (24h)</span>
+                <span className={`text-2xl font-black font-mono ${(adminSummaryStats?.failedLogins24h ?? 0) > 10 ? 'text-red-400' : 'text-amber-400'}`}>
+                  {adminSummaryStats?.failedLogins24h ?? 0}
+                </span>
+                <p className="text-[9px] text-slate-400">Active Alerts: {activePanicEventsCount}</p>
+              </div>
+
+              <div className="glass-panel p-5 space-y-1">
+                <span className="text-[9px] font-mono uppercase text-slate-500 font-bold block">Organizations & Mesh</span>
+                <span className="text-2xl font-black font-mono text-emerald-400">{organizations.length}</span>
+                <p className="text-[9px] text-slate-400">30d Panics: {adminSummaryStats?.panicsLast30Days ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Minimum Supported Version Rule & App Version Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="glass-panel p-5 space-y-3 border-l-4 border-l-amber-500">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black font-mono uppercase text-amber-300 tracking-wider">Minimum Supported App Version Policy</h3>
+                  <span className="text-[9px] font-mono text-slate-400">Current Rule: v{minSupportedVersion}</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Installations older than this version are blocked from accessing live emergency workflows until they install the latest update.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={minVerInput}
+                    onChange={e => setMinVerInput(e.target.value)}
+                    placeholder="e.g. 1.1.900"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await updateMinSupportedVersion(minVerInput);
+                      addToast(ok ? `Minimum supported version updated to v${minVerInput}` : 'Failed to update minimum version policy', ok ? 'success' : 'error');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold uppercase cursor-pointer"
+                  >
+                    Enforce Version
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 space-y-3 border-l-4 border-l-blue-500">
+                <h3 className="text-xs font-black font-mono uppercase text-blue-300 tracking-wider">Client Versions & Telemetry Disclosure</h3>
+                <div className="flex flex-wrap gap-2">
+                  {(adminSummaryStats?.versionsBreakdown || []).length > 0 ? (
+                    adminSummaryStats.versionsBreakdown.map((vb: any, idx: number) => (
+                      <span key={idx} className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-200">
+                        v{vb.version}: <strong className="text-emerald-400">{vb.count}</strong>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] font-mono text-slate-500">Version telemetry populates automatically as devices sign in.</span>
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <strong>Collected Telemetry Disclosure:</strong> SafetyLink records device OS/model, app version, last-seen timestamp, organization membership, and failed login counts solely for incident readiness, dispatch reliability, and security auditing.
+                </p>
               </div>
             </div>
 
@@ -551,12 +613,23 @@ export const AdminPanel: React.FC = () => {
               {releaseStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to trigger workflows. Ensure your PAT has the correct permissions.</p>}
             </div>
 
-            {/* Recent Activity Logs */}
+            {/* Recent Activity & Security Action Audit Logs */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">
-                System Administrative Audit Trails
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">
+                  System Administrative Audit Trails
+                </h3>
+                <span className="text-[10px] font-mono text-slate-500">{adminAuditLogs.length} server actions logged</span>
+              </div>
               <div className="bg-slate-950/80 border border-slate-900 rounded-3xl p-4 h-64 overflow-y-auto font-mono text-[10px] space-y-2.5">
+                {adminAuditLogs.map((log: any, idx: number) => (
+                  <div key={log.id || idx} className="border-b border-slate-900/40 pb-2 text-slate-300">
+                    <span className="text-slate-500">[{new Date(log.created_at || Date.now()).toLocaleString()}]</span>{' '}
+                    <span className="text-red-400 font-bold">{log.action}</span>{' '}
+                    on target <span className="text-amber-300">{log.target_id}</span>{' '}
+                    {log.details ? <span className="text-slate-500">({log.details})</span> : null}
+                  </div>
+                ))}
                 {users.map((u, i) => (
                   <div key={i} className="border-b border-slate-900/40 pb-2 last:border-0 text-slate-400">
                     <span className="text-slate-500">[{new Date(u.createdAt).toLocaleTimeString()}]</span> USER_REGISTRY: Resident <span className="text-amber-400">@{u.username}</span> registered under organization <span className="text-blue-400">{u.orgCode || 'Independent Node'}</span>.
@@ -1111,16 +1184,16 @@ export const AdminPanel: React.FC = () => {
                             <th className="py-3 px-3">Contact (Cell/WA)</th>
                             <th className="py-3 px-3">Email Address</th>
                             <th className="py-3 px-3">Org Node & Role</th>
-                            <th className="py-3 px-3">Addresses (Home / Work)</th>
+                            <th className="py-3 px-3">Device / Ver / Last Seen</th>
                             <th className="py-3 px-3">Trauma & Hospital</th>
-                            <th className="py-3 px-3">Registered At</th>
-                            <th className="py-3 px-3">Status</th>
-                            <th className="py-3 px-3 text-right">Actions</th>
+                            <th className="py-3 px-3">Account Status</th>
+                            <th className="py-3 px-3 text-right">Actions & Controls</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-900/80">
                           {filteredUsers.map(u => {
                             const uOrg = organizations.find(o => o.id === u.orgCode);
+                            const acctStatus = (u.accountStatus || 'active').toUpperCase();
                             return (
                               <tr key={u.id} className="hover:bg-slate-900/40 transition-colors">
                                 <td className="py-3 px-3">
@@ -1157,16 +1230,14 @@ export const AdminPanel: React.FC = () => {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-3 text-slate-300 max-w-[160px] truncate">
+                                <td className="py-3 px-3 text-slate-300 max-w-[180px]">
                                   <div className="space-y-0.5">
-                                    <span className="block truncate text-slate-200" title={u.homeAddress}>
-                                      🏠 {u.homeAddress || 'Not entered'}
+                                    <span className="block truncate text-cyan-300 text-[10px]" title={u.deviceModel}>
+                                      📱 {u.deviceModel || 'Mobile / Web Client'}
                                     </span>
-                                    {u.workAddress && (
-                                      <span className="block truncate text-[9px] text-slate-500" title={u.workAddress}>
-                                        🏢 {u.workAddress}
-                                      </span>
-                                    )}
+                                    <span className="block text-[9px] text-slate-400">
+                                      v{u.appVersion || '1.1.x'} • {u.lastSeen ? new Date(u.lastSeen).toLocaleDateString() : new Date(u.createdAt).toLocaleDateString()}
+                                    </span>
                                   </div>
                                 </td>
 
@@ -1181,25 +1252,56 @@ export const AdminPanel: React.FC = () => {
                                   </div>
                                 </td>
 
-                                <td className="py-3 px-3 text-[10px] text-slate-400 whitespace-nowrap">
-                                  {new Date(u.createdAt).toLocaleDateString()}
-                                </td>
-
                                 <td className="py-3 px-3">
                                   <span
-                                    className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border"
-                                    style={{
-                                      backgroundColor: u.subscriptionStatus === 'active' || !u.subscriptionStatus ? '#10b98115' : u.subscriptionStatus === 'trial' ? '#f59e0b15' : '#ef444415',
-                                      borderColor: u.subscriptionStatus === 'active' || !u.subscriptionStatus ? '#10b98140' : u.subscriptionStatus === 'trial' ? '#f59e0b40' : '#ef444440',
-                                      color: u.subscriptionStatus === 'active' || !u.subscriptionStatus ? '#34d399' : u.subscriptionStatus === 'trial' ? '#fbbf24' : '#f87171'
-                                    }}
+                                    className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider border ${
+                                      acctStatus === 'ACTIVE'
+                                        ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
+                                        : acctStatus === 'SUSPENDED'
+                                          ? 'bg-amber-950/30 border-amber-500/40 text-amber-300'
+                                          : 'bg-red-950/30 border-red-500/40 text-red-300'
+                                    }`}
                                   >
-                                    {u.subscriptionStatus || 'ACTIVE'}
+                                    {acctStatus}
                                   </span>
                                 </td>
 
                                 <td className="py-3 px-3 text-right whitespace-nowrap">
                                   <div className="flex items-center justify-end gap-1">
+                                    {acctStatus !== 'ACTIVE' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => adminUpdateUserStatus(u.id, 'ACTIVATE', 'Superadmin re-activation')}
+                                        className="px-2 py-1 rounded bg-emerald-950/50 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold"
+                                      >
+                                        Activate
+                                      </button>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => adminUpdateUserStatus(u.id, 'SUSPEND', 'Superadmin suspension')}
+                                          className="px-2 py-1 rounded bg-amber-950/50 hover:bg-amber-900/70 text-amber-300 border border-amber-500/30 text-[9px] font-bold"
+                                        >
+                                          Suspend
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => adminUpdateUserStatus(u.id, 'DEACTIVATE', 'Superadmin deactivation')}
+                                          className="px-2 py-1 rounded bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border border-rose-500/30 text-[9px] font-bold"
+                                        >
+                                          Deactivate
+                                        </button>
+                                      </>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => adminUpdateUserStatus(u.id, 'REVOKE_SESSIONS', 'Session tokens revoked')}
+                                      className="px-2 py-1 rounded bg-indigo-950/50 hover:bg-indigo-900/70 text-indigo-300 border border-indigo-500/30 text-[9px] font-bold"
+                                      title="Revoke all active sessions for this user"
+                                    >
+                                      Revoke
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => setViewingUserDossier(u)}
