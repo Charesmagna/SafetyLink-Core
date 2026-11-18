@@ -37,7 +37,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
     }
   }, [isApp, updateInfo?.available, updateInfo?.version, dismissed]);
 
-  if (!updateInfo?.available || dismissed) {
+  if (!updateInfo?.available || updateInfo?.updateRequiredBlocked || dismissed) {
     return null;
   }
 

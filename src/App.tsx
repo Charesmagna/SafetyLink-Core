@@ -1558,7 +1558,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[9999999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-slate-900 border-2 border-red-500/50 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
             <div className="w-14 h-14 mx-auto rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-2xl">⚠️</div>
-            <h2 className="text-lg font-black font-mono text-white uppercase tracking-wider">Update Required</h2>
+            <h2 className="text-lg font-black font-mono text-white uppercase tracking-wider">Mandatory Update Required</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
               {updateInfo.releaseNotes || `Your app version is below the minimum supported release (v${updateInfo.minSupportedVersion}). Please update to continue using SafetyLink.`}
             </p>
@@ -1573,12 +1573,22 @@ const App: React.FC = () => {
                   Download Updated APK (v{updateInfo.version})
                 </a>
               )}
+              {updateInfo.exeUrl && (
+                <a
+                  href={updateInfo.exeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono font-bold text-xs uppercase tracking-wider text-center"
+                >
+                  Download Desktop Update (v{updateInfo.version})
+                </a>
+              )}
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs uppercase"
+                onClick={() => checkAppUpdates()}
+                className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs uppercase cursor-pointer"
               >
-                Reload After Updating
+                Recheck Version Policy
               </button>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 export const CURRENT_VERSION: string =
   (import.meta as any).env?.VITE_APP_VERSION ||
   localStorage.getItem('sl_active_version') ||
-  '1.1.906';
+  '1.1.1170';
 
 export function isAppBinary(): boolean {
   if (typeof window === 'undefined') return false;
@@ -156,45 +156,29 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
       };
     }
 
-    // 1. Always ask GitHub/Worker for the newest release first
+    // 1. Ask Worker / GitHub Releases endpoint for newest release
     try {
       const release = await xhrGet(GITHUB_RELEASES_API);
       const latestVersion = (release.tag_name || '').replace(/^v/, '');
       if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
-        const apk = (release.assets || []).find((x: any) => x.name.endsWith('.apk'));
+        const assets = release.assets || [];
+        const apk = assets.find((x: any) => x.name?.endsWith('.apk'));
+        const exe = assets.find((x: any) => x.name?.endsWith('.exe'));
         return {
           available: true,
           version: latestVersion,
           apkUrl: apk?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink-v${latestVersion}-Signed.apk`,
+          exeUrl: exe?.browser_download_url,
           releaseNotes: release.body ? String(release.body).slice(0, 300) : 'New release available.',
-          isLiveUpdate: false
+          isLiveUpdate: false,
         };
       }
       if (latestVersion) return { available: false };
     } catch {
-      // GitHub unreachable - fall back to the website's version file
+      // Worker release check failed
     }
 
-    // 2. Final query fallback
-    const release = await xhrGet(GITHUB_RELEASES_API);
-    const latestVersion = (release.tag_name || '').replace(/^v/, '');
-
-    if (!latestVersion || !isNewerVersion(latestVersion, currentVersion)) {
-      return { available: false };
-    }
-
-    const assets = release.assets || [];
-    const apkAsset = assets.find((a: any) => a.name.endsWith('.apk'));
-    const exeAsset = assets.find((a: any) => a.name.endsWith('.exe'));
-
-    return {
-      available: true,
-      version: latestVersion,
-      apkUrl: apkAsset?.browser_download_url || `${APK_DOWNLOAD_BASE}/SafetyLink-v${latestVersion}-Signed.apk`,
-      exeUrl: exeAsset?.browser_download_url,
-      releaseNotes: release.body?.substring(0, 200) || 'SafetyLink system update available.',
-      isLiveUpdate: true
-    };
+    return { available: false };
   } catch (e) {
     console.warn('[UpdateService] Check failed:', e);
     return { available: false };

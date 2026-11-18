@@ -139,14 +139,20 @@ export const LizzyPopup: React.FC = () => {
           } else if (msg.type === 'text' && msg.text) {
             setPromptMessage(msg.text);
           } else if (msg.type === 'error') {
-            setLiveStatus(`Live voice fallback: ${msg.message}`);
+            setLiveActive(false);
+            if (processorRef.current) { try { processorRef.current.disconnect(); } catch {} processorRef.current = null; }
+            if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
+            setLiveStatus(`Local voice mode active: ${msg.message}`);
           }
         } catch (err) {
           console.error('Live check-in decode error:', err);
         }
       };
 
-      ws.onerror = () => setLiveStatus('Live voice unavailable — use tap or speech buttons below.');
+      ws.onerror = () => {
+        setLiveActive(false);
+        setLiveStatus('Live voice unavailable — use tap or speech buttons below.');
+      };
       ws.onclose = () => setLiveActive(false);
     } catch {
       setLiveActive(false);

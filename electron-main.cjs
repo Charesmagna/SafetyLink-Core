@@ -6,10 +6,11 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
     },
-    icon: path.join(__dirname, 'public', 'sl-shield.svg')
+    icon: path.join(__dirname, 'dist', 'icon-512.png')
   });
   
   win.loadFile(path.join(__dirname, 'dist', 'index.html'));

@@ -69,6 +69,8 @@ public class MainActivity extends BridgeActivity {
             WebView mainWebView = getBridge().getWebView();
             WebSettings mainSettings = mainWebView.getSettings();
             mainSettings.setTextZoom(100);
+            mainSettings.setAllowFileAccessFromFileURLs(false);
+            mainSettings.setAllowUniversalAccessFromFileURLs(false);
             mainSettings.setSupportMultipleWindows(true);
             mainSettings.setJavaScriptCanOpenWindowsAutomatically(true);
 
@@ -86,6 +88,10 @@ public class MainActivity extends BridgeActivity {
                     WebSettings settings = popupWebView.getSettings();
                     settings.setJavaScriptEnabled(true);
                     settings.setDomStorageEnabled(true);
+                    settings.setAllowFileAccess(false);
+                    settings.setAllowContentAccess(false);
+                    settings.setAllowFileAccessFromFileURLs(false);
+                    settings.setAllowUniversalAccessFromFileURLs(false);
                     settings.setSupportMultipleWindows(true);
                     settings.setJavaScriptCanOpenWindowsAutomatically(true);
 

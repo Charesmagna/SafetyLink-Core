@@ -7,7 +7,6 @@
 -optimizationpasses 5
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
--dontpreskip
 -verbose
 
 # Strip source file names and line numbers from stack traces

@@ -1324,7 +1324,6 @@ export const useAppStore = create<AppState>((set, get) => ({
           appVersion,
           deviceModel,
           pinCode: user.pinCode,
-          password: user.password
         } as any;
 
         const updatedUsers = [...get().users.filter(u => u.username.toLowerCase() !== user.username.toLowerCase()), createdUser];
@@ -1394,7 +1393,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       appVersion,
       deviceModel,
       pinCode: user.pinCode,
-      password: user.password
+      passwordHash: user.password ? await (async () => {
+        try {
+          const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(user.password!));
+          return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch {
+          return undefined;
+        }
+      })() : undefined,
     } as any;
 
     const provisionalQueue = getStoredJSON<any[]>('sl_provisional_registrations', []);
@@ -1818,7 +1824,22 @@ export const useAppStore = create<AppState>((set, get) => ({
         return { success: false, error: 'User does not belong to this organization code.', role: 'USER' };
       }
       const userPassword = (localUser as any).password;
-      if (!skipPasswordCheck && userPassword && userPassword !== rawPassword) {
+      const userPasswordHash = (localUser as any).passwordHash;
+      let offlinePwOk = true;
+      if (!skipPasswordCheck) {
+        if (userPasswordHash) {
+          try {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(rawPassword));
+            const rawHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            offlinePwOk = rawHash === userPasswordHash;
+          } catch {
+            offlinePwOk = false;
+          }
+        } else if (userPassword) {
+          offlinePwOk = userPassword === rawPassword;
+        }
+      }
+      if (!offlinePwOk) {
         return { success: false, error: 'Incorrect password.', role: 'USER' };
       }
       const nextRemembered = localUser.orgCode
@@ -2013,8 +2034,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   fetchSuperAdminData: async () => {
     if (!get().superAdminActive) return;
     try {
+      const token = get().token;
+      if (!token) return;
       const headers: Record<string, string> = {
-        'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
+        'Authorization': `Bearer ${token}`
       };
 
       // 1. Fetch backend organizations and merge with local organizations
@@ -2547,7 +2570,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${get().token || 'superadmin-master-key'}`
+          ...(get().token ? { 'Authorization': `Bearer ${get().token}` } : {})
         },
         body: JSON.stringify({
           fileId,

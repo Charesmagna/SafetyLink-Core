@@ -282,14 +282,26 @@ export const OrgDashboard: React.FC = () => {
           >
             🛰️ Dispatch Control
           </button>
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('roster')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'roster' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            👥 Clients / Profiles
-          </button>}
+          {!isResponder && (() => {
+            const pendingCount =
+              users.filter(u => u.pendingOrgCode === currentOrg?.id).length +
+              serverJoinRequests.filter(sr => !users.some(u => u.pendingOrgCode === currentOrg?.id && (u.id === sr.user_id || u.username === sr.username))).length;
+            return (
+              <button
+                onClick={() => setActiveSubTab('roster')}
+                className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all flex items-center gap-1.5 ${
+                  activeSubTab === 'roster' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
+                }`}
+              >
+                <span>👥 Clients / Profiles</span>
+                {pendingCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[8px] font-black">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            );
+          })()}
           {!isResponder && <button
             onClick={() => setActiveSubTab('branding')}
             className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${

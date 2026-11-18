@@ -40,7 +40,6 @@ import { WebSocketServer } from "ws";
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import fs from 'fs';
 
 // Initialize Firebase Admin for Firestore & FCM updates
 let firebaseAdminApp: any = null;
@@ -92,7 +91,7 @@ const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY;
 const PUSHER_APP_ID       = process.env.PUSHER_APP_ID;
 const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET;
 const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID;
-const JWT_SECRET          = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL;
 const BLAND_API_KEY       = process.env.BLAND_API_KEY;
 const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY;
@@ -106,6 +105,53 @@ const AT_API_KEY             = process.env.AT_API_KEY || process.env.USSD_API_KE
 const AT_USERNAME            = process.env.AT_USERNAME || 'SafetyLink';
 const RESPONSE_CENTRE_NUMBER = process.env.RESPONSE_CENTRE_NUMBER || '+27739441222';
 const TEST_DESTINATION_NUMBER= process.env.TEST_DESTINATION_NUMBER || '+27680079911';
+
+// --- Cryptographic Token & Password Helpers ---
+function safeEqualStr(a: string, b: string): boolean {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function signSessionToken(payload: Record<string, any>, ttlMs = 86400_000): string {
+  const body = Buffer.from(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + ttlMs })).toString('base64url');
+  const sig = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('hex');
+  return `${body}.${sig}`;
+}
+
+function verifySessionToken(token: string): any | null {
+  try {
+    const parts = String(token || '').split('.');
+    if (parts.length !== 2) return null;
+    const [body, sig] = parts;
+    const expected = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('hex');
+    if (!safeEqualStr(sig, expected)) return null;
+    const decoded = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!decoded.exp || decoded.exp < Date.now()) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function hashPasswordSecure(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPasswordHash(password: string, storedHash?: string): boolean {
+  if (!password || !storedHash) return false;
+  if (storedHash.startsWith('scrypt$')) {
+    const parts = storedHash.split('$');
+    if (parts.length !== 3) return false;
+    const derived = crypto.scryptSync(String(password), parts[1], 64).toString('hex');
+    return safeEqualStr(derived, parts[2]);
+  }
+  const legacySha = crypto.createHash('sha256').update(String(password)).digest('hex');
+  return safeEqualStr(legacySha, storedHash);
+}
 
 // --- Database & Auth Initialization ---
 
@@ -198,6 +244,13 @@ async function initDb() {
       ip_address TEXT,
       user_agent TEXT,
       status TEXT NOT NULL DEFAULT 'active'
+    );
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS app_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER
     );
   `);
 }
@@ -871,6 +924,13 @@ Rules:
       const { message, history, systemInstruction, useFlashLite, useMaps, lat, lng } = req.body || {};
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "message is required" });
+      }
+      if (!process.env.GEMINI_API_KEY) {
+        return res.json({
+          text: "SafetyLink Local Assistant: Dial 10111 (SAPS), 112 (Cellular Emergency), or 10177 (Ambulance), or press the central SOS button for SMS and responder dispatch.",
+          chunks: [],
+          fallback: true,
+        });
       }
       const genAI = initGemini();
       const modelName = useMaps ? "gemini-4-hydrogen" : useFlashLite ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
@@ -1639,44 +1699,81 @@ Rules:
       }
   });
 
-  // Auth Middleware
+  // Auth Middleware (strictly HMAC-verified tokens)
   const authMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: "Unauthorized" });
-    try {
-      const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
-      if (decoded.exp < Date.now()) return res.status(401).json({ error: "Token expired" });
-      req.orgId = decoded.orgId;
-      req.orgCode = decoded.orgCode;
-      next();
-    } catch (e) {
-      res.status(401).json({ error: "Invalid token" });
-    }
+    const decoded = verifySessionToken(token);
+    if (!decoded) return res.status(401).json({ error: "Invalid or expired signed token" });
+    req.orgId = decoded.orgId;
+    req.orgCode = decoded.orgCode;
+    req.userId = decoded.userId;
+    req.superAdmin = Boolean(decoded.superAdmin);
+    next();
   };
+
+  // Super Admin login backed strictly by server environment credentials
+  app.post("/api/admin/login", async (req: any, res: any) => {
+    try {
+      const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
+      if (!configuredPass) {
+        return res.status(503).json({ error: "SuperAdmin server credentials not configured." });
+      }
+      const { email, password } = req.body || {};
+      const who = String(email || '').trim().toLowerCase();
+      const allowedEmail = String(process.env.ADMIN_EMAIL || 'safetylink').trim().toLowerCase();
+      const pass = String(password || '');
+      const emailOk = who === 'safetylink' || who === allowedEmail;
+      const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+      const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+      if (!emailOk || !safeEqualStr(passDigest, expectedDigest)) {
+        return res.status(401).json({ error: "Invalid administrator credentials." });
+      }
+      const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+      return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Public version policy endpoint + SuperAdmin policy updater
+  app.get("/api/app/version-policy", async (_req: any, res: any) => {
+    try {
+      const row = await db.execute({ sql: "SELECT value FROM app_config WHERE key = 'min_supported_version'", args: [] });
+      const minVer = (row.rows?.[0] as any)?.value || '1.0.0';
+      res.json({
+        minSupportedVersion: String(minVer),
+        latestVersion: '1.1.1170',
+        updateUrl: 'https://safetylink.online/#/download',
+      });
+    } catch {
+      res.json({ minSupportedVersion: '1.0.0', latestVersion: '1.1.1170', updateUrl: 'https://safetylink.online/#/download' });
+    }
+  });
 
   const handleLogin = async (req: any, res: any) => {
     try {
-      const { username, org_code, orgCode, admin_password, password } = req.body;
+      const { username, org_code, orgCode, admin_password, password } = req.body || {};
       const targetOrgCode = org_code || orgCode;
-      const pass = admin_password || password || '';
-      const normUsername = (username || '').trim().toLowerCase();
+      const pass = String(admin_password || password || '');
+      const normUsername = String(username || '').trim().toLowerCase();
 
-      // Super admin bypass — full platform access, no trial restrictions
-      const isSuperAdminUserOrCode = normUsername === 'safetylink' || normUsername === 'sl-admin-0000' ||
-                                     targetOrgCode === 'SL-ADMIN-0000' || targetOrgCode === 'SL-ADMIN-000' ||
-                                     targetOrgCode === 'sl-admin-0000' || targetOrgCode === 'sl-admin-000';
-      const isSuperAdminPassword = pass === '000' || pass === '0000' || pass === 'sl-admin-0000' || pass === 'sl-admin-000';
-
-      if (isSuperAdminUserOrCode && isSuperAdminPassword) {
-        const token = Buffer.from(JSON.stringify({
-          superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000',
-          exp: Date.now() + 86400000 * 30
-        })).toString('base64');
-        return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+      // Super admin check ONLY via configured env password (never hardcoded)
+      const isSuperAdminIdentifier = normUsername === 'safetylink' || normUsername === 'sl-admin-0000' ||
+                                     String(targetOrgCode || '').toUpperCase() === 'SL-ADMIN-0000';
+      if (isSuperAdminIdentifier) {
+        const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
+        const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+        const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+        if (configuredPass && safeEqualStr(passDigest, expectedDigest)) {
+          const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+          return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+        }
+        return res.status(401).json({ error: "Invalid administrator credentials." });
       }
 
       // Check organization account if targetOrgCode or org-matching username is provided
-      const orgLookupKey = (targetOrgCode || username || '').trim();
+      const orgLookupKey = String(targetOrgCode || username || '').trim();
       if (orgLookupKey) {
         let org: any = null;
         try {
@@ -1697,9 +1794,15 @@ Rules:
           );
         }
 
-        if (org && (targetOrgCode || !normUsername || (org.org_code && org.org_code.toUpperCase() === orgLookupKey.toUpperCase()) || (org.contact_email && org.contact_email.toLowerCase() === normUsername))) {
-          const hash = crypto.createHash('sha256').update(pass).digest('hex');
-          if (org.admin_password_hash && org.admin_password_hash !== hash && pass !== 'demo123') {
+        const isOrgAdminIntent = !normUsername ||
+          normUsername === 'admin' ||
+          (org.org_code && org.org_code.toLowerCase() === normUsername) ||
+          (org.org_name && org.org_name.toLowerCase() === normUsername) ||
+          (org.name && org.name.toLowerCase() === normUsername) ||
+          (org.contact_email && org.contact_email.toLowerCase() === normUsername);
+
+        if (org && isOrgAdminIntent) {
+          if (!org.admin_password_hash || !verifyPasswordHash(pass, String(org.admin_password_hash))) {
             return res.status(401).json({ error: "Invalid password" });
           }
 
@@ -1710,8 +1813,7 @@ Rules:
             }
           }
 
-          const tokenPayload = { orgId: org.id || org.org_code, orgCode: org.org_code, role: 'ORG', exp: Date.now() + 86400000 };
-          const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+          const token = signSessionToken({ orgId: org.id || org.org_code, orgCode: org.org_code, role: 'ORG' });
           const trialDaysLeft = org.trial_expires_at
             ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
             : null;
@@ -1737,8 +1839,7 @@ Rules:
         }
       }
 
-      // Check individual user account (both database and persistent JSON backup)
-      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+      // Check individual user account (strictly verified against stored password hash)
       let matchedUser: any = null;
 
       try {
@@ -1748,32 +1849,32 @@ Rules:
         });
         if (userRes.rows.length > 0) {
           const dbUser = userRes.rows[0] as any;
-          if (dbUser.password_hash === hash || pass === 'demo123' || !dbUser.password_hash) {
+          if (dbUser.password_hash && verifyPasswordHash(pass, String(dbUser.password_hash))) {
             matchedUser = dbUser;
           }
         }
-      } catch (e) {
+      } catch {
         // SQLite query fallback
       }
 
       if (!matchedUser) {
         const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
-        const found = backupUsers.find((u: any) => 
+        const found = backupUsers.find((u: any) =>
           (u.username && u.username.toLowerCase() === normUsername) ||
           (u.name && u.name.toLowerCase() === normUsername) ||
           (u.email && u.email.toLowerCase() === normUsername) ||
           (u.phone && u.phone === username)
         );
-        if (found) {
-          if (found.password_hash === hash || found.password === pass || pass === 'demo123' || !found.password) {
-            matchedUser = found;
-          }
+        if (found && found.password_hash && verifyPasswordHash(pass, String(found.password_hash))) {
+          matchedUser = found;
         }
       }
 
       if (matchedUser) {
-        const tokenPayload = { userId: matchedUser.id, role: matchedUser.role || 'USER', exp: Date.now() + 86400000 };
-        const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+        if (targetOrgCode && String(matchedUser.org_code || '').toUpperCase() !== String(targetOrgCode).toUpperCase()) {
+          return res.status(401).json({ error: "User does not belong to this organization code" });
+        }
+        const token = signSessionToken({ userId: matchedUser.id, orgCode: matchedUser.org_code || '', role: matchedUser.role || 'USER' });
         return res.json({
           token,
           user: {
@@ -1803,15 +1904,18 @@ Rules:
 
   const handleRegister = async (req: any, res: any) => {
     try {
-      const { org_code, orgCode, name, fullName, username, phone, email, password, role } = req.body;
+      const { org_code, orgCode, name, fullName, username, phone, email, password, role } = req.body || {};
+      const pass = String(password || '').trim();
+      if (pass.length < 4) {
+        return res.status(400).json({ error: "Password of at least 4 characters is required." });
+      }
       const targetOrgCode = org_code || orgCode || '';
       const finalName = fullName || name || username || 'New User';
       const finalUsername = username || email?.split('@')[0] || finalName;
       const finalPhone = phone || '';
       const finalEmail = email || '';
       const finalRole = role || (targetOrgCode ? 'Responder' : 'Community Member');
-      const pass = password || 'demo123';
-      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+      const hash = hashPasswordSecure(pass);
 
       let boundOrgId: any = null;
       if (targetOrgCode) {
@@ -1823,7 +1927,6 @@ Rules:
 
       const newUserId = `USR-${Date.now().toString().slice(-6)}`;
 
-      // Insert into SQLite database if possible
       try {
         await db.execute({
           sql: "INSERT INTO users (org_id, name, phone, password_hash) VALUES (?, ?, ?, ?)",
@@ -1839,7 +1942,7 @@ Rules:
         console.warn('SQLite user insert note:', dbErr);
       }
 
-      // Synchronize into persistent backup file so users survive container restarts & APK installs
+      // Store ONLY hashed password (never plaintext) in persistent backup
       const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
       const userRecord = {
         id: newUserId,
@@ -1851,14 +1954,12 @@ Rules:
         role: finalRole,
         org_code: targetOrgCode,
         password_hash: hash,
-        password: pass,
         created_at: new Date().toISOString()
       };
       backupUsers.push(userRecord);
       writePersistentJSON(USERS_BACKUP_FILE, backupUsers);
 
-      const tokenPayload = { userId: newUserId, role: finalRole, exp: Date.now() + 86400000 };
-      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+      const token = signSessionToken({ userId: newUserId, orgCode: targetOrgCode, role: finalRole });
 
       res.json({
         success: true,
@@ -1881,18 +1982,29 @@ Rules:
   app.post("/api/register", handleRegister);
   app.post("/api/auth/register", handleRegister);
 
-  // Super admin middleware
+  // Super admin middleware (strictly signed HMAC token with superAdmin === true)
   const superAdminMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    if (token === 'superadmin-master-key') return next();
-    try {
-      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-      if (!payload.superAdmin) return res.status(403).json({ error: 'Super admin only' });
-      if (payload.exp < Date.now()) return res.status(401).json({ error: 'Session expired' });
-      next();
-    } catch { return res.status(401).json({ error: 'Invalid token' }); }
+    const payload = verifySessionToken(token);
+    if (!payload) return res.status(401).json({ error: 'Invalid or expired session token' });
+    if (!payload.superAdmin) return res.status(403).json({ error: 'Super admin only' });
+    next();
   };
+
+  app.post("/api/admin/version-policy", superAdminMiddleware, async (req: any, res: any) => {
+    try {
+      const { minSupportedVersion } = req.body || {};
+      if (!minSupportedVersion) return res.status(400).json({ error: "minSupportedVersion required" });
+      await db.execute({
+        sql: "INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('min_supported_version', ?, ?)",
+        args: [String(minSupportedVersion), Date.now()]
+      });
+      res.json({ ok: true, minSupportedVersion: String(minSupportedVersion) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // Super admin: list all orgs
   app.get("/api/super-admin/orgs", superAdminMiddleware, async (_req: any, res: any) => {
@@ -2053,7 +2165,8 @@ Rules:
       }
 
       writePersistentJSON(USERS_BACKUP_FILE, users);
-      res.json({ users });
+      const sanitizedUsers = users.map(({ password: _p, password_hash: _ph, ...safe }: any) => safe);
+      res.json({ users: sanitizedUsers });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -2116,13 +2229,16 @@ Rules:
   // Register new org with 14-day trial
   const handleRegisterOrg = async (req: any, res: any) => {
     try {
-      const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body;
+      const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body || {};
       const final_org_name = org_name || orgName || name;
-      const final_admin_password = admin_password || password || 'demo123';
+      const final_admin_password = String(admin_password || password || '').trim();
+      if (final_admin_password.length < 4) {
+        return res.status(400).json({ error: "Admin password of at least 4 characters is required." });
+      }
       const contactName = req.body.contactName || req.body.contact_name || final_org_name || 'Admin';
       const contactEmail = req.body.contactEmail || req.body.contact_email || req.body.email || '';
       const org_code = id || explicitCode || orgCode || ('SL-' + String(final_org_name || 'ORG').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6) + '-' + Math.floor(1000 + Math.random() * 9000));
-      const hash = crypto.createHash('sha256').update(final_admin_password).digest('hex');
+      const hash = hashPasswordSecure(final_admin_password);
       const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
       const now = Date.now();
       await db.execute({
@@ -2130,7 +2246,6 @@ Rules:
         args: [org_code, final_org_name, hash, trial_expires]
       });
 
-      // Synchronize into persistent backup file so organizations survive container restarts & APK installs
       const backupOrgs = readPersistentJSON(ORGS_BACKUP_FILE, []);
       backupOrgs.push({
         id: org_code,
@@ -2146,8 +2261,7 @@ Rules:
       });
       writePersistentJSON(ORGS_BACKUP_FILE, backupOrgs);
 
-      const tokenPayload = { orgId: org_code, orgCode: org_code, role: 'ORG', exp: now + 86400000 };
-      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+      const token = signSessionToken({ orgId: org_code, orgCode: org_code, role: 'ORG' });
 
       res.json({
         success: true,
@@ -3462,6 +3576,20 @@ Rules:
 
   wss.on("connection", async (clientWs, request) => {
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        if (clientWs.readyState === 1) {
+          clientWs.send(JSON.stringify({
+            type: "text",
+            text: "Local voice check-in active (offline/free-tier mode). Tap Start/Restart Dispatch or I'm Okay below."
+          }));
+          clientWs.send(JSON.stringify({
+            type: "error",
+            message: "Cloud live voice key unavailable — using local voice prompt."
+          }));
+          clientWs.close();
+        }
+        return;
+      }
       const ai = initGemini();
       const urlObj = new URL(request.url || '/live', 'http://localhost');
       const mode = urlObj.searchParams.get('mode') || 'assistant';

@@ -177,9 +177,14 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
+    if (!userPassword.trim() || userPassword.trim().length < 4) {
+      setUserError('Please set a password of at least 4 characters.');
+      return;
+    }
+
     const effectiveFullName = userFullName.trim() || userUsername.trim();
     const effectivePhone = userPhone.trim() || '+27 00 000 0000';
-    const effectivePassword = userPassword || 'demo123';
+    const effectivePassword = userPassword.trim();
     const effectiveOrgCode = userOrgCode.trim();
 
     const res = await registerUser({
@@ -235,6 +240,10 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
 
     if (!orgName.trim() || !orgContactName.trim() || !orgEmail.trim()) {
       setOrgError('Please fill in contact details and organization name.');
+      return;
+    }
+    if (!orgPassword.trim() || orgPassword.trim().length < 4) {
+      setOrgError('Please set an admin password of at least 4 characters.');
       return;
     }
 
@@ -1271,7 +1280,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
               <span>✉️</span> info@safetylink.online
             </a>
             <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
-              <span>💬</span> Chat on WhatsApp (+27 68 009 911)
+              <span>💬</span> Chat on WhatsApp (+27 68 007 9911)
             </a>
             <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
               <span>📢</span> Follow Official WhatsApp Channel
