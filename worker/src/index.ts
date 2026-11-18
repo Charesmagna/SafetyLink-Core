@@ -641,6 +641,73 @@ app.get('/pcm/:token', (c) => {
   return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
 });
 app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
+// Device token route (required by installed app versions).
+app.post('/api/device/token', async (c) => {
+  const profileToken = c.req.header('X-Profile-Token') || '';
+  const body: any = await c.req.json().catch(() => ({}));
+  const phone = body.phone;
+  const token = body.token;
+  if (!phone || !token) return c.json({ error: 'Missing phone or token' }, 400);
+
+  await c.env.DB?.prepare(`
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      phone TEXT PRIMARY KEY,
+      token TEXT NOT NULL,
+      profile_token TEXT,
+      updated_at INTEGER NOT NULL
+    )
+  `).run().catch(() => {});
+
+  await c.env.DB?.prepare(`
+    INSERT INTO device_tokens (phone, token, profile_token, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(phone) DO UPDATE SET token=excluded.token, profile_token=excluded.profile_token, updated_at=excluded.updated_at
+  `).bind(phone, token, profileToken, Date.now()).run().catch(async () => {
+    await c.env.DB?.prepare(`
+      INSERT OR REPLACE INTO device_tokens (phone, token, profile_token, updated_at)
+      VALUES (?, ?, ?, ?)
+    `).bind(phone, token, profileToken, Date.now()).run().catch(() => {});
+  });
+
+  return c.json({ ok: true, registered: true });
+});
+
+// Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
+async function getR2AssetFromEnv(env: any, rawKey: string, rangeHeader?: string | null) {
+  const key = decodeURIComponent(rawKey).replace(/^\/+/, '');
+  const candidates = key.startsWith('Safetylink/') ? [key, key.replace(/^Safetylink\//, '')] : ['Safetylink/' + key, key];
+
+  let parsedRange: { offset: number; length?: number; end?: number } | undefined;
+  let rangeStart = 0;
+  let hasEnd = false;
+  let requestedEnd = 0;
+  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+    const [s, e] = rangeHeader.replace(/^bytes=/, '').split('-');
+    rangeStart = parseInt(s, 10) || 0;
+    if (e && !isNaN(parseInt(e, 10))) {
+      hasEnd = true;
+      requestedEnd = parseInt(e, 10);
+      parsedRange = { offset: rangeStart, length: Math.max(1, requestedEnd - rangeStart + 1) };
+    } else {
+      parsedRange = { offset: rangeStart };
+    }
+  }
+
+  for (const bucket of [env.MEDIA, env.RELEASES]) {
+    if (!bucket) continue;
+    for (const candidate of candidates) {
+      const obj = parsedRange
+        ? await bucket.get(candidate, { range: parsedRange }).catch(() => null)
+        : await bucket.get(candidate).catch(() => null);
+      if (obj) {
+        return { obj, key: candidate, hasRange: Boolean(parsedRange), rangeStart, hasEnd, requestedEnd };
+      }
+    }
+  }
+  return null;
+}
+
+
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
