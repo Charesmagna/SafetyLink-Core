@@ -58,6 +58,7 @@ const ConfidentialVault = lazy(() => import('./components/ConfidentialVault').th
 const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
+const LiveCameraFeed = lazy(() => import('./components/LiveCameraFeed').then(m => ({ default: m.LiveCameraFeed })));
 import { getR2StreamUrl } from './utils/r2Assets';
 import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
 
@@ -71,7 +72,7 @@ const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
 const klevaLogo = getR2StreamUrl('Polish_20260809_035827088.png');
 const polishLogo = getR2StreamUrl('limx dynamics.jpg');
 
-type TabId = 'home' | 'deck' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
+type TabId = 'home' | 'deck' | 'cameras' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -810,6 +811,7 @@ const App: React.FC = () => {
           } ${
             activeTab === 'home' ? 'text-red-400 border-red-500/20' :
             activeTab === 'deck' ? 'text-cyan-500 border-cyan-500/20' :
+            activeTab === 'cameras' ? 'text-emerald-500 border-emerald-500/20' :
             activeTab === 'vault' ? 'text-emerald-500 border-emerald-500/20' :
             activeTab === 'contacts' ? 'text-blue-500 border-blue-500/20' :
             activeTab === 'ble' ? 'text-emerald-500 border-emerald-500/20' :
@@ -887,7 +889,7 @@ const App: React.FC = () => {
 
       {/* Main Workspace content */}
       <main className={`flex-1 min-h-0 pb-12 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        <div className={`max-w-md mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
+        <div className={`${activeTab === 'cameras' ? 'max-w-6xl' : 'max-w-md'} mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
             <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
@@ -1058,6 +1060,14 @@ const App: React.FC = () => {
                 );
               })()}
             </div>
+          )}
+
+          {activeTab === 'cameras' && (
+            <ErrorBoundary tabName="Live Cameras">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Live Camera Control Deck...</div>}>
+                <div className="animate-fadeIn"><LiveCameraFeed scope="USER" /></div>
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'vault' && (
@@ -1247,6 +1257,21 @@ const App: React.FC = () => {
                     <div className="text-left">
                       <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.deck')}</p>
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Support tools & telemetry</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('cameras'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'cameras'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 font-bold'
+                        : 'bg-transparent border-transparent text-slate-400 hover:bg-slate-900/40 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">📹</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.cameras')}</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">WebRTC quad wall, PTZ &amp; talkback</p>
                     </div>
                   </button>
 

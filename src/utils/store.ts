@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
-import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord, CameraDevice } from '../types';
+import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord, CameraDevice, CameraLocalCredentials, CameraEvidenceSnapshot } from '../types';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
@@ -152,12 +152,30 @@ interface AppState {
 
   // Hikvision / ONVIF CCTV Cameras (scoped to Org or Individual User)
   cameras: CameraDevice[];
+  cameraEvidenceSnapshots: CameraEvidenceSnapshot[];
   addCamera: (
-    cam: Omit<CameraDevice, 'id' | 'createdAt' | 'status' | 'ownerUid' | 'orgId'> & { orgId?: string; username?: string; password?: string }
+    cam: Omit<CameraDevice, 'id' | 'createdAt' | 'status' | 'ownerUid' | 'orgId'> & {
+      orgId?: string;
+      username?: string;
+      password?: string;
+      whepBearerToken?: string;
+      turnUsername?: string;
+      turnCredential?: string;
+    }
   ) => CameraDevice;
   updateCamera: (id: string, updated: Partial<CameraDevice>) => void;
   removeCamera: (id: string) => void;
+  getCameraLocalCredentials: (id: string) => CameraLocalCredentials;
+  setCameraLocalCredentials: (id: string, creds: CameraLocalCredentials) => void;
+  addCameraEvidenceSnapshot: (snap: Omit<CameraEvidenceSnapshot, 'id' | 'capturedAt'>) => CameraEvidenceSnapshot;
+  removeCameraEvidenceSnapshot: (id: string) => void;
   probeCamera: (id: string) => Promise<{ reachable: boolean; diagnostics: string }>;
+  fetchCameraSnapshot: (id: string) => Promise<{ ok: boolean; imageBase64?: string; diagnostics: string }>;
+  sendCameraPtz: (
+    id: string,
+    cmd: { action: 'CONTINUOUS' | 'STOP' | 'PRESET'; pan?: number; tilt?: number; zoom?: number; presetId?: number }
+  ) => Promise<{ ok: boolean; statusCode?: number; diagnostics: string }>;
+  triggerSingleCameraSoftIo: (id: string) => Promise<{ triggered: boolean; statusCode?: number; diagnostics: string }>;
   triggerCameraSoftIo: () => Promise<void>;
   
   toggleDrillMode: () => void;
@@ -1012,6 +1030,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   token: getStoredJSON<string | null>('sl_jwt_token', null),
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
   cameras: getStoredJSON<CameraDevice[]>('sl_hikvision_cameras', []),
+  cameraEvidenceSnapshots: getStoredJSON<CameraEvidenceSnapshot[]>('sl_hikvision_snapshots', []),
 
   // Floating widget states
   isFloatingWidgetDeployed: getStoredJSON<boolean>('sl_floating_widget_deployed', true),
@@ -3318,20 +3337,73 @@ export const useAppStore = create<AppState>((set, get) => ({
     const camId = `cam-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const resolvedOrgId = String(cam.orgId || org?.id || user?.orgCode || 'INDIVIDUAL').slice(0, 64);
     const resolvedOwnerUid = String(auth.currentUser?.uid || user?.id || org?.id || 'local-owner').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
-    const { username, password, ...cleanMeta } = cam;
+    const {
+      username,
+      password,
+      whepBearerToken,
+      turnUsername,
+      turnCredential,
+      ...cleanMeta
+    } = cam;
+
+    const stripUrlCredentials = (raw?: string): string | undefined => {
+      if (!raw || !raw.trim()) return undefined;
+      try {
+        const u = new URL(raw.trim());
+        u.username = '';
+        u.password = '';
+        return u.toString();
+      } catch {
+        return raw.trim().replace(/https?:\/\/[^/@]+@/i, (m) => (m.toLowerCase().startsWith('https') ? 'https://' : 'http://'));
+      }
+    };
+
+    const sanitizedWhepUrl = stripUrlCredentials(cleanMeta.whepUrl || cleanMeta.relayUrl);
+    const defaultPresets = cleanMeta.ptzPresets && cleanMeta.ptzPresets.length > 0
+      ? cleanMeta.ptzPresets.slice(0, 8)
+      : [
+          { presetId: 1, label: 'Gate Entry' },
+          { presetId: 2, label: 'Perimeter' },
+          { presetId: 3, label: 'Loading Bay' },
+          { presetId: 4, label: 'Street View' },
+        ];
+
     const newCam: CameraDevice = {
       ...cleanMeta,
       id: camId,
       orgId: resolvedOrgId,
       ownerUid: resolvedOwnerUid,
+      whepUrl: sanitizedWhepUrl,
+      relayUrl: sanitizedWhepUrl || cleanMeta.relayUrl,
+      signalingMode:
+        cleanMeta.signalingMode ||
+        (cleanMeta.mode === 'WHEP_HLS_RELAY'
+          ? 'WHEP_DIRECT'
+          : cleanMeta.mode === 'LAN_ISAPI'
+          ? 'LAN_ISAPI_POLL'
+          : 'HIK_CONNECT_P2P'),
+      streamProfile: cleanMeta.streamProfile || (Number(cleanMeta.channel) === 101 ? 'MAIN_HD' : 'SUB_MOBILE'),
+      stunServers: cleanMeta.stunServers && cleanMeta.stunServers.length > 0 ? cleanMeta.stunServers.slice(0, 5) : ['stun:stun.l.google.com:19302'],
+      turnUrls: cleanMeta.turnUrls ? cleanMeta.turnUrls.slice(0, 4) : [],
+      ptzEnabled: cleanMeta.ptzEnabled ?? true,
+      twoWayAudioEnabled: cleanMeta.twoWayAudioEnabled ?? true,
+      ptzPresets: defaultPresets,
       status: 'UNVERIFIED',
       createdAt: Date.now(),
     };
-    if (username || password) {
-      const creds = getStoredJSON<Record<string, { username: string; password: string }>>('sl_hikvision_local_creds', {});
-      creds[camId] = { username: username || 'admin', password: password || '' };
+
+    if (username || password || whepBearerToken || turnUsername || turnCredential) {
+      const creds = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {});
+      creds[camId] = {
+        username: username || 'admin',
+        password: password || '',
+        ...(whepBearerToken ? { whepBearerToken } : {}),
+        ...(turnUsername ? { turnUsername } : {}),
+        ...(turnCredential ? { turnCredential } : {}),
+      };
       setStoredJSON('sl_hikvision_local_creds', creds);
     }
+
     const updated = [newCam, ...get().cameras];
     set({ cameras: updated });
     setStoredJSON('sl_hikvision_cameras', updated);
@@ -3345,7 +3417,19 @@ export const useAppStore = create<AppState>((set, get) => ({
         name: newCam.name.slice(0, 100),
         brand: newCam.brand,
         mode: newCam.mode,
+        signalingMode: newCam.signalingMode,
+        streamProfile: newCam.streamProfile,
         channel: Number(newCam.channel) || 101,
+        httpPort: Number(newCam.httpPort) || 80,
+        rtspPort: Number(newCam.rtspPort) || 554,
+        ptzEnabled: Boolean(newCam.ptzEnabled),
+        twoWayAudioEnabled: Boolean(newCam.twoWayAudioEnabled),
+        ptzPresets: (newCam.ptzPresets || []).slice(0, 8).map((p) => ({
+          presetId: Number(p.presetId) || 1,
+          label: String(p.label || 'Preset').slice(0, 40),
+        })),
+        stunServers: (newCam.stunServers || []).slice(0, 5),
+        turnUrls: (newCam.turnUrls || []).slice(0, 4),
         softIoTriggerId: Number(newCam.softIoTriggerId) || 1,
         triggerOnPanic: Boolean(newCam.triggerOnPanic),
         status: newCam.status,
@@ -3353,32 +3437,79 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
       if (newCam.serialNumber) fsPayload.serialNumber = newCam.serialNumber.slice(0, 64);
       if (newCam.host) fsPayload.host = newCam.host.slice(0, 128);
-      setDoc(doc(db, 'cameras', camId), fsPayload).catch(() => {});
+      if (newCam.whepUrl) fsPayload.whepUrl = newCam.whepUrl.slice(0, 512);
+      setDoc(doc(db, 'cameras', camId), fsPayload).catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.CREATE, `cameras/${camId}`);
+        } catch {
+          // Local storage preserves offline creation without blocking operator
+        }
+      });
     }
     return newCam;
   },
 
   updateCamera: (id, updatedFields) => {
+    const sanitizeUrl = (raw?: string): string | undefined => {
+      if (!raw || !raw.trim()) return undefined;
+      try {
+        const u = new URL(raw.trim());
+        u.username = '';
+        u.password = '';
+        return u.toString();
+      } catch {
+        return raw.trim().replace(/https?:\/\/[^/@]+@/i, (m) => (m.toLowerCase().startsWith('https') ? 'https://' : 'http://'));
+      }
+    };
+
+    const sanitizedFields: Partial<CameraDevice> = { ...updatedFields };
+    if ('whepUrl' in updatedFields) {
+      sanitizedFields.whepUrl = sanitizeUrl(updatedFields.whepUrl);
+    }
+    if ('relayUrl' in updatedFields && !('whepUrl' in updatedFields)) {
+      sanitizedFields.whepUrl = sanitizeUrl(updatedFields.relayUrl);
+    }
+
     const updated = get().cameras.map((c) =>
-      c.id === id ? { ...c, ...updatedFields, updatedAt: Date.now() } : c
+      c.id === id ? { ...c, ...sanitizedFields, updatedAt: Date.now() } : c
     );
     set({ cameras: updated });
     setStoredJSON('sl_hikvision_cameras', updated);
     if (auth.currentUser?.emailVerified) {
       const target = updated.find((c) => c.id === id);
       if (target) {
-        updateDoc(doc(db, 'cameras', id), {
+        const fsUpdate: Record<string, any> = {
           name: target.name.slice(0, 100),
           brand: target.brand,
           mode: target.mode,
+          signalingMode: target.signalingMode || 'WHEP_DIRECT',
+          streamProfile: target.streamProfile || 'SUB_MOBILE',
           channel: Number(target.channel) || 101,
+          httpPort: Number(target.httpPort) || 80,
+          rtspPort: Number(target.rtspPort) || 554,
+          ptzEnabled: Boolean(target.ptzEnabled ?? true),
+          twoWayAudioEnabled: Boolean(target.twoWayAudioEnabled ?? true),
+          ptzPresets: (target.ptzPresets || []).slice(0, 8).map((p) => ({
+            presetId: Number(p.presetId) || 1,
+            label: String(p.label || 'Preset').slice(0, 40),
+          })),
+          stunServers: (target.stunServers || []).slice(0, 5),
+          turnUrls: (target.turnUrls || []).slice(0, 4),
           softIoTriggerId: Number(target.softIoTriggerId) || 1,
           triggerOnPanic: Boolean(target.triggerOnPanic),
           status: target.status,
-          ...(target.serialNumber ? { serialNumber: target.serialNumber.slice(0, 64) } : {}),
-          ...(target.host ? { host: target.host.slice(0, 128) } : {}),
           updatedAt: serverTimestamp(),
-        }).catch(() => {});
+        };
+        if (target.serialNumber) fsUpdate.serialNumber = target.serialNumber.slice(0, 64);
+        if (target.host) fsUpdate.host = target.host.slice(0, 128);
+        if (target.whepUrl) fsUpdate.whepUrl = target.whepUrl.slice(0, 512);
+        updateDoc(doc(db, 'cameras', id), fsUpdate).catch((err) => {
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, `cameras/${id}`);
+          } catch {
+            // Non-blocking fallback for offline editing
+          }
+        });
       }
     }
   },
@@ -3387,15 +3518,51 @@ export const useAppStore = create<AppState>((set, get) => ({
     const updated = get().cameras.filter((c) => c.id !== id);
     set({ cameras: updated });
     setStoredJSON('sl_hikvision_cameras', updated);
-    const creds = getStoredJSON<Record<string, { username: string; password: string }>>('sl_hikvision_local_creds', {});
+    const creds = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {});
     if (creds[id]) {
       delete creds[id];
       setStoredJSON('sl_hikvision_local_creds', creds);
     }
     if (auth.currentUser?.emailVerified) {
-      deleteDoc(doc(db, 'cameras', id)).catch(() => {});
+      deleteDoc(doc(db, 'cameras', id)).catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.DELETE, `cameras/${id}`);
+        } catch {
+          // Non-blocking fallback
+        }
+      });
     }
     get().addAuditLog('SYSTEM', 'INFO', 'CCTV Camera Removed', `ID: ${id}`);
+  },
+
+  getCameraLocalCredentials: (id) => {
+    const creds = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {});
+    return creds[id] || { username: 'admin', password: '' };
+  },
+
+  setCameraLocalCredentials: (id, newCreds) => {
+    const creds = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {});
+    creds[id] = { ...(creds[id] || {}), ...newCreds };
+    setStoredJSON('sl_hikvision_local_creds', creds);
+  },
+
+  addCameraEvidenceSnapshot: (snap) => {
+    const entry: CameraEvidenceSnapshot = {
+      ...snap,
+      id: `snap-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      capturedAt: Date.now(),
+    };
+    const next = [entry, ...get().cameraEvidenceSnapshots].slice(0, 12);
+    set({ cameraEvidenceSnapshots: next });
+    setStoredJSON('sl_hikvision_snapshots', next);
+    get().addAuditLog('SYSTEM', 'INFO', 'Camera Snapshot Captured', `${entry.cameraName} (${entry.orgId})`);
+    return entry;
+  },
+
+  removeCameraEvidenceSnapshot: (id) => {
+    const next = get().cameraEvidenceSnapshots.filter((s) => s.id !== id);
+    set({ cameraEvidenceSnapshots: next });
+    setStoredJSON('sl_hikvision_snapshots', next);
   },
 
   probeCamera: async (id) => {
@@ -3413,7 +3580,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       return { reachable: ok, diagnostics: diag };
     }
-    const creds = getStoredJSON<Record<string, { username: string; password: string }>>('sl_hikvision_local_creds', {})[id] || {
+    const creds = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {})[id] || {
       username: 'admin',
       password: '',
     };
@@ -3428,7 +3595,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           channel: cam.channel || 101,
           username: creds.username,
           password: creds.password,
-          relayUrl: cam.relayUrl,
+          relayUrl: cam.whepUrl || cam.relayUrl,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -3450,10 +3617,111 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  fetchCameraSnapshot: async (id) => {
+    const cam = get().cameras.find((c) => c.id === id);
+    if (!cam) return { ok: false, diagnostics: 'Camera not found.' };
+    if (!cam.host) return { ok: false, diagnostics: 'No camera LAN IP/host configured for ISAPI snapshot.' };
+    const creds = get().getCameraLocalCredentials(id);
+    try {
+      const res = await fetch('/api/hikvision/snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: cam.host,
+          httpPort: cam.httpPort || 80,
+          channel: cam.channel || 102,
+          username: creds.username || 'admin',
+          password: creds.password || '',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok && data.imageBase64) {
+        get().updateCamera(id, {
+          status: 'ONLINE',
+          lastError: undefined,
+          lastSnapshotBase64: data.imageBase64,
+          lastCheckedAt: Date.now(),
+        });
+        return { ok: true, imageBase64: data.imageBase64, diagnostics: data.diagnostics || 'Frame received.' };
+      }
+      const diag = data.diagnostics || data.error || `HTTP ${res.status}`;
+      get().updateCamera(id, { status: res.status === 401 ? 'ERROR' : 'OFFLINE', lastError: diag, lastCheckedAt: Date.now() });
+      return { ok: false, diagnostics: diag };
+    } catch (err: any) {
+      const msg = err?.message || 'Snapshot request failed.';
+      get().updateCamera(id, { status: 'ERROR', lastError: msg, lastCheckedAt: Date.now() });
+      return { ok: false, diagnostics: msg };
+    }
+  },
+
+  sendCameraPtz: async (id, cmd) => {
+    const cam = get().cameras.find((c) => c.id === id);
+    if (!cam) return { ok: false, diagnostics: 'Camera not found.' };
+    if (!cam.host) return { ok: false, diagnostics: 'Configure camera IP/hostname in Connection Settings to enable ISAPI PTZ.' };
+    const creds = get().getCameraLocalCredentials(id);
+    try {
+      const res = await fetch('/api/hikvision/ptz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: cam.host,
+          httpPort: cam.httpPort || 80,
+          channel: cam.channel || 101,
+          action: cmd.action,
+          pan: cmd.pan || 0,
+          tilt: cmd.tilt || 0,
+          zoom: cmd.zoom || 0,
+          presetId: cmd.presetId || 1,
+          username: creds.username || 'admin',
+          password: creds.password || '',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return {
+        ok: Boolean(data.ok),
+        statusCode: data.statusCode || res.status,
+        diagnostics: data.diagnostics || data.error || `HTTP ${res.status}`,
+      };
+    } catch (err: any) {
+      return { ok: false, diagnostics: err?.message || 'PTZ network error.' };
+    }
+  },
+
+  triggerSingleCameraSoftIo: async (id) => {
+    const cam = get().cameras.find((c) => c.id === id);
+    if (!cam) return { triggered: false, diagnostics: 'Camera not found.' };
+    if (!cam.host) return { triggered: false, diagnostics: 'Configure LAN/Public camera host to trigger Soft-IO hardware relay.' };
+    const creds = get().getCameraLocalCredentials(id);
+    try {
+      const res = await fetch('/api/hikvision/trigger-io', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: cam.host,
+          httpPort: cam.httpPort || 80,
+          softIoTriggerId: cam.softIoTriggerId || 1,
+          username: creds.username || 'admin',
+          password: creds.password || '',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.triggered) {
+        get().addAuditLog('DISPATCH', 'INFO', 'Camera Soft-IO Relay Triggered', `${cam.name} Soft-IO #${cam.softIoTriggerId}`);
+      }
+      return {
+        triggered: Boolean(data.triggered),
+        statusCode: data.statusCode || res.status,
+        diagnostics: data.diagnostics || data.error || `HTTP ${res.status}`,
+      };
+    } catch (err: any) {
+      return { triggered: false, diagnostics: err?.message || 'Soft-IO trigger failed.' };
+    }
+  },
+
   triggerCameraSoftIo: async () => {
     const armed = get().cameras.filter((c) => c.triggerOnPanic && c.host);
     if (armed.length === 0) return;
-    const credsMap = getStoredJSON<Record<string, { username: string; password: string }>>('sl_hikvision_local_creds', {});
+    const credsMap = getStoredJSON<Record<string, CameraLocalCredentials>>('sl_hikvision_local_creds', {});
     await Promise.allSettled(
       armed.map(async (cam) => {
         const creds = credsMap[cam.id] || { username: 'admin', password: '' };

@@ -151,6 +151,7 @@ export const translationDicts: Record<string, Record<string, string>> = {
     
     // Tabs
     'tab.home': 'Home',
+    'tab.cameras': 'Live Cameras',
     'tab.contacts': 'Contacts',
     'tab.ble': 'Beacons',
     'tab.map': 'Map',

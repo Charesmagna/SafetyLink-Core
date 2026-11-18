@@ -18,6 +18,7 @@ import { GeospatialAnalytics } from './GeospatialAnalytics';
 
 import { EvidenceLedger } from './EvidenceLedger';
 import { HikvisionCameraManager } from './HikvisionCameraManager';
+import { LiveCameraFeed } from './LiveCameraFeed';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -42,6 +43,8 @@ export const OrgDashboard: React.FC = () => {
     generateReferralCode,
     isTrialEnabled,
   } = useAppStore();
+
+  const [cctvViewMode, setCctvViewMode] = useState<'LIVE' | 'ONBOARD'>('LIVE');
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
 
@@ -1153,8 +1156,42 @@ export const OrgDashboard: React.FC = () => {
         )}
 
         {activeSubTab === 'cctv' && (
-          <div className="glass-panel rounded-2xl p-5 animate-fadeIn">
-            <HikvisionCameraManager scope="ORG" />
+          <div className="glass-panel rounded-2xl p-5 animate-fadeIn space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/70 pb-3">
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider font-mono text-emerald-400">
+                  Organization CCTV Command &amp; Hikvision Deployment
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Switch between the live WebRTC quad wall (PTZ, talkback, snapshots) and zero-IT camera onboarding.
+                </p>
+              </div>
+              <div className="inline-flex items-center p-1 rounded-lg bg-slate-950 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setCctvViewMode('LIVE')}
+                  className={`px-3 py-1.5 text-[10px] font-mono font-bold uppercase rounded-md transition-colors ${
+                    cctvViewMode === 'LIVE' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Live WebRTC Wall
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCctvViewMode('ONBOARD')}
+                  className={`px-3 py-1.5 text-[10px] font-mono font-bold uppercase rounded-md transition-colors ${
+                    cctvViewMode === 'ONBOARD' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Fleet &amp; Onboarding
+                </button>
+              </div>
+            </div>
+            {cctvViewMode === 'LIVE' ? (
+              <LiveCameraFeed scope="ORG" />
+            ) : (
+              <HikvisionCameraManager scope="ORG" />
+            )}
           </div>
         )}
         

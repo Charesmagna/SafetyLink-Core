@@ -100,7 +100,7 @@
     },
     "CameraDevice": {
       "title": "CameraDevice",
-      "description": "Organization or user CCTV/Hikvision camera onboarding metadata (no raw passwords stored in Firestore).",
+      "description": "Organization or user CCTV/Hikvision camera onboarding & WebRTC metadata (no raw passwords or tokens stored in Firestore).",
       "type": "object",
       "properties": {
         "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
@@ -109,9 +109,30 @@
         "name": { "type": "string", "minLength": 1, "maxLength": 100 },
         "brand": { "type": "string", "enum": ["HIKVISION", "HILOOK", "ONVIF_GENERIC"] },
         "mode": { "type": "string", "enum": ["HIK_CONNECT_P2P", "LAN_ISAPI", "WHEP_HLS_RELAY"] },
+        "signalingMode": { "type": "string", "enum": ["WHEP_DIRECT", "SERVER_PROXY", "LAN_ISAPI_POLL", "HIK_CONNECT_P2P"] },
+        "streamProfile": { "type": "string", "enum": ["MAIN_HD", "SUB_MOBILE"] },
         "serialNumber": { "type": "string", "maxLength": 64 },
         "host": { "type": "string", "maxLength": 128 },
+        "httpPort": { "type": "number" },
+        "rtspPort": { "type": "number" },
         "channel": { "type": "number" },
+        "whepUrl": { "type": "string", "maxLength": 512 },
+        "stunServers": { "type": "array", "maxItems": 5, "items": { "type": "string", "maxLength": 200 } },
+        "turnUrls": { "type": "array", "maxItems": 4, "items": { "type": "string", "maxLength": 200 } },
+        "ptzEnabled": { "type": "boolean" },
+        "twoWayAudioEnabled": { "type": "boolean" },
+        "ptzPresets": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "properties": {
+              "presetId": { "type": "number" },
+              "label": { "type": "string", "maxLength": 40 }
+            },
+            "required": ["presetId", "label"]
+          }
+        },
         "softIoTriggerId": { "type": "number" },
         "triggerOnPanic": { "type": "boolean" },
         "status": { "type": "string", "enum": ["UNVERIFIED", "ONLINE", "OFFLINE", "ERROR"] },

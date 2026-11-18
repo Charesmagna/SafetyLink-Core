@@ -1087,6 +1087,120 @@ Rules:
     );
   };
 
+  function parseDigestChallenge(headerValue: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    const trimmed = headerValue.replace(/^Digest\s+/i, "");
+    const regex = /([a-zA-Z0-9_-]+)=(?:"([^"]*)"|([^,\s]*))/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(trimmed)) !== null) {
+      out[m[1].toLowerCase()] = m[2] !== undefined ? m[2] : (m[3] || "");
+    }
+    return out;
+  }
+
+  function buildDigestAuthHeader(
+    method: string,
+    uriPath: string,
+    username: string,
+    password: string,
+    challenge: Record<string, string>
+  ): string {
+    const algRaw = (challenge.algorithm || "MD5").toUpperCase();
+    const hashName = algRaw.includes("SHA-256") ? "sha256" : "md5";
+    const h = (val: string) => crypto.createHash(hashName).update(val).digest("hex");
+
+    const realm = challenge.realm || "";
+    const nonce = challenge.nonce || "";
+    const cnonce = crypto.randomBytes(8).toString("hex");
+    const nc = "00000001";
+    const qopList = (challenge.qop || "").split(",").map((s) => s.trim().toLowerCase());
+    const qop = qopList.includes("auth") ? "auth" : (challenge.qop ? qopList[0] : "");
+
+    let ha1 = h(`${username}:${realm}:${password}`);
+    if (algRaw.endsWith("-SESS")) {
+      ha1 = h(`${ha1}:${nonce}:${cnonce}`);
+    }
+    const ha2 = h(`${method.toUpperCase()}:${uriPath}`);
+    const responseHash = qop
+      ? h(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
+      : h(`${ha1}:${nonce}:${ha2}`);
+
+    const parts = [
+      `username="${username.replace(/"/g, "")}"`,
+      `realm="${realm}"`,
+      `nonce="${nonce}"`,
+      `uri="${uriPath}"`,
+      `algorithm="${algRaw}"`,
+      `response="${responseHash}"`,
+    ];
+    if (challenge.opaque) parts.push(`opaque="${challenge.opaque}"`);
+    if (qop) {
+      parts.push(`qop=${qop}`, `nc=${nc}`, `cnonce="${cnonce}"`);
+    }
+    return `Digest ${parts.join(", ")}`;
+  }
+
+  async function fetchWithHikvisionAuth(
+    urlStr: string,
+    init: RequestInit & { timeoutMs?: number } = {},
+    username = "admin",
+    password = ""
+  ): Promise<Response> {
+    const { timeoutMs = 4000, headers: baseHeaders, ...restInit } = init;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const initialHeaders: Record<string, string> = {
+        ...(baseHeaders as Record<string, string> | undefined),
+      };
+      if (username && !initialHeaders.Authorization) {
+        initialHeaders.Authorization =
+          "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64");
+      }
+
+      const firstRes = await fetch(urlStr, {
+        ...restInit,
+        headers: initialHeaders,
+        signal: ctrl.signal,
+      });
+
+      if (firstRes.status === 401 && username) {
+        const wwwAuth = firstRes.headers.get("www-authenticate") || "";
+        if (/^Digest\s+/i.test(wwwAuth)) {
+          const challenge = parseDigestChallenge(wwwAuth);
+          const parsedUrl = new URL(urlStr);
+          const uriPath = `${parsedUrl.pathname}${parsedUrl.search}`;
+          const digestHeader = buildDigestAuthHeader(
+            String(restInit.method || "GET"),
+            uriPath,
+            username,
+            password || "",
+            challenge
+          );
+          const retryHeaders: Record<string, string> = {
+            ...(baseHeaders as Record<string, string> | undefined),
+            Authorization: digestHeader,
+          };
+          const retryCtrl = new AbortController();
+          const retryTimer = setTimeout(() => retryCtrl.abort(), timeoutMs);
+          try {
+            return await fetch(urlStr, {
+              ...restInit,
+              headers: retryHeaders,
+              signal: retryCtrl.signal,
+            });
+          } finally {
+            clearTimeout(retryTimer);
+          }
+        }
+      }
+
+      return firstRes;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   app.post("/api/hikvision/probe", async (req, res) => {
     try {
       const { mode, host, httpPort = 80, channel = 101, username = "admin", password = "", relayUrl } = req.body || {};
@@ -1104,12 +1218,15 @@ Rules:
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 3500);
         try {
-          const r = await fetch(parsed.toString(), { method: "HEAD", signal: ctrl.signal });
+          const r = await fetch(parsed.toString(), { method: "OPTIONS", signal: ctrl.signal });
           clearTimeout(timer);
           return res.json({
-            reachable: r.ok || r.status === 405,
+            reachable: r.ok || r.status === 405 || r.status === 204 || r.status === 401,
             statusCode: r.status,
-            diagnostics: r.ok ? "Relay stream endpoint responded." : `Relay returned HTTP ${r.status}.`,
+            diagnostics:
+              r.ok || r.status === 204 || r.status === 405
+                ? `Relay signaling endpoint responded (HTTP ${r.status}).`
+                : `Relay returned HTTP ${r.status}.`,
           });
         } catch (err: any) {
           clearTimeout(timer);
@@ -1127,35 +1244,28 @@ Rules:
       const cleanHost = host.trim();
       const portNum = Number(httpPort) || 80;
       const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
-      const authHeader = username
-        ? "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64")
-        : undefined;
 
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 3500);
       try {
-        const infoRes = await fetch(`${base}/ISAPI/System/deviceInfo`, {
-          method: "GET",
-          headers: authHeader ? { Authorization: authHeader } : {},
-          signal: ctrl.signal,
-        });
-        clearTimeout(timer);
+        const infoRes = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/System/deviceInfo`,
+          { method: "GET", timeoutMs: 3800 },
+          username,
+          password
+        );
 
         let snapshotPreviewBase64: string | undefined;
         if (infoRes.ok || infoRes.status === 401) {
-          // Try fetching channel snapshot when Basic auth succeeds
           if (infoRes.ok) {
             try {
-              const snapCtrl = new AbortController();
-              const snapTimer = setTimeout(() => snapCtrl.abort(), 3500);
-              const snapRes = await fetch(`${base}/ISAPI/Streaming/channels/${Number(channel) || 101}/picture`, {
-                headers: authHeader ? { Authorization: authHeader } : {},
-                signal: snapCtrl.signal,
-              });
-              clearTimeout(snapTimer);
+              const snapRes = await fetchWithHikvisionAuth(
+                `${base}/ISAPI/Streaming/channels/${Number(channel) || 101}/picture`,
+                { method: "GET", timeoutMs: 3800 },
+                username,
+                password
+              );
               if (snapRes.ok) {
                 const buf = Buffer.from(await snapRes.arrayBuffer());
-                if (buf.byteLength > 0 && buf.byteLength < 1024 * 1024) {
+                if (buf.byteLength > 0 && buf.byteLength < 2 * 1024 * 1024) {
                   snapshotPreviewBase64 = `data:image/jpeg;base64,${buf.toString("base64")}`;
                 }
               }
@@ -1170,8 +1280,8 @@ Rules:
             snapshotPreviewBase64,
             isapiUrl: `${base}/ISAPI/System/IO/softInputs/trigger?format=json`,
             diagnostics: infoRes.ok
-              ? "Hikvision ISAPI responded OK."
-              : "Camera reached over network (HTTP 401 — verify device username/verification password or digest auth on LAN).",
+              ? "Hikvision ISAPI authenticated & responded OK."
+              : "Camera reached over network (HTTP 401 — verify camera username/password).",
           });
         }
 
@@ -1181,11 +1291,10 @@ Rules:
           diagnostics: `ISAPI returned HTTP ${infoRes.status}.`,
         });
       } catch (err: any) {
-        clearTimeout(timer);
         return res.json({
           reachable: false,
           statusCode: 0,
-          diagnostics: `Cannot reach ${cleanHost}:${portNum} from cloud server (${err?.message || "timeout"}). Expected for private LAN IPs—run LAN probe on customer Wi-Fi or configure go2rtc/Cloudflare Tunnel.`,
+          diagnostics: `Cannot reach ${cleanHost}:${portNum} from cloud server (${err?.message || "timeout"}). Expected for private LAN IPs—connect via site relay or Cloudflare Tunnel.`,
         });
       }
     } catch (e: any) {
@@ -1202,27 +1311,249 @@ Rules:
       const cleanHost = host.trim();
       const portNum = Number(httpPort) || 80;
       const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
-      const authHeader = "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64");
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 3500);
       try {
-        const r = await fetch(`${base}/ISAPI/System/IO/softInputs/trigger?format=json`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: authHeader,
+        const r = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/System/IO/softInputs/trigger?format=json`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ SoftIO: { id: Number(softIoTriggerId) || 1, state: "active" } }),
+            timeoutMs: 3800,
           },
-          body: JSON.stringify({ SoftIO: { id: Number(softIoTriggerId) || 1, state: "active" } }),
-          signal: ctrl.signal,
+          username,
+          password
+        );
+        return res.json({
+          triggered: r.ok,
+          statusCode: r.status,
+          diagnostics: r.ok
+            ? `Soft-IO #${Number(softIoTriggerId) || 1} triggered (HTTP ${r.status}).`
+            : `Camera responded HTTP ${r.status} on Soft-IO trigger.`,
         });
-        clearTimeout(timer);
-        return res.json({ triggered: r.ok, statusCode: r.status });
       } catch (err: any) {
-        clearTimeout(timer);
         return res.status(502).json({ triggered: false, error: err?.message || "Camera unreachable from server" });
       }
     } catch (e: any) {
       return res.status(500).json({ triggered: false, error: e?.message || "Trigger failed" });
+    }
+  });
+
+  // --- Hikvision Snapshot Frame Relay (LAN ISAPI Fallback & High-Res Evidence) ---
+  app.post("/api/hikvision/snapshot", async (req, res) => {
+    try {
+      const { host, httpPort = 80, channel = 102, username = "admin", password = "" } = req.body || {};
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ ok: false, error: "Valid camera host required." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+      const chNum = Math.max(1, Math.min(1024, Number(channel) || 102));
+
+      try {
+        const r = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/Streaming/channels/${chNum}/picture`,
+          { method: "GET", timeoutMs: 4000 },
+          username,
+          password
+        );
+        if (!r.ok) {
+          return res.status(r.status === 401 ? 401 : 502).json({
+            ok: false,
+            statusCode: r.status,
+            diagnostics: r.status === 401 ? "HTTP 401: Verify camera username/password." : `Snapshot returned HTTP ${r.status}.`,
+          });
+        }
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.byteLength === 0 || buf.byteLength > 2 * 1024 * 1024) {
+          return res.status(413).json({ ok: false, diagnostics: "Snapshot payload empty or exceeded 2MB cap." });
+        }
+        return res.json({
+          ok: true,
+          statusCode: r.status,
+          capturedAt: Date.now(),
+          imageBase64: `data:image/jpeg;base64,${buf.toString("base64")}`,
+          diagnostics: `Frame captured (${Math.round(buf.byteLength / 1024)} KB)`,
+        });
+      } catch (err: any) {
+        return res.status(502).json({ ok: false, diagnostics: err?.message || "Camera snapshot timed out." });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, diagnostics: e?.message || "Snapshot failed." });
+    }
+  });
+
+  // --- Hikvision ISAPI PTZ Control (Continuous Move, Release Stop, Preset Recall) ---
+  app.post("/api/hikvision/ptz", async (req, res) => {
+    try {
+      const {
+        host,
+        httpPort = 80,
+        channel = 101,
+        action = "STOP",
+        pan = 0,
+        tilt = 0,
+        zoom = 0,
+        presetId = 1,
+        username = "admin",
+        password = "",
+      } = req.body || {};
+
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ ok: false, diagnostics: "Valid camera host required for PTZ." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+
+      // Hikvision NVR stream channels use 101/102, 201/202, etc., whereas PTZCtrl uses 1-based channel 1, 2...
+      const rawCh = Number(channel) || 101;
+      const ptzCh = rawCh >= 100 ? Math.max(1, Math.floor(rawCh / 100)) : Math.max(1, rawCh);
+
+      let url = "";
+      let xmlBody = "<PTZData></PTZData>";
+
+      if (action === "PRESET") {
+        const cleanPreset = Math.max(1, Math.min(300, Number(presetId) || 1));
+        url = `${base}/ISAPI/PTZCtrl/channels/${ptzCh}/presets/${cleanPreset}/goto`;
+      } else {
+        const clamp = (v: any) => Math.max(-100, Math.min(100, Math.round(Number(v) || 0)));
+        const p = action === "STOP" ? 0 : clamp(pan);
+        const t = action === "STOP" ? 0 : clamp(tilt);
+        const z = action === "STOP" ? 0 : clamp(zoom);
+        url = `${base}/ISAPI/PTZCtrl/channels/${ptzCh}/continuous`;
+        xmlBody = `<?xml version="1.0" encoding="UTF-8"?><PTZData><pan>${p}</pan><tilt>${t}</tilt><zoom>${z}</zoom></PTZData>`;
+      }
+
+      try {
+        const r = await fetchWithHikvisionAuth(
+          url,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/xml" },
+            body: xmlBody,
+            timeoutMs: 3000,
+          },
+          username,
+          password
+        );
+        return res.json({
+          ok: r.ok,
+          statusCode: r.status,
+          ptzChannel: ptzCh,
+          diagnostics: r.ok
+            ? action === "PRESET"
+              ? `Preset #${presetId} recalled on ch ${ptzCh}.`
+              : action === "STOP"
+              ? `PTZ stopped (ch ${ptzCh}).`
+              : `PTZ active on ch ${ptzCh}.`
+            : `ISAPI PTZ returned HTTP ${r.status}.`,
+        });
+      } catch (err: any) {
+        return res.status(502).json({
+          ok: false,
+          diagnostics: err?.message || "PTZ host unreachable from server.",
+        });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, diagnostics: e?.message || "PTZ failed." });
+    }
+  });
+
+  // --- Signed Server-Proxied WebRTC Signaling (WHEP / go2rtc SDP Exchange & Session Teardown) ---
+  app.post("/api/hikvision/webrtc/signal", async (req, res) => {
+    try {
+      const {
+        action = "OFFER",
+        targetUrl,
+        sdpOffer,
+        bearerToken,
+        username,
+        password,
+      } = req.body || {};
+
+      if (!targetUrl || typeof targetUrl !== "string") {
+        return res.status(400).json({ ok: false, error: "Signaling targetUrl is required." });
+      }
+      let parsed: URL;
+      try {
+        parsed = new URL(targetUrl.trim());
+      } catch {
+        return res.status(400).json({ ok: false, error: "Invalid signaling targetUrl." });
+      }
+      if (!["http:", "https:"].includes(parsed.protocol) || isBlockedMetadataHost(parsed.hostname)) {
+        return res.status(400).json({ ok: false, error: "Unsupported or blocked signaling host." });
+      }
+
+      const headers: Record<string, string> = {};
+      if (typeof bearerToken === "string" && bearerToken.trim()) {
+        headers.Authorization = `Bearer ${bearerToken.trim()}`;
+      }
+
+      if (action === "DELETE") {
+        try {
+          const delRes = await fetchWithHikvisionAuth(
+            parsed.toString(),
+            { method: "DELETE", headers, timeoutMs: 3500 },
+            username || "",
+            password || ""
+          );
+          return res.json({ ok: delRes.ok || delRes.status === 404, statusCode: delRes.status });
+        } catch (err: any) {
+          return res.status(502).json({ ok: false, error: err?.message || "Teardown failed" });
+        }
+      }
+
+      if (!sdpOffer || typeof sdpOffer !== "string" || sdpOffer.length > 65536) {
+        return res.status(400).json({ ok: false, error: "Valid SDP offer required." });
+      }
+
+      headers["Content-Type"] = "application/sdp";
+      headers.Accept = "application/sdp";
+
+      try {
+        const sigRes = await fetchWithHikvisionAuth(
+          parsed.toString(),
+          {
+            method: "POST",
+            headers,
+            body: sdpOffer,
+            timeoutMs: 5000,
+          },
+          username || "",
+          password || ""
+        );
+        const answerText = await sigRes.text();
+        if (!sigRes.ok) {
+          return res.status(sigRes.status === 401 ? 401 : 502).json({
+            ok: false,
+            statusCode: sigRes.status,
+            error: `Signaling gateway returned HTTP ${sigRes.status}${answerText ? `: ${answerText.slice(0, 140)}` : ""}`,
+          });
+        }
+        const locationHeader = sigRes.headers.get("location");
+        let resolvedSessionUrl: string | undefined;
+        if (locationHeader) {
+          try {
+            resolvedSessionUrl = new URL(locationHeader, parsed.toString()).toString();
+          } catch {
+            resolvedSessionUrl = undefined;
+          }
+        }
+        return res.json({
+          ok: true,
+          statusCode: sigRes.status,
+          sdpAnswer: answerText,
+          locationHeader: resolvedSessionUrl,
+        });
+      } catch (err: any) {
+        return res.status(502).json({
+          ok: false,
+          error: `WebRTC signaling relay failed (${err?.message || "timeout"}).`,
+        });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: e?.message || "WebRTC signal proxy error." });
     }
   });
 

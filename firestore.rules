@@ -118,8 +118,11 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'ownerUid', 'orgId', 'name', 'brand', 'mode', 'channel', 'triggerOnPanic', 'status', 'createdAt'])
         && data.keys().hasOnly([
           'id', 'ownerUid', 'orgId', 'name', 'brand', 'mode',
-          'serialNumber', 'host', 'channel', 'softIoTriggerId',
-          'triggerOnPanic', 'status', 'createdAt', 'updatedAt'
+          'signalingMode', 'streamProfile',
+          'serialNumber', 'host', 'httpPort', 'rtspPort', 'channel',
+          'whepUrl', 'stunServers', 'turnUrls',
+          'ptzEnabled', 'twoWayAudioEnabled', 'ptzPresets',
+          'softIoTriggerId', 'triggerOnPanic', 'status', 'createdAt', 'updatedAt'
         ])
         && data.id is string && data.id == cameraId && isValidId(data.id)
         && data.ownerUid is string && isValidId(data.ownerUid)
@@ -127,9 +130,19 @@ service cloud.firestore {
         && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
         && data.brand in ['HIKVISION', 'HILOOK', 'ONVIF_GENERIC']
         && data.mode in ['HIK_CONNECT_P2P', 'LAN_ISAPI', 'WHEP_HLS_RELAY']
+        && (!('signalingMode' in data) || data.signalingMode in ['WHEP_DIRECT', 'SERVER_PROXY', 'LAN_ISAPI_POLL', 'HIK_CONNECT_P2P'])
+        && (!('streamProfile' in data) || data.streamProfile in ['MAIN_HD', 'SUB_MOBILE'])
         && (!('serialNumber' in data) || (data.serialNumber is string && data.serialNumber.size() <= 64))
         && (!('host' in data) || (data.host is string && data.host.size() <= 128))
+        && (!('httpPort' in data) || (data.httpPort is number && data.httpPort >= 1 && data.httpPort <= 65535))
+        && (!('rtspPort' in data) || (data.rtspPort is number && data.rtspPort >= 1 && data.rtspPort <= 65535))
         && data.channel is number && data.channel >= 1 && data.channel <= 1024
+        && (!('whepUrl' in data) || (data.whepUrl is string && data.whepUrl.size() <= 512 && data.whepUrl.matches('^https?://[^@]*$')))
+        && (!('stunServers' in data) || (data.stunServers is list && data.stunServers.size() <= 5))
+        && (!('turnUrls' in data) || (data.turnUrls is list && data.turnUrls.size() <= 4))
+        && (!('ptzEnabled' in data) || data.ptzEnabled is bool)
+        && (!('twoWayAudioEnabled' in data) || data.twoWayAudioEnabled is bool)
+        && (!('ptzPresets' in data) || (data.ptzPresets is list && data.ptzPresets.size() <= 8))
         && (!('softIoTriggerId' in data) || (data.softIoTriggerId is number && data.softIoTriggerId >= 1 && data.softIoTriggerId <= 64))
         && data.triggerOnPanic is bool
         && data.status in ['UNVERIFIED', 'ONLINE', 'OFFLINE', 'ERROR'];
@@ -386,7 +399,10 @@ service cloud.firestore {
               )
             ) &&
             incoming().diff(existing()).affectedKeys().hasOnly([
-              'name', 'brand', 'mode', 'serialNumber', 'host', 'channel',
+              'name', 'brand', 'mode', 'signalingMode', 'streamProfile',
+              'serialNumber', 'host', 'httpPort', 'rtspPort', 'channel',
+              'whepUrl', 'stunServers', 'turnUrls',
+              'ptzEnabled', 'twoWayAudioEnabled', 'ptzPresets',
               'softIoTriggerId', 'triggerOnPanic', 'status', 'updatedAt'
             ])
           )
