@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../../utils/store';
-import { BatteryIndicator } from '../common/BatteryIndicator';
 
 interface HeaderProps {
   onLogin?: () => void;
@@ -401,7 +400,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             )}
 
             {/* Hardware Real-time Battery Indicator */}
-            <BatteryIndicator theme={isLight ? 'light' : 'dark'} />
+            <a href="#download" style={{ background: 'linear-gradient(90deg,#10b981,#34d399)', color: '#04121c', fontWeight: 800, fontSize: '12px', letterSpacing: '.06em', padding: '8px 14px', borderRadius: '8px', textDecoration: 'none', whiteSpace: 'nowrap' }}>⬇️ DOWNLOAD</a>
 
             {/* Theme Toggle (Moon / Sun) */}
             <button
