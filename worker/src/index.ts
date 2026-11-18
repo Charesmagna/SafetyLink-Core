@@ -91,7 +91,8 @@ const fromB64Url = (b64: string) => {
 };
 
 const makeToken = async (env: Env, payload: Record<string, any>): Promise<string> => {
-  const secret = env.JWT_SECRET || 'safetylink-dev-signing-secret';
+  const secret = env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
   const body = toB64Url(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + 7 * 86400_000 }));
   const sig = await hexHmac(secret, body);
   return `${body}.${sig}`;
@@ -102,7 +103,8 @@ const verifyToken = async (env: Env, token: string): Promise<any> => {
     const parts = String(token || '').split('.');
     if (parts.length !== 2) return null;
     const [body, givenSig] = parts;
-    const secret = env.JWT_SECRET || 'safetylink-dev-signing-secret';
+    const secret = env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
     const expectedSig = await hexHmac(secret, body);
     if (!safeEq(givenSig, expectedSig)) return null;
     const p = JSON.parse(fromB64Url(body));
