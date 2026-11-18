@@ -1,217 +1,898 @@
-<!doctype html>
-<html lang="en" data-theme="light">
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f4f7f8">
-  <meta name="description" content="Explore the SafetyLink website preview — connected personal, community and workplace safety by TM Media Solutions.">
-  <meta property="og:title" content="SafetyLink | Connected safety, coordinated response">
-  <meta property="og:description" content="A connected safety platform for people, communities and organisations.">
-  <title>SafetyLink | Website Preview</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafetyLink Core — Family &amp; Community Security Platform</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            navy: { 950: '#060D1A', 900: '#0B1B32', 800: '#132847', 700: '#1E3A5F' },
+            emeraldBrand: { 600: '#0F8A54', 500: '#10B981', 50: '#ECFDF5' },
+            sos: { 600: '#DC2626', 500: '#EF4444' }
+          }
+        }
+      }
+    };
+  </script>
   <style>
-    :root{color-scheme:light;--bg:#f4f7f8;--surface:#fff;--surface-2:#eaf0f2;--ink:#10243a;--muted:#526579;--line:#dce5e9;--navy:#102b49;--navy-2:#0a2038;--green:#0b8b79;--green-soft:#e0f3ee;--orange:#ef762f;--shadow:0 22px 60px rgba(16,43,73,.10);--glass:rgba(255,255,255,.88)}
-    :root[data-theme=dark]{color-scheme:dark;--bg:#071522;--surface:#0e2234;--surface-2:#132b40;--ink:#edf4f7;--muted:#afc0cc;--line:#294154;--navy:#d9eaf3;--navy-2:#b9d2df;--green:#5ad0b2;--green-soft:#123c3a;--orange:#ff9a5d;--shadow:0 24px 65px rgba(0,0,0,.28);--glass:rgba(8,27,44,.9)}
-    *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:92px}body{margin:0;background:var(--bg);color:var(--ink);font-family:"DM Sans",system-ui,sans-serif;line-height:1.55;overflow-x:hidden;transition:background .25s,color .25s}a{color:inherit}button,input,textarea,select{font:inherit}button,a{-webkit-tap-highlight-color:transparent}img{max-width:100%}
-    .skip{position:fixed;top:10px;left:10px;z-index:1000;padding:12px 16px;background:var(--surface);color:var(--ink);border:2px solid var(--green);border-radius:8px;transform:translateY(-160%)}.skip:focus{transform:translateY(0)}
-    .ambient{position:fixed;inset:0;z-index:-2;background:radial-gradient(ellipse at 12% 10%,rgba(11,139,121,.16),transparent 38%),linear-gradient(135deg,#071a2c,#102b49)}.ambient video{position:absolute;width:100%;height:100%;object-fit:cover;opacity:.15}.ambient:after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(5,19,33,.78),rgba(7,26,43,.38) 52%,rgba(5,19,33,.76))}
-    .wrap{width:min(1160px,calc(100% - 44px));margin-inline:auto}.preview-strip{position:relative;z-index:30;padding:8px 18px;text-align:center;background:var(--green-soft);color:var(--green);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.preview-strip a{margin-left:12px;text-decoration:underline;text-underline-offset:3px}
-    .header{position:sticky;top:0;z-index:25;background:var(--glass);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}.nav{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;font:800 22px Manrope,sans-serif;letter-spacing:-.7px;color:var(--ink)}.brand img{width:46px;height:46px;object-fit:contain}.nav-links{display:flex;align-items:center;gap:25px}.nav-links a{font-size:13px;font-weight:700;color:var(--muted);text-decoration:none;transition:color .2s}.nav-links a:hover{color:var(--green)}.nav-actions{display:flex;align-items:center;gap:9px}.theme-button,.menu-button{min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:800;cursor:pointer}.menu-button{display:none}.mobile-nav{display:none;padding:0 0 16px}.mobile-nav a{display:block;padding:12px 4px;border-top:1px solid var(--line);font-weight:700;text-decoration:none;color:var(--ink)}
-    .button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:13px 20px;border:1px solid transparent;border-radius:10px;background:var(--orange);color:#fff;text-decoration:none;font-size:13px;font-weight:800;box-shadow:0 9px 22px rgba(239,118,47,.2);transition:transform .2s,box-shadow .2s}.button:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(239,118,47,.26)}.button.secondary{background:var(--navy-2);color:var(--bg);box-shadow:none}.button.outline{background:transparent;border-color:var(--line);color:var(--ink);box-shadow:none}
-    .hero{position:relative;padding:76px 0 92px;color:#fff}.hero-grid{display:grid;grid-template-columns:1.04fr .96fr;align-items:center;gap:clamp(32px,5vw,72px)}.eyebrow{display:inline-flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid rgba(90,208,178,.42);border-radius:999px;background:rgba(8,35,51,.55);color:#9be7d2;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.eyebrow:before{content:"";width:7px;height:7px;border-radius:50%;background:#5ad0b2;box-shadow:0 0 0 4px rgba(90,208,178,.14)}.hero h1{max-width:700px;margin:22px 0 18px;font:800 clamp(42px,6.2vw,74px)/1.02 Manrope,sans-serif;letter-spacing:-3px;text-wrap:balance}.hero h1 span{color:#74d8bd}.hero-copy{max-width:590px;color:#e0eaf0;font-size:16px;line-height:1.8}.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:27px}.hero .button.secondary{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4);color:#fff;backdrop-filter:blur(10px)}.hero-media{position:relative;min-height:455px;overflow:hidden;border:1px solid rgba(255,255,255,.35);border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,.34)}.hero-media img{position:absolute;width:100%;height:100%;inset:0;object-fit:cover}.hero-media:after{content:"";position:absolute;inset:40% 0 0;background:linear-gradient(transparent,rgba(3,17,30,.8))}.hero-caption{position:absolute;z-index:1;left:24px;right:24px;bottom:22px;color:#fff}.hero-caption strong{font:800 20px Manrope,sans-serif}.hero-caption p{margin:5px 0 0;color:#d9e5eb;font-size:12px}
-    .proof-wrap{position:relative;z-index:2;margin-top:-34px}.proof{display:grid;grid-template-columns:repeat(3,1fr);overflow:hidden;border:1px solid var(--line);border-radius:18px;background:var(--surface);box-shadow:var(--shadow)}.proof-item{display:flex;gap:15px;align-items:flex-start;padding:25px}.proof-item+.proof-item{border-left:1px solid var(--line)}.proof-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:13px;background:var(--green-soft);color:var(--green);font-size:20px}.proof h3{margin:1px 0 5px;font:800 14px Manrope,sans-serif;color:var(--ink)}.proof p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
-    section{padding:88px 0}.section-head{max-width:720px;margin:0 auto 38px;text-align:center}.kicker{color:var(--green);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.section-head h2,.split-copy h2,.enterprise-copy h2{margin:12px 0;font:800 clamp(30px,4.3vw,48px)/1.1 Manrope,sans-serif;letter-spacing:-1.8px;color:var(--ink);text-wrap:balance}.section-head p,.split-copy>p{margin:0;color:var(--muted);font-size:15px;line-height:1.8}.surface{border:1px solid var(--line);border-radius:20px;background:var(--surface);box-shadow:var(--shadow)}
-    .solutions{display:grid;grid-template-columns:repeat(4,1fr);gap:17px}.solution{overflow:hidden;transition:transform .22s,box-shadow .22s}.solution:hover{transform:translateY(-5px);box-shadow:0 26px 60px rgba(16,43,73,.15)}.solution img{display:block;width:100%;height:190px;object-fit:cover;background:var(--surface-2)}.solution-body{padding:20px}.solution h3{margin:0 0 8px;font:800 16px Manrope,sans-serif;color:var(--ink)}.solution p{margin:0;color:var(--muted);font-size:12px;line-height:1.7}
-    .split{display:grid;grid-template-columns:.9fr 1.1fr;gap:24px;align-items:stretch}.split-copy{padding:clamp(26px,4vw,44px)}.steps{display:grid;gap:17px;margin-top:27px}.step{display:flex;gap:13px;align-items:flex-start}.step-no{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:var(--green-soft);color:var(--green);font-size:12px;font-weight:900}.step strong{display:block;margin:1px 0 3px;color:var(--ink);font-size:13px}.step span{display:block;color:var(--muted);font-size:12px;line-height:1.6}.dashboard{overflow:hidden}.dashboard img{display:block;width:100%;height:100%;min-height:360px;object-fit:cover}.dashboard-caption{padding:15px 19px;border-top:1px solid var(--line);color:var(--muted);font-size:11px}
-    .gallery{padding:17px}.gallery-main{position:relative;height:clamp(310px,44vw,510px);overflow:hidden;border-radius:14px;background:var(--surface-2)}.gallery-main img{width:100%;height:100%;object-fit:cover;display:block}.gallery-caption{position:absolute;left:0;right:0;bottom:0;padding:38px 26px 22px;background:linear-gradient(transparent,rgba(3,17,30,.88));color:#fff}.gallery-caption strong{display:block;font:800 20px Manrope,sans-serif}.gallery-caption span{display:block;margin-top:4px;color:#dce8ee;font-size:12px}.gallery-controls{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 2px 0}.gallery-dots{display:flex;gap:7px}.gallery-dot{width:8px;height:8px;padding:0;border:0;border-radius:99px;background:#aab8c3;cursor:pointer}.gallery-dot[aria-current=true]{width:24px;background:var(--green)}.arrow{width:40px;height:40px;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--ink);font-size:20px;cursor:pointer}
-    .enterprise{display:grid;grid-template-columns:1fr 1fr;overflow:hidden;border-radius:22px;background:#102b49;box-shadow:0 28px 75px rgba(3,18,35,.2)}.enterprise-copy{padding:clamp(28px,5vw,54px);color:#fff}.enterprise-copy .kicker{color:#8be1c9}.enterprise-copy h2{color:#fff}.enterprise-copy p{color:#d3e1e9;font-size:13px;line-height:1.8}.enterprise-copy ul{padding-left:19px;color:#e0ebf0;font-size:12px;line-height:2}.enterprise-image{min-height:350px}.enterprise-image img{display:block;width:100%;height:100%;object-fit:cover}
-    .contact-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:20px}.contact-info,.contact-form{padding:clamp(24px,4vw,36px)}.contact-info h3,.contact-form h3{margin:10px 0 8px;font:800 23px Manrope,sans-serif;color:var(--ink)}.contact-info>p{color:var(--muted);font-size:13px;line-height:1.7}.contact-item{display:flex;gap:12px;margin-top:18px;color:var(--muted);font-size:12px;line-height:1.6}.contact-item b{display:block;color:var(--ink);font-size:12px}.contact-item a{color:var(--green);font-weight:800;text-decoration:none}.contact-form{display:grid;grid-template-columns:1fr 1fr;gap:13px}.contact-form h3{grid-column:1/-1}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}.field label{color:var(--ink);font-size:11px;font-weight:800}.field input,.field textarea,.field select{width:100%;min-height:44px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font-size:13px}.field textarea{min-height:110px;resize:vertical}.field input:focus,.field textarea:focus,.field select:focus{outline:3px solid rgba(11,139,121,.18);border-color:var(--green)}.form-note,.form-status{grid-column:1/-1;margin:0;color:var(--muted);font-size:11px;line-height:1.6}.contact-form .button{justify-self:start}
-    footer{margin-top:30px;padding:48px 0 22px;background:#081d30;color:#c7d6df;border-top:5px solid #0b8b79}.footer-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:28px}.footer-brand img{width:56px;height:56px;object-fit:contain;filter:brightness(0) invert(1)}footer h4{margin:0 0 13px;color:#fff;font:800 11px Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase}footer p,footer a{color:#b8c9d3;font-size:11px;line-height:1.9;text-decoration:none}footer a:hover{color:#fff}.footer-links{display:grid;gap:4px}.copyright{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:28px;padding-top:18px;border-top:1px solid rgba(255,255,255,.14);color:#8fa5b4;font-size:10px}
-    :focus-visible{outline:3px solid var(--green);outline-offset:3px;border-radius:4px}
-    @media(max-width:950px){.hero-grid{grid-template-columns:1fr}.hero{padding:60px 0 80px}.hero-media{min-height:390px}.solutions{grid-template-columns:repeat(2,1fr)}.proof{grid-template-columns:1fr}.proof-item+.proof-item{border-left:0;border-top:1px solid var(--line)}.split,.contact-grid{grid-template-columns:1fr}.enterprise{grid-template-columns:1fr}.enterprise-image{min-height:280px}.footer-grid{grid-template-columns:repeat(2,1fr)}.nav-links{gap:14px}}
-    @media(max-width:680px){.wrap{width:min(100% - 30px,1160px)}.nav{min-height:66px}.brand{font-size:19px}.brand img{width:39px;height:39px}.nav-links{display:none}.menu-button{display:inline-flex}.nav-actions .button{display:none}.mobile-nav.open{display:block}.hero{padding:48px 0 70px}.hero h1{font-size:clamp(40px,11vw,54px);letter-spacing:-2px}.hero-copy{font-size:14px}.hero-media{min-height:310px;border-radius:18px}.hero-actions .button{width:100%}.proof-wrap{margin-top:-23px}.proof-item{padding:20px}.proof-item+.proof-item{border-top:1px solid var(--line)}section{padding:62px 0}.section-head{text-align:left;margin-bottom:28px}.section-head p{font-size:14px}.solutions{grid-template-columns:1fr}.solution img{height:205px}.split-copy{padding:24px}.dashboard img{min-height:260px}.gallery{padding:11px}.gallery-main{height:300px}.gallery-caption{padding:28px 18px 18px}.gallery-caption strong{font-size:17px}.enterprise-copy{padding:27px}.enterprise-image{min-height:230px}.contact-info,.contact-form{padding:22px}.contact-form{grid-template-columns:1fr}.contact-form h3,.field.full,.form-note,.form-status{grid-column:1}.contact-form .button{width:100%}.footer-grid{grid-template-columns:1fr 1fr;gap:23px}.copyright{display:block}.copyright span{display:block;margin-top:7px}}
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important;animation:none!important}}
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sos-pulse { animation: sosPulse 2s infinite; }
+    @keyframes sosPulse {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55); }
+      70% { box-shadow: 0 0 0 18px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+    .hold-ring { transition: stroke-dashoffset 0.05s linear; }
   </style>
 </head>
-<body>
-  <a class="skip" href="#main">Skip to content</a>
-  <div class="ambient" aria-hidden="true"><video autoplay muted loop playsinline preload="metadata" poster="/logos/Safety_Link_Logo_Transparent.png"><source src="/api/r2/stream/Safetylink%2FSafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4"></video></div>
-  <div class="preview-strip">SafetyLink website preview · Design review build <a href="/">Return to live website</a></div>
-  <header class="header">
-    <div class="wrap nav">
-      <a class="brand" href="#top" aria-label="SafetyLink home"><img src="/logos/New%20SafetyLink%20Official%20Logo.svg" alt=""><span>SafetyLink</span></a>
-      <nav class="nav-links" aria-label="Main navigation">
-        <a href="#solutions">Solutions</a><a href="#how">How it works</a><a href="#platform">Platform</a><a href="#enterprise">Organisations</a><a href="#contact">Contact</a>
+<body class="bg-slate-50 text-slate-900 dark:bg-navy-950 dark:text-slate-100 antialiased transition-colors duration-200 pb-16 md:pb-0 relative overflow-x-hidden">
+
+  <!-- Constant Animated SafetyLink Logo Background Layer (Preserves safetylink.online background slot) -->
+  <div id="animatedLogoBg" class="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.04] dark:opacity-[0.08]">
+    <video id="bgLogoVideo" autoplay loop muted playsinline class="w-full h-full object-cover hidden"></video>
+    <div id="bgLogoFallback" class="w-full h-full flex items-center justify-center">
+      <img src="/preview/assets/asset-01.svg" alt="" class="w-[520px] max-w-[80vw] animate-pulse select-none" />
+    </div>
+  </div>
+
+  <!-- Top Utility Strip -->
+  <div class="relative z-40 bg-navy-900 dark:bg-black text-slate-200 text-xs py-1.5 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 font-extrabold tracking-wider text-red-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          SAFETYLINK CORE
+        </span>
+        <span class="hidden sm:inline text-slate-500">|</span>
+        <span class="hidden md:inline text-slate-300">Offline-First Multi-Channel Safety • TM Media Solutions</span>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <select id="langSelect" aria-label="Language" class="bg-navy-800 dark:bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-0.5 text-[11px] font-semibold focus:outline-none">
+          <option value="EN">ENGLISH</option>
+          <option value="ZU">ISIZULU</option>
+          <option value="AF">AFRIKAANS</option>
+          <option value="ST">SESOTHO</option>
+        </select>
+
+        <button id="themeToggleBtn" type="button" title="Toggle Light / Dark Theme" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-navy-800 dark:bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] font-semibold text-amber-300 transition">
+          <span id="themeIcon">☀️</span>
+          <span id="themeLabel">Light</span>
+        </button>
+
+        <div class="flex items-center gap-2 pl-1 border-l border-slate-700">
+          <a href="mailto:info@safetylink.online" title="Email SafetyLink" class="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition" aria-label="Email">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" title="SafetyLink on Facebook" class="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-blue-400 transition" aria-label="Facebook">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+          </a>
+          <a href="https://wa.me/27680079911" target="_blank" rel="noopener noreferrer" title="WhatsApp Support (+27 68 007 9911)" class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emeraldBrand-600 hover:bg-emerald-500 text-white font-semibold text-[11px] transition">
+            <span>WhatsApp</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky Multi-Page Header with Official SafetyLink Logo -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-navy-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <a href="#/home" data-route="home" class="route-link flex items-center gap-2.5 shrink-0">
+        <img src="/preview/assets/asset-01.svg" alt="SafetyLink TM Media Solutions" class="h-10 w-auto object-contain dark:hidden" />
+        <img src="/preview/assets/asset-01.svg" alt="SafetyLink TM Media Solutions" class="h-10 w-auto object-contain hidden dark:block rounded" />
+      </a>
+
+      <nav class="hidden xl:flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+        <a href="#/home" data-route="home" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Home</a>
+        <a href="#/features" data-route="features" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Platform Features</a>
+        <a href="#/use-cases" data-route="use-cases" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Use Cases</a>
+        <a href="#/hardware" data-route="hardware" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Hardware Config</a>
+        <a href="#/copilot" data-route="copilot" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">AI Co-Pilot</a>
+        <a href="#/pricing" data-route="pricing" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Pricing</a>
+        <a href="#/store" data-route="store" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Store</a>
+        <a href="#/control-room" data-route="control-room" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-emeraldBrand-600 dark:text-emerald-400 font-bold transition">Control Room</a>
+        <a href="#/download" data-route="download" class="route-link px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">Download</a>
       </nav>
-      <div class="nav-actions">
-        <button class="theme-button" id="themeToggle" type="button" aria-label="Switch colour theme" aria-pressed="false">☾ Dark mode</button>
-        <a class="button" href="/#download">Get SafetyLink</a>
-        <button class="menu-button" id="menuButton" type="button" aria-expanded="false" aria-controls="mobileNav">Menu</button>
+
+      <div class="flex items-center gap-2">
+        <button id="openDemoBtnHeader" type="button" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emeraldBrand-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition">
+          Get a Demo
+        </button>
+        <button id="mobileMenuBtn" type="button" aria-label="Toggle Menu" class="xl:hidden p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
       </div>
     </div>
-    <nav class="wrap mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-      <a href="#solutions">Solutions</a><a href="#how">How it works</a><a href="#platform">Platform</a><a href="#enterprise">Organisations</a><a href="#contact">Contact</a><a href="/#download">Get SafetyLink</a>
-    </nav>
+
+    <div id="mobileMenu" class="hidden xl:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-navy-900 px-4 py-3 grid grid-cols-2 gap-2 text-xs font-semibold">
+      <a href="#/home" data-route="home" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Home</a>
+      <a href="#/features" data-route="features" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Platform Features</a>
+      <a href="#/use-cases" data-route="use-cases" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Use Cases</a>
+      <a href="#/hardware" data-route="hardware" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Hardware Config</a>
+      <a href="#/copilot" data-route="copilot" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">AI Co-Pilot</a>
+      <a href="#/pricing" data-route="pricing" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Pricing</a>
+      <a href="#/store" data-route="store" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Store</a>
+      <a href="#/control-room" data-route="control-room" class="route-link mobile-nav-link p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emeraldBrand-600 dark:text-emerald-400">Control Room</a>
+      <a href="#/download" data-route="download" class="route-link mobile-nav-link p-2 rounded-lg bg-slate-50 dark:bg-slate-800">Download</a>
+      <button id="openDemoBtnMobile" type="button" class="p-2 rounded-lg bg-emeraldBrand-600 text-white font-bold">Get a Demo</button>
+    </div>
   </header>
-  <main id="main">
-    <section class="hero" id="top">
-      <div class="wrap hero-grid">
-        <div>
-          <span class="eyebrow">Connected safety · South Africa</span>
-          <h1>Safety that connects people. <span>Response that brings teams together.</span></h1>
-          <p class="hero-copy">SafetyLink brings personal alerts, trusted contacts, connected devices and organisational response workflows into one safety platform — designed for everyday life and real operational environments.</p>
-          <div class="hero-actions"><a class="button" href="/#download">Explore SafetyLink <span aria-hidden="true">→</span></a><a class="button secondary" href="#how">See how it works</a></div>
-        </div>
-        <div class="hero-media">
-          <img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_1eu4fz1eu4fz1eu4.png" alt="Community safety environment representing connected personal and neighbourhood protection" fetchpriority="high">
-          <div class="hero-caption"><strong>One connected safety experience.</strong><p>For individuals, families, communities and organisations.</p></div>
-        </div>
-      </div>
-    </section>
-    <div class="wrap proof-wrap">
-      <div class="proof">
-        <article class="proof-item"><div class="proof-icon" aria-hidden="true">⌖</div><div><h3>Location context</h3><p>Share useful location information with the people and teams involved in a response.</p></div></article>
-        <article class="proof-item"><div class="proof-icon" aria-hidden="true">◉</div><div><h3>Emergency alerts</h3><p>Initiate an alert from the SafetyLink experience and route it through configured channels.</p></div></article>
-        <article class="proof-item"><div class="proof-icon" aria-hidden="true">⇄</div><div><h3>Connected response</h3><p>Give trusted contacts and authorised response teams a clearer operational picture.</p></div></article>
-      </div>
-    </div>
-    <section id="solutions">
-      <div class="wrap">
-        <div class="section-head"><span class="kicker">One platform · Multiple environments</span><h2>Safety that fits the way people live and work.</h2><p>Different environments need different response arrangements. SafetyLink is designed to support personal use and coordinated organisational deployments without losing sight of the people at the centre of every alert.</p></div>
-        <div class="solutions">
-          <article class="solution surface"><img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_1eu4fz1eu4fz1eu4.png" alt="Residential community environment" loading="lazy"><div class="solution-body"><h3>Personal &amp; family</h3><p>Keep important safety details and trusted contacts together, with a clear way to initiate an alert.</p></div></article>
-          <article class="solution surface"><img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_41892s41892s4189.png" alt="Managed campus and community setting" loading="lazy"><div class="solution-body"><h3>Estates &amp; communities</h3><p>Support security teams with incident visibility, responder coordination and clearer handovers.</p></div></article>
-          <article class="solution surface"><img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_48euet48euet48eu.png" alt="Industrial workplace environment" loading="lazy"><div class="solution-body"><h3>Workplace safety</h3><p>Give teams a structured way to raise incidents and coordinate authorised responders.</p></div></article>
-          <article class="solution surface"><img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_k2mcd9k2mcd9k2mc.png" alt="School and university campus" loading="lazy"><div class="solution-body"><h3>Schools &amp; institutions</h3><p>Build a more connected safety process around staff, students, facilities and response roles.</p></div></article>
-        </div>
-      </div>
-    </section>
-    <section id="how">
-      <div class="wrap split">
-        <div class="split-copy surface">
-          <span class="kicker">From alert to coordinated action</span><h2>A clearer path when every moment matters.</h2>
-          <p>SafetyLink is structured around the information people need to raise, receive and manage an incident. Exact delivery depends on device permissions, network availability and the channels configured for the account or organisation.</p>
-          <div class="steps">
-            <div class="step"><span class="step-no">01</span><div><strong>Raise an alert</strong><span>Use the app or a supported connected trigger to initiate an emergency alert.</span></div></div>
-            <div class="step"><span class="step-no">02</span><div><strong>Share relevant context</strong><span>Provide available location and profile information to help recipients understand the incident.</span></div></div>
-            <div class="step"><span class="step-no">03</span><div><strong>Coordinate the response</strong><span>Configured contacts and authorised teams can receive and manage the alert through their assigned workflows.</span></div></div>
+
+  <!-- ==================== PAGE 1: HOME ==================== -->
+  <main id="page-home" class="page-view relative z-10">
+    <!-- Hero: Protect What Matters Most + Laptop Dashboard + Phone & iTag Showcase -->
+    <section class="bg-white/90 dark:bg-navy-950/90 border-b border-slate-200 dark:border-slate-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-10 lg:py-14 grid lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-6 space-y-5">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emeraldBrand-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-wide">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            SafetyLink Core • South Africa
+          </div>
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-navy-900 dark:text-white leading-[1.06]">
+            PROTECT WHAT <span class="text-emeraldBrand-600 dark:text-emerald-400">MATTERS MOST.</span>
+          </h1>
+          <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
+            Smarter family and community security—from your <strong class="text-navy-900 dark:text-white">R149 HST-01 BLE panic keyfob</strong> to the mobile app and 24/7 organization control-room dashboard.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <a href="#/pricing" data-route="pricing" class="route-link inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-emeraldBrand-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition">
+              Get SafetyLink Now →
+            </a>
+            <a href="#/control-room" data-route="control-room" class="route-link inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-navy-900 dark:bg-slate-800 hover:bg-navy-800 text-white font-semibold text-sm transition">
+              Open Control Room
+            </a>
           </div>
         </div>
-        <div class="dashboard surface"><img src="/api/r2/stream/Safetylink%2FIMG_20260914_221811.png" alt="SafetyLink command and monitoring interface concept" loading="lazy"><div class="dashboard-caption">SafetyLink platform imagery · Interface and deployment capabilities depend on the active product configuration.</div></div>
-      </div>
-    </section>
-    <section id="platform">
-      <div class="wrap">
-        <div class="section-head"><span class="kicker">Inside the platform</span><h2>Designed around real operational environments.</h2><p>Explore selected SafetyLink media and platform visuals. The gallery uses the existing SafetyLink media stream rather than duplicate website uploads.</p></div>
-        <div class="gallery surface">
-          <div class="gallery-main"><img id="galleryImage" src="/api/r2/stream/Safetylink%2FEmergency_Response_Platform_Architecture_Overview.png" alt="SafetyLink emergency response platform architecture" loading="lazy"><div class="gallery-caption"><strong id="galleryTitle">A connected response architecture</strong><span id="galleryText">Platform architecture and operational visibility.</span></div></div>
-          <div class="gallery-controls"><button class="arrow" id="prevSlide" type="button" aria-label="Previous gallery image">‹</button><div class="gallery-dots" id="galleryDots" aria-label="Choose gallery image"></div><button class="arrow" id="nextSlide" type="button" aria-label="Next gallery image">›</button></div>
-        </div>
-      </div>
-    </section>
-    <section id="enterprise">
-      <div class="wrap">
-        <div class="enterprise">
-          <div class="enterprise-copy"><span class="kicker">For organisations</span><h2>One operational view. A connected team.</h2><p>SafetyLink supports organisational safety workflows that bring authorised users, dispatch functions and responder teams into a shared operating environment.</p><ul><li>Organisation-based user and responder roles</li><li>Incident visibility and response coordination</li><li>Connected devices and configurable alert channels</li><li>Deployment options aligned to operational needs</li></ul><a class="button" href="mailto:info@safetylink.online?subject=SafetyLink%20organisation%20enquiry">Discuss an organisation deployment</a></div>
-          <div class="enterprise-image"><img src="/api/r2/stream/Safetylink%2FGemini_Generated_Image_41892s41892s4189.png" alt="Organisational security and campus environment" loading="lazy"></div>
-        </div>
-      </div>
-    </section>
-    <section id="contact">
-      <div class="wrap">
-        <div class="section-head"><span class="kicker">Start a conversation</span><h2>Let's build a safer connection.</h2><p>Contact TM Media Solutions to discuss SafetyLink, an organisational deployment or a product enquiry.</p></div>
-        <div class="contact-grid">
-          <div class="contact-info surface"><span class="kicker">TM Media Solutions</span><h3>SafetyLink enquiries</h3><p>Tell us what environment you need to support and the response workflow you want to improve.</p>
-            <div class="contact-item"><span aria-hidden="true">☎</span><div><b>Phone</b><a href="tel:+27816738186">+27 81 673 8186</a></div></div>
-            <div class="contact-item"><span aria-hidden="true">◉</span><div><b>WhatsApp</b><a href="https://wa.me/27680079911" target="_blank" rel="noopener noreferrer">Message TM Media Solutions</a></div></div>
-            <div class="contact-item"><span aria-hidden="true">✉</span><div><b>Email</b><a href="mailto:info@safetylink.online">info@safetylink.online</a></div></div>
+
+        <!-- Right Visual: Laptop Organization Dashboard + Family Hero + Phone/iTag R2 Slot -->
+        <div class="lg:col-span-6 space-y-4">
+          <div class="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl bg-navy-900">
+            <img src="/preview/assets/asset-02.jpg" alt="SafetyLink Organization Control-Room Dashboard on Laptop" class="w-full h-64 sm:h-72 object-cover" />
+            <!-- Floating Phone + iTag R2 Slot Badge -->
+            <div class="absolute bottom-3 left-3 right-3 bg-navy-950/90 backdrop-blur border border-slate-700/80 rounded-xl p-3 flex items-center justify-between gap-3 text-white">
+              <div class="flex items-center gap-3">
+                <img id="heroPhoneItagImg" src="/preview/assets/asset-03.jpg" alt="SafetyLink Mobile App & HST-01 iTag" class="w-12 h-12 rounded-lg object-cover border border-emerald-500/40" />
+                <div>
+                  <div class="text-xs font-extrabold text-emerald-400">Laptop Control Room + Mobile App + iTag</div>
+                  <div class="text-[11px] text-slate-300">R49/mo Individual • R99/mo Family • R149 Keyfob</div>
+                </div>
+              </div>
+              <a href="#/store" data-route="store" class="route-link shrink-0 px-3 py-1.5 rounded-lg bg-emeraldBrand-600 hover:bg-emerald-500 text-white text-[11px] font-bold">Store</a>
+            </div>
           </div>
-          <form class="contact-form surface" id="contactForm">
-            <h3>Send an enquiry</h3>
-            <div class="field"><label for="name">Your name</label><input id="name" name="name" autocomplete="name" required></div>
-            <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required></div>
-            <div class="field"><label for="organisation">Organisation (optional)</label><input id="organisation" name="organisation" autocomplete="organization"></div>
-            <div class="field"><label for="topic">Enquiry type</label><select id="topic" name="topic"><option>Personal SafetyLink</option><option>Organisation deployment</option><option>Hardware and connected devices</option><option>General enquiry</option></select></div>
-            <div class="field full"><label for="message">How can we help?</label><textarea id="message" name="message" required></textarea></div>
-            <p class="form-note">This preview opens your email application with the enquiry details. It does not submit data to a website server.</p>
-            <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
-            <button class="button" type="submit">Continue to email <span aria-hidden="true">→</span></button>
-          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive 4-Quadrant Connected Security Ecosystem (Click Any Subsystem for Video Pop-up) -->
+    <section class="py-12 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div class="text-center max-w-2xl mx-auto mb-8">
+        <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">Interactive Ecosystem Hub</span>
+        <h2 class="text-2xl sm:text-3xl font-black text-navy-900 dark:text-white mt-1">From Tap to Response: One Unified System</h2>
+        <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2">Click any of the 4 SafetyLink subsystems below to watch its walkthrough video.</p>
+      </div>
+
+      <div class="relative grid md:grid-cols-2 gap-5 items-stretch">
+        <!-- Subsystem 1: Wearable iTag & App Alerts -->
+        <button type="button" data-video-key="wearable" class="ecosystem-card group text-left p-6 rounded-2xl bg-white dark:bg-navy-900 border-2 border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 dark:hover:border-emerald-400 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emeraldBrand-600 dark:text-emerald-400 text-[11px] font-extrabold">1. WEARABLE &amp; APP ALERTS</span>
+              <span class="inline-flex items-center gap-1 text-xs font-bold text-emeraldBrand-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition">▶ Watch Video</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-navy-900 dark:text-white mt-3">Instant Triggers &amp; Family Connection</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">2-second hold panic from your HST-01 iTag keyfob or mobile app. Family-linked, BLE background active, and works offline.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            Click to launch Wearable &amp; App SOS video →
+          </div>
+        </button>
+
+        <!-- Subsystem 3: Automated Drone Dispatch -->
+        <button type="button" data-video-key="drone" class="ecosystem-card group text-left p-6 rounded-2xl bg-white dark:bg-navy-900 border-2 border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 dark:hover:border-emerald-400 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 text-[11px] font-extrabold">3. AUTOMATED DRONE DISPATCH</span>
+              <span class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition">▶ Watch Video</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-navy-900 dark:text-white mt-3">Drone-in-a-Box Physical Response</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">Immediate automated launch on alert trigger with pre-programmed flight paths and live aerial eyes on scene within minutes.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            Click to launch Drone-in-a-Box video →
+          </div>
+        </button>
+
+        <!-- Subsystem 2: Offline Failover & AI Voice Triage (Replaced generic Server Mesh with useful capability) -->
+        <button type="button" data-video-key="failover" class="ecosystem-card group text-left p-6 rounded-2xl bg-white dark:bg-navy-900 border-2 border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 dark:hover:border-emerald-400 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[11px] font-extrabold">2. OFFLINE FAILOVER &amp; AI TRIAGE</span>
+              <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 group-hover:translate-x-0.5 transition">▶ Watch Video</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-navy-900 dark:text-white mt-3">WhatsApp, SMS, VAPI Voice &amp; USSD</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">Zero-data escalation across WhatsApp, Africa's Talking SMS, VAPI AI Voice verification, and USSD—built for South African load shedding.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            Click to launch AI Co-Pilot &amp; Failover video →
+          </div>
+        </button>
+
+        <!-- Subsystem 4: Live Coordination & Control Room -->
+        <button type="button" data-video-key="controlroom" class="ecosystem-card group text-left p-6 rounded-2xl bg-white dark:bg-navy-900 border-2 border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 dark:hover:border-emerald-400 shadow-sm transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 text-[11px] font-extrabold">4. LIVE COORDINATION &amp; CONTROL</span>
+              <span class="inline-flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400 group-hover:translate-x-0.5 transition">▶ Watch Video</span>
+            </div>
+            <h3 class="text-lg font-extrabold text-navy-900 dark:text-white mt-3">Organization Control-Room Dashboard</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">Multi-tenant dispatch console with live incident map, severity filtering, patrol monitoring, and armed response coordination.</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+            Click to launch Control Room Dashboard video →
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Clean 3-Card Network Preview Strip -->
+    <section class="pb-12 px-4 sm:px-6 max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-navy-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+          <img src="/preview/assets/asset-04.jpg" alt="24/7 Control Room Operations" class="w-full h-44 object-cover" />
+          <div class="p-4">
+            <h3 class="font-bold text-navy-900 dark:text-white">24/7 Control Room</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Multi-tenant dispatch dashboard for estates and armed response partners.</p>
+          </div>
+        </div>
+        <div class="bg-white dark:bg-navy-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+          <img src="/preview/assets/asset-05.jpg" alt="Aerial & Perimeter Patrol" class="w-full h-44 object-cover" />
+          <div class="p-4">
+            <h3 class="font-bold text-navy-900 dark:text-white">Estate &amp; Community Patrols</h3>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Real-time guard patrol monitoring and neighborhood watch coordination.</p>
+          </div>
+        </div>
+        <div class="bg-navy-900 dark:bg-slate-900 text-white rounded-2xl p-6 flex flex-col justify-between border border-slate-800">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">For Security Companies</span>
+            <h3 class="text-lg font-extrabold mt-1">Get Your Own Control-Room Dashboard</h3>
+            <p class="text-xs text-slate-300 mt-2">White-label server network, B-BBEE Level 1 compliance, and live incident mapping.</p>
+          </div>
+          <a href="#/control-room" data-route="control-room" class="route-link mt-5 inline-flex items-center justify-center py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-navy-900 font-bold text-xs transition">
+            Launch Live Dashboard →
+          </a>
         </div>
       </div>
     </section>
   </main>
-  <footer>
-    <div class="wrap">
-      <div class="footer-grid">
-        <div class="footer-brand"><img src="/logos/New%20SafetyLink%20Official%20Logo.svg" alt="SafetyLink"><p>Connected safety for people, communities and organisations.</p><p>Powered by TM Media Solutions.</p></div>
-        <div><h4>Explore</h4><div class="footer-links"><a href="#solutions">Solutions</a><a href="#how">How it works</a><a href="#platform">Platform</a><a href="/#download">Downloads</a></div></div>
-        <div><h4>Company</h4><div class="footer-links"><a href="#enterprise">Organisations</a><a href="#contact">Contact</a><a href="/">Live website</a></div></div>
-        <div><h4>Connect</h4><div class="footer-links"><a href="mailto:info@safetylink.online">Email</a><a href="https://wa.me/27680079911" target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="tel:+27816738186">Call us</a></div></div>
+
+  <!-- ==================== PAGE 2: PLATFORM FEATURES ==================== -->
+  <section id="page-features" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+    <div class="grid lg:grid-cols-12 gap-8 items-start">
+      <div class="lg:col-span-7 space-y-6">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">Offline-First Architecture</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white mt-1">6-Layer Emergency Escalation</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Built for South African load shedding and zero-data environments. Alerts queue locally and route across FCM, WhatsApp, Africa's Talking SMS, VAPI AI Voice, and USSD.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800">
+            <div class="font-bold text-navy-900 dark:text-white">2-Second Hold Panic</div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Prevents false pocket triggers on both the mobile app and HST-01 BLE keyfob.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800">
+            <div class="font-bold text-navy-900 dark:text-white">AES-256-GCM + POPIA</div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Sealed incident audit chains and encrypted telemetry across all tenants.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800">
+            <div class="font-bold text-navy-900 dark:text-white">Android 15 Background BLE</div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Persistent foreground service keeps keyfob listening active even when locked.</p>
+          </div>
+          <div class="p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800">
+            <div class="font-bold text-navy-900 dark:text-white">Oracle Cloud + Cloudflare</div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Sub-3-second dispatch via api.safetylink.online with Upstash Redis rate limiting.</p>
+          </div>
+        </div>
       </div>
-      <div class="copyright"><span>© <span id="year"></span> TM Media Solutions. SafetyLink.</span><span>Website preview · Not a live emergency service.</span></div>
+
+      <div class="lg:col-span-5">
+        <div class="bg-slate-900 text-white rounded-[2rem] p-5 sm:p-6 shadow-2xl border-4 border-slate-800 max-w-md mx-auto">
+          <div class="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-slate-800">
+            <span class="font-bold text-white">SafetyLink Mobile Simulator</span>
+            <button id="networkToggleBtn" type="button" class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30 text-[11px]">Mode: Online Live</button>
+          </div>
+          <div class="py-5 flex flex-col items-center text-center">
+            <div class="relative w-36 h-36 flex items-center justify-center">
+              <svg class="absolute inset-0 w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" stroke="#1E293B" stroke-width="6" fill="none" />
+                <circle id="sosProgressRing" class="hold-ring" cx="60" cy="60" r="54" stroke="#10B981" stroke-width="6" fill="none" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round" />
+              </svg>
+              <button id="sosHoldBtn" type="button" class="sos-pulse w-24 h-24 rounded-full bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-xl tracking-wider shadow-xl flex flex-col items-center justify-center select-none touch-none">
+                <span>SOS</span>
+                <span id="sosSubLabel" class="text-[10px] font-semibold uppercase text-red-100">Hold 2s</span>
+              </button>
+            </div>
+            <div class="flex gap-2 mt-4">
+              <button id="keyfobTriggerBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300">Simulate Keyfob (2s)</button>
+              <button id="resetSimBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Reset</button>
+            </div>
+          </div>
+          <div class="bg-slate-950/80 rounded-2xl p-3.5 border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase text-slate-400">
+              <span>Escalation Pipeline</span>
+              <span id="simStatusBadge" class="text-emerald-400">STANDBY</span>
+            </div>
+            <ul id="pipelineList" class="space-y-1 text-xs"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 3: USE CASES ==================== -->
+  <section id="page-use-cases" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+    <div class="mb-8">
+      <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">Who We Protect</span>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white mt-1">Every Sector. One Platform.</h2>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Residential</div><h3 class="text-lg font-bold mt-1">Estates &amp; Complexes</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Resident panic rings, gatehouse alerts, and rapid estate guard dispatch.</p></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Enterprise</div><h3 class="text-lg font-bold mt-1">Corporates &amp; Campuses</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Lone-worker protection, access control alerts, and incident audit logs.</p></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Municipal</div><h3 class="text-lg font-bold mt-1">Municipalities &amp; Wards</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Community safety networks with USSD and zero-airtime SMS escalation.</p></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Education</div><h3 class="text-lg font-bold mt-1">Schools &amp; Campuses</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Staff wearable keyfobs and instant lockdown or medical emergency routing.</p></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Healthcare</div><h3 class="text-lg font-bold mt-1">Clinics &amp; Hospitals</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Silent panic triggers for night-shift nurses, security, and emergency bays.</p></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Logistics</div><h3 class="text-lg font-bold mt-1">Transport &amp; Field Ops</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1.5">Driver BLE panic buttons with live GPS coordinates for fleet control rooms.</p></div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 4: HARDWARE CONFIG ==================== -->
+  <section id="page-hardware" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+    <div class="grid lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-6 space-y-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">Bluetooth 5.0 • HST-01 iTag</span>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white">Hardware Config &amp; R2 Asset Slots</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-300">Paste your Cloudflare R2 public URLs into <code class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-xs">R2_ASSETS</code> to swap in your exact black and pink SafetyLink iTag photos.</p>
+        <div>
+          <div class="text-xs font-bold uppercase text-slate-500 mb-2">Selected Finish: <span id="selectedKeyfobName" class="text-navy-900 dark:text-white">Stealth Black</span></div>
+          <div id="keyfobSwatches" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div class="flex items-center gap-4 pt-2">
+          <div class="px-4 py-2 rounded-xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800">
+            <span class="text-[11px] text-slate-500 block">Once-off Unit Price</span>
+            <span class="text-xl font-black text-navy-900 dark:text-white">R149</span>
+          </div>
+          <button id="orderKeyfobBtn" type="button" class="px-6 py-3 rounded-xl bg-emeraldBrand-600 hover:bg-emerald-700 text-white font-bold text-sm transition">Order HST-01 Keyfob</button>
+        </div>
+      </div>
+      <div class="lg:col-span-6 bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col items-center justify-center">
+        <img id="r2KeyfobImg" alt="SafetyLink HST-01 Keyfob" class="hidden w-52 h-52 object-contain" />
+        <svg id="keyfobSvg" class="w-36 h-48 drop-shadow-xl" viewBox="0 0 160 220" fill="none">
+          <rect id="fobBody" x="25" y="20" width="110" height="175" rx="55" fill="#1E293B" stroke="#0F172A" stroke-width="4"/>
+          <circle cx="80" cy="160" r="16" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/>
+          <circle id="fobButton" cx="80" cy="82" r="28" fill="#0F172A" stroke="#475569" stroke-width="3"/>
+          <path d="M80 68V96" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="mt-4 text-xs text-slate-500 dark:text-slate-400">IP65 Splash Resistant • CR2032 Battery • 2s Hold-to-Activate</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 5: AI CO-PILOT ==================== -->
+  <section id="page-copilot" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-5xl mx-auto">
+    <div class="bg-white dark:bg-navy-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-5">
+      <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">VAPI Voice &amp; Triage</span>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white">SafetyLink AI Co-Pilot</h2>
+      <p class="text-sm text-slate-600 dark:text-slate-300">When an SOS triggers, SafetyLink's AI Voice Co-Pilot places an automated verification call, transcribes background audio, and briefs the nearest control-room operator in real time.</p>
+      <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1.5">
+        <div class="text-emeraldBrand-600 dark:text-emerald-400 font-bold">[VAPI_VOICE] Dialing primary user (+27 68 *** 9911)...</div>
+        <div class="text-slate-600 dark:text-slate-300">[TRANSCRIPT] "Silent panic confirmed. Suspect at perimeter gate."</div>
+        <div class="text-red-600 dark:text-red-400 font-bold">[DISPATCH] Escalated to Control Room • Priority: CRITICAL</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 6: PRICING ==================== -->
+  <section id="page-pricing" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-7xl mx-auto">
+    <div class="text-center max-w-2xl mx-auto mb-8">
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white">Transparent South African Pricing</h2>
+      <div class="inline-flex rounded-xl bg-slate-200 dark:bg-navy-900 p-1 mt-4">
+        <button id="planTabPersonal" type="button" class="px-4 py-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow-sm">Individuals &amp; Families</button>
+        <button id="planTabBusiness" type="button" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400">Security Firms &amp; Estates</button>
+      </div>
+    </div>
+    <div id="personalPlansGrid" class="grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-navy-900 flex flex-col justify-between">
+        <div><div class="text-xs font-bold text-slate-500 uppercase">Community Free</div><div class="text-4xl font-black mt-2">R0 <span class="text-sm font-medium text-slate-500">/mo</span></div><ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300"><li>✓ Mobile app &amp; PWA access</li><li>✓ Community neighborhood alerts</li><li>✓ Direct SMS fallback</li></ul></div>
+        <button type="button" data-plan="Community Free (R0/mo)" class="select-plan-btn mt-6 w-full py-3 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-xs">Get Started</button>
+      </div>
+      <div class="rounded-2xl border-2 border-emeraldBrand-600 p-6 bg-white dark:bg-navy-900 shadow-md flex flex-col justify-between relative">
+        <span class="absolute -top-3 right-5 px-3 py-0.5 rounded-full bg-emeraldBrand-600 text-white text-[10px] font-bold">MOST POPULAR</span>
+        <div><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Premium Individual</div><div class="text-4xl font-black mt-2">R49 <span class="text-sm font-medium text-slate-500">/mo</span></div><ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300"><li>✓ Continuous 24/7 monitoring</li><li>✓ BLE Keyfob + WhatsApp &amp; SMS relay</li><li>✓ VAPI AI voice follow-up &amp; USSD</li></ul></div>
+        <button type="button" data-plan="Premium Individual (R49/mo)" class="select-plan-btn mt-6 w-full py-3 rounded-xl bg-emeraldBrand-600 hover:bg-emerald-700 text-white font-bold text-xs">Start Protection</button>
+      </div>
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-navy-900 flex flex-col justify-between">
+        <div><div class="text-xs font-bold text-slate-500 uppercase">Family Ring</div><div class="text-4xl font-black mt-2">R99 <span class="text-sm font-medium text-slate-500">/mo</span></div><ul class="mt-4 space-y-2 text-xs text-slate-600 dark:text-slate-300"><li>✓ Up to 5 family members</li><li>✓ Shared live safety map</li><li>✓ 24/7 priority dispatch</li></ul></div>
+        <button type="button" data-plan="Family Ring (R99/mo)" class="select-plan-btn mt-6 w-full py-3 rounded-xl bg-navy-900 dark:bg-slate-800 text-white font-bold text-xs">Protect Your Family</button>
+      </div>
+    </div>
+    <div id="businessPlansGrid" class="hidden grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-navy-900 flex flex-col justify-between"><div><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Estates &amp; Community Watches</div><div class="text-2xl font-black mt-2">48-Hour Rapid Setup</div><p class="text-xs text-slate-600 dark:text-slate-400 mt-2">Resident panic apps, gatehouse incident boards, and patrol tracking.</p></div><button type="button" data-plan="Estate & Community Watch Setup" class="select-plan-btn mt-6 w-full py-3 rounded-xl bg-emeraldBrand-600 text-white font-bold text-xs">Schedule Estate Demo</button></div>
+      <div class="rounded-2xl border-2 border-navy-900 p-6 bg-navy-900 text-white flex flex-col justify-between"><div><div class="text-xs font-bold text-emerald-400 uppercase">Enterprise Security Firms</div><div class="text-2xl font-black mt-2">White-Label Control Room</div><p class="text-xs text-slate-300 mt-2">Multi-tenant dispatch server + B-BBEE Level 1 (135% Procurement Recognition).</p></div><button type="button" data-plan="Enterprise Security Firm" class="select-plan-btn mt-6 w-full py-3 rounded-xl bg-emerald-500 text-navy-900 font-bold text-xs">Request Enterprise Quote</button></div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 7: STORE ==================== -->
+  <section id="page-store" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-5xl mx-auto">
+    <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white mb-6">SafetyLink Hardware Store</h2>
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between"><div><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Single Unit</div><h3 class="text-lg font-extrabold mt-1">HST-01 BLE Panic Keyfob</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Includes CR2032 battery &amp; lanyard ring. Works with Android APK &amp; PWA.</p><div class="text-2xl font-black mt-3">R149 <span class="text-xs font-normal text-slate-500">Once-off</span></div></div><button type="button" data-plan="HST-01 Single Keyfob (R149)" class="select-plan-btn mt-5 w-full py-3 rounded-xl bg-emeraldBrand-600 text-white font-bold text-xs">Order Single Keyfob</button></div>
+      <div class="p-6 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 flex flex-col justify-between"><div><div class="text-xs font-bold text-navy-900 dark:text-emerald-400 uppercase">Family Pack</div><h3 class="text-lg font-extrabold mt-1">4x HST-01 Family Bundle</h3><p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Four color-coded keyfobs pre-linked to your Family Ring account.</p><div class="text-2xl font-black mt-3">R549 <span class="text-xs font-normal text-slate-500">Once-off</span></div></div><button type="button" data-plan="4x HST-01 Family Bundle (R549)" class="select-plan-btn mt-5 w-full py-3 rounded-xl bg-navy-900 dark:bg-slate-800 text-white font-bold text-xs">Order Family Bundle</button></div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 8: CONTROL ROOM ==================== -->
+  <section id="page-control-room" class="page-view hidden relative z-10">
+    <div class="max-w-[1440px] mx-auto grid lg:grid-cols-12 min-h-[640px] border-b border-slate-200 dark:border-slate-800">
+      <aside class="lg:col-span-2 bg-white dark:bg-navy-900 border-r border-slate-200 dark:border-slate-800 p-4 space-y-5 text-xs">
+        <div class="flex items-center gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="w-7 h-7 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center">S</div>
+          <div class="font-bold text-navy-900 dark:text-white truncate">Sandton Security Ser...</div>
+        </div>
+        <button id="openNewIncidentBtn" type="button" class="w-full py-2 px-3 rounded-lg bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 font-bold text-left hover:bg-red-100 transition">+ New Incident</button>
+        <div class="space-y-1 text-slate-600 dark:text-slate-300 font-medium">
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Dashboard</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Reports</div>
+          <div class="pt-2 text-[10px] font-bold uppercase text-slate-400 px-2">Incidents</div>
+          <div class="px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold">Incident Map</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Operations Board</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Analytics</div>
+          <div class="pt-2 text-[10px] font-bold uppercase text-slate-400 px-2">Team</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Manage Team</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Team Map</div>
+          <div class="pt-2 text-[10px] font-bold uppercase text-slate-400 px-2">Operations</div>
+          <div class="px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">Sites &amp; Patrols</div>
+        </div>
+      </aside>
+      <div class="lg:col-span-3 bg-slate-50 dark:bg-navy-950 border-r border-slate-200 dark:border-slate-800 p-4 flex flex-col max-h-[640px]">
+        <div class="font-extrabold text-sm text-navy-900 dark:text-white mb-3">Live Security</div>
+        <div class="grid grid-cols-4 gap-1.5 text-center pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="bg-white dark:bg-navy-900 rounded-lg p-2 border border-slate-200 dark:border-slate-800"><div id="countCritical" class="text-base font-black text-red-600">0</div><div class="text-[9px] font-bold text-slate-500 uppercase">Critical</div></div>
+          <div class="bg-white dark:bg-navy-900 rounded-lg p-2 border border-slate-200 dark:border-slate-800"><div id="countActive" class="text-base font-black text-amber-600">0</div><div class="text-[9px] font-bold text-slate-500 uppercase">Active</div></div>
+          <div class="bg-white dark:bg-navy-900 rounded-lg p-2 border border-slate-200 dark:border-slate-800"><div id="countResolved" class="text-base font-black text-emerald-600">0</div><div class="text-[9px] font-bold text-slate-500 uppercase">Resolved</div></div>
+          <div class="bg-white dark:bg-navy-900 rounded-lg p-2 border border-slate-200 dark:border-slate-800"><div id="countTotal" class="text-base font-black text-navy-900 dark:text-white">0</div><div class="text-[9px] font-bold text-slate-500 uppercase">Total</div></div>
+        </div>
+        <div class="py-3 space-y-2 border-b border-slate-200 dark:border-slate-800 text-[11px]">
+          <div class="flex flex-wrap gap-1">
+            <button type="button" data-status="all" class="status-filter px-2 py-1 rounded bg-blue-600 text-white font-semibold">All</button>
+            <button type="button" data-status="active" class="status-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">Active</button>
+            <button type="button" data-status="resolved" class="status-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">Resolved</button>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            <button type="button" data-severity="all" class="severity-filter px-2 py-1 rounded bg-blue-600 text-white font-semibold">All</button>
+            <button type="button" data-severity="Low" class="severity-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">Low</button>
+            <button type="button" data-severity="Med" class="severity-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">Med</button>
+            <button type="button" data-severity="High" class="severity-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">High</button>
+            <button type="button" data-severity="Crit" class="severity-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">Crit</button>
+          </div>
+        </div>
+        <div id="incidentList" class="overflow-y-auto flex-1 space-y-2 mt-3 pr-1"></div>
+      </div>
+      <div class="lg:col-span-7 relative"><div id="incidentMap" class="w-full h-[420px] lg:h-[640px] z-10"></div></div>
+    </div>
+  </section>
+
+  <!-- ==================== PAGE 9: DOWNLOAD ==================== -->
+  <section id="page-download" class="page-view hidden relative z-10 py-10 px-4 sm:px-6 max-w-5xl mx-auto space-y-8">
+    <div>
+      <span class="text-xs font-bold uppercase tracking-wider text-emeraldBrand-600 dark:text-emerald-400">Available on Every Platform</span>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white mt-1">Download SafetyLink</h2>
+      <div class="grid sm:grid-cols-3 gap-4 mt-5">
+        <button type="button" data-dl="Android APK (v2.4)" class="dl-btn p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 text-left shadow-sm"><div class="text-xs font-bold text-emeraldBrand-600 uppercase">Mobile</div><div class="font-extrabold mt-1">Android APK</div><div class="text-xs text-slate-500 mt-0.5">BLE Background Ready</div></button>
+        <button type="button" data-dl="Windows Control-Room EXE" class="dl-btn p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 text-left shadow-sm"><div class="text-xs font-bold text-navy-900 dark:text-blue-400 uppercase">Desktop</div><div class="font-extrabold mt-1">Windows EXE</div><div class="text-xs text-slate-500 mt-0.5">Dispatch Console</div></button>
+        <button type="button" data-dl="Web App (PWA)" class="dl-btn p-5 rounded-2xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 hover:border-emeraldBrand-600 text-left shadow-sm"><div class="text-xs font-bold text-blue-600 uppercase">Browser</div><div class="font-extrabold mt-1">Web App (PWA)</div><div class="text-xs text-slate-500 mt-0.5">Zero-Install Access</div></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Clean Footer -->
+  <footer class="relative z-10 bg-navy-900 dark:bg-black text-slate-300 py-8 px-4 sm:px-6 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div>© 2026 TM Media Solutions · Reg: 2018/580101/07 · safetylink.online</div>
+      <div class="flex items-center gap-4">
+        <a href="mailto:info@safetylink.online" class="hover:text-emerald-400">info@safetylink.online</a>
+        <a href="https://wa.me/27680079911" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-400">WhatsApp: +27 68 007 9911</a>
+      </div>
     </div>
   </footer>
+
+  <!-- Mobile Bottom App Bar -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-navy-900 border-t border-slate-200 dark:border-slate-800 grid grid-cols-4 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+    <a href="#/home" data-route="home" class="route-link py-2.5 text-center text-emeraldBrand-600 dark:text-emerald-400">Home</a>
+    <a href="#/features" data-route="features" class="route-link py-2.5 text-center text-red-600 dark:text-red-400 font-bold">SOS Demo</a>
+    <a href="#/control-room" data-route="control-room" class="route-link py-2.5 text-center">Map</a>
+    <a href="#/pricing" data-route="pricing" class="route-link py-2.5 text-center">Plans</a>
+  </nav>
+
+  <!-- Ecosystem Subsystem Video Pop-Up Modal -->
+  <div id="ecosystemVideoModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-navy-900 rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800">
+        <h3 id="videoModalTitle" class="text-sm sm:text-base font-extrabold text-navy-900 dark:text-white">Subsystem Walkthrough</h3>
+        <button id="closeVideoModalBtn" type="button" class="text-slate-400 hover:text-slate-700 dark:hover:text-white font-bold text-lg">✕</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div id="videoContainer" class="aspect-video w-full rounded-xl overflow-hidden bg-navy-950 flex flex-col items-center justify-center text-white p-6 text-center relative">
+          <video id="subsystemVideoPlayer" controls class="hidden w-full h-full object-cover"></video>
+          <div id="videoFallbackPreview" class="space-y-3 max-w-md">
+            <img id="videoFallbackImg" src="" alt="" class="w-40 h-28 object-cover rounded-lg mx-auto border border-emerald-500/40" />
+            <div id="videoFallbackTitle" class="font-extrabold text-base text-emerald-400"></div>
+            <p id="videoFallbackDesc" class="text-xs text-slate-300"></p>
+            <div class="text-[11px] text-slate-400">Paste your Cloudflare R2 `.mp4` URL into <code class="text-emerald-300">R2_ASSETS.videos</code> to auto-play here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo / Order Modal -->
+  <div id="actionModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-navy-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+        <h3 id="modalTitle" class="text-lg font-extrabold text-navy-900 dark:text-white">Request SafetyLink Demo</h3>
+        <button id="closeModalBtn" type="button" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
+      </div>
+      <form id="modalForm" class="space-y-4 mt-4">
+        <input id="modalSelection" type="text" readonly class="w-full px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emeraldBrand-600 dark:text-emerald-400 text-xs font-bold" />
+        <div><label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Your Name / Estate / Company</label><input id="modalName" type="text" required placeholder="e.g. Lenasia South Community Watch" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-navy-950 text-sm" /></div>
+        <div><label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">WhatsApp or Phone Number</label><input id="modalPhone" type="tel" required placeholder="+27 68 000 0000" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-navy-950 text-sm" /></div>
+        <button type="submit" class="w-full py-3 rounded-xl bg-emeraldBrand-600 hover:bg-emerald-700 text-white font-bold text-sm transition">Confirm Request</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- New Incident Modal -->
+  <div id="incidentModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-navy-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="text-lg font-extrabold text-navy-900 dark:text-white">Log Simulated Incident</h3>
+        <button id="closeIncidentModalBtn" type="button" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
+      </div>
+      <form id="incidentForm" class="space-y-3 mt-4">
+        <div><label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Incident Title</label><input id="incTitle" type="text" required placeholder="e.g. Perimeter Gate Panic Trigger" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-navy-950 text-sm" /></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Area</label><select id="incArea" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-navy-950 text-sm"><option value="roodepoort">Roodepoort</option><option value="sandton">Sandton</option><option value="johannesburg">Johannesburg CBD</option></select></div>
+          <div><label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Severity</label><select id="incSeverity" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 dark:bg-navy-950 text-sm"><option value="Crit">Critical</option><option value="High">High</option><option value="Med">Medium</option><option value="Low">Low</option></select></div>
+        </div>
+        <button type="submit" class="w-full py-3 rounded-xl bg-sos-600 hover:bg-red-700 text-white font-bold text-sm transition">Dispatch to Live Map</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-16 md:bottom-6 right-4 z-50 bg-navy-900 text-white px-4 py-3 rounded-xl shadow-lg text-sm font-medium border border-slate-700 max-w-sm"></div>
+
   <script>
-    (function(){
-      var root=document.documentElement;
-      var themeButton=document.getElementById('themeToggle');
-      var stored=null;
-      try{stored=localStorage.getItem('safetylink-preview-theme')}catch(e){}
-      var preferred=stored||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-      function applyTheme(theme){
-        root.setAttribute('data-theme',theme);
-        themeButton.setAttribute('aria-pressed',String(theme==='dark'));
-        themeButton.textContent=theme==='dark'?'☀ Light mode':'☾ Dark mode';
-        var meta=document.querySelector('meta[name="theme-color"]');
-        if(meta)meta.setAttribute('content',theme==='dark'?'#071522':'#f4f7f8');
+    // Cloudflare R2 Asset Configuration (Paste your public R2 URLs here)
+    const R2_ASSETS = {
+      animatedLogoBgVideo: '', // Existing safetylink.online animated logo background video URL
+      phoneAndItag: '',        // R2 URL for Phone UI + HST-01 iTag photo
+      keyfobBlack: '',
+      keyfobBlue: '',
+      keyfobWhite: '',
+      keyfobPink: '',
+      keyfobLime: '',
+      videos: {
+        wearable: '',
+        failover: '',
+        drone: '',
+        controlroom: ''
       }
-      applyTheme(preferred);
-      themeButton.addEventListener('click',function(){
-        var next=root.getAttribute('data-theme')==='dark'?'light':'dark';
-        applyTheme(next);
-        try{localStorage.setItem('safetylink-preview-theme',next)}catch(e){}
+    };
+
+    if (R2_ASSETS.animatedLogoBgVideo) {
+      const bgVid = document.getElementById('bgLogoVideo');
+      bgVid.src = R2_ASSETS.animatedLogoBgVideo;
+      bgVid.classList.remove('hidden');
+      document.getElementById('bgLogoFallback').classList.add('hidden');
+    }
+    if (R2_ASSETS.phoneAndItag) {
+      document.getElementById('heroPhoneItagImg').src = R2_ASSETS.phoneAndItag;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+    }
+
+    // Light / Dark Theme Toggle
+    const htmlEl = document.documentElement;
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const isDark = htmlEl.classList.toggle('dark');
+      document.getElementById('themeIcon').textContent = isDark ? '🌙' : '☀️';
+      document.getElementById('themeLabel').textContent = isDark ? 'Dark' : 'Light';
+    });
+
+    // Multi-Page Router
+    let map = null;
+    let mapInitialized = false;
+    function navigateTo(routeName) {
+      const valid = ['home', 'features', 'use-cases', 'hardware', 'copilot', 'pricing', 'store', 'control-room', 'download'];
+      const target = valid.includes(routeName) ? routeName : 'home';
+      document.querySelectorAll('.page-view').forEach(el => el.classList.add('hidden'));
+      const activePage = document.getElementById(`page-${target}`);
+      if (activePage) activePage.classList.remove('hidden');
+      document.querySelectorAll('header nav .route-link').forEach(link => {
+        if (link.dataset.route === target) link.classList.add('bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emeraldBrand-600', 'dark:text-emerald-400', 'font-bold');
+        else link.classList.remove('bg-emerald-50', 'dark:bg-emerald-950/60', 'text-emeraldBrand-600', 'dark:text-emerald-400', 'font-bold');
       });
-      var menuButton=document.getElementById('menuButton');
-      var mobileNav=document.getElementById('mobileNav');
-      menuButton.addEventListener('click',function(){
-        var open=mobileNav.classList.toggle('open');
-        menuButton.setAttribute('aria-expanded',String(open));
-        menuButton.textContent=open?'Close':'Menu';
-      });
-      mobileNav.querySelectorAll('a').forEach(function(link){link.addEventListener('click',function(){mobileNav.classList.remove('open');menuButton.setAttribute('aria-expanded','false');menuButton.textContent='Menu'})});
-      var slides=[
-        {src:'/api/r2/stream/Safetylink%2FEmergency_Response_Platform_Architecture_Overview.png',alt:'SafetyLink emergency response platform architecture',title:'A connected response architecture',text:'Platform architecture and operational visibility.'},
-        {src:'/api/r2/stream/Safetylink%2FPolish_20260809_161140255.png',alt:'SafetyLink dispatch and response control visual',title:'Response coordination',text:'Operational tools for teams managing incidents.'},
-        {src:'/api/r2/stream/Safetylink%2FIMG_20260914_221811.png',alt:'SafetyLink command interface visual',title:'One operational view',text:'A connected interface for authorised teams.'}
-      ];
-      var index=0,image=document.getElementById('galleryImage'),title=document.getElementById('galleryTitle'),caption=document.getElementById('galleryText'),dots=document.getElementById('galleryDots');
-      function showSlide(next){
-        index=(next+slides.length)%slides.length;
-        var slide=slides[index];
-        image.src=slide.src;image.alt=slide.alt;title.textContent=slide.title;caption.textContent=slide.text;
-        Array.prototype.forEach.call(dots.children,function(dot,i){dot.setAttribute('aria-current',String(i===index));dot.setAttribute('aria-label','Show gallery image '+(i+1))});
+      if (target === 'control-room') {
+        setTimeout(() => {
+          if (!mapInitialized) initControlRoomMap();
+          else if (map) map.invalidateSize();
+        }, 60);
       }
-      slides.forEach(function(slide,i){
-        var dot=document.createElement('button');dot.type='button';dot.className='gallery-dot';dot.setAttribute('aria-label','Show gallery image '+(i+1));dot.addEventListener('click',function(){showSlide(i)});dots.appendChild(dot);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    document.querySelectorAll('.route-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const r = link.dataset.route || 'home';
+        window.location.hash = `#/${r}`;
+        navigateTo(r);
+        document.getElementById('mobileMenu').classList.add('hidden');
       });
-      document.getElementById('prevSlide').addEventListener('click',function(){showSlide(index-1)});
-      document.getElementById('nextSlide').addEventListener('click',function(){showSlide(index+1)});
-      showSlide(0);
-      document.getElementById('year').textContent=new Date().getFullYear();
-      document.getElementById('contactForm').addEventListener('submit',function(event){
-        event.preventDefault();
-        var form=event.currentTarget;
-        if(!form.reportValidity())return;
-        var data=new FormData(form);
-        var subject='SafetyLink enquiry: '+String(data.get('topic')||'General enquiry');
-        var body='Name: '+data.get('name')+'\nEmail: '+data.get('email')+'\nOrganisation: '+(data.get('organisation')||'Not provided')+'\nEnquiry type: '+data.get('topic')+'\n\nMessage:\n'+data.get('message');
-        document.getElementById('formStatus').textContent='Opening your email application with the enquiry details…';
-        window.location.href='mailto:info@safetylink.online?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+    });
+    window.addEventListener('hashchange', () => navigateTo(window.location.hash.replace('#/', '') || 'home'));
+    document.getElementById('mobileMenuBtn').addEventListener('click', () => document.getElementById('mobileMenu').classList.toggle('hidden'));
+
+    // Interactive 4-Quadrant Subsystem Video Pop-Up
+    const subsystemMeta = {
+      wearable: {
+        title: '1. Wearable HST-01 iTag & Mobile App Alerts',
+        desc: 'Demonstrates 2-second hold panic triggers from the HST-01 keyfob and SafetyLink Android/PWA app, with background BLE listening.',
+        img: '/preview/assets/asset-03.jpg'
+      },
+      failover: {
+        title: '2. Offline-First Failover & AI Voice Triage',
+        desc: 'Shows automatic escalation across WhatsApp, Africa\'s Talking SMS, VAPI AI Voice verification, and zero-data USSD.',
+        img: '/preview/assets/asset-04.jpg'
+      },
+      drone: {
+        title: '3. Automated Drone-in-a-Box Dispatch',
+        desc: 'Demonstrates pre-programmed automated drone launch upon critical panic trigger for immediate aerial scene verification.',
+        img: '/preview/assets/asset-05.jpg'
+      },
+      controlroom: {
+        title: '4. Live Control-Room Organization Dashboard',
+        desc: 'Walkthrough of the Sandton Security multi-tenant dispatch console, live map pins, severity filters, and responder assignment.',
+        img: '/preview/assets/asset-02.jpg'
+      }
+    };
+    const videoModal = document.getElementById('ecosystemVideoModal');
+    const videoPlayer = document.getElementById('subsystemVideoPlayer');
+    const videoFallback = document.getElementById('videoFallbackPreview');
+    document.querySelectorAll('.ecosystem-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const key = card.dataset.videoKey;
+        const meta = subsystemMeta[key];
+        document.getElementById('videoModalTitle').textContent = meta.title;
+        const r2VidUrl = R2_ASSETS.videos[key];
+        if (r2VidUrl) {
+          videoPlayer.src = r2VidUrl;
+          videoPlayer.classList.remove('hidden');
+          videoFallback.classList.add('hidden');
+          videoPlayer.play().catch(() => {});
+        } else {
+          videoPlayer.pause();
+          videoPlayer.classList.add('hidden');
+          videoFallback.classList.remove('hidden');
+          document.getElementById('videoFallbackImg').src = meta.img;
+          document.getElementById('videoFallbackTitle').textContent = meta.title;
+          document.getElementById('videoFallbackDesc').textContent = meta.desc;
+        }
+        videoModal.classList.remove('hidden');
       });
-    })();
+    });
+    document.getElementById('closeVideoModalBtn').addEventListener('click', () => {
+      videoPlayer.pause();
+      videoModal.classList.add('hidden');
+    });
+
+    // SOS Simulator
+    let isOfflineMode = false, holdInterval = null, holdProgress = 0;
+    const CIRCUMFERENCE = 339.292;
+    const pipelineSteps = [
+      { id: 1, name: 'STEP 1 • BLE / App 2s Hold Trigger', status: 'Waiting' },
+      { id: 2, name: 'STEP 2 • WhatsApp Family Relay', status: 'Waiting' },
+      { id: 3, name: 'STEP 3 • SMS via Africa\'s Talking', status: 'Waiting' },
+      { id: 4, name: 'STEP 4 • VAPI AI Voice Call', status: 'Waiting' },
+      { id: 5, name: 'STEP 5 • USSD + Please Call Me', status: 'Waiting' },
+      { id: 6, name: 'STEP 6 • Control-Room Responder ACK', status: 'Waiting' }
+    ];
+    function renderPipeline() {
+      document.getElementById('pipelineList').innerHTML = pipelineSteps.map(s => {
+        const badgeColor = s.status === 'DISPATCHED' || s.status === 'ACKED' ? 'text-emerald-400' : s.status === 'QUEUED (OFFLINE)' ? 'text-amber-400' : 'text-slate-500';
+        return `<li class="flex items-center justify-between py-1 border-b border-slate-900 last:border-0"><span class="text-slate-300">${s.name}</span><span class="font-bold ${badgeColor}">${s.status}</span></li>`;
+      }).join('');
+    }
+    renderPipeline();
+    document.getElementById('networkToggleBtn').addEventListener('click', (e) => {
+      isOfflineMode = !isOfflineMode;
+      e.target.textContent = isOfflineMode ? 'Mode: Offline Queue' : 'Mode: Online Live';
+    });
+    function triggerEscalationSequence() {
+      const badge = document.getElementById('simStatusBadge');
+      badge.textContent = isOfflineMode ? 'OFFLINE QUEUED' : 'ESCALATING';
+      pipelineSteps.forEach((step, idx) => {
+        setTimeout(() => {
+          if (isOfflineMode && idx > 0 && idx < 4) step.status = 'QUEUED (OFFLINE)';
+          else if (idx === 5) { step.status = isOfflineMode ? 'SMS/USSD ACK' : 'ACKED'; badge.textContent = 'RESPONDER ASSIGNED'; }
+          else step.status = 'DISPATCHED';
+          renderPipeline();
+        }, idx * 450);
+      });
+    }
+    function resetSimulator() {
+      clearInterval(holdInterval); holdProgress = 0;
+      document.getElementById('sosProgressRing').style.strokeDashoffset = CIRCUMFERENCE;
+      document.getElementById('sosSubLabel').textContent = 'Hold 2s';
+      document.getElementById('simStatusBadge').textContent = 'STANDBY';
+      pipelineSteps.forEach(s => { s.status = 'Waiting'; });
+      renderPipeline();
+    }
+    const sosBtn = document.getElementById('sosHoldBtn');
+    function startHold(e) {
+      e.preventDefault(); clearInterval(holdInterval); holdProgress = 0;
+      document.getElementById('sosSubLabel').textContent = 'Holding...';
+      holdInterval = setInterval(() => {
+        holdProgress += 5;
+        document.getElementById('sosProgressRing').style.strokeDashoffset = CIRCUMFERENCE - (holdProgress / 100) * CIRCUMFERENCE;
+        if (holdProgress >= 100) {
+          clearInterval(holdInterval);
+          document.getElementById('sosSubLabel').textContent = 'SENT!';
+          triggerEscalationSequence();
+          showToast('SOS triggered! Escalation pipeline active.');
+        }
+      }, 100);
+    }
+    function cancelHold() {
+      if (holdProgress < 100) {
+        clearInterval(holdInterval); holdProgress = 0;
+        document.getElementById('sosProgressRing').style.strokeDashoffset = CIRCUMFERENCE;
+        document.getElementById('sosSubLabel').textContent = 'Hold 2s';
+      }
+    }
+    sosBtn.addEventListener('mousedown', startHold);
+    sosBtn.addEventListener('touchstart', startHold, { passive: false });
+    window.addEventListener('mouseup', cancelHold);
+    window.addEventListener('touchend', cancelHold);
+    document.getElementById('keyfobTriggerBtn').addEventListener('click', () => {
+      resetSimulator();
+      document.getElementById('sosProgressRing').style.strokeDashoffset = 0;
+      document.getElementById('sosSubLabel').textContent = 'BLE SENT';
+      triggerEscalationSequence();
+      showToast('BLE HST-01 Keyfob 2-second hold simulated.');
+    });
+    document.getElementById('resetSimBtn').addEventListener('click', resetSimulator);
+
+    // Keyfob Selector
+    const keyfobColors = [
+      { name: 'Stealth Black', key: 'keyfobBlack', body: '#1E293B', btn: '#0F172A' },
+      { name: 'Ocean Blue', key: 'keyfobBlue', body: '#0EA5E9', btn: '#0284C7' },
+      { name: 'Arctic White', key: 'keyfobWhite', body: '#F1F5F9', btn: '#CBD5E1' },
+      { name: 'Signal Pink', key: 'keyfobPink', body: '#EC4899', btn: '#DB2777' },
+      { name: 'Volt Lime', key: 'keyfobLime', body: '#A3E635', btn: '#65A30D' }
+    ];
+    let selectedKeyfob = keyfobColors[0];
+    function renderSwatches() {
+      const swatchWrap = document.getElementById('keyfobSwatches');
+      swatchWrap.innerHTML = keyfobColors.map((c, idx) => `<button type="button" data-fob="${idx}" class="fob-swatch flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${selectedKeyfob.name === c.name ? 'border-navy-900 dark:border-emerald-400 bg-slate-100 dark:bg-slate-800' : 'border-slate-200 dark:border-slate-700'}"><span class="w-4 h-4 rounded-full border border-slate-300" style="background:${c.body}"></span>${c.name}</button>`).join('');
+      swatchWrap.querySelectorAll('.fob-swatch').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedKeyfob = keyfobColors[Number(btn.dataset.fob)];
+          document.getElementById('selectedKeyfobName').textContent = selectedKeyfob.name;
+          const r2Url = R2_ASSETS[selectedKeyfob.key];
+          const imgEl = document.getElementById('r2KeyfobImg');
+          const svgEl = document.getElementById('keyfobSvg');
+          if (r2Url) { imgEl.src = r2Url; imgEl.classList.remove('hidden'); svgEl.classList.add('hidden'); }
+          else { imgEl.classList.add('hidden'); svgEl.classList.remove('hidden'); document.getElementById('fobBody').setAttribute('fill', selectedKeyfob.body); document.getElementById('fobButton').setAttribute('fill', selectedKeyfob.btn); }
+          renderSwatches();
+        });
+      });
+    }
+    renderSwatches();
+
+    // Pricing Tabs & Modals
+    const personalBtn = document.getElementById('planTabPersonal');
+    const businessBtn = document.getElementById('planTabBusiness');
+    const personalGrid = document.getElementById('personalPlansGrid');
+    const businessGrid = document.getElementById('businessPlansGrid');
+    personalBtn.addEventListener('click', () => { personalGrid.classList.remove('hidden'); businessGrid.classList.add('hidden'); personalBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow-sm'; businessBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400'; });
+    businessBtn.addEventListener('click', () => { businessGrid.classList.remove('hidden'); personalGrid.classList.add('hidden'); businessBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 text-navy-900 dark:text-white shadow-sm'; personalBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400'; });
+
+    const actionModal = document.getElementById('actionModal');
+    function openActionModal(title, selectionText) { document.getElementById('modalTitle').textContent = title; document.getElementById('modalSelection').value = selectionText; actionModal.classList.remove('hidden'); }
+    document.getElementById('openDemoBtnHeader').addEventListener('click', () => openActionModal('Request SafetyLink Demo', 'Platform Demo & Estate Setup'));
+    document.getElementById('openDemoBtnMobile').addEventListener('click', () => openActionModal('Request SafetyLink Demo', 'Platform Demo & Estate Setup'));
+    document.getElementById('orderKeyfobBtn').addEventListener('click', () => openActionModal('Order BLE Panic Keyfob', `HST-01 Keyfob (${selectedKeyfob.name}) — R149 Once-off`));
+    document.querySelectorAll('.select-plan-btn').forEach(btn => btn.addEventListener('click', () => openActionModal('Get Started with SafetyLink', `Selected: ${btn.dataset.plan}`)));
+    document.getElementById('closeModalBtn').addEventListener('click', () => actionModal.classList.add('hidden'));
+    document.getElementById('modalForm').addEventListener('submit', (e) => { e.preventDefault(); const name = document.getElementById('modalName').value.trim(); actionModal.classList.add('hidden'); showToast(`Request saved for ${name}.`); e.target.reset(); });
+    document.querySelectorAll('.dl-btn').forEach(btn => btn.addEventListener('click', () => showToast(`Preparing ${btn.dataset.dl}...`)));
+
+    // Control Room Map
+    const areaCoords = { roodepoort: [-26.16250, 27.87250], sandton: [-26.1076, 28.0567], johannesburg: [-26.201452, 28.045488] };
+    const incidents = [
+      { id: 1, title: 'BLE Keyfob Panic Hold (#14)', area: 'Roodepoort', lat: -26.16250, lng: 27.87250, severity: 'Crit', status: 'active', time: '2m ago' },
+      { id: 2, title: 'Perimeter Gate Motion (#11)', area: 'Sandton', lat: -26.1076, lng: 28.0567, severity: 'High', status: 'active', time: '9m ago' },
+      { id: 3, title: 'After-Hours Access Alert (#08)', area: 'Johannesburg CBD', lat: -26.201452, lng: 28.045488, severity: 'Med', status: 'active', time: '24m ago' },
+      { id: 4, title: 'Patrol Check-In Verified (#03)', area: 'Roodepoort', lat: -26.151, lng: 27.892, severity: 'Low', status: 'resolved', time: '1h ago' }
+    ];
+    let statusFilter = 'all', severityFilter = 'all', markerLayer = null;
+    function initControlRoomMap() {
+      mapInitialized = true;
+      map = L.map('incidentMap').setView([-26.165, 27.975], 11);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' }).addTo(map);
+      markerLayer = L.layerGroup().addTo(map);
+      renderIncidents();
+    }
+    function renderIncidents() {
+      const filtered = incidents.filter(inc => (statusFilter === 'all' || inc.status === statusFilter) && (severityFilter === 'all' || inc.severity === severityFilter));
+      document.getElementById('countCritical').textContent = incidents.filter(i => i.severity === 'Crit' && i.status === 'active').length;
+      document.getElementById('countActive').textContent = incidents.filter(i => i.status === 'active').length;
+      document.getElementById('countResolved').textContent = incidents.filter(i => i.status === 'resolved').length;
+      document.getElementById('countTotal').textContent = incidents.length;
+      if (markerLayer) {
+        markerLayer.clearLayers();
+        filtered.forEach(inc => {
+          const color = inc.status === 'resolved' ? '#10B981' : inc.severity === 'Crit' ? '#DC2626' : inc.severity === 'High' ? '#EA580C' : '#F59E0B';
+          markerLayer.addLayer(L.circleMarker([inc.lat, inc.lng], { radius: 9, fillColor: color, color: '#FFFFFF', weight: 2, fillOpacity: 0.9 }).bindPopup(`<strong>${inc.title}</strong><br>${inc.area} • ${inc.severity} (${inc.status})`));
+        });
+      }
+      const listEl = document.getElementById('incidentList');
+      listEl.innerHTML = filtered.map(inc => `<div class="p-2.5 rounded-xl bg-white dark:bg-navy-900 border border-slate-200 dark:border-slate-800 flex items-start justify-between gap-2"><div><div class="text-xs font-bold text-navy-900 dark:text-white">${inc.title}</div><div class="text-[11px] text-slate-500">${inc.area} • ${inc.time}</div></div><button type="button" data-focus="${inc.id}" class="focus-inc-btn shrink-0 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold">View</button></div>`).join('');
+      listEl.querySelectorAll('.focus-inc-btn').forEach(btn => btn.addEventListener('click', () => { const item = incidents.find(i => i.id === Number(btn.dataset.focus)); if (item && map) map.setView([item.lat, item.lng], 13); }));
+    }
+    document.querySelectorAll('.status-filter').forEach(btn => btn.addEventListener('click', () => {
+      statusFilter = btn.dataset.status;
+      document.querySelectorAll('.status-filter').forEach(b => b.className = b === btn ? 'status-filter px-2 py-1 rounded bg-blue-600 text-white font-semibold' : 'status-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold');
+      renderIncidents();
+    }));
+    document.querySelectorAll('.severity-filter').forEach(btn => btn.addEventListener('click', () => {
+      severityFilter = btn.dataset.severity;
+      document.querySelectorAll('.severity-filter').forEach(b => b.className = b === btn ? 'severity-filter px-2 py-1 rounded bg-blue-600 text-white font-semibold' : 'severity-filter px-2 py-1 rounded bg-white dark:bg-navy-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold');
+      renderIncidents();
+    }));
+    const incModal = document.getElementById('incidentModal');
+    document.getElementById('openNewIncidentBtn').addEventListener('click', () => incModal.classList.remove('hidden'));
+    document.getElementById('closeIncidentModalBtn').addEventListener('click', () => incModal.classList.add('hidden'));
+    document.getElementById('incidentForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('incTitle').value.trim();
+      const areaKey = document.getElementById('incArea').value;
+      const severity = document.getElementById('incSeverity').value;
+      const [baseLat, baseLng] = areaCoords[areaKey];
+      const newInc = { id: Date.now(), title: `${title} (#${incidents.length + 15})`, area: areaKey.charAt(0).toUpperCase() + areaKey.slice(1), lat: baseLat + (Math.random() - 0.5) * 0.015, lng: baseLng + (Math.random() - 0.5) * 0.015, severity, status: 'active', time: 'Just now' };
+      incidents.unshift(newInc); incModal.classList.add('hidden'); renderIncidents();
+      if (map) map.setView([newInc.lat, newInc.lng], 13);
+      showToast(`Incident "${title}" dispatched.`); e.target.reset();
+    });
+
+    navigateTo(window.location.hash.replace('#/', '') || 'home');
   </script>
 </body>
 </html>
