@@ -41,6 +41,24 @@ html.light [style*="background:#0"],html.light [style*="background: #0"],html.li
 html.light [style*="color:#fff"],html.light [style*="color: #fff"]{color:#0f172a!important}
 #sl-theme-btn{position:fixed;right:16px;bottom:16px;z-index:9999;border:1px solid #0b8b79;background:#0b8b79;color:#fff;font-weight:700;font-size:13px;padding:10px 14px;border-radius:999px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25)}
 </style>
+<style id="sl-responsive">
+*{box-sizing:border-box}
+img,video{max-width:100%;height:auto;display:block}
+img[alt*="logo" i],img[src*="logo" i]{max-height:72px;width:auto;margin:0 auto}
+section{padding:40px 20px;margin:0 auto;max-width:1200px}
+section > * {max-width:100%}
+.sl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+header nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+body{margin:0;overflow-x:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}
+h1{font-size:clamp(28px,6vw,52px);line-height:1.1}
+h2{font-size:clamp(22px,4vw,34px)}
+@media (max-width:768px){
+  section{padding:28px 16px}
+  .sl-grid{grid-template-columns:1fr}
+  header nav{justify-content:center}
+  img[alt*="logo" i],img[src*="logo" i]{max-height:56px}
+}
+</style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-navy-950 dark:text-slate-100 antialiased transition-colors duration-200 pb-16 md:pb-0 relative overflow-x-hidden">
 
