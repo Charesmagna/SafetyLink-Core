@@ -24,3 +24,6 @@ bucket_name = "safetylink-releases"
 binding = "MEDIA"
 bucket_name = "media"
 
+[triggers]
+crons = ["*/2 * * * *"]
+

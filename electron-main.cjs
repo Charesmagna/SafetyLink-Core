@@ -10,7 +10,7 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true
     },
-    icon: path.join(__dirname, 'dist', 'icon-512.png')
+    icon: path.join(__dirname, 'dist', 'logo.png')
   });
   
   win.loadFile(path.join(__dirname, 'dist', 'index.html'));

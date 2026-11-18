@@ -2355,8 +2355,29 @@ Rules:
   // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
   const pcmGatewayHandler = async (req: express.Request, res: express.Response) => {
     try {
-      const body = req.body || {};
+      const pcmSecret = (process.env.PCM_WEBHOOK_SECRET || '').trim();
+      const pcmToken = (process.env.PCM_WEBHOOK_TOKEN || '').trim();
+      const secrets = [pcmSecret, pcmToken].filter(Boolean);
+      if (secrets.length === 0) {
+        return res.status(503).json({ error: 'PCM webhook not configured' });
+      }
       const query = (req.query as any) || {};
+      const givenToken = String((req.params as any)?.token || query.token || req.headers['x-pcm-token'] || '').trim();
+      const sigHeader = String(req.headers['x-signature'] || req.headers['x-hmac-sha256'] || '').trim()
+        .replace(/^sha256=/i, '').trim().toLowerCase();
+      const rawBuf: Buffer = (req as any).rawBody instanceof Buffer
+        ? (req as any).rawBody
+        : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}), 'utf8');
+      const tokenOk = Boolean(pcmToken && givenToken && safeEqualStr(givenToken, pcmToken));
+      const sigOk = /^[0-9a-f]{64}$/.test(sigHeader) && secrets.some((s) => {
+        const expectedHex = crypto.createHmac('sha256', s).update(rawBuf).digest('hex');
+        return safeEqualStr(sigHeader, expectedHex);
+      });
+      if (!tokenOk && !sigOk) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const body = req.body || {};
 
       // 1. Universal field resolution across forwarder formats
       // Format A: SMS Forwarder App: { from, text, timestamp } or { sender, message } or { phone, text }

@@ -9,4 +9,4 @@ files:
   - "package.json"
 win:
   target: nsis
-  icon: public/icon-512.png
+  icon: public/logo.png
