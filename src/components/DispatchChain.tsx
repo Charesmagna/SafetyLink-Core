@@ -13,6 +13,7 @@ export const DispatchChain: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [template, setTemplate] = useState('');
   const [channelType, setChannelType] = useState<Contact['channelType']>('SMS');
+  const [hasWhatsApp, setHasWhatsApp] = useState(false);
   const [triggerTypes, setTriggerTypes] = useState<EmergencyProfileType[]>([]);
 
   const toggleTriggerType = (t: EmergencyProfileType) => {
@@ -25,11 +26,12 @@ export const DispatchChain: React.FC = () => {
     setPhone(contact.phone);
     setTemplate(contact.template || '');
     setChannelType(contact.channelType || 'SMS');
+    setHasWhatsApp(Boolean(contact.hasWhatsApp || contact.channelType === 'WHATSAPP'));
     setTriggerTypes(contact.triggerTypes || []);
   };
 
   const handleSaveEdit = (id: string) => {
-    updateContact(id, { label, phone, template, channelType, triggerTypes });
+    updateContact(id, { label, phone, template, channelType, hasWhatsApp: hasWhatsApp || channelType === 'WHATSAPP', triggerTypes });
     setEditingId(null);
   };
 
@@ -41,6 +43,7 @@ export const DispatchChain: React.FC = () => {
       phone,
       template: template || 'EMERGENCY: Distress beacon active near {LAT}, {LNG}',
       channelType,
+      hasWhatsApp: hasWhatsApp || channelType === 'WHATSAPP',
       triggerTypes,
       priority: contacts.length + 1
     });
@@ -49,6 +52,7 @@ export const DispatchChain: React.FC = () => {
     setPhone('');
     setTemplate('');
     setChannelType('SMS');
+    setHasWhatsApp(false);
     setTriggerTypes([]);
     setShowAddForm(false);
   };
@@ -135,6 +139,15 @@ export const DispatchChain: React.FC = () => {
                 <option value="GROUP">Community Broadcaster Channel</option>
                 <option value="POLICE">SAPS Police Center</option>
               </select>
+              <label className="flex items-center gap-2 mt-2 text-[9px] font-mono text-emerald-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasWhatsApp || channelType === 'WHATSAPP'}
+                  onChange={e => setHasWhatsApp(e.target.checked)}
+                  className="accent-emerald-500"
+                />
+                <span>Contact uses WhatsApp (enables Priority 5 WhatsApp fallback)</span>
+              </label>
             </div>
 
             <div className="flex flex-col">

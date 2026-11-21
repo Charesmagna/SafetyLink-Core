@@ -1,3 +1,5 @@
+import { getR2StreamUrl } from '../utils/r2Assets';
+
 // SafetyLink Branding Configuration
 // Assets served from Google Drive public folder
 // Replace drive URLs with hosted CDN URLs when ready
@@ -15,7 +17,7 @@ export const Brand = {
   umbrellaLogo: `/logos/New SafetyLink Official Logo.svg`,
 
   // 3D animation — use in: web hero background, APK splash screen  
-  animation3d: `/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4`,
+  animation3d: getR2StreamUrl('SafetyLink 3D Animation Logo.mp4'),
 
   // App launcher icon — APK home screen icon
   launcherIcon: `/Icons/icon-512.png`,

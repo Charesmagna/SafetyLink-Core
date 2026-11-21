@@ -56,14 +56,18 @@ export async function sendPanic(panicData: any, contacts: any[], customServerUrl
   console.log(`${prefix}Attempting Priority 1: Native SMS`);
   if (!isDrill) await sendNativeSMS(emergencyPhone, message);
 
-  // PRIORITY 2: Native Android Call (Optional delay/prompt can be added if needed, but for now we initiate it)
-  // We may not want to auto-call immediately after SMS without a delay, but as per request, we initiate.
+  // PRIORITY 2: Native Android Call
   console.log(`${prefix}Attempting Priority 2: Native Call`);
   if (!isDrill) await makeNativeCall(emergencyPhone);
 
-  // PRIORITY 3: WhatsApp Offline-First
-  console.log(`${prefix}Attempting Priority 3: WhatsApp`);
-  if (!isDrill) await sendWhatsApp(emergencyPhone, message);
+  // PRIORITY 3: WhatsApp (ONLY for contacts that actually support/use WhatsApp)
+  const whatsappContact = (contacts || []).find(
+    (c: any) => (c?.channelType === 'WHATSAPP' || c?.hasWhatsApp === true) && c?.phone
+  );
+  if (!isDrill && whatsappContact) {
+    console.log(`${prefix}Attempting Priority 3: WhatsApp for`, whatsappContact.phone);
+    await sendWhatsApp(whatsappContact.phone, message);
+  }
   
   // SUPABASE EDGE FUNCTION
   if (hasData) {

@@ -162,15 +162,15 @@ export const OfflineMap: React.FC = () => {
         </span>
       </div>
 
-      {/* Leaflet Interactive Map View */}
+      {/* Google Maps Interactive View */}
       <div className="relative w-full h-72 bg-slate-950 border border-slate-900 rounded-2xl overflow-hidden mt-4 z-10">
-        <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}>
+        <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''} language="en" region="ZA">
           <Map
             internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
             mapId="DEMO_MAP_ID" 
             defaultZoom={13} 
             center={{ lat: activeFocusCenter[0], lng: activeFocusCenter[1] }} 
-            disableDefaultUI={true} 
+            disableDefaultUI={false} 
             gestureHandling={'greedy'} 
             mapTypeId={mapCenterMode === 'satellite' ? 'satellite' : 'roadmap'}
             style={{ width: '100%', height: '100%' }}
@@ -201,8 +201,24 @@ export const OfflineMap: React.FC = () => {
                 : 'bg-slate-950/90 border-slate-800 text-slate-400 hover:text-slate-200'
             }`}
           >
-            🛰️ Focus Sat
+            🛰️ Satellite View
           </button>
+          <a
+            href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${userLat},${userLng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1.5 rounded-lg text-[8px] font-mono font-black uppercase border bg-slate-950/90 border-slate-800 text-blue-300 hover:text-white text-center"
+          >
+            👁️ Street View
+          </a>
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${userLat},${userLng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1.5 rounded-lg text-[8px] font-mono font-black uppercase border bg-slate-950/90 border-slate-800 text-emerald-300 hover:text-white text-center"
+          >
+            🧭 Navigate
+          </a>
         </div>
 
         {/* Bottom coordinate banner overlay */}

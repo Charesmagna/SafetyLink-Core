@@ -23,6 +23,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     signInWithGoogle,
     registerUser, 
     registerOrganization,
+    rememberedOrgs,
     generateReferralCode,
     applyReferralCode,
     demoMode,
@@ -51,6 +52,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   const [loginOrgCode, setLoginOrgCode] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [showPopia, setShowPopia] = useState(false);
   const [showReferralInput, setShowReferralInput] = useState(false);
   const [loginReferralCode, setLoginReferralCode] = useState(() => {
     return localStorage.getItem('sl_pending_referral') || '';
@@ -85,6 +87,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   const [userAvatar, setUserAvatar] = useState('');
   const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [userPinInput, setUserPinInput] = useState('');
+  const [userDuressPinInput, setUserDuressPinInput] = useState('');
   const [userSuccessMsg, setUserSuccessMsg] = useState('');
   const [userError, setUserError] = useState('');
 
@@ -98,7 +102,6 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   const [showClosingLogo, setShowClosingLogo] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
-  const [showPopia, setShowPopia] = useState(false);
 
   useEffect(() => {
     let listener: any = null;
@@ -134,21 +137,21 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     if (e?.preventDefault) e.preventDefault();
     setLoginError('');
 
-    if (!loginUsername) {
-      setLoginError('Please enter a username or administrative identifier.');
-      return;
-    }
-
     const cleanUsername = loginUsername.trim();
     const cleanPassword = loginPassword.trim();
     const cleanOrg = loginOrgCode.trim();
 
-    const res = await login(cleanUsername, skipPasswordCheck ? '' : cleanPassword, cleanOrg, skipPasswordCheck);
+    if (!cleanUsername && !cleanOrg) {
+      setLoginError('Please enter a username, email, or organization mesh code.');
+      return;
+    }
+
+    const res = await login(cleanUsername || cleanOrg, skipPasswordCheck ? '' : cleanPassword, cleanOrg, skipPasswordCheck);
     if (!res.success) {
       setLoginError(res.error || 'Invalid credentials or code combination.');
     } else if (loginReferralCode.trim() && !referralApplied) {
       const { users } = useAppStore.getState();
-      const user = users.find(u => u.username.toLowerCase() === loginUsername.toLowerCase());
+      const user = users.find(u => u.username.toLowerCase() === cleanUsername.toLowerCase());
       if (user && !user.referredByCode) {
         applyReferralCode(loginReferralCode.trim(), user.id);
         setReferralApplied(true);
@@ -167,9 +170,23 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       return;
     }
 
+    if (!/^\d{4}$/.test(userPinInput.trim())) {
+      setUserError('Please set a mandatory 4-digit Safety PIN (digits 0–9) to disarm emergencies.');
+      return;
+    }
+    if (userDuressPinInput.trim() && (!/^\d{4}$/.test(userDuressPinInput.trim()) || userDuressPinInput.trim() === userPinInput.trim())) {
+      setUserError('Silent Duress PIN must be 4 digits and different from your primary Safety PIN.');
+      return;
+    }
+
+    if (!userPassword.trim() || userPassword.trim().length < 4) {
+      setUserError('Please set a password of at least 4 characters.');
+      return;
+    }
+
     const effectiveFullName = userFullName.trim() || userUsername.trim();
     const effectivePhone = userPhone.trim() || '+27 00 000 0000';
-    const effectivePassword = userPassword || 'demo123';
+    const effectivePassword = userPassword.trim();
     const effectiveOrgCode = userOrgCode.trim();
 
     const res = await registerUser({
@@ -182,19 +199,17 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
       avatarUrl: userAvatar,
       email: userEmail.trim(),
       orgCode: effectiveOrgCode,
+      pinCode: userPinInput.trim(),
+      duressPin: userDuressPinInput.trim() || undefined,
       autoLogin: true
     });
 
     if (res.success) {
-      setUserSuccessMsg('Profile created successfully! Accessing your SafetyLink Console...');
-      const tempUsername = userUsername.trim();
-      const tempPassword = effectivePassword;
-      const tempOrg = effectiveOrgCode;
-
-      setTimeout(async () => {
-        await login(tempUsername, tempPassword, tempOrg);
-        setUserSuccessMsg('');
-      }, 400);
+      setUserSuccessMsg(
+        res.provisionalOffline
+          ? 'Provisional offline profile created! Sync will complete automatically when online.'
+          : 'Profile created successfully! Opening your SafetyLink Console...'
+      );
     } else {
       setUserError(res.error || 'Registration failed.');
     }
@@ -225,61 +240,50 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     setOrgError('');
     setOrgSuccessMsg('');
 
-    if (!orgName || !orgContactName || !orgEmail) {
+    if (!orgName.trim() || !orgContactName.trim() || !orgEmail.trim()) {
       setOrgError('Please fill in contact details and organization name.');
       return;
     }
-
-
-    const newOrg = await registerOrganization({
-      name: orgName,
-      contactName: orgContactName,
-      contactEmail: orgEmail,
-      id: '', // the server issues the code
-      password: orgPassword
-    });
-
-    if (!newOrg) {
-      setOrgError('Failed to register organization.');
+    if (!orgPassword.trim() || orgPassword.trim().length < 4) {
+      setOrgError('Please set an admin password of at least 4 characters.');
       return;
     }
 
-    // Sign straight in with the new details, then open the dashboard (no return to the login screen).
-    const autoIn = await login(orgContactName, orgPassword, newOrg.id);
-    if (autoIn?.success) { setOrgError(''); return; }
+    const res = await registerOrganization({
+      name: orgName.trim(),
+      contactName: orgContactName.trim(),
+      contactEmail: orgEmail.trim(),
+      id: generatedOrgId.trim() || '',
+      password: orgPassword
+    });
 
+    if (!res || (res as any).error || !res.id) {
+      setOrgError((res as any)?.error || 'Failed to register organization. Please try again.');
+      return;
+    }
+
+    const newOrg = res;
     if (newOrg.approved === false) {
       setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Awaiting registry approval from Super Admin...`);
-      const prefillContactName = orgContactName;
-      const prefillOrgId = generatedOrgId;
+      const prefillEmail = orgEmail.trim();
+      const prefillOrgId = newOrg.id;
       setTimeout(() => {
         setView('LOGIN');
-        setLoginUsername(prefillContactName);
+        setLoginUsername(prefillEmail);
         setLoginOrgCode(prefillOrgId);
         setOrgSuccessMsg('');
         setOrgName('');
         setOrgContactName('');
         setOrgEmail('');
         setOrgPassword('');
-        setOrgPassword('');
         setGeneratedOrgId('');
         setShowIdApplication(false);
-      }, 4000);
-    } else {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Logging you in...`);
-      const registeredContactName = orgContactName;
-      const registeredOrgId = generatedOrgId;
-
-      setTimeout(async () => {
-        await login(registeredContactName, orgPassword, registeredOrgId);
-        setOrgSuccessMsg('');
-        setOrgName('');
-        setOrgContactName('');
-        setOrgEmail('');
-        setGeneratedOrgId('');
-        setShowIdApplication(false);
-      }, 1500);
+      }, 3000);
+      return;
     }
+
+    // registerOrganization() already persisted the org session into currentOrg + sl_remembered_orgs.
+    setOrgSuccessMsg(`Organization provisioned (${newOrg.id}). Opening Commander Deck...`);
   };
 
   return (
@@ -467,9 +471,8 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   type="text"
                   value={loginUsername}
                   onChange={e => setLoginUsername(e.target.value)}
-                  placeholder="e.g. thabo_m or user@gmail.com"
+                  placeholder="e.g. thabo_m or user@gmail.com (optional if Org Code filled)"
                   className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
-                  required
                 />
               </div>
 
@@ -485,6 +488,27 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                   placeholder="e.g. SL-ORG-001 or SL-DEEPSOUTH-002"
                   className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all uppercase"
                 />
+                {rememberedOrgs && rememberedOrgs.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="text-[8px] text-slate-500 uppercase tracking-wider self-center mr-1">Remembered Orgs:</span>
+                    {rememberedOrgs.slice(0, 4).map((ro) => (
+                      <button
+                        key={ro.id}
+                        type="button"
+                        onClick={() => {
+                          setLoginOrgCode(ro.id);
+                          if (!loginUsername.trim() && ro.contactEmail && !ro.contactEmail.endsWith('@safetylink.app')) {
+                            setLoginUsername(ro.contactEmail);
+                          }
+                        }}
+                        className="px-2 py-1 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/25 text-emerald-300 text-[9px] font-mono font-bold transition-colors cursor-pointer"
+                        title={`${ro.name} (${ro.id})`}
+                      >
+                        {ro.name} · {ro.id}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <span className="text-[9px] text-slate-500 mt-1 pl-1">Format: SL-&lt;COMPANY&gt;-001. Leave blank for standalone personal profile mode.</span>
               </div>
               <div className="flex flex-col mt-2">
@@ -902,6 +926,36 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-bold text-emerald-400 mb-1 uppercase tracking-wider">4-Digit Safety PIN *</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={userPinInput}
+                    onChange={e => setUserPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="e.g. 4829"
+                    className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 font-mono tracking-[0.4em] text-center"
+                    required
+                  />
+                  <span className="text-[8px] text-slate-500 mt-1">Required to cancel/disarm alerts</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-bold text-amber-400 mb-1 uppercase tracking-wider">Silent Duress PIN</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={userDuressPinInput}
+                    onChange={e => setUserDuressPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Optional"
+                    className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 font-mono tracking-[0.4em] text-center"
+                  />
+                  <span className="text-[8px] text-slate-500 mt-1">Pretends to cancel while dispatching silently</span>
+                </div>
+              </div>
+
 
 
 
@@ -1241,17 +1295,23 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
             </a>
           </div>
         </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setShowPopia(true)}
+            className="text-[10px] font-mono text-slate-400 hover:text-emerald-400 underline cursor-pointer transition-colors"
+          >
+            POPIA Privacy Policy &amp; Emergency Terms (10111 / 112)
+          </button>
+        </div>
         <p className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em]">
-          SAFETYLINK SOUTH AFRICA · POPIA COMPLIANT (ACT 4 OF 2013)
+          SAFETYLINK DOES NOT REPLACE 10111, 112, OR 10177
         </p>
-        <button type="button" onClick={() => setShowPopia(true)} className="text-[9px] text-emerald-400 hover:text-emerald-300 font-mono uppercase tracking-widest underline cursor-pointer">
-          POPIA Privacy Notice &amp; Terms
-        </button>
         <p className="text-[8px] text-amber-500/60 font-mono uppercase tracking-[0.25em] font-black">
-          POWERED BY TM MEDIA SOLUTIONS
+          TM MEDIA SOLUTIONS · REG: 2018/500191/07
         </p>
-        <PopiaLegalModal open={showPopia} onClose={() => setShowPopia(false)} />
       </div>
+      <PopiaLegalModal open={showPopia} onClose={() => setShowPopia(false)} />
     </div>
   );
 };

@@ -8,14 +8,14 @@ import {
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 
-// Cloudflare R2 credentials with environment fallback
+// Cloudflare R2 credentials from environment
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'd089bef8b0b58c5d9506b512ec2f63dc';
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '375c7925df088e45da2409ccd00cbb07';
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || 'c69466e33f32d39b1ab448df54e85f486412ce3e6b513a1962b3e8dd7057b281';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const R2_BUCKET = process.env.R2_BUCKET || 'media';
 const R2_ENDPOINT = process.env.R2_ENDPOINT || `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
 const R2_PREFIX = process.env.R2_PREFIX || 'Safetylink/';
-const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || process.env.R2_API_TOKEN || 'cfat_tlHx1K8hOs4F2qIzQUSsc7CWGmudEORDrYc5DYcLa68f67f3';
+const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN || process.env.R2_API_TOKEN || '';
 
 export const r2Client = new S3Client({
   endpoint: R2_ENDPOINT,

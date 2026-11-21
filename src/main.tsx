@@ -17,6 +17,19 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import { useAppStore } from './utils/store'
 import './styles/index.css'
 
+// Tier 1 Google Maps Platform quota & auth error detector (Case A Demo Key defense)
+(window as any).gm_authFailure = () => {
+  window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+};
+const _origConsoleError = console.error;
+console.error = (...args: unknown[]) => {
+  _origConsoleError.apply(console, args);
+  const msg = args.map((a) => String(a)).join(' ');
+  if (msg.includes('OverQuotaMapError') || msg.includes('QuotaExceededError')) {
+    window.dispatchEvent(new CustomEvent('gmp-quota-exceeded'));
+  }
+};
+
 // Only register service worker on web — not inside Android WebView
 if (!Capacitor.isNativePlatform()) {
 }

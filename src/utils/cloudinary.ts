@@ -1,3 +1,5 @@
+import { getR2StreamUrl } from './r2Assets';
+
 // Cloudinary assets centralized configuration
 const CLOUD = 'qcp4fx2v';
 const IMG_BASE = `https://res.cloudinary.com/${CLOUD}/image/upload`;
@@ -18,23 +20,23 @@ export const ASSETS = {
   logoCdn: '/logos/Safety_Link_Logo_Transparent.png',
   logo3d: '/logos/Safety_Link_Logo_Transparent.png',
   logoKlev: '/media/kleva_logo/Kleva.svg',
-  appSos: '/api/r2/stream/Safetylink/Cat%20with%20a%20button.png',
-  appLogin: '/api/r2/stream/Safetylink/Polish_20260819_014832026.jpg',
-  itagAll: '/api/r2/stream/Safetylink/HST-01-Anti-Lost-Finder-PRODUCT.jpg',
-  itagSingle: '/api/r2/stream/Safetylink/31DP9Fqk0wL._AC_.jpg',
-  itagBattery: '/api/r2/stream/Safetylink/Polish_20260819_020007723.jpg',
-  dispatch: '/api/r2/stream/Safetylink/Polish_20260819_020134421.jpg',
-  family: '/api/r2/stream/Safetylink/Polish_20260819_020007723.jpg',
-  tactical: '/api/r2/stream/Safetylink/Polish_20260907_043403519.jpg',
-  drone: '/api/r2/stream/Safetylink/Polish_20260819_020219883.jpg',
-  controlRoom: '/api/r2/stream/Safetylink/Polish_20260711_034127538.jpg',
-  banner: '/api/r2/stream/Safetylink/Emergency_Response_Platform_Architecture_Overview.png',
+  appSos: getR2StreamUrl('Cat with a button.png'),
+  appLogin: getR2StreamUrl('Polish_20260819_014832026.jpg'),
+  itagAll: getR2StreamUrl('HST-01-Anti-Lost-Finder-PRODUCT.jpg'),
+  itagSingle: getR2StreamUrl('31DP9Fqk0wL._AC_.jpg'),
+  itagBattery: getR2StreamUrl('Polish_20260819_020007723.jpg'),
+  dispatch: getR2StreamUrl('Polish_20260819_020134421.jpg'),
+  family: getR2StreamUrl('Polish_20260819_020007723.jpg'),
+  tactical: getR2StreamUrl('Polish_20260907_043403519.jpg'),
+  drone: getR2StreamUrl('Polish_20260819_020219883.jpg'),
+  controlRoom: getR2StreamUrl('Polish_20260711_034127538.jpg'),
+  banner: getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png'),
   businessCard: '/logos/Safety_Link_Logo_Transparent.png',
-  dashboardDark: '/api/r2/stream/Safetylink/IMG_20260914_221811.png',
-  estateTactical: '/api/r2/stream/Safetylink/Polish_20260907_043403519.jpg',
-  estatePhoto: '/api/r2/stream/Safetylink/Polish_20260819_020134421.jpg',
-  promoGraphic: '/api/r2/stream/Safetylink/Emergency_Mesh_Platform_Overview.png',
-  mapDark: '/api/r2/stream/Safetylink/Polish_20260809_035827088.png',
+  dashboardDark: getR2StreamUrl('IMG_20260914_221811.png'),
+  estateTactical: getR2StreamUrl('Polish_20260907_043403519.jpg'),
+  estatePhoto: getR2StreamUrl('Polish_20260819_020134421.jpg'),
+  promoGraphic: getR2StreamUrl('Emergency_Mesh_Platform_Overview.png'),
+  mapDark: getR2StreamUrl('Polish_20260809_035827088.png'),
 };
 
 export const USE_CASE_VIDEOS = [

@@ -13,6 +13,7 @@ export const ResponderDashboard: React.FC = () => {
   const users = useAppStore(s => s.users);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -26.3085, lng: 27.8344 });
+  const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid' | 'satellite'>('roadmap');
 
   const panicEvents = useAppStore(s => s.panicEvents);
   const orgCode = currentUser?.orgCode;
@@ -25,7 +26,6 @@ export const ResponderDashboard: React.FC = () => {
   );
 
   const getUserStatus = (u: typeof users[0]): 'panic' | 'safe' | 'offline' => {
-    // Check if there is an active panic event for this user
     const isPanic = panicEvents.some(e => e.profileUsed === u.id && e.status !== 'RESOLVED');
     if (isPanic) return 'panic';
     if (!(u as any).lastLocation) return 'offline';
@@ -34,19 +34,48 @@ export const ResponderDashboard: React.FC = () => {
   };
 
   const panicUsers = guardedUsers.filter(u => getUserStatus(u) === 'panic');
+  const selectedUser = guardedUsers.find(u => u.id === selectedUserId) || panicUsers[0] || guardedUsers[0];
+  const focusLoc = (selectedUser as any)?.lastLocation || mapCenter;
+  const focusLat = typeof focusLoc?.lat === 'number' && focusLoc.lat !== 0 ? focusLoc.lat : mapCenter.lat;
+  const focusLng = typeof focusLoc?.lng === 'number' && focusLoc.lng !== 0 ? focusLoc.lng : mapCenter.lng;
   const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
   return (
     <div className="flex flex-col h-full bg-slate-950 text-white overflow-hidden">
       {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <div>
           <h2 className="font-black font-mono text-sm text-red-400 uppercase tracking-widest">Responder Console</h2>
           <p className="text-gray-400 text-xs font-mono mt-0.5">{guardedUsers.length} residents · {panicUsers.length} alerts</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-emerald-400 font-mono text-xs font-bold">LIVE</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMapTypeId(prev => prev === 'roadmap' ? 'hybrid' : prev === 'hybrid' ? 'satellite' : 'roadmap')}
+            className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 uppercase"
+          >
+            Layer: {mapTypeId}
+          </button>
+          <a
+            href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${focusLat},${focusLng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-blue-300 hover:bg-slate-700 uppercase"
+          >
+            Street View
+          </a>
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&destination=${focusLat},${focusLng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-emerald-600/90 text-white hover:bg-emerald-500 uppercase"
+          >
+            Navigate
+          </a>
+          <div className="flex items-center gap-1.5 pl-1">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 font-mono text-xs font-bold">LIVE</span>
+          </div>
         </div>
       </div>
 
@@ -55,7 +84,7 @@ export const ResponderDashboard: React.FC = () => {
         <div className="bg-red-950 border-b border-red-500/50 px-4 py-2 flex-shrink-0 space-y-1">
           {panicUsers.map(u => (
             <div key={u.id} className="flex items-center gap-2 animate-pulse">
-              <span className="text-red-400 font-black font-mono text-xs">🚨 PANIC:</span>
+              <span className="text-red-400 font-black font-mono text-xs">PANIC:</span>
               <span className="text-white font-bold text-xs">{u.fullName}</span>
               <span className="text-red-300 text-xs">{u.phone}</span>
             </div>
@@ -64,12 +93,15 @@ export const ResponderDashboard: React.FC = () => {
       )}
 
       {/* Map */}
-      <div className="flex-1 min-h-0">
-        <APIProvider apiKey={GMAPS_KEY}>
+      <div className="flex-1 min-h-[260px]">
+        <APIProvider apiKey={GMAPS_KEY} language="en" region="ZA">
           <Map
             defaultCenter={mapCenter}
+            center={{ lat: focusLat, lng: focusLng }}
             defaultZoom={14}
-            mapId="responder-map"
+            mapId="DEMO_MAP_ID"
+            internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
+            mapTypeId={mapTypeId}
             style={{ width: '100%', height: '100%' }}
             gestureHandling="greedy"
             disableDefaultUI={false}
@@ -85,14 +117,20 @@ export const ResponderDashboard: React.FC = () => {
                   position={{ lat: loc.lat, lng: loc.lng }}
                   onClick={() => setSelectedUserId(u.id)}
                 >
-                  <div style={{
-                    width: 14, height: 14, borderRadius: '50%',
-                    background: color, border: '2px solid white',
-                    boxShadow: `0 0 8px ${color}`,
-                    cursor: 'pointer',
-                    transform: selectedUserId === u.id ? 'scale(1.6)' : 'scale(1)',
-                    transition: 'transform 0.15s',
-                  }} title={u.fullName} />
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      background: color,
+                      border: '2px solid white',
+                      boxShadow: `0 0 8px ${color}`,
+                      cursor: 'pointer',
+                      transform: selectedUserId === u.id ? 'scale(1.6)' : 'scale(1)',
+                      transition: 'transform 0.15s',
+                    }}
+                    title={u.fullName}
+                  />
                 </AdvancedMarker>
               );
             })}
@@ -125,8 +163,10 @@ export const ResponderDashboard: React.FC = () => {
                   <p className="font-bold text-xs text-white truncate">{u.fullName}</p>
                   <p className="text-gray-400 text-[10px] font-mono">{u.phone || 'No phone'}</p>
                 </div>
-                <span className="text-[10px] font-black font-mono uppercase px-2 py-0.5 rounded-full"
-                  style={{ background: color + '22', color }}>
+                <span
+                  className="text-[10px] font-black font-mono uppercase px-2 py-0.5 rounded-full"
+                  style={{ background: color + '22', color }}
+                >
                   {status}
                 </span>
               </div>

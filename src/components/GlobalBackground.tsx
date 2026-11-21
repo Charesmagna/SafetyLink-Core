@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { getR2StreamUrl } from '../utils/r2Assets';
 
 export const GlobalBackground: React.FC = () => {
   const [videoError, setVideoError] = useState(false);
@@ -34,7 +35,7 @@ export const GlobalBackground: React.FC = () => {
           >
             <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
             <source src="/splash-video.mp4" type="video/mp4" />
-            <source src="/api/r2/stream/Safetylink%2FSafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+            <source src={getR2StreamUrl('SafetyLink 3D Animation Logo.mp4')} type="video/mp4" />
           </video>
         </div>
       )}

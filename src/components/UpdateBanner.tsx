@@ -37,8 +37,7 @@ export const UpdateBanner: React.FC<UpdateBannerProps> = ({ updateInfo, onDismis
     }
   }, [isApp, updateInfo?.available, updateInfo?.version, dismissed]);
 
-  // The website never shows the update/cache banner. Only the installed app does.
-  if (!isApp || !updateInfo?.available || dismissed) {
+  if (!updateInfo?.available || updateInfo?.updateRequiredBlocked || dismissed) {
     return null;
   }
 
