@@ -48,13 +48,12 @@ public class PanicService extends Service {
     private Handler countdownHandler;
     private PowerManager.WakeLock wakeLock;
 
-    private String pendingPhone = "+27816738186";
+    private String pendingPhone = "";
     private String pendingDescription = "Sequential Emergency SOS Trigger";
-    private long lastTriggerAtMs = 0L;
     private double pendingLat = 0.0;
     private double pendingLng = 0.0;
-    private String pendingOrgId = "SL-ORG-MAIN";
-    private String pendingTriggeredBy = "USER";
+    private String pendingOrgId = "";
+    private String pendingTriggeredBy = "";
 
     public static boolean isCountdownActiveState() {
         return activeCountdown;
@@ -85,28 +84,38 @@ public class PanicService extends Service {
             Log.i(TAG, "PanicService received Action: " + action);
 
             if (ACTION_TRIGGER_PANIC.equals(action)) {
-                if (intent.hasExtra("phone")) pendingPhone = intent.getStringExtra("phone");
-                if (intent.hasExtra("phones")) pendingPhones = intent.getStringExtra("phones");
-                if (intent.hasExtra("description")) pendingDescription = intent.getStringExtra("description");
-                if (intent.hasExtra("latitude")) pendingLat = intent.getDoubleExtra("latitude", 0.0);
-                if (intent.hasExtra("longitude")) pendingLng = intent.getDoubleExtra("longitude", 0.0);
-                if (intent.hasExtra("orgId")) pendingOrgId = intent.getStringExtra("orgId");
-                if (intent.hasExtra("triggeredBy")) pendingTriggeredBy = intent.getStringExtra("triggeredBy");
-
-                // Second press within 10s while a countdown is running = CANCEL (one press starts, two presses cancel)
-                long nowMs = System.currentTimeMillis();
-                if (isCountdownActiveState() && (nowMs - lastTriggerAtMs) < 10000) {
-                    Log.i(TAG, "Second press within 10s - cancelling countdown");
-                    cancelPanicSequence();
-                    lastTriggerAtMs = 0;
-                    return START_STICKY;
+                android.content.SharedPreferences prefs = getSharedPreferences("safetylink_prefs", Context.MODE_PRIVATE);
+                pendingPhone = intent.hasExtra("phone") && intent.getStringExtra("phone") != null && !intent.getStringExtra("phone").trim().isEmpty()
+                        ? intent.getStringExtra("phone").trim()
+                        : prefs.getString("sl_phone", "");
+                if (intent.hasExtra("phones") && intent.getStringExtra("phones") != null) {
+                    pendingPhones = intent.getStringExtra("phones").trim();
+                } else {
+                    pendingPhones = "";
                 }
-                lastTriggerAtMs = nowMs;
+                if (intent.hasExtra("description") && intent.getStringExtra("description") != null) {
+                    pendingDescription = intent.getStringExtra("description");
+                }
+                pendingLat = intent.hasExtra("latitude") ? intent.getDoubleExtra("latitude", 0.0) : 0.0;
+                pendingLng = intent.hasExtra("longitude") ? intent.getDoubleExtra("longitude", 0.0) : 0.0;
+                if (pendingLat == 0.0 && pendingLng == 0.0 && prefs.contains("sl_lat") && prefs.contains("sl_lng")) {
+                    pendingLat = Double.longBitsToDouble(prefs.getLong("sl_lat", 0L));
+                    pendingLng = Double.longBitsToDouble(prefs.getLong("sl_lng", 0L));
+                }
+                pendingOrgId = intent.hasExtra("orgId") && intent.getStringExtra("orgId") != null && !intent.getStringExtra("orgId").trim().isEmpty()
+                        ? intent.getStringExtra("orgId").trim()
+                        : prefs.getString("sl_org_id", "INDIVIDUAL");
+                pendingTriggeredBy = intent.hasExtra("triggeredBy") && intent.getStringExtra("triggeredBy") != null && !intent.getStringExtra("triggeredBy").trim().isEmpty()
+                        ? intent.getStringExtra("triggeredBy").trim()
+                        : prefs.getString("sl_user_id", prefs.getString("sl_name", "USER"));
 
                 boolean directDispatch = intent.getBooleanExtra("directDispatch", false);
                 if (directDispatch) {
-                    Log.i(TAG, "Direct dispatch requested — executing emergency dispatch immediately without secondary countdown");
+                    Log.i(TAG, "Direct dispatch requested — executing emergency dispatch immediately");
+                    countdownHandler.removeCallbacks(countdownRunnable);
                     triggerFinalSOS();
+                } else if (activeCountdown) {
+                    Log.i(TAG, "Countdown already active (" + currentSeconds + "s remaining); ignoring redundant trigger");
                 } else {
                     startPanicSequence();
                 }
@@ -138,8 +147,7 @@ public class PanicService extends Service {
     }
 
     private void cancelPanicSequence() {
-        if (!activeCountdown) return;
-
+        boolean wasActive = activeCountdown;
         activeCountdown = false;
         lastStatus = "CANCELLED";
         countdownHandler.removeCallbacks(countdownRunnable);
@@ -147,8 +155,10 @@ public class PanicService extends Service {
         releaseWakeLock();
 
         notifyBridgeStatus("CANCELLED", 0);
-        updateNotification("SafetyLink Secured", "Emergency alert cancelled by user");
-        Log.i(TAG, "SOS sequence cleanly disarmed");
+        if (wasActive) {
+            updateNotification("SafetyLink Secured", "Emergency alert cancelled by user");
+            Log.i(TAG, "SOS sequence cleanly disarmed");
+        }
         stopSelf();
     }
 
@@ -192,11 +202,22 @@ public class PanicService extends Service {
                 new EmergencyService.DispatchCallback() {
                     @Override
                     public void onResult(EmergencyService.DispatchResult result) {
-                        lastStatus = result.success ? "DISPATCHED" : "PARTIAL_SUCCESS";
+                        if (SafetyLinkBridgePlugin.getInstance() != null) {
+                            SafetyLinkBridgePlugin.getInstance().recordLastResult(result);
+                        }
+                        if (!result.success) {
+                            lastStatus = "FAILED";
+                        } else if ("SENT".equals(result.smsStatus) && "SYNCED".equals(result.backendSyncStatus)) {
+                            lastStatus = "DISPATCHED";
+                        } else {
+                            lastStatus = "PARTIAL_SUCCESS";
+                        }
                         notifyBridgeStatus(lastStatus, 0);
 
-                        String title = result.success ? "🚨 SOS DISPATCH CONFIRMED" : "⚠️ SOS PARTIAL DISPATCH";
-                        String msg = "SMS: " + result.smsStatus + " | Sync: " + result.backendSyncStatus;
+                        String title = "DISPATCHED".equals(lastStatus)
+                                ? "🚨 SOS DISPATCHED"
+                                : ("FAILED".equals(lastStatus) ? "❌ SOS DISPATCH FAILED" : "⚠️ SOS PARTIAL DISPATCH");
+                        String msg = "SMS: " + result.smsStatus + " | Call: " + result.callStatus + " | Sync: " + result.backendSyncStatus;
                         updateNotification(title, msg);
 
                         releaseWakeLock();

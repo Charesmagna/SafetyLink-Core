@@ -34,8 +34,8 @@ public class BootReceiver extends BroadcastReceiver {
             // Arm the survival watchdog alarm cycle
             WatchdogAlarmReceiver.scheduleWatchdog(context);
 
-            // Automatically re-establish connection to saved iTAG devices
-            ITagPlugin.reconnectBondedDevices(context);
+            // Automatically re-establish connection to saved iTAG devices headlessly
+            ITagGattManager.reconnectBondedDevices(context);
         }
     }
 }

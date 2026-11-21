@@ -60,7 +60,7 @@ public class SafelinkForegroundService extends Service {
         Log.i(TAG, "Service created");
         createNotificationChannels();
         acquireWakeLock();
-        ITagPlugin.reconnectBondedDevices(this);
+        ITagGattManager.reconnectBondedDevices(this);
     }
 
     @Override

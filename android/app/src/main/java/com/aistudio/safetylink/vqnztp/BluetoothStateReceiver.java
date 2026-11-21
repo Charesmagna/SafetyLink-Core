@@ -23,15 +23,15 @@ public class BluetoothStateReceiver extends BroadcastReceiver {
         if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
             int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
             if (state == BluetoothAdapter.STATE_ON) {
-                Log.i(TAG, "Bluetooth turned ON: auto-reconnecting saved iTAG devices");
-                ITagPlugin.reconnectBondedDevices(context);
+                Log.i(TAG, "Bluetooth turned ON: auto-reconnecting saved iTAG devices headlessly");
+                ITagGattManager.reconnectBondedDevices(context);
                 // Clear any warning
                 try {
                     android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                     if (nm != null) nm.cancel(9911);
                 } catch (Exception e) {}
             } else if (state == BluetoothAdapter.STATE_OFF || state == BluetoothAdapter.STATE_TURNING_OFF) {
-                if (!ITagPlugin.getBondedMacs(context).isEmpty()) {
+                if (!ITagGattManager.getBondedMacs(context).isEmpty()) {
                     Log.w(TAG, "Bluetooth turned OFF while iTAG devices are bonded! Alerting user.");
                     try {
                         android.app.NotificationManager nm = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);

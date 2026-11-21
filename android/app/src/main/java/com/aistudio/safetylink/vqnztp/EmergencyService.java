@@ -1,50 +1,85 @@
 package com.aistudio.safetylink.vqnztp;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.Manifest;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import android.os.Build;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
-import android.content.SharedPreferences;
 import android.util.Log;
+
+import com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * EmergencyService
  *
- * Native singleton orchestrating real SMS dispatch via Android SmsManager,
- * placeCall intents, and asynchronous incident persistence with the backend.
+ * Native singleton orchestrating real SMS dispatch via Android SmsManager with BroadcastReceiver
+ * confirmation and Dual-SIM failover, direct voice call placement, USSD Please Call Me fallback,
+ * offline-first profile/contact/GPS hydration, and backend incident synchronization.
  */
 public final class EmergencyService {
     private static final String TAG = "EmergencyService";
-    private static final String BACKEND_BASE_URL = "https://api.safetylink.online";
-    private static final String BACKEND_FALLBACK_URL = "http://10.0.2.2:3000";
+    private static final String BACKEND_PRIMARY_URL = "https://api.safetylink.online";
+    private static final String BACKEND_WORKERS_URL = "https://safetylink-api.tshilidzi-mukwevho54.workers.dev";
+    private static final String BACKEND_LOCAL_DEV_URL = "http://10.0.2.2:3000";
+
     private static volatile EmergencyService instance;
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-
-    // ---- Dual-SIM support ----
     public static final String PREFS = "safetylink_prefs";
+    public static final String CONTACTS_PREFS = "sl_contacts_store";
     public static final String PREF_SIM_SUB_ID = "preferred_sim_sub_id";
+    public static final String DEFAULT_PCM_GATEWAY = "0816738186";
+    private static final String DEFAULT_RESPONSE_CENTRE = "+27680079911";
+
+    private static final AtomicInteger smsRequestSeq = new AtomicInteger(1000);
+    private static final java.util.concurrent.atomic.AtomicLong lastDispatchAt = new java.util.concurrent.atomic.AtomicLong(0);
+
+    private EmergencyService() {}
+
+    public static EmergencyService getInstance() {
+        if (instance == null) {
+            synchronized (EmergencyService.class) {
+                if (instance == null) {
+                    instance = new EmergencyService();
+                }
+            }
+        }
+        return instance;
+    }
 
     public static int getPreferredSubId(Context ctx) {
         return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(PREF_SIM_SUB_ID, -1);
@@ -73,12 +108,70 @@ public final class EmergencyService {
         return SmsManager.getDefault();
     }
 
-    /** Attaches the preferred SIM's PhoneAccountHandle to a call intent. Silent no-op if unavailable. */
+    @SuppressWarnings("MissingPermission")
+    private static List<SmsManager> getOrderedSmsManagers(Context ctx) {
+        List<SmsManager> managers = new ArrayList<>();
+        LinkedHashSet<Integer> usedSubIds = new LinkedHashSet<>();
+
+        int preferredSubId = getPreferredSubId(ctx);
+        if (preferredSubId >= 0) {
+            SmsManager pref = createSmsManagerForSubId(ctx, preferredSubId);
+            if (pref != null) {
+                managers.add(pref);
+                usedSubIds.add(preferredSubId);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 &&
+                ctx.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                SubscriptionManager sm = (SubscriptionManager) ctx.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                if (sm != null) {
+                    List<SubscriptionInfo> list = sm.getActiveSubscriptionInfoList();
+                    if (list != null) {
+                        for (SubscriptionInfo info : list) {
+                            int subId = info.getSubscriptionId();
+                            if (!usedSubIds.contains(subId)) {
+                                SmsManager mgr = createSmsManagerForSubId(ctx, subId);
+                                if (mgr != null) {
+                                    managers.add(mgr);
+                                    usedSubIds.add(subId);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "SubscriptionManager enumeration failed: " + e.getMessage());
+            }
+        }
+
+        if (managers.isEmpty()) {
+            SmsManager fallback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    ? ctx.getSystemService(SmsManager.class)
+                    : SmsManager.getDefault();
+            if (fallback != null) managers.add(fallback);
+        }
+        return managers;
+    }
+
+    private static SmsManager createSmsManagerForSubId(Context ctx, int subId) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                SmsManager base = ctx.getSystemService(SmsManager.class);
+                return base != null ? base.createForSubscriptionId(subId) : null;
+            }
+            return SmsManager.getSmsManagerForSubscriptionId(subId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Attaches the preferred SIM's PhoneAccountHandle to a call intent. */
     @SuppressWarnings("MissingPermission")
     public static void applyPreferredSim(Context ctx, Intent callIntent) {
         int subId = getPreferredSubId(ctx);
         if (subId < 0) {
-            // No SIM chosen: use the phone's default outgoing SIM so Android does not ask SIM 1 or SIM 2
             try {
                 TelecomManager tc = (TelecomManager) ctx.getSystemService(Context.TELECOM_SERVICE);
                 if (tc != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -104,7 +197,10 @@ public final class EmergencyService {
                 if (info != null && tc != null) {
                     for (PhoneAccountHandle h : tc.getCallCapablePhoneAccounts()) {
                         String id = h.getId();
-                        if (id != null && (id.equals(info.getIccId()) || id.equals(String.valueOf(subId)))) { handle = h; break; }
+                        if (id != null && (id.equals(info.getIccId()) || id.equals(String.valueOf(subId)))) {
+                            handle = h;
+                            break;
+                        }
                     }
                 }
             }
@@ -114,23 +210,21 @@ public final class EmergencyService {
         }
     }
 
-    // ---- Please Call Me (USSD) to the Rain SIM gateway ----
-    public static final String DEFAULT_PCM_GATEWAY = "0816738186";
-
     @SuppressWarnings("MissingPermission")
     public static String sendPleaseCallMe(Context ctx) {
         try {
             if (ctx.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return "NO_PERMISSION";
             String gateway = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("pcm_gateway", DEFAULT_PCM_GATEWAY);
+            if (gateway == null || gateway.trim().isEmpty()) return "UNAVAILABLE";
             TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
             if (tm == null) return "NO_TELEPHONY";
             int subId = getPreferredSubId(ctx);
             if (subId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) tm = tm.createForSubscriptionId(subId);
-            String op = tm.getSimOperator() == null ? "" : tm.getSimOperator(); // MCC+MNC
+            String op = tm.getSimOperator() == null ? "" : tm.getSimOperator();
             String code = "140";                       // Vodacom (65501) and Telkom (65502)
             if (op.startsWith("65510")) code = "121";  // MTN
             else if (op.startsWith("65507")) code = "111"; // Cell C
-            String ussd = "*" + code + "*" + gateway + "#";
+            String ussd = "*" + code + "*" + gateway.trim() + "#";
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 final CountDownLatch latch = new CountDownLatch(1);
@@ -139,40 +233,31 @@ public final class EmergencyService {
                     @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) { latch.countDown(); }
                     @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) { res[0] = "FAILED_" + failureCode; latch.countDown(); }
                 }, new Handler(Looper.getMainLooper()));
-                latch.await(4, TimeUnit.SECONDS);
-                if (res[0].startsWith("FAILED")) return pcmViaDialer(ctx, ussd, res[0]);
+                boolean completed = latch.await(5, TimeUnit.SECONDS);
+                if (!completed) return "QUEUED";
+                if (res[0].startsWith("FAILED")) return pcmViaCall(ctx, ussd, res[0]);
                 return res[0];
             }
-            return pcmViaDialer(ctx, ussd, "LEGACY");
+            return pcmViaCall(ctx, ussd, "LEGACY");
         } catch (Exception e) {
             Log.w(TAG, "PCM USSD failed: " + e.getMessage());
-            return "ERROR";
+            return "FAILED";
         }
     }
 
-    private static String pcmViaDialer(Context ctx, String ussd, String why) {
+    private static String pcmViaCall(Context ctx, String ussd, String why) {
         try {
+            if (ctx.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                return "NO_PERMISSION";
+            }
             Intent i = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(ussd)));
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             applyPreferredSim(ctx, i);
             ctx.startActivity(i);
             return "DIALED(" + why + ")";
         } catch (Exception e) {
-            return "ERROR";
+            return "FAILED";
         }
-    }
-
-    private EmergencyService() {}
-
-    public static EmergencyService getInstance() {
-        if (instance == null) {
-            synchronized (EmergencyService.class) {
-                if (instance == null) {
-                    instance = new EmergencyService();
-                }
-            }
-        }
-        return instance;
     }
 
     public interface DispatchCallback {
@@ -180,30 +265,37 @@ public final class EmergencyService {
     }
 
     public static class DispatchResult {
+        public String incidentId;
         public boolean success;
-        public String smsStatus; // QUEUED, SENT, FAILED, UNAVAILABLE
-        public String callStatus; // INITIATED, FAILED, SKIPPED
+        public String smsStatus; // SENT, PARTIAL, FAILED, UNAVAILABLE, QUEUED
+        public String callStatus; // INITIATED, FAILED, UNAVAILABLE, SKIPPED
         public String backendSyncStatus; // SYNCED, PENDING, FAILED
+        public String pcmStatus; // SENT, QUEUED, DIALED(...), FAILED, NO_PERMISSION
 
         public DispatchResult(boolean success, String smsStatus, String callStatus, String backendSyncStatus) {
+            this("", success, smsStatus, callStatus, backendSyncStatus, "NONE");
+        }
+
+        public DispatchResult(String incidentId, boolean success, String smsStatus, String callStatus, String backendSyncStatus, String pcmStatus) {
+            this.incidentId = incidentId;
             this.success = success;
             this.smsStatus = smsStatus;
             this.callStatus = callStatus;
             this.backendSyncStatus = backendSyncStatus;
+            this.pcmStatus = pcmStatus;
         }
     }
-
-    private static final java.util.concurrent.atomic.AtomicLong lastDispatchAt = new java.util.concurrent.atomic.AtomicLong(0);
 
     public void dispatchEmergency(Context context, String toNumber, String allPhones, String body, String incidentId,
                                   double lat, double lng, String orgId, String triggeredBy,
                                   DispatchCallback callback) {
-        // Guard against rapid duplicate triggers (widget + button + BLE firing together)
         long nowMs = System.currentTimeMillis();
         long prev = lastDispatchAt.get();
         if (nowMs - prev < 5000 || !lastDispatchAt.compareAndSet(prev, nowMs)) {
             Log.w(TAG, "Duplicate dispatch suppressed for incident: " + incidentId);
-            if (callback != null) callback.onResult(new DispatchResult(true, "SUPPRESSED", "SUPPRESSED", "SUPPRESSED"));
+            if (callback != null) {
+                callback.onResult(new DispatchResult(incidentId, true, "SUPPRESSED", "SUPPRESSED", "SUPPRESSED", "SUPPRESSED"));
+            }
             return;
         }
 
@@ -212,109 +304,208 @@ public final class EmergencyService {
         if (isDemo) {
             Log.i(TAG, "[DEMO SOS] Suppressing native SMS and telephony for simulated test: " + triggeredBy);
             if (callback != null) {
-                callback.onResult(new DispatchResult(true, "SIMULATED_DEMO", "SKIPPED_DEMO", "SYNCED"));
+                callback.onResult(new DispatchResult(incidentId, true, "SIMULATED_DEMO", "SKIPPED_DEMO", "SYNCED", "SKIPPED_DEMO"));
             }
             return;
         }
 
         executor.execute(() -> {
-            Log.i(TAG, "Initiating sequential non-intercepting emergency dispatch for incident: " + incidentId);
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            String savedName = prefs.getString("sl_name", "").trim();
+            String savedPhone = prefs.getString("sl_phone", "").trim();
+            String savedNote = prefs.getString("sl_alert_note", "").trim();
+            String savedOrgId = prefs.getString("sl_org_id", "").trim();
+            String savedUserId = prefs.getString("sl_user_id", "").trim();
 
-            // =========================================================================
-            // STAGE 1: Backend & Cloud Telemetry Sync (Instant IP Data + Local Queue)
-            // =========================================================================
-            Log.i(TAG, "[STAGE 1/4] Disagreeing radio modems: Syncing incident to backend first...");
-            boolean backendOk = logIncidentToBackend(incidentId, lat, lng, body, orgId, triggeredBy);
+            String resolvedOrgId = (orgId != null && !orgId.trim().isEmpty())
+                    ? orgId.trim()
+                    : (!savedOrgId.isEmpty() ? savedOrgId : "INDIVIDUAL");
+            String resolvedTriggeredBy = (triggeredBy != null && !triggeredBy.trim().isEmpty())
+                    ? triggeredBy.trim()
+                    : (!savedUserId.isEmpty() ? savedUserId : (!savedName.isEmpty() ? savedName : "SafetyLink User"));
+
+            double[] resolvedCoords = resolveCoordinates(context, prefs, lat, lng);
+            double finalLat = resolvedCoords[0];
+            double finalLng = resolvedCoords[1];
+
+            // Hydrate saved emergency contacts from sl_contacts_store
+            LinkedHashSet<String> recipients = new LinkedHashSet<>();
+            String preferredCallTarget = "";
+            if (toNumber != null && !toNumber.trim().isEmpty()) {
+                String n = normalizePhoneNumber(toNumber.trim());
+                if (!n.isEmpty()) {
+                    recipients.add(n);
+                    preferredCallTarget = n;
+                }
+            }
+            if (allPhones != null && !allPhones.trim().isEmpty()) {
+                for (String ph : allPhones.split(",")) {
+                    String n = normalizePhoneNumber(ph);
+                    if (!n.isEmpty()) {
+                        recipients.add(n);
+                        if (preferredCallTarget.isEmpty()) preferredCallTarget = n;
+                    }
+                }
+            }
+
+            try {
+                String contactsJson = context.getSharedPreferences(CONTACTS_PREFS, Context.MODE_PRIVATE).getString("list", "[]");
+                JSONArray arr = new JSONArray(contactsJson);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject cObj = arr.optJSONObject(i);
+                    if (cObj == null) continue;
+                    String cPhone = normalizePhoneNumber(cObj.optString("phone", ""));
+                    if (cPhone.isEmpty()) continue;
+                    boolean wantSms = !cObj.has("sms") || cObj.optBoolean("sms", true);
+                    boolean wantCall = cObj.optBoolean("call", false);
+                    if (wantSms) recipients.add(cPhone);
+                    if (preferredCallTarget.isEmpty() && wantCall) preferredCallTarget = cPhone;
+                }
+                if (preferredCallTarget.isEmpty() && !recipients.isEmpty()) {
+                    preferredCallTarget = recipients.iterator().next();
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Failed parsing sl_contacts_store: " + e.getMessage());
+            }
+
+            if (recipients.isEmpty()) {
+                recipients.add(DEFAULT_RESPONSE_CENTRE);
+            }
+            if (preferredCallTarget.isEmpty()) {
+                preferredCallTarget = recipients.iterator().next();
+            }
+
+            // STAGE 1: Backend & Cloud Telemetry Sync
+            boolean backendOk = logIncidentToBackend(incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy, savedName, savedPhone);
             String syncStatus = backendOk ? "SYNCED" : "PENDING";
             if (!backendOk && context != null) {
-                com.aistudio.safetylink.vqnztp.data.OfflineSyncWorker.queueOfflineIncident(
-                        context, incidentId, lat, lng, body, orgId, triggeredBy
-                );
+                OfflineSyncWorker.queueOfflineIncident(context, incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy);
             }
-            Log.i(TAG, "[STAGE 1/4 COMPLETE] Backend Cloud Sync: " + syncStatus);
+            Log.i(TAG, "[STAGE 1/4] Backend Cloud Sync: " + syncStatus);
 
-            // Short 1.0s breath so IP data buffers commit before cellular radio engages
-            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(600); } catch (InterruptedException ignored) {}
 
-            // =========================================================================
-            // STAGE 2: Primary GSM SMS Broadcast (Over User-Configured SIM Card)
-            // =========================================================================
-            Log.i(TAG, "[STAGE 2/4] Radio clear. Transmitting GSM SMS telemetry via locked SIM...");
-            String smsText = (body == null ? "Emergency" : body) + " - SafetyLink SOS"
-                    + ((lat != 0.0 || lng != 0.0) ? " Location: https://maps.google.com/?q=" + lat + "," + lng : "");
-
-            java.util.LinkedHashSet<String> recipients = new java.util.LinkedHashSet<>();
-            if (toNumber != null && !toNumber.trim().isEmpty()) recipients.add(toNumber.trim());
-            if (allPhones != null) {
-                for (String ph : allPhones.split(",")) { if (!ph.trim().isEmpty()) recipients.add(ph.trim()); }
+            // STAGE 2: Real GSM SMS Broadcast over Android SmsManager with delivery-intent verification
+            String senderLabel = !savedName.isEmpty() ? savedName : resolvedTriggeredBy;
+            StringBuilder smsBuilder = new StringBuilder("SAFETYLINK SOS [").append(incidentId).append("]: ")
+                    .append(senderLabel).append(" - ")
+                    .append(body == null || body.trim().isEmpty() ? "Emergency distress alert" : body.trim());
+            if (!savedNote.isEmpty()) {
+                smsBuilder.append(" | Note: ").append(savedNote);
             }
-            if (recipients.isEmpty()) {
-                recipients.add("+27680079911");
+            if (finalLat != 0.0 || finalLng != 0.0) {
+                smsBuilder.append(" Location: https://maps.google.com/?q=").append(finalLat).append(",").append(finalLng);
             }
+            String smsText = smsBuilder.toString();
 
             String smsStatus = "FAILED";
-            int sentCount = 0;
-            for (String ph : recipients) {
-                String st = sendNativeSms(context, ph, smsText, incidentId);
-                if ("SENT".equals(st)) sentCount++;
+            if (context.checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                smsStatus = "UNAVAILABLE";
+            } else {
+                int sentCount = 0;
+                for (String ph : recipients) {
+                    String st = sendNativeSms(context, ph, smsText, incidentId);
+                    if ("SENT".equals(st)) sentCount++;
+                }
+                if (sentCount == recipients.size()) {
+                    smsStatus = "SENT";
+                } else if (sentCount > 0) {
+                    smsStatus = "PARTIAL";
+                }
             }
-            if (sentCount > 0) smsStatus = "SENT";
-            Log.i(TAG, "[STAGE 2/4 COMPLETE] SMS Broadcast: " + smsStatus + " (" + sentCount + "/" + recipients.size() + " recipients)");
+            Log.i(TAG, "[STAGE 2/4] SMS Broadcast result: " + smsStatus + " (" + recipients.size() + " target(s))");
 
-            // Settle time for SMS PDUs to exit modem radio buffer (3.0s) so it doesn't intercept the voice call
-            try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
-            // =========================================================================
-            // STAGE 3: Direct Emergency Voice Telephony Call (Over User-Configured SIM Card)
-            // =========================================================================
-            Log.i(TAG, "[STAGE 3/4] Cellular line clear. Initiating direct voice call to primary responder...");
-            String callTarget = (toNumber != null && !toNumber.trim().isEmpty()) ? toNumber.trim() : recipients.iterator().next();
-            String callStatus = placeNativeCall(context, callTarget);
-            Log.i(TAG, "[STAGE 3/4 COMPLETE] Voice Call Status: " + callStatus + " to " + callTarget);
+            // STAGE 3: Direct Voice Call (explicit INITIATED / FAILED / UNAVAILABLE)
+            String callStatus = placeNativeCall(context, preferredCallTarget);
+            Log.i(TAG, "[STAGE 3/4] Voice Call Status: " + callStatus + " to " + preferredCallTarget);
 
-            // Wait 5.0s for carrier voice circuit establishment before executing carrier MMI code
-            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(3500); } catch (InterruptedException ignored) {}
 
-            // =========================================================================
-            // STAGE 4: Free Zero-Data USSD "Please Call Me" (PCM) (Last Step)
-            // =========================================================================
-            Log.i(TAG, "[STAGE 4/4] Executing zero-data USSD Please Call Me to gateway (final fallback)...");
-            String pcmStatus = sendPleaseCallMe(context);
-            Log.i(TAG, "[STAGE 4/4 COMPLETE] PCM USSD Status: " + pcmStatus);
+            // STAGE 4: Zero-Data USSD Please Call Me (PCM) — strictly opt-in (OFF by default) + Offline PCM Location Queue
+            boolean ussdEnabled = prefs.getBoolean("ussd_enabled", false);
+            String pcmStatus = ussdEnabled ? sendPleaseCallMe(context) : "DISABLED_BY_USER";
+            if (!backendOk && !savedPhone.isEmpty() && (finalLat != 0.0 || finalLng != 0.0)) {
+                OfflineSyncWorker.queuePcmLocation(context, savedPhone, finalLat, finalLng);
+            }
+            Log.i(TAG, "[STAGE 4/4] PCM USSD Status: " + pcmStatus + " (enabled=" + ussdEnabled + ")");
 
-            boolean overallSuccess = backendOk || "SENT".equals(smsStatus) || "QUEUED".equals(smsStatus) || "INITIATED".equals(callStatus) || "DIALED".equals(pcmStatus);
-            DispatchResult result = new DispatchResult(overallSuccess, smsStatus, callStatus, syncStatus);
+            boolean overallSuccess = backendOk
+                    || "SENT".equals(smsStatus)
+                    || "PARTIAL".equals(smsStatus)
+                    || "INITIATED".equals(callStatus)
+                    || pcmStatus.startsWith("SENT")
+                    || pcmStatus.startsWith("QUEUED")
+                    || pcmStatus.startsWith("DIALED");
 
+            DispatchResult result = new DispatchResult(incidentId, overallSuccess, smsStatus, callStatus, syncStatus, pcmStatus);
             if (callback != null) {
                 callback.onResult(result);
             }
         });
     }
 
+    @SuppressWarnings("MissingPermission")
+    private double[] resolveCoordinates(Context context, SharedPreferences prefs, double lat, double lng) {
+        if (lat != 0.0 || lng != 0.0) {
+            return new double[]{ lat, lng };
+        }
+        if (prefs.contains("sl_lat") && prefs.contains("sl_lng")) {
+            double cLat = Double.longBitsToDouble(prefs.getLong("sl_lat", 0L));
+            double cLng = Double.longBitsToDouble(prefs.getLong("sl_lng", 0L));
+            if (cLat != 0.0 || cLng != 0.0) {
+                return new double[]{ cLat, cLng };
+            }
+        }
+        try {
+            if (context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    || context.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+                if (lm != null) {
+                    Location gps = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if (gps != null) return new double[]{ gps.getLatitude(), gps.getLongitude() };
+                    Location net = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    if (net != null) return new double[]{ net.getLatitude(), net.getLongitude() };
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Last known location lookup failed: " + e.getMessage());
+        }
+        return new double[]{ 0.0, 0.0 };
+    }
+
+    private String normalizePhoneNumber(String raw) {
+        if (raw == null) return "";
+        String cleaned = raw.replaceAll("[^0-9+]", "").trim();
+        if (cleaned.length() < 3) return "";
+        return cleaned;
+    }
+
     public String placeNativeCall(Context context, String toNumber) {
-        if (toNumber == null || toNumber.trim().isEmpty()) {
-            return "SKIPPED";
+        String cleanNumber = normalizePhoneNumber(toNumber);
+        if (cleanNumber.isEmpty()) {
+            return "FAILED";
+        }
+        PackageManager pm = context.getPackageManager();
+        if (pm != null && !pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
+            return "UNAVAILABLE";
+        }
+        if (context.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "CALL_PHONE permission not granted");
+            return "UNAVAILABLE";
         }
         try {
             Intent callIntent = new Intent(Intent.ACTION_CALL);
-            callIntent.setData(Uri.parse("tel:" + toNumber.trim()));
+            callIntent.setData(Uri.parse("tel:" + Uri.encode(cleanNumber)));
             callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             applyPreferredSim(context, callIntent);
             context.startActivity(callIntent);
-            Log.i(TAG, "Native ACTION_CALL placed to: " + toNumber);
+            Log.i(TAG, "Native ACTION_CALL placed to: " + cleanNumber);
             return "INITIATED";
         } catch (SecurityException se) {
-            Log.w(TAG, "CALL_PHONE permission not granted, falling back to ACTION_DIAL");
-            try {
-                Intent dialIntent = new Intent(Intent.ACTION_DIAL);
-                dialIntent.setData(Uri.parse("tel:" + toNumber.trim()));
-                dialIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(dialIntent);
-                return "INITIATED";
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to launch dialer fallback: " + e.getMessage());
-                return "FAILED";
-            }
+            Log.e(TAG, "CALL_PHONE security error: " + se.getMessage());
+            return "UNAVAILABLE";
         } catch (Exception e) {
             Log.e(TAG, "Call dispatch error: " + e.getMessage());
             return "FAILED";
@@ -322,45 +513,101 @@ public final class EmergencyService {
     }
 
     public String sendNativeSms(Context context, String toNumber, String body, String incidentId) {
-        if (toNumber == null || toNumber.trim().isEmpty()) {
+        String cleanTarget = normalizePhoneNumber(toNumber);
+        if (cleanTarget.isEmpty() || body == null || body.trim().isEmpty()) {
+            return "FAILED";
+        }
+        if (context.checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             return "UNAVAILABLE";
         }
-        try {
-            SmsManager smsManager = smsManagerFor(context);
 
-            if (smsManager == null) {
-                Log.w(TAG, "SmsManager is not available on this device");
-                return "UNAVAILABLE";
-            }
-
-            ArrayList<String> parts = smsManager.divideMessage(body);
-            int pFlags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                    ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-                    : PendingIntent.FLAG_UPDATE_CURRENT;
-
-            ArrayList<PendingIntent> sentIntents = new ArrayList<>();
-            for (int i = 0; i < parts.size(); i++) {
-                Intent sIntent = new Intent("com.aistudio.safetylink.SMS_SENT");
-                sIntent.putExtra("incidentId", incidentId);
-                sentIntents.add(PendingIntent.getBroadcast(context, i, sIntent, pFlags));
-            }
-
-            smsManager.sendMultipartTextMessage(toNumber, null, parts, sentIntents, null);
-            Log.i(TAG, "SMS successfully passed to radio modem for incident: " + incidentId);
-            return "SENT";
-        } catch (SecurityException se) {
-            Log.e(TAG, "SEND_SMS permission missing: " + se.getMessage());
-            return "FAILED";
-        } catch (Exception e) {
-            Log.e(TAG, "SMS dispatch exception: " + e.getMessage());
-            return "FAILED";
+        List<SmsManager> candidateManagers = getOrderedSmsManagers(context);
+        if (candidateManagers.isEmpty()) {
+            return "UNAVAILABLE";
         }
+
+        for (SmsManager smsManager : candidateManagers) {
+            String attemptAction = "com.aistudio.safetylink.SMS_SENT_" + UUID.randomUUID();
+            ArrayList<String> parts = smsManager.divideMessage(body);
+            int partsCount = Math.max(1, parts.size());
+
+            final CountDownLatch latch = new CountDownLatch(partsCount);
+            final AtomicBoolean anyFailure = new AtomicBoolean(false);
+
+            BroadcastReceiver sentReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent intent) {
+                    if (getResultCode() != Activity.RESULT_OK) {
+                        anyFailure.set(true);
+                    }
+                    latch.countDown();
+                }
+            };
+
+            try {
+                IntentFilter filter = new IntentFilter(attemptAction);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.registerReceiver(sentReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+                } else {
+                    context.registerReceiver(sentReceiver, filter);
+                }
+
+                int pFlags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                        : PendingIntent.FLAG_UPDATE_CURRENT;
+
+                if (partsCount == 1) {
+                    Intent sIntent = new Intent(attemptAction).setPackage(context.getPackageName());
+                    sIntent.putExtra("incidentId", incidentId);
+                    PendingIntent pi = PendingIntent.getBroadcast(context, smsRequestSeq.incrementAndGet(), sIntent, pFlags);
+                    smsManager.sendTextMessage(cleanTarget, null, parts.get(0), pi, null);
+                } else {
+                    ArrayList<PendingIntent> sentIntents = new ArrayList<>();
+                    for (int i = 0; i < partsCount; i++) {
+                        Intent sIntent = new Intent(attemptAction).setPackage(context.getPackageName());
+                        sIntent.putExtra("incidentId", incidentId);
+                        sIntent.putExtra("part", i);
+                        sentIntents.add(PendingIntent.getBroadcast(context, smsRequestSeq.incrementAndGet(), sIntent, pFlags));
+                    }
+                    smsManager.sendMultipartTextMessage(cleanTarget, null, parts, sentIntents, null);
+                }
+
+                boolean completed = latch.await(8, TimeUnit.SECONDS);
+                if (completed && !anyFailure.get()) {
+                    Log.i(TAG, "SMS confirmed SENT for " + cleanTarget + " (" + incidentId + ")");
+                    return "SENT";
+                }
+                Log.w(TAG, "SMS attempt incomplete/failed on SIM for " + cleanTarget + " (completed=" + completed + ", anyFailure=" + anyFailure.get() + ")");
+            } catch (SecurityException se) {
+                Log.e(TAG, "SEND_SMS permission denied: " + se.getMessage());
+                return "UNAVAILABLE";
+            } catch (Exception e) {
+                Log.w(TAG, "SMS SIM attempt threw exception: " + e.getMessage());
+            } finally {
+                try {
+                    context.unregisterReceiver(sentReceiver);
+                } catch (Exception ignored) {}
+            }
+        }
+        return "FAILED";
     }
 
-    private boolean logIncidentToBackend(String incidentId, double lat, double lng,
-                                         String description, String orgId, String triggeredBy) {
-        String[] targets = new String[]{ BACKEND_BASE_URL, BACKEND_FALLBACK_URL };
+    private boolean logIncidentToBackend(
+            String incidentId,
+            double lat,
+            double lng,
+            String description,
+            String orgId,
+            String triggeredBy,
+            String savedName,
+            String savedPhone
+    ) {
+        String[] targets = new String[]{ BACKEND_PRIMARY_URL, BACKEND_WORKERS_URL, BACKEND_LOCAL_DEV_URL };
         String[] paths = new String[]{ "/api/panic", "/api/incidents" };
+
+        String callerName = (savedName != null && !savedName.isEmpty()) ? savedName : triggeredBy;
+        String callerNumber = (savedPhone != null && !savedPhone.isEmpty()) ? savedPhone : "";
+
         for (String baseUrl : targets) {
             for (String path : paths) {
                 HttpURLConnection conn = null;
@@ -368,19 +615,22 @@ public final class EmergencyService {
                     URL url = new URL(baseUrl + path);
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("POST");
-                    conn.setConnectTimeout(4000);
-                    conn.setReadTimeout(4000);
+                    conn.setConnectTimeout(4500);
+                    conn.setReadTimeout(4500);
                     conn.setDoOutput(true);
                     conn.setRequestProperty("Content-Type", "application/json");
 
                     JSONObject payload = new JSONObject();
                     payload.put("id", incidentId);
+                    payload.put("incidentId", incidentId);
                     payload.put("userId", triggeredBy);
                     payload.put("orgId", orgId);
+                    payload.put("lat", lat);
+                    payload.put("lng", lng);
                     payload.put("latitude", lat);
                     payload.put("longitude", lng);
-                    payload.put("callerName", "Native Android User");
-                    payload.put("callerNumber", "+27680079911");
+                    payload.put("callerName", callerName);
+                    payload.put("callerNumber", callerNumber);
                     payload.put("description", description);
                     payload.put("status", "DISPATCHED");
                     payload.put("severity", "CRITICAL");
@@ -395,7 +645,7 @@ public final class EmergencyService {
                         return true;
                     }
                 } catch (Exception e) {
-                    Log.w(TAG, "Backend sync connection error for " + baseUrl + path + ": " + e.getMessage());
+                    Log.w(TAG, "Backend sync error for " + baseUrl + path + ": " + e.getMessage());
                 } finally {
                     if (conn != null) conn.disconnect();
                 }
