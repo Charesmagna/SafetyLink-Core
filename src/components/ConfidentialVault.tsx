@@ -1,10 +1,76 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { derivePasswordVerifier } from '../utils/crypto';
+import React, { useState, useEffect, useMemo } from 'react';
+import { derivePasswordVerifier, encryptFileData, decryptFileData } from '../utils/crypto';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
-import { encryptFileData, decryptFileData } from '../utils/crypto';
-import GooglePicker from "./GooglePicker";
 import { biometricService } from '../services/BiometricService';
+
+type CredentialCategory = 'ALL' | 'LOGINS' | 'BANKING' | 'EMERGENCY_PINS' | 'WIFI_DEVICES' | 'NOTES';
+
+interface EncryptedCredential {
+  id: string;
+  label: string;
+  username: string;
+  url?: string;
+  category: Exclude<CredentialCategory, 'ALL'>;
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
+const CATEGORIES: { id: CredentialCategory; label: string; icon: string }[] = [
+  { id: 'ALL', label: 'All', icon: '🔑' },
+  { id: 'LOGINS', label: 'Logins', icon: '🌐' },
+  { id: 'BANKING', label: 'Banking', icon: '🏦' },
+  { id: 'EMERGENCY_PINS', label: 'Emergency PINs', icon: '🛡️' },
+  { id: 'WIFI_DEVICES', label: 'Wi-Fi / CCTV', icon: '📡' },
+  { id: 'NOTES', label: 'Notes', icon: '📝' },
+];
+
+function evaluatePasswordStrength(pwd: string): { score: number; label: string; color: string; bar: string } {
+  if (!pwd) return { score: 0, label: 'Empty', color: 'text-slate-500', bar: 'bg-slate-700 w-0' };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+  if (score <= 1) return { score, label: 'Weak', color: 'text-red-400', bar: 'bg-red-500 w-1/4' };
+  if (score === 2 || score === 3) return { score, label: 'Moderate', color: 'text-amber-400', bar: 'bg-amber-400 w-2/4' };
+  if (score === 4) return { score, label: 'Strong', color: 'text-cyan-400', bar: 'bg-cyan-400 w-3/4' };
+  return { score, label: 'Military Grade', color: 'text-emerald-400', bar: 'bg-emerald-400 w-full' };
+}
+
+function generateCryptoPassword(length: number, useUpper: boolean, useDigits: boolean, useSymbols: boolean): string {
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const digits = '23456789';
+  const symbols = '!@#$%^&*()-_=+[]{}';
+  let charset = lower;
+  const required: string[] = [lower];
+  if (useUpper) { charset += upper; required.push(upper); }
+  if (useDigits) { charset += digits; required.push(digits); }
+  if (useSymbols) { charset += symbols; required.push(symbols); }
+
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+  const chars: string[] = [];
+  for (let i = 0; i < length; i++) {
+    const pool = i < required.length ? required[i] : charset;
+    chars.push(pool[randomValues[i] % pool.length]);
+  }
+  // Fisher-Yates shuffle using crypto randomness
+  const shuffleValues = new Uint32Array(chars.length);
+  crypto.getRandomValues(shuffleValues);
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = shuffleValues[i] % (i + 1);
+    const tmp = chars[i];
+    chars[i] = chars[j];
+    chars[j] = tmp;
+  }
+  return chars.join('');
+}
 
 export const ConfidentialVault: React.FC = () => {
   const {
@@ -12,8 +78,6 @@ export const ConfidentialVault: React.FC = () => {
     vaultPassword,
     vaultSecurityQuestion,
     vaultSecurityAnswer,
-    vaultFiles,
-    vaultApps,
     silenceAlerts,
     firestoreSync,
     decoyActive,
@@ -25,10 +89,6 @@ export const ConfidentialVault: React.FC = () => {
     setVaultPassword,
     setSilenceAlerts,
     setFirestoreSync,
-    addVaultFile,
-    removeVaultFile,
-    addVaultApp,
-    removeVaultApp,
     addToast,
     addAuditLog
   } = useAppStore();
@@ -42,6 +102,50 @@ export const ConfidentialVault: React.FC = () => {
   const [biometryType, setBiometryType] = useState<string>('FINGERPRINT');
   const [isAuthenticatingBiometric, setIsAuthenticatingBiometric] = useState(false);
 
+  // Setup fields
+  const [setupPassword, setSetupPassword] = useState('');
+  const [setupQuestion, setSetupQuestion] = useState('What was your first tactical security node ID?');
+  const [setupAnswer, setSetupAnswer] = useState('');
+
+  // Password Manager state
+  const [credentials, setCredentials] = useState<EncryptedCredential[]>(() => {
+    try {
+      const raw = localStorage.getItem('sl_vault_passwords');
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((c: any) => ({
+        ...c,
+        category: c.category || 'LOGINS',
+      }));
+    } catch {
+      return [];
+    }
+  });
+
+  const [selectedCategory, setSelectedCategory] = useState<CredentialCategory>('ALL');
+  const [credSearch, setCredSearch] = useState('');
+  const [revealedCreds, setRevealedCreds] = useState<Record<string, { password: string; notes: string }>>({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [showStealthDrawer, setShowStealthDrawer] = useState(false);
+  const [showGenerator, setShowGenerator] = useState(false);
+
+  // Add / Edit form fields
+  const [credLabel, setCredLabel] = useState('');
+  const [credUsername, setCredUsername] = useState('');
+  const [credUrl, setCredUrl] = useState('');
+  const [credCategory, setCredCategory] = useState<Exclude<CredentialCategory, 'ALL'>>('LOGINS');
+  const [credPassword, setCredPassword] = useState('');
+  const [credNotes, setCredNotes] = useState('');
+  const [showFormPwd, setShowFormPwd] = useState(false);
+
+  // Generator controls
+  const [genLength, setGenLength] = useState(18);
+  const [genUpper, setGenUpper] = useState(true);
+  const [genDigits, setGenDigits] = useState(true);
+  const [genSymbols, setGenSymbols] = useState(true);
+  const [generatedPreview, setGeneratedPreview] = useState(() => generateCryptoPassword(18, true, true, true));
+
   useEffect(() => {
     let active = true;
     biometricService.checkAvailability().then(res => {
@@ -50,28 +154,47 @@ export const ConfidentialVault: React.FC = () => {
         setBiometryType(res.biometryType);
       }
     });
-
     if (biometricService.isScopeUnlocked('vault')) {
       setIsUnlocked(true);
     }
     return () => { active = false; };
   }, []);
 
+  const persistCredentials = (next: EncryptedCredential[]) => {
+    setCredentials(next);
+    try {
+      localStorage.setItem('sl_vault_passwords', JSON.stringify(next));
+    } catch {
+      // ignore storage quota errors
+    }
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setCredLabel('');
+    setCredUsername('');
+    setCredUrl('');
+    setCredCategory('LOGINS');
+    setCredPassword('');
+    setCredNotes('');
+    setShowFormPwd(false);
+  };
+
   const handleBiometricUnlock = async () => {
     setIsAuthenticatingBiometric(true);
     try {
       const verified = await biometricService.authenticate({
-        title: 'Unlock Confidential Vault',
+        title: 'Unlock Password Manager',
         subtitle: 'Biometric Security Gate',
-        description: 'Verify your fingerprint or face to decrypt sensitive vault contents.',
+        description: 'Verify your fingerprint or face to decrypt your AES-256-GCM credentials.',
         negativeButtonText: 'Use Master Password'
       });
 
       if (verified) {
         setIsUnlocked(true);
         biometricService.grantScopeUnlock('vault');
-        addToast('Biometrics verified. Vault unlocked.', 'success');
-        addAuditLog('SECURITY', 'INFO', 'Confidential Vault unlocked.', 'Biometric identity verified.');
+        addToast('Biometrics verified. Password Manager unlocked.', 'success');
+        addAuditLog('SECURITY', 'INFO', 'Password Manager unlocked.', 'Biometric identity verified.');
       } else {
         addToast('Biometric authentication unconfirmed or canceled.', 'warn');
       }
@@ -81,138 +204,16 @@ export const ConfidentialVault: React.FC = () => {
       setIsAuthenticatingBiometric(false);
     }
   };
-  
-  // Setup fields
-  const [setupPassword, setSetupPassword] = useState('');
-  const [setupQuestion, setSetupQuestion] = useState('What was your first tactical security node ID?');
-  const [setupAnswer, setSetupAnswer] = useState('');
-
-  // Add item forms
-  const [newFileName, setNewFileName] = useState('');
-  const [newFileType, setNewFileType] = useState('PDF');
-  const [newFileSize, setNewFileSize] = useState('1.2 MB');
-  const [newAppName, setNewAppName] = useState('');
-  const [newAppPackage, setNewAppPackage] = useState('');
-
-  // Cryptographic File States & Drag-and-Drop
-  const [isEncrypting, setIsEncrypting] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-
-    await processAndEncryptFile(file);
-  };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    await processAndEncryptFile(file);
-    if (e.target) {
-      e.target.value = ''; // Reset input
-    }
-  };
-
-  const processAndEncryptFile = async (file: File) => {
-    setIsEncrypting(true);
-    addToast(`Encrypting ${file.name} (Zero-Knowledge)...`, 'info');
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const arrayBuffer = event.target?.result as ArrayBuffer;
-          const { ciphertext, iv, salt } = await encryptFileData(arrayBuffer, vaultPassword);
-          
-          addVaultFile({
-            name: file.name,
-            size: `${(file.size / 1024).toFixed(1)} KB`,
-            type: file.name.split('.').pop()?.toUpperCase() || 'BIN',
-            ciphertext,
-            iv,
-            salt,
-            isEncrypted: true
-          });
-
-          addToast(`File cryptographically sealed: ${file.name}`, 'success');
-          addAuditLog('SECURITY', 'INFO', `File added to Zero-Knowledge Vault: ${file.name}`, 'AES-GCM 256-bit sealed.');
-        } catch (err: any) {
-          addToast(`Encryption failed: ${err.message}`, 'error');
-        } finally {
-          setIsEncrypting(false);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } catch (err: any) {
-      addToast(`Failed to read file: ${err.message}`, 'error');
-      setIsEncrypting(false);
-    }
-  };
-
-  const handleDecryptAndDownload = async (file: any) => {
-    if (!file.ciphertext || !file.iv || !file.salt) {
-      // Mock files originally populated on init do not have ciphertext, trigger warning & simulated download
-      addToast(`Decrypting mock file: ${file.name}`, 'info');
-      setTimeout(() => {
-        const blob = new Blob([`Decrypted mock payload for ${file.name}`], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        addToast(`Mock file decrypted & downloaded!`, 'success');
-      }, 500);
-      return;
-    }
-
-    addToast(`Decrypting cryptographic node: ${file.name}...`, 'info');
-
-    try {
-      const arrayBuffer = await decryptFileData(file.ciphertext, file.iv, file.salt, vaultPassword);
-      const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      addToast(`File verified & decrypted: ${file.name}`, 'success');
-      addAuditLog('SECURITY', 'INFO', `Decrypted and downloaded file: ${file.name}`, 'Integrity check passed.');
-    } catch (err: any) {
-      addToast(`Decryption failed: Integrity check failed or incorrect key.`, 'error');
-      addAuditLog('SECURITY', 'SEVERE', `Failed decryption attempt on file: ${file.name}`, err.message);
-    }
-  };
 
   const handleSetupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!setupPassword || !setupAnswer) {
-      addToast('Please fill out all security credentials.', 'error');
+      addToast('Please fill out Master Password and recovery answer.', 'error');
       return;
     }
     await setVaultPassword(setupPassword, setupQuestion, setupAnswer);
     setIsUnlocked(true);
-    addToast('Confidential Vault encrypted successfully.', 'success');
+    addToast('AES-256 Password Manager initialized.', 'success');
   };
 
   const handleUnlockSubmit = async (e: React.FormEvent) => {
@@ -222,10 +223,10 @@ export const ConfidentialVault: React.FC = () => {
       setIsUnlocked(true);
       setShowForgot(false);
       setPasswordInput('');
-      addToast('Cryptographic vault block decrypted.', 'success');
-      addAuditLog('SECURITY', 'INFO', 'Confidential Vault unlocked.', 'Successful password entry.');
+      addToast('Password Manager unlocked.', 'success');
+      addAuditLog('SECURITY', 'INFO', 'Password Manager unlocked.', 'Master password verified.');
     } else {
-      addToast('Decryption failed: Incorrect password.', 'error');
+      addToast('Incorrect master password.', 'error');
     }
   };
 
@@ -235,38 +236,153 @@ export const ConfidentialVault: React.FC = () => {
       setIsUnlocked(true);
       setShowForgot(false);
       setForgotAnswerInput('');
-      addToast('Security answer verified. Vault unlocked.', 'success');
-      addAuditLog('SECURITY', 'WARN', 'Vault bypassed via security question.', 'Forgot password recovery flow completed.');
+      addToast('Security answer verified. Password Manager unlocked.', 'success');
+      addAuditLog('SECURITY', 'WARN', 'Password Manager recovered via security question.', 'Recovery flow completed.');
     } else {
       addToast('Verification failed: Incorrect security response.', 'error');
     }
   };
 
-  const handleAddFile = (e: React.FormEvent) => {
+  const handleSaveCredential = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFileName) return;
-    addVaultFile({
-      name: newFileName.endsWith(`.${newFileType.toLowerCase()}`) ? newFileName : `${newFileName}.${newFileType.toLowerCase()}`,
-      size: newFileSize,
-      type: newFileType
+    if (!credLabel.trim() || !credPassword.trim()) {
+      addToast('Title and password/secret are required.', 'warn');
+      return;
+    }
+    try {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ password: credPassword, notes: credNotes.trim() })
+      );
+      const { ciphertext, iv, salt } = await encryptFileData(payload.buffer, vaultPassword || 'sl-vault-session');
+      const now = Date.now();
+
+      if (editingId) {
+        const updated = credentials.map(c =>
+          c.id === editingId
+            ? {
+                ...c,
+                label: credLabel.trim(),
+                username: credUsername.trim(),
+                url: credUrl.trim() || undefined,
+                category: credCategory,
+                ciphertext,
+                iv,
+                salt,
+                updatedAt: now,
+              }
+            : c
+        );
+        persistCredentials(updated);
+        setRevealedCreds(prev => {
+          const copy = { ...prev };
+          delete copy[editingId];
+          return copy;
+        });
+        addToast(`Updated "${credLabel.trim()}" (AES-256-GCM).`, 'success');
+      } else {
+        const entry: EncryptedCredential = {
+          id: 'cred-' + now + '-' + Math.random().toString(36).slice(2, 6),
+          label: credLabel.trim(),
+          username: credUsername.trim(),
+          url: credUrl.trim() || undefined,
+          category: credCategory,
+          ciphertext,
+          iv,
+          salt,
+          createdAt: now,
+          updatedAt: now,
+        };
+        persistCredentials([entry, ...credentials]);
+        addToast(`Saved "${entry.label}" with AES-256-GCM encryption.`, 'success');
+        addAuditLog('SECURITY', 'INFO', `Password entry encrypted: ${entry.label}`, `Category: ${entry.category}`);
+      }
+
+      resetForm();
+      setShowAddForm(false);
+    } catch (err: any) {
+      addToast(`Encryption failed: ${err?.message || 'Error'}`, 'error');
+    }
+  };
+
+  const handleStartEdit = async (cred: EncryptedCredential) => {
+    try {
+      let secret = revealedCreds[cred.id];
+      if (!secret) {
+        const buf = await decryptFileData(cred.ciphertext, cred.iv, cred.salt, vaultPassword || 'sl-vault-session');
+        secret = JSON.parse(new TextDecoder().decode(buf));
+      }
+      setEditingId(cred.id);
+      setCredLabel(cred.label);
+      setCredUsername(cred.username || '');
+      setCredUrl(cred.url || '');
+      setCredCategory(cred.category || 'LOGINS');
+      setCredPassword(secret.password || '');
+      setCredNotes(secret.notes || '');
+      setShowAddForm(true);
+    } catch {
+      addToast('Unable to decrypt entry for editing.', 'error');
+    }
+  };
+
+  const handleRevealCredential = async (cred: EncryptedCredential) => {
+    if (revealedCreds[cred.id]) {
+      setRevealedCreds(prev => {
+        const copy = { ...prev };
+        delete copy[cred.id];
+        return copy;
+      });
+      return;
+    }
+    try {
+      const buf = await decryptFileData(cred.ciphertext, cred.iv, cred.salt, vaultPassword || 'sl-vault-session');
+      const parsed = JSON.parse(new TextDecoder().decode(buf));
+      setRevealedCreds(prev => ({ ...prev, [cred.id]: parsed }));
+    } catch {
+      addToast('Unable to decrypt entry with active master key.', 'error');
+    }
+  };
+
+  const handleCopyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard?.writeText(text);
+      addToast(`Copied ${label} to clipboard.`, 'success');
+    } catch {
+      addToast('Clipboard unavailable on this device.', 'warn');
+    }
+  };
+
+  const handleCopyCredentialPassword = async (cred: EncryptedCredential) => {
+    try {
+      let secret = revealedCreds[cred.id]?.password;
+      if (!secret) {
+        const buf = await decryptFileData(cred.ciphertext, cred.iv, cred.salt, vaultPassword || 'sl-vault-session');
+        const parsed = JSON.parse(new TextDecoder().decode(buf));
+        secret = parsed.password;
+      }
+      await handleCopyText(secret || '', `password for ${cred.label}`);
+    } catch {
+      addToast('Failed to decrypt & copy password.', 'error');
+    }
+  };
+
+  const filteredCredentials = useMemo(() => {
+    const q = credSearch.trim().toLowerCase();
+    return credentials.filter(c => {
+      if (selectedCategory !== 'ALL' && c.category !== selectedCategory) return false;
+      if (!q) return true;
+      return (
+        c.label.toLowerCase().includes(q) ||
+        (c.username || '').toLowerCase().includes(q) ||
+        (c.url || '').toLowerCase().includes(q)
+      );
     });
-    setNewFileName('');
-    addToast('File enqueued to secure directory block.', 'success');
-  };
+  }, [credentials, selectedCategory, credSearch]);
 
-  const handleAddApp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAppName || !newAppPackage) return;
-    addVaultApp({ name: newAppName, packageName: newAppPackage });
-    setNewAppName('');
-    setNewAppPackage('');
-    addToast('Target application bound to hidden system matrix.', 'success');
-  };
+  const formStrength = evaluatePasswordStrength(credPassword);
+  const genStrength = evaluatePasswordStrength(generatedPreview);
 
-  // If a trigger alert is active, hide everything and show glassmorphic "Data-Sync Pending" matching loaders!
-  const isSOSAvaliable = activeSOSState !== 'IDLE';
-
-  if (isSOSAvaliable) {
+  // SOS Lockdown Shield
+  if (activeSOSState !== 'IDLE') {
     return (
       <div className="p-6 midnight-glass border border-red-500/20 text-center space-y-4 animate-fadeIn">
         <div className="flex flex-col items-center justify-center p-8 space-y-4">
@@ -275,9 +391,9 @@ export const ConfidentialVault: React.FC = () => {
             <span className="absolute inset-0 flex items-center justify-center text-red-500 font-mono text-xs font-bold animate-pulse">LOCK</span>
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-mono font-black uppercase text-red-400 tracking-wider">Data-Sync Pending...</h3>
+            <h3 className="text-sm font-mono font-black uppercase text-red-400 tracking-wider">Password Manager Sealed</h3>
             <p className="text-[10px] font-mono text-slate-500 leading-relaxed uppercase">
-              SOS distress signal broadcast active. Cryptographic partition instantly locked down to protect user-defined secure files and private applications.
+              Active SOS broadcast detected. Your encrypted passwords and PINs are automatically locked until the emergency is resolved.
             </p>
           </div>
         </div>
@@ -285,36 +401,36 @@ export const ConfidentialVault: React.FC = () => {
     );
   }
 
-  // Password Setup Screen (First Use)
+  // First-time Master Password Setup
   if (!vaultPassword) {
     return (
       <div className="p-5 midnight-glass text-left space-y-5">
-        <div className="border-b border-slate-900 pb-3 flex items-center gap-2">
-          <span className="text-xl">🛡️</span>
+        <div className="border-b border-slate-900 pb-3 flex items-center gap-2.5">
+          <span className="text-xl">🔐</span>
           <div>
-            <h2 className="text-xs font-mono font-black uppercase tracking-wider text-slate-200">Initialize Private Vault</h2>
-            <p className="text-[8px] font-mono text-slate-500">Configure Secure Cryptographic Segment</p>
+            <h2 className="text-xs font-mono font-black uppercase tracking-wider text-slate-100">Initialize Password Manager</h2>
+            <p className="text-[8.5px] font-mono text-slate-500">Zero-Knowledge AES-256-GCM On-Device Credential Encryption</p>
           </div>
         </div>
 
         <form onSubmit={handleSetupSubmit} className="space-y-4 font-mono text-[10px]">
           <div className="space-y-1.5">
-            <label className="text-slate-400 uppercase font-bold tracking-wider">Vault Password</label>
+            <label className="text-slate-400 uppercase font-bold tracking-wider">Master Password</label>
             <input
               type="password"
-              placeholder="Enter secure master password..."
+              placeholder="Create a strong master password..."
               value={setupPassword}
               onChange={(e) => setSetupPassword(e.target.value)}
-              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/30 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
+              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/40 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-400 uppercase font-bold tracking-wider">Security Question</label>
+            <label className="text-slate-400 uppercase font-bold tracking-wider">Recovery Question</label>
             <select
               value={setupQuestion}
               onChange={(e) => setSetupQuestion(e.target.value)}
-              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/30 rounded-xl text-slate-300 outline-none transition-all cursor-pointer"
+              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/40 rounded-xl text-slate-300 outline-none transition-all cursor-pointer"
             >
               <option>What was your first tactical security node ID?</option>
               <option>What is your primary emergency dispatch region?</option>
@@ -323,37 +439,37 @@ export const ConfidentialVault: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-slate-400 uppercase font-bold tracking-wider">Security Answer</label>
+            <label className="text-slate-400 uppercase font-bold tracking-wider">Recovery Answer</label>
             <input
               type="text"
-              placeholder="Enter cryptographic fallback answer..."
+              placeholder="Enter fallback recovery answer..."
               value={setupAnswer}
               onChange={(e) => setSetupAnswer(e.target.value)}
-              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/30 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
+              className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-emerald-500/40 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/20 font-bold uppercase tracking-wider rounded-xl transition-all"
+            className="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold uppercase tracking-wider rounded-xl transition-all"
           >
-            Create Vault Partition
+            Create Encrypted Password Manager
           </button>
         </form>
       </div>
     );
   }
 
-  // Password Unlock Screen
+  // Unlock Screen
   if (!isUnlocked) {
     return (
       <div className="p-5 midnight-glass text-left space-y-5 animate-fadeIn">
         <div className="border-b border-slate-900 pb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <span className="text-xl">🔐</span>
             <div>
-              <h2 className="text-xs font-mono font-black uppercase tracking-wider text-slate-200">Decrypt Vault block</h2>
-              <p className="text-[8px] font-mono text-slate-500">Secure operator verification required</p>
+              <h2 className="text-xs font-mono font-black uppercase tracking-wider text-slate-100">Unlock Password Manager</h2>
+              <p className="text-[8.5px] font-mono text-slate-500">AES-256-GCM Encrypted Credentials ({credentials.length} saved)</p>
             </div>
           </div>
         </div>
@@ -364,20 +480,18 @@ export const ConfidentialVault: React.FC = () => {
               type="button"
               onClick={handleBiometricUnlock}
               disabled={isAuthenticatingBiometric}
-              className="w-full py-3 bg-gradient-to-r from-emerald-950/50 via-slate-900 to-emerald-950/50 hover:from-emerald-900/60 hover:to-slate-800 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-lg group active:scale-[0.98]"
+              className="w-full py-3 bg-gradient-to-r from-emerald-950/50 via-slate-900 to-emerald-950/50 hover:from-emerald-900/60 hover:to-slate-800 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 font-mono text-[11px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-lg active:scale-[0.98]"
             >
-              <span className="text-lg group-hover:scale-110 transition-transform">
-                {biometryType === 'FACE_ID' ? '👤' : '👆'}
-              </span>
+              <span className="text-lg">{biometryType === 'FACE_ID' ? '👤' : '👆'}</span>
               <span>
                 {isAuthenticatingBiometric
                   ? 'Verifying Biometrics...'
-                  : `Scan ${biometryType === 'FACE_ID' ? 'Face ID' : 'Fingerprint'} to Decrypt`}
+                  : `Unlock with ${biometryType === 'FACE_ID' ? 'Face ID' : 'Fingerprint'}`}
               </span>
             </button>
             <div className="flex items-center gap-3">
               <div className="h-[1px] flex-1 bg-slate-900" />
-              <span className="text-[8px] font-mono uppercase tracking-widest text-slate-600">OR USE MASTER PASSWORD</span>
+              <span className="text-[8px] font-mono uppercase tracking-widest text-slate-600">OR MASTER PASSWORD</span>
               <div className="h-[1px] flex-1 bg-slate-900" />
             </div>
           </div>
@@ -397,10 +511,10 @@ export const ConfidentialVault: React.FC = () => {
                 <label className="text-slate-400 uppercase font-bold tracking-wider">Master Password</label>
                 <input
                   type="password"
-                  placeholder="Enter vault password..."
+                  placeholder="Enter master password..."
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-cyan-500/30 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
+                  className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-cyan-500/40 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
                 />
               </div>
 
@@ -410,15 +524,15 @@ export const ConfidentialVault: React.FC = () => {
                   onClick={() => setShowForgot(true)}
                   className="text-cyan-400 hover:underline uppercase tracking-wider font-bold"
                 >
-                  Forgot password?
+                  Forgot master password?
                 </button>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 font-bold uppercase tracking-wider rounded-xl transition-all"
+                className="w-full py-2.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 font-bold uppercase tracking-wider rounded-xl transition-all"
               >
-                Unlock Partition
+                Decrypt Password Manager
               </button>
             </motion.form>
           ) : (
@@ -431,7 +545,7 @@ export const ConfidentialVault: React.FC = () => {
               className="space-y-4 font-mono text-[10px]"
             >
               <div className="p-3 bg-slate-950/80 border border-slate-900 rounded-xl space-y-1 text-slate-300">
-                <span className="text-[8px] text-slate-500 font-bold uppercase block">Security Question</span>
+                <span className="text-[8px] text-slate-500 font-bold uppercase block">Recovery Question</span>
                 <p className="font-bold">{vaultSecurityQuestion}</p>
               </div>
 
@@ -439,28 +553,26 @@ export const ConfidentialVault: React.FC = () => {
                 <label className="text-slate-400 uppercase font-bold tracking-wider">Your Answer</label>
                 <input
                   type="text"
-                  placeholder="Enter fallback answer..."
+                  placeholder="Enter recovery answer..."
                   value={forgotAnswerInput}
                   onChange={(e) => setForgotAnswerInput(e.target.value)}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-amber-500/30 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
+                  className="w-full p-2.5 bg-slate-950 border border-slate-900 focus:border-amber-500/40 rounded-xl text-slate-100 placeholder-slate-700 outline-none transition-all"
                 />
               </div>
 
-              <div className="flex justify-between items-center text-[8px]">
-                <button
-                  type="button"
-                  onClick={() => setShowForgot(false)}
-                  className="text-slate-500 hover:text-slate-300 uppercase tracking-wider font-bold"
-                >
-                  Back to Password
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowForgot(false)}
+                className="text-[8px] text-slate-500 hover:text-slate-300 uppercase tracking-wider font-bold"
+              >
+                ← Back to Master Password
+              </button>
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider rounded-xl transition-all"
+                className="w-full py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold uppercase tracking-wider rounded-xl transition-all"
               >
-                Verify Answer
+                Verify Recovery Answer
               </button>
             </motion.form>
           )}
@@ -469,326 +581,513 @@ export const ConfidentialVault: React.FC = () => {
     );
   }
 
-  // Unlocked Vault Dashboard
+  // Unlocked Password Manager Workspace
   return (
-    <div className="space-y-5 animate-fadeIn">
-      {/* Vault Configuration header */}
-      <div className="p-5 midnight-glass text-left space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-900 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🔓</span>
+    <div className="space-y-4 animate-fadeIn pb-6" data-testid="password-manager-workspace">
+      {/* Header Bar */}
+      <div className="p-4 midnight-glass text-left space-y-3">
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-lg">
+              🔐
+            </div>
             <div>
-              <h2 className="text-xs font-mono font-black uppercase tracking-wider text-emerald-400">Vault Partition Active</h2>
-              <p className="text-[8px] font-mono text-slate-500">Cryptographic block decrypted</p>
+              <h2 className="text-xs font-mono font-black uppercase tracking-wider text-emerald-400">
+                Password Manager
+              </h2>
+              <p className="text-[8px] font-mono text-slate-400">
+                AES-256-GCM Zero-Knowledge · {credentials.length} {credentials.length === 1 ? 'entry' : 'entries'}
+              </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setIsUnlocked(false);
-              biometricService.lockScope('vault');
-              addToast('Confidential Vault locked successfully.', 'info');
-            }}
-            className="text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 rounded-lg transition-all"
-          >
-            Lock Vault
-          </button>
-        </div>
-
-        {/* Global Security Toggles */}
-        <div className="space-y-3 font-mono text-[9px] uppercase tracking-wider">
-          <div className="flex items-center justify-between p-3 bg-slate-950/60 border border-slate-900 rounded-xl">
-            <div>
-              <p className="font-bold text-slate-200">Decoy Disguise Launcher</p>
-              <p className="text-[7.5px] text-slate-500 font-normal">Launch app disguised as operational calculator</p>
-            </div>
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setDecoyActive(!decoyActive)}
-              className={`px-3 py-1 rounded-lg border font-black transition-all ${
-                decoyActive
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
+              type="button"
+              onClick={() => setShowGenerator(g => !g)}
+              className={`px-2.5 py-1.5 rounded-lg border text-[8.5px] font-mono font-bold uppercase transition-all ${
+                showGenerator
+                  ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
               }`}
             >
-              {decoyActive ? 'ACTIVE' : 'DISABLED'}
+              ⚡ Generator
             </button>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-slate-950/60 border border-slate-900 rounded-xl">
-            <div>
-              <p className="font-bold text-slate-200">Tactical Silence Mode</p>
-              <p className="text-[7.5px] text-slate-500 font-normal">Disable device audio sirens on SOS broadcast</p>
-            </div>
             <button
-              onClick={() => setSilenceAlerts(!silenceAlerts)}
-              className={`px-3 py-1 rounded-lg border font-black transition-all ${
-                silenceAlerts
-                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
-              }`}
+              type="button"
+              onClick={() => {
+                setIsUnlocked(false);
+                setRevealedCreds({});
+                biometricService.lockScope('vault');
+                addToast('Password Manager locked.', 'info');
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 text-[8.5px] font-mono font-bold uppercase transition-all"
             >
-              {silenceAlerts ? 'SILENT' : 'SIREN'}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-slate-950/60 border border-slate-900 rounded-xl">
-            <div>
-              <p className="font-bold text-slate-200">Firestore Cloud Sync</p>
-              <p className="text-[7.5px] text-slate-500 font-normal">Sync configuration securely with Firestore database</p>
-            </div>
-            <button
-              onClick={() => setFirestoreSync(!firestoreSync)}
-              className={`px-3 py-1 rounded-lg border font-black transition-all ${
-                firestoreSync
-                  ? 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
-              }`}
-            >
-              {firestoreSync ? 'CLOUD ACTIVE' : 'LOCAL ONLY'}
+              🔒 Lock
             </button>
           </div>
         </div>
 
-        {/* Custom Decoy Codes */}
-        <div className="grid grid-cols-2 gap-3 font-mono text-[9px] uppercase tracking-wider pt-1">
-          <div className="p-3 bg-slate-950/60 border border-slate-900 rounded-xl space-y-1">
-            <span className="text-slate-500 font-bold block text-[7.5px]">Calculator Bypass code</span>
-            <input
-              type="text"
-              maxLength={4}
-              value={decoyCode}
-              onChange={(e) => setDecoyCode(e.target.value.replace(/[^0-9]/g, ''))}
-              className="w-full bg-transparent border-none text-emerald-400 font-bold text-base outline-none p-0"
-            />
-          </div>
-          <div className="p-3 bg-slate-950/60 border border-slate-900 rounded-xl space-y-1">
-            <span className="text-slate-500 font-bold block text-[7.5px]">Covert Distress code</span>
-            <input
-              type="text"
-              maxLength={4}
-              value={decoyDistressCode}
-              onChange={(e) => setDecoyDistressCode(e.target.value.replace(/[^0-9]/g, ''))}
-              className="w-full bg-transparent border-none text-red-400 font-bold text-base outline-none p-0"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Hidden Apps Section */}
-      <div className="p-5 midnight-glass text-left space-y-4">
-        <div className="border-b border-slate-900 pb-2">
-          <h3 className="text-xs font-mono font-black uppercase text-slate-300 tracking-wider">Hidden specified applications</h3>
-          <p className="text-[8px] font-mono text-slate-500">Apps hidden immediately on panic broadcast</p>
-        </div>
-
-        <div className="space-y-2 font-mono text-[9px]">
-          {vaultApps.map((app) => (
-            <div key={app.id} className="p-2.5 bg-slate-950/80 border border-slate-900 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="font-bold text-slate-200 block">{app.name}</span>
-                <span className="text-[7px] text-slate-600 block">{app.packageName}</span>
+        {/* Built-in Cryptographic Password Generator */}
+        <AnimatePresence>
+          {showGenerator && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="p-3 bg-slate-950/90 border border-cyan-500/25 rounded-2xl space-y-3 font-mono overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-black text-cyan-400 uppercase tracking-wider">
+                  Cryptographic Password Generator
+                </span>
+                <span className={`text-[8.5px] font-bold uppercase ${genStrength.color}`}>
+                  {genStrength.label}
+                </span>
               </div>
-              <button
-                onClick={() => {
-                  removeVaultApp(app.id);
-                  addToast('App removed from secure lockdown.', 'info');
-                }}
-                className="text-red-500 hover:text-red-400 font-bold text-[8px] uppercase tracking-wider"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
 
-          {vaultApps.length === 0 && (
-            <p className="text-[8.5px] text-slate-600 text-center uppercase tracking-wider py-2">No apps in secure block list</p>
-          )}
-        </div>
-
-        {/* Add App Form */}
-        <form onSubmit={handleAddApp} className="grid grid-cols-2 gap-2 pt-2">
-          <select
-            value={newAppPackage}
-            onChange={(e) => {
-              setNewAppPackage(e.target.value);
-              const selectedOption = e.target.options[e.target.selectedIndex];
-              if (selectedOption.text !== 'Custom App...') {
-                setNewAppName(selectedOption.text);
-              }
-            }}
-            className="col-span-2 p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none"
-          >
-            <option value="">-- Select App to Hide --</option>
-            <option value="org.thoughtcrime.securesms">Signal Private Messenger</option>
-            <option value="com.whatsapp">WhatsApp</option>
-            <option value="org.telegram.messenger">Telegram</option>
-            <option value="com.twitter.android">X (Twitter)</option>
-            <option value="com.facebook.katana">Facebook</option>
-            <option value="com.google.android.apps.photos">Google Photos</option>
-            <option value="com.google.android.gm">Gmail</option>
-            <option value="com.instagram.android">Instagram</option>
-            <option value="custom">Custom App...</option>
-          </select>
-          {newAppPackage === 'custom' && (
-            <>
-              <input
-                type="text"
-                placeholder="App Name (e.g. Signal)"
-                value={newAppName}
-                onChange={(e) => setNewAppName(e.target.value)}
-                className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none placeholder-slate-700"
-              />
-              <input
-                type="text"
-                placeholder="Package (e.g. org.signal)"
-                value={newAppPackage}
-                onChange={(e) => setNewAppPackage(e.target.value)}
-                className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none placeholder-slate-700"
-              />
-            </>
-          )}
-          <button
-            type="submit"
-            className="col-span-2 py-2 bg-slate-900/60 hover:bg-slate-850 text-slate-300 border border-slate-800 text-[8px] font-mono font-bold uppercase tracking-widest rounded-lg transition-all"
-          >
-            Add Hidden App Target
-          </button>
-        </form>
-      </div>
-
-      {/* Google Picker Integration */}
-      <div className="p-5 midnight-glass text-left space-y-4">
-        <div className="border-b border-slate-900 pb-2">
-          <h3 className="text-xs font-mono font-black uppercase text-slate-300 tracking-wider">Remote Secure Storage Link</h3>
-          <p className="text-[8px] font-mono text-slate-500">Link external protected nodes via OAuth</p>
-        </div>
-        <GooglePicker />
-      </div>
-
-      {/* Secure File System Directory */}
-      <div className="p-5 midnight-glass text-left space-y-4">
-        <div className="border-b border-slate-900 pb-2 flex justify-between items-center">
-          <div>
-            <h3 className="text-xs font-mono font-black uppercase text-slate-300 tracking-wider">Secure File block directory</h3>
-            <p className="text-[8px] font-mono text-slate-500">Confidential nodes and logs locked under ZK vault</p>
-          </div>
-          <span className="text-[8px] font-mono bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold px-2 py-0.5 rounded uppercase">
-            AES-GCM 256-Bit
-          </span>
-        </div>
-
-        {/* Drag & Drop Zone */}
-        <div
-          onDragEnter={handleDrag}
-          onDragOver={handleDrag}
-          onDragLeave={handleDrag}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border border-dashed p-5 rounded-xl cursor-pointer text-center transition-all ${
-            dragActive
-              ? "border-cyan-500 bg-cyan-500/5"
-              : "border-slate-800 bg-slate-950/40 hover:border-slate-700 hover:bg-slate-950/70"
-          }`}
-        >
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <span className="text-xl block mb-1">📥</span>
-          <p className="text-[9px] font-mono text-slate-300 font-bold uppercase tracking-wider">
-            Drag & drop files here, or <span className="text-cyan-400 underline">browse</span>
-          </p>
-          <p className="text-[7.5px] font-mono text-slate-500 uppercase mt-1">
-            {isEncrypting ? "Encrypting node..." : "Files are immediately encrypted client-side using Zero-Knowledge keys"}
-          </p>
-        </div>
-
-        <div className="space-y-2 font-mono text-[9px]">
-          {vaultFiles.map((file) => (
-            <div key={file.id} className="p-2.5 bg-slate-950/80 border border-slate-900 rounded-xl flex items-center justify-between">
-              <div className="flex items-center gap-2.5 flex-1 min-w-0 mr-3">
-                <span className="text-base flex-shrink-0">📄</span>
-                <div className="truncate">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-slate-200 truncate">{file.name}</span>
-                    {file.ciphertext ? (
-                      <span className="text-[6.5px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-1 rounded uppercase font-black tracking-widest flex-shrink-0">
-                        ZK-AES
-                      </span>
-                    ) : (
-                      <span className="text-[6.5px] bg-slate-900 border border-slate-800 text-slate-500 px-1 rounded uppercase font-black tracking-widest flex-shrink-0">
-                        Default
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-[7.5px] text-slate-500 block uppercase tracking-wider">{file.type} · {file.size}</span>
+              <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-2">
+                <code className="text-xs text-emerald-300 font-bold break-all select-all">
+                  {generatedPreview}
+                </code>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setGeneratedPreview(generateCryptoPassword(genLength, genUpper, genDigits, genSymbols))}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[8.5px] font-bold"
+                    title="Regenerate"
+                  >
+                    ↻
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(generatedPreview, 'generated password')}
+                    className="px-2 py-1 rounded-lg bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/30 text-emerald-300 text-[8px] font-bold uppercase"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCredPassword(generatedPreview);
+                      setShowFormPwd(true);
+                      setShowAddForm(true);
+                      addToast('Generated password loaded into new credential form.', 'info');
+                    }}
+                    className="px-2 py-1 rounded-lg bg-cyan-600/25 hover:bg-cyan-600/40 border border-cyan-500/30 text-cyan-300 text-[8px] font-bold uppercase"
+                  >
+                    Use
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5 flex-shrink-0">
-                <button
-                  onClick={() => handleDecryptAndDownload(file)}
-                  className="text-cyan-400 hover:text-cyan-300 font-bold text-[8px] uppercase tracking-wider px-2 py-1 bg-cyan-950/40 hover:bg-cyan-950/80 border border-cyan-900/30 rounded-lg transition-all"
-                >
-                  Decrypt & Download
-                </button>
-                <button
-                  onClick={() => {
-                    removeVaultFile(file.id);
-                    addToast('File deleted securely from vault.', 'info');
-                  }}
-                  className="text-red-500 hover:text-red-400 font-bold text-[8px] uppercase tracking-wider px-2 py-1 bg-red-950/10 hover:bg-red-950/30 border border-red-900/10 rounded-lg transition-all"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
 
-          {vaultFiles.length === 0 && (
-            <p className="text-[8.5px] text-slate-600 text-center uppercase tracking-wider py-2">Secure directory block empty</p>
+              <div className="space-y-2 text-[9px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Length: <strong className="text-white">{genLength}</strong></span>
+                  <input
+                    type="range"
+                    min={12}
+                    max={32}
+                    value={genLength}
+                    onChange={(e) => {
+                      const nextLen = Number(e.target.value);
+                      setGenLength(nextLen);
+                      setGeneratedPreview(generateCryptoPassword(nextLen, genUpper, genDigits, genSymbols));
+                    }}
+                    className="w-40 accent-cyan-400"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3 text-[8.5px] text-slate-300">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={genUpper}
+                      onChange={(e) => {
+                        setGenUpper(e.target.checked);
+                        setGeneratedPreview(generateCryptoPassword(genLength, e.target.checked, genDigits, genSymbols));
+                      }}
+                      className="accent-cyan-400"
+                    />
+                    A-Z
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={genDigits}
+                      onChange={(e) => {
+                        setGenDigits(e.target.checked);
+                        setGeneratedPreview(generateCryptoPassword(genLength, genUpper, e.target.checked, genSymbols));
+                      }}
+                      className="accent-cyan-400"
+                    />
+                    0-9
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={genSymbols}
+                      onChange={(e) => {
+                        setGenSymbols(e.target.checked);
+                        setGeneratedPreview(generateCryptoPassword(genLength, genUpper, genDigits, e.target.checked));
+                      }}
+                      className="accent-cyan-400"
+                    />
+                    !@#$ Symbols
+                  </label>
+                </div>
+              </div>
+            </motion.div>
           )}
+        </AnimatePresence>
+
+        {/* Search + Add Button */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={credSearch}
+            onChange={(e) => setCredSearch(e.target.value)}
+            placeholder="Search sites, usernames, PINs, cameras..."
+            className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 focus:border-emerald-500/40 rounded-xl text-[10px] font-mono text-slate-100 placeholder-slate-600 outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (showAddForm) {
+                resetForm();
+                setShowAddForm(false);
+              } else {
+                resetForm();
+                setShowAddForm(true);
+              }
+            }}
+            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[9.5px] font-mono font-black uppercase tracking-wider shrink-0 transition-colors"
+          >
+            {showAddForm ? 'Cancel' : '+ Add Login'}
+          </button>
         </div>
 
-        {/* Add File Form */}
-        <form onSubmit={handleAddFile} className="space-y-2 pt-2 border-t border-slate-900/40">
-          <p className="text-[8px] font-mono text-slate-500 uppercase tracking-wider font-bold">Inject Plaintext Placeholder Block (Manual Setup):</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="File Title (e.g. mission_manifest)"
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              className="flex-1 p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none placeholder-slate-700"
-            />
-            <select
-              value={newFileType}
-              onChange={(e) => setNewFileType(e.target.value)}
-              className="p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-300 outline-none cursor-pointer"
+        {/* Category Filter Tabs */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-2.5 py-1 rounded-lg border text-[8.5px] font-mono font-bold uppercase whitespace-nowrap transition-all ${
+                selectedCategory === cat.id
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                  : 'bg-slate-950/60 border-slate-900 text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <option>PDF</option>
-              <option>JSON</option>
-              <option>XLSX</option>
-              <option>JPG</option>
-              <option>TXT</option>
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="File Size (e.g. 512 KB)"
-              value={newFileSize}
-              onChange={(e) => setNewFileSize(e.target.value)}
-              className="flex-1 p-2 bg-slate-950 border border-slate-900 rounded-lg text-[9px] font-mono text-slate-200 outline-none placeholder-slate-700"
+              {cat.icon} {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Add / Edit Credential Form */}
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.form
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            onSubmit={handleSaveCredential}
+            className="p-4 midnight-glass border border-emerald-500/30 text-left space-y-3 font-mono"
+          >
+            <div className="flex items-center justify-between border-b border-slate-900 pb-2">
+              <h3 className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                {editingId ? 'Edit Encrypted Credential' : 'New Encrypted Credential'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  const strong = generateCryptoPassword(genLength, true, true, true);
+                  setCredPassword(strong);
+                  setShowFormPwd(true);
+                }}
+                className="text-[8.5px] font-bold text-cyan-400 hover:text-cyan-300 uppercase"
+              >
+                ⚡ Auto-Generate Strong
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <input
+                type="text"
+                placeholder="Title (e.g. FNB Banking, Home CCTV)"
+                value={credLabel}
+                onChange={(e) => setCredLabel(e.target.value)}
+                className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-100 outline-none focus:border-emerald-500/50"
+                required
+              />
+              <select
+                value={credCategory}
+                onChange={(e) => setCredCategory(e.target.value as any)}
+                className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-200 outline-none focus:border-emerald-500/50"
+              >
+                <option value="LOGINS">🌐 Web / App Login</option>
+                <option value="BANKING">🏦 Banking &amp; Cards</option>
+                <option value="EMERGENCY_PINS">🛡️ Emergency / Gate PINs</option>
+                <option value="WIFI_DEVICES">📡 Wi-Fi &amp; CCTV Cameras</option>
+                <option value="NOTES">📝 Encrypted Secure Note</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <input
+                type="text"
+                placeholder="Username / Email / Account #"
+                value={credUsername}
+                onChange={(e) => setCredUsername(e.target.value)}
+                className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-100 outline-none focus:border-emerald-500/50"
+              />
+              <input
+                type="text"
+                placeholder="Website URL or Device IP (optional)"
+                value={credUrl}
+                onChange={(e) => setCredUrl(e.target.value)}
+                className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-100 outline-none focus:border-emerald-500/50"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <input
+                  type={showFormPwd ? 'text' : 'password'}
+                  placeholder="Password, PIN, or Secret Key"
+                  value={credPassword}
+                  onChange={(e) => setCredPassword(e.target.value)}
+                  className="flex-1 p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-100 outline-none focus:border-emerald-500/50"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowFormPwd(v => !v)}
+                  className="px-3 rounded-xl bg-slate-900 border border-slate-800 text-[9px] text-slate-300 font-bold uppercase"
+                >
+                  {showFormPwd ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                  <div className={`h-full transition-all ${formStrength.bar}`} />
+                </div>
+                <span className={`text-[8px] font-bold uppercase ${formStrength.color}`}>
+                  {formStrength.label}
+                </span>
+              </div>
+            </div>
+
+            <textarea
+              rows={2}
+              placeholder="Optional recovery codes, security questions, or notes (also AES-256 encrypted)..."
+              value={credNotes}
+              onChange={(e) => setCredNotes(e.target.value)}
+              className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-[10px] text-slate-100 outline-none focus:border-emerald-500/50 resize-none"
             />
+
             <button
               type="submit"
-              className="px-4 py-2 bg-slate-900/60 hover:bg-slate-850 text-slate-300 border border-slate-800 text-[8px] font-mono font-bold uppercase tracking-widest rounded-lg transition-all"
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
             >
-              Inject File Block
+              {editingId ? 'Save Encrypted Changes' : '+ Encrypt & Store Entry'}
             </button>
+          </motion.form>
+        )}
+      </AnimatePresence>
+
+      {/* Saved Credentials List */}
+      <div className="space-y-2.5 text-left font-mono">
+        {filteredCredentials.map((cred) => {
+          const revealed = revealedCreds[cred.id];
+          const catMeta = CATEGORIES.find(c => c.id === cred.category) || CATEGORIES[1];
+          return (
+            <div
+              key={cred.id}
+              className="p-3.5 midnight-glass border border-slate-800/90 hover:border-emerald-500/30 rounded-2xl space-y-2.5 transition-all"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sm shrink-0">
+                    {catMeta.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-black text-slate-100 truncate">{cred.label}</span>
+                      <span className="text-[7px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 uppercase font-bold">
+                        {catMeta.label}
+                      </span>
+                    </div>
+                    {cred.username && (
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[9.5px] text-slate-400 truncate">{cred.username}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(cred.username, 'username')}
+                          className="text-[8px] text-cyan-400 hover:text-cyan-300 font-bold uppercase shrink-0"
+                        >
+                          Copy User
+                        </button>
+                      </div>
+                    )}
+                    {cred.url && (
+                      <span className="text-[8px] text-slate-500 block truncate">{cred.url}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                  <button
+                    type="button"
+                    onClick={() => handleRevealCredential(cred)}
+                    className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-lg text-[8px] font-bold uppercase"
+                  >
+                    {revealed ? 'Hide' : 'View'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCredentialPassword(cred)}
+                    className="px-2 py-1 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 rounded-lg text-[8px] font-bold uppercase"
+                  >
+                    Copy Pass
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdit(cred)}
+                    className="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-cyan-300 rounded-lg text-[8px] font-bold uppercase"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      persistCredentials(credentials.filter(c => c.id !== cred.id));
+                      addToast(`Deleted "${cred.label}".`, 'info');
+                    }}
+                    className="px-1.5 py-1 text-red-400 hover:text-red-300 font-bold text-[8px] uppercase"
+                  >
+                    Del
+                  </button>
+                </div>
+              </div>
+
+              {revealed && (
+                <div className="p-2.5 bg-slate-950/90 border border-emerald-500/25 rounded-xl text-[9.5px] space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-emerald-300 font-bold break-all select-all">
+                      {revealed.password}
+                    </span>
+                    <span className={`text-[7.5px] font-bold uppercase shrink-0 ${evaluatePasswordStrength(revealed.password).color}`}>
+                      {evaluatePasswordStrength(revealed.password).label}
+                    </span>
+                  </div>
+                  {revealed.notes && (
+                    <div className="text-[8.5px] text-slate-400 border-t border-slate-800/80 pt-1 break-words whitespace-pre-wrap">
+                      {revealed.notes}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {filteredCredentials.length === 0 && (
+          <div className="p-8 midnight-glass text-center space-y-2 border border-dashed border-slate-800 rounded-2xl">
+            <span className="text-2xl block">🔑</span>
+            <p className="text-xs font-bold text-slate-300 uppercase">
+              {credentials.length === 0 ? 'Your Password Manager is Empty' : 'No Matching Credentials'}
+            </p>
+            <p className="text-[9px] text-slate-500 max-w-xs mx-auto">
+              Store logins, banking PINs, emergency gate codes, and CCTV passwords safely with zero-knowledge AES-256-GCM encryption.
+            </p>
           </div>
-        </form>
+        )}
+      </div>
+
+      {/* Collapsible Stealth & Decoy Security Drawer (preserves Calculator Disguise without clutter) */}
+      <div className="midnight-glass rounded-2xl overflow-hidden text-left font-mono">
+        <button
+          type="button"
+          onClick={() => setShowStealthDrawer(s => !s)}
+          className="w-full p-3.5 flex items-center justify-between text-[9.5px] font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-900/40 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <span>🧮</span>
+            <span>Stealth &amp; Decoy Calculator Protection</span>
+          </span>
+          <span className="text-slate-500">{showStealthDrawer ? '▲ Hide' : '▼ Configure'}</span>
+        </button>
+
+        {showStealthDrawer && (
+          <div className="p-4 pt-1 border-t border-slate-900 space-y-3 text-[9px] uppercase tracking-wider">
+            <div className="flex items-center justify-between p-2.5 bg-slate-950/70 border border-slate-900 rounded-xl">
+              <div>
+                <p className="font-bold text-slate-200">Decoy Calculator Disguise</p>
+                <p className="text-[7.5px] text-slate-500 font-normal normal-case">Mask SafetyLink behind a working calculator</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDecoyActive(!decoyActive)}
+                className={`px-3 py-1 rounded-lg border font-black ${
+                  decoyActive
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                    : 'bg-slate-900 border-slate-800 text-slate-500'
+                }`}
+              >
+                {decoyActive ? 'ACTIVE' : 'OFF'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-2.5 bg-slate-950/70 border border-slate-900 rounded-xl space-y-1">
+                <span className="text-slate-500 font-bold block text-[7.5px]">Unlock Code (=)</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={decoyCode}
+                  onChange={(e) => setDecoyCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-transparent text-emerald-400 font-bold text-sm outline-none"
+                />
+              </div>
+              <div className="p-2.5 bg-slate-950/70 border border-slate-900 rounded-xl space-y-1">
+                <span className="text-slate-500 font-bold block text-[7.5px]">Silent SOS Code (=)</span>
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={decoyDistressCode}
+                  onChange={(e) => setDecoyDistressCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-transparent text-red-400 font-bold text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSilenceAlerts(!silenceAlerts)}
+                className={`p-2.5 rounded-xl border text-left ${
+                  silenceAlerts
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    : 'bg-slate-950/70 border-slate-900 text-slate-400'
+                }`}
+              >
+                <span className="block font-bold">SOS Siren: {silenceAlerts ? 'SILENT' : 'AUDIBLE'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFirestoreSync(!firestoreSync)}
+                className={`p-2.5 rounded-xl border text-left ${
+                  firestoreSync
+                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                    : 'bg-slate-950/70 border-slate-900 text-slate-400'
+                }`}
+              >
+                <span className="block font-bold">Cloud Sync: {firestoreSync ? 'ON' : 'LOCAL'}</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

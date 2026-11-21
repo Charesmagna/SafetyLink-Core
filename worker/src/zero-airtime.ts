@@ -3,6 +3,8 @@
 // Rain posts that SMS here. Contacts were saved earlier, while the user had data.
 // This file does not replace /api/panic.
 
+import { sendLoudAlarm } from './fcm';
+
 export interface ZeroEnv {
   DB?: D1Database;
   TWILIO_SID?: string;
@@ -22,6 +24,7 @@ export interface ZeroEnv {
   SMSGATE_DEVICE_ID?: string;
   SMSGATE_SIM_NUMBER?: string;
   RAIN_GATEWAY_MSISDN?: string;
+  FCM_SERVICE_ACCOUNT?: string;
 }
 
 const DEDUPE_MS = 90_000; // same caller, 90 seconds
@@ -286,6 +289,35 @@ async function notifyContacts(env: ZeroEnv, opts: {
   await Promise.allSettled(targets.map(async (to) => {
     const res = await sendViaSmsGateWithRetry(env, to, smsBody, 2);
     results.push(res);
+
+    // Also ring any SafetyLink Android app registered to this contact via FCM Loud Alarm
+    if (env.FCM_SERVICE_ACCOUNT && env.DB) {
+      try {
+        const localVariant = to.startsWith('+27') && to.length === 12 ? '0' + to.slice(3) : to;
+        const r1: any = await env.DB.prepare('SELECT token FROM device_tokens WHERE phone = ? OR phone = ? LIMIT 5').bind(to, localVariant).all().catch(() => ({ results: [] }));
+        const r2: any = await env.DB.prepare('SELECT token FROM sl_device_tokens WHERE phone = ? OR phone = ? LIMIT 5').bind(to, localVariant).all().catch(() => ({ results: [] }));
+        const tokens = Array.from(new Set([
+          ...((r1?.results || []).map((x: any) => x.token)),
+          ...((r2?.results || []).map((x: any) => x.token)),
+        ].filter(Boolean)));
+        for (const devToken of tokens) {
+          const fcmRes = await sendLoudAlarm(
+            env.FCM_SERVICE_ACCOUNT,
+            devToken,
+            '🚨 EMERGENCY: SafetyLink Alert',
+            `${opts.ownerName} (${opts.ownerPhone}) triggered a SafetyLink SOS! ${locTxt}`,
+            {
+              callerName: opts.ownerName,
+              callerNumber: opts.ownerPhone,
+              location: place,
+              ...(opts.lat ? { lat: String(opts.lat) } : {}),
+              ...(opts.lng ? { lng: String(opts.lng) } : {}),
+            }
+          ).catch((e: any) => ({ ok: false, error: e?.message }));
+          results.push({ to, channel: 'FCM_LOUD_ALARM', provider: 'firebase', ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm sent' : (fcmRes as any).error });
+        }
+      } catch {}
+    }
   }));
 
   if (opts.eventId) {

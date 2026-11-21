@@ -47,15 +47,24 @@ export async function sendLoudAlarm(
   deviceToken: string,
   title: string,
   body: string,
+  extraData?: Record<string, string>,
 ): Promise<{ ok: boolean; status: number; error?: string }> {
   const sa = JSON.parse(serviceAccountJson) as ServiceAccount;
   const at = await accessToken(sa);
+  const dataPayload: Record<string, string> = {
+    type: 'EMERGENCY_RING',
+    title,
+    body,
+    timestamp: String(Date.now()),
+    ...(extraData || {}),
+  };
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${at}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: {
         token: deviceToken,
+        data: dataPayload,
         notification: { title, body },
         android: {
           priority: 'HIGH',
@@ -64,6 +73,7 @@ export async function sendLoudAlarm(
             channel_id: 'loud_alarm_channel',
             sound: 'default',
             notification_priority: 'PRIORITY_MAX',
+            visibility: 'PUBLIC',
             default_vibrate_timings: true,
           },
         },

@@ -918,27 +918,45 @@ Rules:
     }
   });
 
-  // 1b. Multi-turn Lizzy / Tactical Chatbot (gemini-4-hydrogen / gemini-3.1-flash-lite)
+  // 1b. Multi-turn SafetyLink & Post-Emergency Chatbot (gemini-4-hydrogen / gemini-3.1-flash-lite)
+  const buildChatSystemInstruction = (role?: string, customInstruction?: string, incidentContext?: string) => {
+    if (customInstruction && typeof customInstruction === "string" && customInstruction.trim()) {
+      return incidentContext
+        ? `${customInstruction.trim()}\n\nRecent Incident Context:\n${incidentContext}`
+        : customInstruction.trim();
+    }
+    const rolePrompts: Record<string, string> = {
+      post_emergency:
+        "You are Lizzy, SafetyLink South Africa's compassionate Post-Emergency Care Companion. The user may have just experienced or disarmed an emergency SOS alert. Be calm, reassuring, grounded, and practical. First check if they are physically safe and uninjured. Offer grounding breathing steps if they feel shaken, help them draft a clear 'I am safe' message for family/contacts or a structured incident summary for SAPS / security / insurance, and provide South African emergency numbers (10111 SAPS Police, 112 cellular emergency, 10177 Ambulance/Fire, 082 911 Netcare, 084 124 ER24) when needed. Keep replies well-structured and concise.",
+      coordinator:
+        "You are Lizzy, SafetyLink South Africa's Safety Coordinator. Help users plan safe routes, configure emergency contacts, understand SafetyLink's zero-airtime Please Call Me offline relay (Rain SIM + SMS Forwarder) and BLE iTAG panic triggers, and stay prepared across South Africa. Share verified SA emergency numbers (10111, 112, 10177) when relevant.",
+      scribe:
+        "You are SafetyLink's Incident Scribe. Help the user calmly document what happened after an emergency — capturing time, location, people involved, actions taken, and contacts notified — and format a clean, factual summary suitable for SAPS case reporting, estate security, or insurance.",
+    };
+    const base = rolePrompts[role || "post_emergency"] || rolePrompts.post_emergency;
+    return incidentContext ? `${base}\n\nActive/Recent SafetyLink Incident Context:\n${incidentContext}` : base;
+  };
+
   app.post("/api/gemini/chat", async (req, res) => {
     try {
-      const { message, history, systemInstruction, useFlashLite, useMaps, lat, lng } = req.body || {};
-      if (!message || typeof message !== "string") {
+      const { message, history, systemInstruction, role, incidentContext, model, useFlashLite, useMaps, lat, lng } = req.body || {};
+      if (!message || typeof message !== "string" || !message.trim()) {
         return res.status(400).json({ error: "message is required" });
       }
-      if (!process.env.GEMINI_API_KEY) {
-        return res.json({
-          text: "SafetyLink Local Assistant: Dial 10111 (SAPS), 112 (Cellular Emergency), or 10177 (Ambulance), or press the central SOS button for SMS and responder dispatch.",
-          chunks: [],
-          fallback: true,
-        });
-      }
       const genAI = initGemini();
-      const modelName = useMaps ? "gemini-4-hydrogen" : useFlashLite ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+      const allowedModels = new Set(["gemini-4-hydrogen", "gemini-3.1-flash-lite"]);
+      const modelName = useMaps
+        ? "gemini-4-hydrogen"
+        : typeof model === "string" && allowedModels.has(model)
+          ? model
+          : useFlashLite
+            ? "gemini-3.1-flash-lite"
+            : "gemini-4-hydrogen";
 
       const formattedHistory = Array.isArray(history)
         ? history
             .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
-            .slice(-16)
+            .slice(-20)
             .map((h: any) => ({
               role: h.role === "model" || h.sender === "bot" ? "model" : "user",
               parts: [{ text: h.text }],
@@ -952,22 +970,96 @@ Rules:
           config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
         }
       } else {
-        config.systemInstruction =
-          systemInstruction ||
-          "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai). Be warm, clear, concise, and practical. Share South African emergency numbers (10111 SAPS, 112 cellular emergency, 10177 ambulance) when relevant.";
+        config.systemInstruction = buildChatSystemInstruction(role, systemInstruction, incidentContext);
       }
 
-      const response = await genAI.models.generateContent({
+      const chat = genAI.chats.create({
         model: modelName,
-        contents: [...formattedHistory, { role: "user", parts: [{ text: message }] }],
+        history: formattedHistory,
         config,
       });
 
+      const response = await chat.sendMessage({ message: message.trim() });
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      res.json({ text: response.text || "", chunks });
+      res.json({ text: response.text || "", chunks, model: modelName });
     } catch (e: any) {
       console.error("[/api/gemini/chat]", e);
-      res.status(500).json({ error: e.message || "Chat request failed" });
+      const status = typeof e?.status === "number" && e.status >= 400 && e.status < 600 ? e.status : 500;
+      res.status(status).json({ error: e?.message || "Gemini chat request failed" });
+    }
+  });
+
+  // 1b-stream. Streaming Multi-Turn SafetyLink Chatbot (SSE via ai.chats.create + sendMessageStream)
+  app.post("/api/gemini/chat/stream", async (req, res) => {
+    try {
+      const { message, history, systemInstruction, role, incidentContext, model, useFlashLite, useMaps, lat, lng } = req.body || {};
+      if (!message || typeof message !== "string" || !message.trim()) {
+        return res.status(400).json({ error: "message is required" });
+      }
+      const genAI = initGemini();
+      const allowedModels = new Set(["gemini-4-hydrogen", "gemini-3.1-flash-lite"]);
+      const modelName = useMaps
+        ? "gemini-4-hydrogen"
+        : typeof model === "string" && allowedModels.has(model)
+          ? model
+          : useFlashLite
+            ? "gemini-3.1-flash-lite"
+            : "gemini-4-hydrogen";
+
+      const formattedHistory = Array.isArray(history)
+        ? history
+            .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
+            .slice(-20)
+            .map((h: any) => ({
+              role: h.role === "model" || h.sender === "bot" ? "model" : "user",
+              parts: [{ text: h.text }],
+            }))
+        : [];
+
+      const config: any = {};
+      if (useMaps) {
+        config.tools = [{ googleMaps: {} }];
+        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+          config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
+        }
+      } else {
+        config.systemInstruction = buildChatSystemInstruction(role, systemInstruction, incidentContext);
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders?.();
+
+      const chat = genAI.chats.create({
+        model: modelName,
+        history: formattedHistory,
+        config,
+      });
+
+      const streamResponse = await chat.sendMessageStream({ message: message.trim() });
+      let lastChunks: any[] = [];
+      for await (const chunk of streamResponse) {
+        const chunkText = chunk.text || "";
+        const grounding = chunk.candidates?.[0]?.groundingMetadata?.groundingChunks;
+        if (Array.isArray(grounding) && grounding.length > 0) {
+          lastChunks = grounding;
+        }
+        if (chunkText) {
+          res.write(`data: ${JSON.stringify({ delta: chunkText })}\n\n`);
+        }
+      }
+      res.write(`data: ${JSON.stringify({ done: true, model: modelName, chunks: lastChunks })}\n\n`);
+      res.end();
+    } catch (e: any) {
+      console.error("[/api/gemini/chat/stream]", e);
+      if (!res.headersSent) {
+        const status = typeof e?.status === "number" && e.status >= 400 && e.status < 600 ? e.status : 500;
+        res.status(status).json({ error: e?.message || "Streaming chat request failed" });
+      } else {
+        res.write(`data: ${JSON.stringify({ error: e?.message || "Streaming chat request failed" })}\n\n`);
+        res.end();
+      }
     }
   });
 
@@ -3596,101 +3688,141 @@ Rules:
   });
 
   wss.on("connection", async (clientWs, request) => {
+    let session: any = null;
     try {
-      if (!process.env.GEMINI_API_KEY) {
-        if (clientWs.readyState === 1) {
-          clientWs.send(JSON.stringify({
-            type: "text",
-            text: "Local voice check-in active (offline/free-tier mode). Tap Start/Restart Dispatch or I'm Okay below."
-          }));
-          clientWs.send(JSON.stringify({
-            type: "error",
-            message: "Cloud live voice key unavailable — using local voice prompt."
-          }));
-          clientWs.close();
-        }
-        return;
-      }
-      const ai = initGemini();
-      const urlObj = new URL(request.url || '/live', 'http://localhost');
-      const mode = urlObj.searchParams.get('mode') || 'assistant';
+      const aiClient = initGemini();
+      const urlObj = new URL(request.url || "/live", "http://localhost");
+      const mode = urlObj.searchParams.get("mode") || "post_emergency";
+      const requestedVoice = urlObj.searchParams.get("voice") || "Zephyr";
+      const allowedVoices = new Set(["Zephyr", "Kore", "Puck", "Charon", "Fenrir"]);
+      const voiceName = allowedVoices.has(requestedVoice) ? requestedVoice : "Zephyr";
+      const incidentSummary = (urlObj.searchParams.get("context") || "").slice(0, 600);
 
-      const systemText =
-        mode === 'checkin'
-          ? "You are Lizzy from SafetyLink South Africa calling 10 minutes after a panic SOS alert was triggered. Speak warmly, ask 'Are you okay right now? Should I restart emergency dispatch or mark you safe?', listen to their answer, and keep responses under 2 short sentences."
-          : "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai), the emergency AI voice coordinator. Provide calm, reassuring tactical guidance in short, clear responses.";
+      const modeInstructions: Record<string, string> = {
+        checkin:
+          "You are Lizzy from SafetyLink South Africa calling after an emergency SOS alert was triggered. Speak warmly and calmly. First ask 'Are you okay right now? Should I keep emergency dispatch active, or mark you safe?' Listen carefully and keep replies short, reassuring, and clear (1–2 sentences).",
+        post_emergency:
+          "You are Lizzy, SafetyLink South Africa's real-time Post-Emergency Voice Companion. Speak with a warm, calm, steady voice. Check if the user is physically safe and uninjured, guide them through calm breathing if shaken, help them plan immediate next steps or contact loved ones, and share South African emergency numbers (10111 SAPS, 112 emergency, 10177 ambulance) only if needed. Keep spoken responses natural and concise (2–3 sentences).",
+        assistant:
+          "You are Lizzy, SafetyLink South Africa's real-time AI voice safety companion. Answer questions about personal safety, route planning, BLE iTAG triggers, and SafetyLink emergency tools in a warm, calm, concise spoken tone.",
+      };
 
-      const session = await ai.live.connect({
+      const baseInstruction = modeInstructions[mode] || modeInstructions.post_emergency;
+      const systemText = incidentSummary
+        ? `${baseInstruction}\n\nRecent SafetyLink Incident Context: ${incidentSummary}`
+        : baseInstruction;
+
+      session = await aiClient.live.connect({
         model: "gemini-3.8-live",
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName } },
           },
-          systemInstruction: {
-            parts: [{ text: systemText }],
-          },
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          systemInstruction: systemText,
         },
         callbacks: {
+          onopen: () => {
+            if (clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "ready", model: "gemini-3.8-live", voice: voiceName, mode }));
+            }
+          },
           onmessage: (message: LiveServerMessage) => {
-            const parts = message.serverContent?.modelTurn?.parts || [];
+            if (clientWs.readyState !== 1) return;
+            const content = message.serverContent;
+
+            if (content?.inputTranscription?.text) {
+              clientWs.send(JSON.stringify({ type: "inputTranscript", text: content.inputTranscription.text }));
+            }
+            if (content?.outputTranscription?.text) {
+              clientWs.send(JSON.stringify({ type: "outputTranscript", text: content.outputTranscription.text }));
+            }
+
+            const parts = content?.modelTurn?.parts || [];
             for (const part of parts) {
               const audio = (part as any)?.inlineData?.data;
-              if (audio && clientWs.readyState === 1) {
+              if (audio) {
                 clientWs.send(JSON.stringify({ type: "audio", data: audio }));
               }
               const txt = (part as any)?.text;
-              if (txt && clientWs.readyState === 1) {
+              if (txt) {
                 clientWs.send(JSON.stringify({ type: "text", text: txt }));
               }
             }
-            if (message.serverContent?.interrupted && clientWs.readyState === 1) {
+            if (content?.interrupted) {
               clientWs.send(JSON.stringify({ type: "interrupted" }));
+            }
+            if (content?.turnComplete) {
+              clientWs.send(JSON.stringify({ type: "turnComplete" }));
             }
           },
           onerror: (err: any) => {
             console.error("[Live WS Gemini error]", err);
             if (clientWs.readyState === 1) {
-              clientWs.send(JSON.stringify({ type: "error", message: String(err?.message || err) }));
+              clientWs.send(JSON.stringify({ type: "error", message: String(err?.message || err || "Gemini Live error") }));
+            }
+          },
+          onclose: () => {
+            if (clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "closed" }));
             }
           },
         },
       });
 
-      if (mode === 'checkin') {
+      if (mode === "checkin" || mode === "post_emergency") {
         try {
+          const introPrompt =
+            mode === "checkin"
+              ? "Greet the user warmly and ask if they are safe right now or if they need emergency dispatch restarted."
+              : incidentSummary
+                ? `Greet the user warmly after their recent SafetyLink incident (${incidentSummary}). Ask calmly if they are physically safe right now and how you can support them.`
+                : "Greet the user warmly as Lizzy from SafetyLink Post-Emergency Support and ask if they are safe right now and how you can help.";
           session.sendClientContent({
-            turns: [{ role: 'user', parts: [{ text: 'Begin the 10-minute post-panic welfare check now and greet the user.' }] }],
+            turns: [{ role: "user", parts: [{ text: introPrompt }] }],
             turnComplete: true,
           });
-        } catch {}
+        } catch (greetErr) {
+          console.warn("[Live WS initial prompt skipped]", greetErr);
+        }
       }
 
-      clientWs.on("message", (message: string) => {
+      clientWs.on("message", (raw: Buffer | string) => {
+        if (!session) return;
         try {
-          const msg = JSON.parse(String(message));
+          const msg = JSON.parse(String(raw));
           if (msg.type === "audio" && msg.data) {
             session.sendRealtimeInput({
               audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
             });
           } else if (msg.type === "text" && msg.text) {
             session.sendClientContent({
-              turns: [{ role: 'user', parts: [{ text: String(msg.text) }] }],
+              turns: [{ role: "user", parts: [{ text: String(msg.text) }] }],
               turnComplete: true,
             });
           }
         } catch (err) {
-          console.error("Live API WS message error", err);
+          console.error("[Live WS message error]", err);
         }
       });
 
       clientWs.on("close", () => {
-        try { session.close(); } catch {}
+        try {
+          session?.close();
+        } catch {}
+        session = null;
       });
     } catch (err: any) {
       console.error("[Live WS connection setup failed]", err);
       if (clientWs.readyState === 1) {
-        clientWs.send(JSON.stringify({ type: "error", message: err?.message || "Live connection failed" }));
+        clientWs.send(
+          JSON.stringify({
+            type: "error",
+            message: err?.message || "Failed to start Gemini Live voice session.",
+          })
+        );
         clientWs.close();
       }
     }
@@ -3698,5 +3830,4 @@ Rules:
 }
 
 startServer();
-
 // Keep process alive

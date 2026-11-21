@@ -8,7 +8,7 @@ import { PepxiOrderModal } from './PepxiOrderModal';
 import { Sparkles, Truck, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const BLEScanner: React.FC = () => {
-  const { bleDevices, discoveredDevices, isScanning, pairingProgress, startBleScan, disconnectBleDevice, connectBleDevice, removeDevice, registerDiscoveredDevice, demoMode, isBackgroundServiceRunning } = useAppStore();
+  const { bleDevices, discoveredDevices, isScanning, pairingProgress, startBleScan, disconnectBleDevice, connectBleDevice, removeDevice, registerDiscoveredDevice, demoMode, isBackgroundServiceRunning, bleButtonConfig, handleHardwareButtonPress } = useAppStore();
 
   // Native Custom ITagPlugin States
   const [nativePluginInitialized, setNativePluginInitialized] = React.useState<boolean>(false);
@@ -177,42 +177,8 @@ export const BLEScanner: React.FC = () => {
         const store = useAppStore.getState();
         store.addAuditLog('BLE', 'SEVERE', 'NATIVE PHYSICAL BUTTON PRESS', `Signal byte 0x${val.toString(16)} received from ${address} (Click Code: ${val})`);
 
-        // Medium vibration to acknowledge every iTAG press
-        if (navigator.vibrate) { try { navigator.vibrate(120); } catch(e) {} }
-
-        const lizzyFollowUp = (alertType: string) => {
-          // Lizzy AI voice follow-up after dispatch confirmation
-          setTimeout(() => {
-            if (typeof window !== 'undefined' && window.speechSynthesis) {
-              try {
-                window.speechSynthesis.cancel();
-                const msg = new SpeechSynthesisUtterance(
-                  `${alertType} alert dispatched. This is Lizzy from SafetyLink. Are you okay? Please respond if you can hear me.`
-                );
-                msg.rate = 0.9;
-                msg.pitch = 1.1;
-                window.speechSynthesis.speak(msg);
-              } catch(e) {}
-            }
-          }, 3500);
-        };
-
-        // Single, standardized action on any click code: 10s countdown SOS
-        store.addAuditLog('BLE', 'SEVERE', 'iTAG Physical Button Press', `Emergency trigger confirmed from physical button ${address}. Broadcasting SOS.`);
-        store.startMultiStagePanic("SOS triggered via iTAG button", 10);
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-          try {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance("Emergency countdown initiated. 10 seconds to cancel."));
-          } catch (e) {}
-        }
-        // Long vibration + beep on countdown complete
-        setTimeout(() => {
-          if (store.activeSOSState !== 'IDLE') {
-            if (navigator.vibrate) { try { navigator.vibrate([200, 100, 600]); } catch(e) {} }
-            lizzyFollowUp('SOS');
-          }
-        }, 10500);
+        // Brief haptic pulse confirming hardware packet reached SafetyLink; PanicService drives the 10s countdown natively
+        if (navigator.vibrate) { try { navigator.vibrate(120); } catch (e) {} }
       },
       (battery) => {
         useAppStore.setState(state => ({
@@ -332,6 +298,39 @@ export const BLEScanner: React.FC = () => {
           <Truck className="w-3 h-3 text-amber-400" />
           Order Tag via Pepxi (R100)
         </button>
+      </div>
+
+      {/* ACTIVE FLEXIBLE iTAG GESTURE BINDINGS SUMMARY */}
+      <div className="relative z-10 w-full mb-3 bg-slate-950/70 border border-cyan-500/25 rounded-2xl p-3 text-left font-mono space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[9px] font-black text-cyan-300 uppercase tracking-wider">
+            🔘 Active Button Press Map ({bleButtonConfig.multiPressWindowMs || 550}ms window)
+          </span>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('sl-switch-tab', { detail: 'settings' }))}
+            className="text-[8px] font-bold text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 bg-emerald-950/40 px-2 py-0.5 rounded-lg uppercase"
+          >
+            ⚙️ Customize
+          </button>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[7.5px]">
+          <div className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-500">1x:</span> <span className="text-slate-200 font-bold">{bleButtonConfig.singlePressAction}</span>
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-500">2x:</span> <span className="text-slate-200 font-bold">{bleButtonConfig.doublePressAction}</span>
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-500">3x:</span> <span className="text-slate-200 font-bold">{bleButtonConfig.triplePressAction}</span>
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-500">4x:</span> <span className="text-slate-200 font-bold">{bleButtonConfig.quadPressAction || 'VOICE_LIZZY'}</span>
+          </div>
+          <div className="px-2 py-1 rounded-lg bg-slate-900/80 border border-slate-800 col-span-2">
+            <span className="text-slate-500">Hold:</span> <span className="text-emerald-300 font-bold">{bleButtonConfig.longPressAction || 'SILENT_PANIC'}</span>
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-between items-center border-b border-slate-900 pb-3.5 relative z-10">
@@ -806,22 +805,26 @@ export const BLEScanner: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Hardware Click Simulation */}
-                {demoMode && isConnected && (
+                {/* Hardware Click & Hold Simulation */}
+                {isConnected && (
                   <div className="bg-slate-950/40 p-2 rounded-xl border border-slate-900 flex items-center justify-between gap-1.5 text-[8.5px] font-mono mt-1">
-                    <span className="text-slate-500 font-bold uppercase tracking-wider">Simulate Click:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const store = useAppStore.getState();
-                        store.addAuditLog('BLE', 'SEVERE', 'iTAG Simulated Press', `Simulated physical button press for ${device.macAddress}`);
-                        store.startMultiStagePanic("SOS triggered via simulated iTAG button", 10);
-                        useAppStore.getState().addToast("Simulated press: 10s countdown initiated.", "warn");
-                      }}
-                      className="px-3 py-1 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded font-bold uppercase tracking-wide cursor-pointer"
-                    >
-                      Simulate Press
-                    </button>
+                    <span className="text-slate-500 font-bold uppercase tracking-wider">Test Trigger:</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleHardwareButtonPress(device.macAddress)}
+                        className="px-2.5 py-1 bg-cyan-950/50 hover:bg-cyan-900/50 text-cyan-300 border border-cyan-500/30 rounded font-bold uppercase tracking-wide cursor-pointer"
+                      >
+                        Tap (1x–4x)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleHardwareButtonPress(`LONG_PRESS:${device.macAddress}`)}
+                        className="px-2.5 py-1 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded font-bold uppercase tracking-wide cursor-pointer"
+                      >
+                        Long Hold
+                      </button>
+                    </div>
                   </div>
                 )}
 

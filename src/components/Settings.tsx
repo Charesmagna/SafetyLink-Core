@@ -7,7 +7,23 @@ import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
+import { HikvisionCameraManager } from './HikvisionCameraManager';
 import { PopiaLegalModal } from './PopiaLegalModal';
+import type { BleButtonAction } from '../utils/store';
+
+const BLE_ACTION_OPTIONS: { value: BleButtonAction; label: string }[] = [
+  { value: 'PANIC', label: '🚨 Emergency SOS (Countdown)' },
+  { value: 'INSTANT_PANIC', label: '⚡ Instant SOS (0s, Immediate Dispatch)' },
+  { value: 'SILENT_PANIC', label: '🔕 Silent Stealth SOS (No Siren)' },
+  { value: 'CHECK_IN_SAFE', label: '✅ Check-In Safe (Notify & Clear Timer)' },
+  { value: 'SHARE_GPS_PING', label: '📍 Share Live GPS Pin Snapshot' },
+  { value: 'SAFETY_TIMEOUT', label: '⏱️ Start Safety Walk Timer' },
+  { value: 'FIND_PHONE', label: '🔔 Find My Phone (Max-Volume Ring)' },
+  { value: 'VOICE_LIZZY', label: '🎙️ Open Kleva / Lizzy AI Live Voice' },
+  { value: 'SIREN_ONLY', label: '📢 Audible Deterrent Siren Only' },
+  { value: 'CANCEL', label: '🛡️ Cancel / Disarm Active SOS' },
+  { value: 'DISABLED', label: '⚪ Disabled (Ignore Press)' },
+];
 
 export const Settings: React.FC = () => {
   const { 
@@ -49,10 +65,16 @@ export const Settings: React.FC = () => {
     availableSims,
     preferredSimId,
     setPreferredSim,
-    loadSimCards
+    loadSimCards,
+    unlockMethod,
+    setUnlockMethod
   } = useAppStore();
-
   const [showPopiaModal, setShowPopiaModal] = useState(false);
+
+  const [activeSection, setActiveSection] = useState<'ALL' | 'DISPATCH' | 'SECURITY' | 'HARDWARE' | 'PRIVACY'>('ALL');
+  const [screenWakeLockEnabled, setScreenWakeLockEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem('sl_screen_wake_lock') !== 'false'; } catch { return true; }
+  });
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
 
   // Biometric gate for sensitive security settings
@@ -62,6 +84,74 @@ export const Settings: React.FC = () => {
   const [isAuthenticatingPin, setIsAuthenticatingPin] = useState(false);
   const [isTestingUssd, setIsTestingUssd] = useState(false);
   const [testClicks, setTestClicks] = useState(0);
+
+  // Live SMS / USSD / FCM Diagnostics & Test Trigger Console
+  const [liveTestPhone, setLiveTestPhone] = useState<string>(() => currentUser?.phone || '065 830 7216');
+  const [liveTestSmsOnly, setLiveTestSmsOnly] = useState<boolean>(true);
+  const [isSendingLiveTest, setIsSendingLiveTest] = useState<boolean>(false);
+  const [liveTestResult, setLiveTestResult] = useState<any>(null);
+  const [isCheckingHealth, setIsCheckingHealth] = useState<boolean>(false);
+  const [providerHealth, setProviderHealth] = useState<any>(null);
+
+  const handleCheckGatewayHealth = async () => {
+    setIsCheckingHealth(true);
+    try {
+      const base = (useAppStore.getState().customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
+      const [provRes, pcmRes] = await Promise.all([
+        fetch(`${base}/api/health/providers`).then(r => r.json()).catch(() => null),
+        fetch(`${base}/api/pcm/gateway`).then(r => r.json()).catch(() => null),
+      ]);
+      setProviderHealth({ providers: provRes, pcmGateway: pcmRes?.number || null, checkedAt: Date.now() });
+      useAppStore.getState().addToast('Live gateway diagnostics refreshed.', 'success');
+    } catch (err: any) {
+      useAppStore.getState().addToast(`Health check failed: ${err?.message || err}`, 'error');
+    } finally {
+      setIsCheckingHealth(false);
+    }
+  };
+
+  const handleSendLiveTestTrigger = async () => {
+    const cleanTarget = liveTestPhone.trim();
+    if (!cleanTarget) {
+      useAppStore.getState().addToast('Enter a target phone number to test.', 'warn');
+      return;
+    }
+    setIsSendingLiveTest(true);
+    setLiveTestResult(null);
+    try {
+      const store = useAppStore.getState();
+      const base = (store.customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
+      const loc = store.userLocation;
+      const payload = {
+        callerName: currentUser?.fullName || 'SafetyLink Diagnostic Test',
+        callerNumber: cleanTarget,
+        lat: loc?.lat,
+        lng: loc?.lng,
+        description: 'SafetyLink Settings Live SMS/FCM Trigger Diagnostic Test',
+        emergencyContacts: [{ name: 'Live Diagnostic Target', phone: cleanTarget }],
+        skipVoiceTo: liveTestSmsOnly ? [cleanTarget, '+27739441222'] : [],
+      };
+      const res = await fetch(`${base}/api/panic`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      setLiveTestResult({ httpStatus: res.status, ...data, sentAt: Date.now() });
+      store.addAuditLog('DISPATCH', data.ok ? 'INFO' : 'WARN', `Live Test Trigger -> ${cleanTarget}`, `HTTP ${res.status} • Channels: ${(data.results || []).length}`);
+      store.addToast(
+        data.ok
+          ? `Live test alert dispatched to ${cleanTarget}!`
+          : `Test returned HTTP ${res.status}. Inspect channel results below.`,
+        data.ok ? 'success' : 'warn'
+      );
+    } catch (err: any) {
+      setLiveTestResult({ ok: false, error: err?.message || String(err), sentAt: Date.now() });
+      useAppStore.getState().addToast(`Live test failed: ${err?.message || err}`, 'error');
+    } finally {
+      setIsSendingLiveTest(false);
+    }
+  };
 
   useEffect(() => {
     loadSimCards();
@@ -77,6 +167,7 @@ export const Settings: React.FC = () => {
     });
     return () => { active = false; };
   }, []);
+  const [showHikvisionManager, setShowHikvisionManager] = useState(false);
 
   const handleUnlockPinSettings = async () => {
     setIsAuthenticatingPin(true);
@@ -177,11 +268,36 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      
+      {/* Section Filter Navigation */}
+      <div className="flex flex-wrap gap-1.5 mt-3 relative z-10 font-mono">
+        {([
+          { id: 'ALL', label: 'All' },
+          { id: 'DISPATCH', label: 'Dispatch' },
+          { id: 'SECURITY', label: 'Security' },
+          { id: 'HARDWARE', label: 'BLE & Fleet' },
+          { id: 'PRIVACY', label: 'Privacy & OS' }
+        ] as const).map(sec => (
+          <button
+            key={sec.id}
+            type="button"
+            onClick={() => setActiveSection(sec.id)}
+            className={`px-2.5 py-1 rounded-lg text-[8.5px] font-bold uppercase tracking-wider border transition-all ${
+              activeSection === sec.id
+                ? 'bg-emerald-600 border-emerald-500 text-white'
+                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            {sec.label}
+          </button>
+        ))}
+      </div>
+
       {/* App Preferences */}
+      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
+      <>
       <div className="space-y-3 text-left mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-          🎨 APP PREFERENCES
+          🎨 THEME &amp; APP PREFERENCES
         </h4>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex items-center justify-between">
           <div>
@@ -220,13 +336,21 @@ export const Settings: React.FC = () => {
           </button>
         </div>
       </div>
+      </>
+      )}
 
 
       {/* Alert & Countdown Settings */}
+      {(activeSection === 'ALL' || activeSection === 'DISPATCH') && (
+      <>
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-          🚨 ALERTS & COUNTDOWN
+          🚨 EMERGENCY &amp; DISPATCH ORDER
         </h4>
+        <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-3 text-[8px] font-mono text-emerald-300 space-y-1">
+          <div className="font-bold uppercase tracking-wider text-emerald-400">Canonical Dispatch Sequence</div>
+          <div>1. Server API → 2. Native SMS → 3. Direct Call → 4. Optional USSD → 5. WhatsApp (only contacts with WhatsApp)</div>
+        </div>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-4">
           {/* Floating SOS Overlay Settings (User Golden Spec) */}
           <div className="border-t border-slate-800/50 pt-3 space-y-2">
@@ -349,18 +473,18 @@ export const Settings: React.FC = () => {
           </div>
 
           <p className="text-[7.5px] text-slate-400 leading-relaxed font-sans">
-            Automatically dials your network operator's free USSD Please-Call-Me code to the SafetyLink GSM gateway when panic is pressed. Operates over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
+            Optional carrier USSD fallback dialer. Disabled by default so panic dispatches follow Server → SMS → Call first; enable to dial your carrier USSD code over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
           </p>
 
           <div className="space-y-3 pt-1">
             <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
               <div>
-                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain</span>
-                <span className="text-[7.5px] text-slate-500">Executes hardware USSD dialer immediately as panic is triggered.</span>
+                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain (Optional)</span>
+                <span className="text-[7.5px] text-slate-500">Executes carrier USSD dialer after Call step when enabled.</span>
               </div>
               <input
                 type="checkbox"
-                checked={dispatchSettings.ussdEnabled !== false}
+                checked={Boolean(dispatchSettings.ussdEnabled)}
                 onChange={e => {
                   setDispatchSettings({ ussdEnabled: e.target.checked });
                   useAppStore.getState().addToast(`USSD Auto-Dial ${e.target.checked ? 'Enabled' : 'Disabled'}`, 'info');
@@ -478,6 +602,148 @@ export const Settings: React.FC = () => {
                 </div>
               );
             })()}
+          </div>
+
+          {/* Live SMS / USSD / FCM Gateway Diagnostics & Trigger Test Console */}
+          <div className="border-t border-slate-800/70 pt-4 space-y-3" data-testid="live-trigger-test-console">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h5 className="text-[9.5px] font-bold text-emerald-400 uppercase flex items-center gap-1.5">
+                  <span>🧪</span> Live SMS, USSD &amp; FCM Trigger Test Console
+                </h5>
+                <p className="text-[8px] text-slate-500 mt-0.5">
+                  Verify real-world SMS, Voice, USSD, and FCM loud alarm delivery directly to any test number (no profile required).
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isCheckingHealth}
+                onClick={handleCheckGatewayHealth}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[8.5px] font-bold text-cyan-300 uppercase tracking-wider shrink-0"
+              >
+                {isCheckingHealth ? 'Checking...' : '↻ Check Gateways'}
+              </button>
+            </div>
+
+            {providerHealth && (
+              <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[8px]">
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
+                  <span className="text-slate-400">SMSGate (Rain)</span>
+                  <span className={providerHealth.providers?.smsgate ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                    {providerHealth.providers?.smsgate ? 'ONLINE' : 'CHECK'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
+                  <span className="text-slate-400">Twilio SMS</span>
+                  <span className={providerHealth.providers?.twilio ? 'text-emerald-400 font-bold' : 'text-slate-500 font-bold'}>
+                    {providerHealth.providers?.twilio ? 'ONLINE' : 'OFF'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
+                  <span className="text-slate-400">VAPI Voice</span>
+                  <span className={providerHealth.providers?.vapi ? 'text-emerald-400 font-bold' : 'text-slate-500 font-bold'}>
+                    {providerHealth.providers?.vapi ? 'ONLINE' : 'OFF'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
+                  <span className="text-slate-400">FCM Contact Ring</span>
+                  <span className={providerHealth.providers?.fcm ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                    {providerHealth.providers?.fcm ? 'READY' : 'UNSET'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70 col-span-2">
+                  <span className="text-slate-400">Rain PCM SIM</span>
+                  <span className="text-cyan-300 font-bold">{providerHealth.pcmGateway || '0816738186'}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  value={liveTestPhone}
+                  onChange={e => setLiveTestPhone(e.target.value)}
+                  placeholder="e.g. 065 830 7216 or +27658307216"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[10px] text-slate-100 focus:outline-none focus:border-emerald-500/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLiveTestPhone('065 830 7216')}
+                  className="px-2.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-300 rounded-xl text-[8px] font-bold uppercase whitespace-nowrap"
+                >
+                  065 830 7216
+                </button>
+              </div>
+
+              <label className="flex items-center gap-2 text-[8.5px] text-slate-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={liveTestSmsOnly}
+                  onChange={e => setLiveTestSmsOnly(e.target.checked)}
+                  className="accent-emerald-500"
+                />
+                <span>SMS + FCM Alarm Ring only (skip automated AI voice call during test)</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={isSendingLiveTest}
+                  onClick={handleSendLiveTestTrigger}
+                  className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[9px] uppercase tracking-wider transition-all shadow-md"
+                >
+                  {isSendingLiveTest ? 'Transmitting Live Test...' : '🚀 Send Live SMS + FCM Test'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    useAppStore.getState().triggerIncomingEmergencyRing({
+                      callerName: currentUser?.fullName || 'Emergency Contact Test',
+                      callerNumber: liveTestPhone || '065 830 7216',
+                      location: 'Diagnostic Ring Verification (Loud Alarm Test)',
+                      lat: useAppStore.getState().userLocation?.lat,
+                      lng: useAppStore.getState().userLocation?.lng,
+                      source: 'FCM_LOCAL_TEST',
+                    });
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-bold text-[9px] uppercase tracking-wider transition-all"
+                >
+                  🔔 Test Loud Contact Ringtone
+                </button>
+              </div>
+            </div>
+
+            {liveTestResult && (
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1.5 text-[8.5px] font-mono">
+                <div className="flex items-center justify-between">
+                  <span className={`font-black uppercase ${liveTestResult.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {liveTestResult.ok ? '✓ GATEWAY ACCEPTED DISPATCH' : '⚠️ DISPATCH RESPONSE'}
+                  </span>
+                  <span className="text-slate-500">HTTP {liveTestResult.httpStatus || 'ERR'}</span>
+                </div>
+                {liveTestResult.message && (
+                  <p className="text-amber-300">{liveTestResult.message}</p>
+                )}
+                {liveTestResult.error && (
+                  <p className="text-red-400">{liveTestResult.error}</p>
+                )}
+                {Array.isArray(liveTestResult.results) && liveTestResult.results.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t border-slate-900">
+                    {liveTestResult.results.map((r: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-[8px]">
+                        <span className="text-slate-300 truncate">
+                          [{r.channel}] {r.provider} → {r.to}
+                        </span>
+                        <span className={r.ok ? 'text-emerald-400 font-bold shrink-0' : 'text-red-400 font-bold shrink-0'}>
+                          {r.ok ? 'OK' : `FAIL ${r.status || ''}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -763,9 +1029,12 @@ export const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+      </>
+      )}
 
         {/* BLE & iTAG Hardware Button Configuration Card */}
-        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden">
+        {(activeSection === 'ALL' || activeSection === 'HARDWARE') && (
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden mt-4" data-testid="itag-flexible-config">
           <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
@@ -773,11 +1042,11 @@ export const Settings: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="text-base">🔘</span>
                 <h4 className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
-                  BLE / iTAG Hardware Button Triggers
+                  Flexible BLE / iTAG Hardware Button Triggers
                 </h4>
               </div>
               <p className="text-[8px] text-slate-500 mt-0.5">
-                Configure customized click sequences and pocket disarm actions for physical Bluetooth buttons.
+                Assign any emergency, check-in, GPS, AI voice, or stealth action to 1x, 2x, 3x, 4x clicks and Long Hold.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -791,33 +1060,195 @@ export const Settings: React.FC = () => {
             </div>
           </div>
 
-          {/* Configuration Form Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {/* 1-Tap Role Presets */}
+          <div className="space-y-1.5">
+            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">
+              Quick Behavior Presets:
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                {
+                  name: 'Everyday Safety',
+                  desc: '1x SOS · 2x Ring · 3x Walk · Hold Stealth',
+                  cfg: { singlePressAction: 'PANIC' as BleButtonAction, doublePressAction: 'FIND_PHONE' as BleButtonAction, triplePressAction: 'SAFETY_TIMEOUT' as BleButtonAction, quadPressAction: 'VOICE_LIZZY' as BleButtonAction, longPressAction: 'SILENT_PANIC' as BleButtonAction, cancelDuringCountdown: true, countdownOverrideSec: 10, multiPressWindowMs: 550 }
+                },
+                {
+                  name: 'Pocket-Safe 2x',
+                  desc: '1x Off · 2x SOS · 3x Safe · Hold Instant',
+                  cfg: { singlePressAction: 'DISABLED' as BleButtonAction, doublePressAction: 'PANIC' as BleButtonAction, triplePressAction: 'CHECK_IN_SAFE' as BleButtonAction, quadPressAction: 'SHARE_GPS_PING' as BleButtonAction, longPressAction: 'INSTANT_PANIC' as BleButtonAction, cancelDuringCountdown: true, countdownOverrideSec: 10, multiPressWindowMs: 650 }
+                },
+                {
+                  name: 'Lone Worker',
+                  desc: '1x Safe · 2x GPS · 3x Walk · Hold Instant',
+                  cfg: { singlePressAction: 'CHECK_IN_SAFE' as BleButtonAction, doublePressAction: 'SHARE_GPS_PING' as BleButtonAction, triplePressAction: 'SAFETY_TIMEOUT' as BleButtonAction, quadPressAction: 'VOICE_LIZZY' as BleButtonAction, longPressAction: 'INSTANT_PANIC' as BleButtonAction, cancelDuringCountdown: true, countdownOverrideSec: 5, multiPressWindowMs: 600 }
+                },
+                {
+                  name: 'Covert Stealth',
+                  desc: '1x Silent · 2x GPS · 3x Cancel · Hold Silent',
+                  cfg: { singlePressAction: 'SILENT_PANIC' as BleButtonAction, doublePressAction: 'SHARE_GPS_PING' as BleButtonAction, triplePressAction: 'CANCEL' as BleButtonAction, quadPressAction: 'VOICE_LIZZY' as BleButtonAction, longPressAction: 'SILENT_PANIC' as BleButtonAction, cancelDuringCountdown: true, countdownOverrideSec: 0, multiPressWindowMs: 550 }
+                },
+              ].map((preset) => (
+                <button
+                  key={preset.name}
+                  type="button"
+                  onClick={() => {
+                    setBleButtonConfig(preset.cfg);
+                    useAppStore.getState().addToast(`Applied iTAG preset: ${preset.name}`, 'success');
+                  }}
+                  className="p-2.5 rounded-xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/40 text-left transition-all"
+                >
+                  <div className="text-[8.5px] font-black text-cyan-300 uppercase">{preset.name}</div>
+                  <div className="text-[7px] text-slate-400 mt-0.5 leading-snug">{preset.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Flexible Press Bindings Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* 1 Press Action */}
             <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
               <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
-                <span>1 Press (Single Click)</span>
-                <span className="text-red-400 font-extrabold text-[7.5px]">DEFAULT: SOS</span>
+                <span>1x Press (Single Click)</span>
+                <span className="text-red-400 font-extrabold text-[7.5px]">PRIMARY</span>
               </label>
               <select
                 value={bleButtonConfig.singlePressAction}
-                onChange={e => setBleButtonConfig({ singlePressAction: e.target.value as any })}
+                onChange={e => setBleButtonConfig({ singlePressAction: e.target.value as BleButtonAction })}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
               >
-                <option value="PANIC">🚨 Emergency SOS (10s Countdown)</option>
-                <option value="SILENT_PANIC">🔕 Silent SOS (Stealth Mode, No Sirens)</option>
-                <option value="DISABLED">⚪ Disabled (Ignore 1 press)</option>
+                {BLE_ACTION_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
-              <p className="text-[7.5px] text-slate-500">
-                Initiates full emergency SOS countdown with audible siren and GPS broadcast.
-              </p>
+            </div>
+
+            {/* 2 Presses Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>2x Presses (Double Click)</span>
+                <span className="text-cyan-400 font-extrabold text-[7.5px]">SECONDARY</span>
+              </label>
+              <select
+                value={bleButtonConfig.doublePressAction}
+                onChange={e => setBleButtonConfig({ doublePressAction: e.target.value as BleButtonAction })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                {BLE_ACTION_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3 Presses Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>3x Presses (Triple Click)</span>
+                <span className="text-amber-400 font-extrabold text-[7.5px]">TERTIARY</span>
+              </label>
+              <select
+                value={bleButtonConfig.triplePressAction}
+                onChange={e => setBleButtonConfig({ triplePressAction: e.target.value as BleButtonAction })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                {BLE_ACTION_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 4 Presses Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>4x Rapid Presses</span>
+                <span className="text-purple-400 font-extrabold text-[7.5px]">CUSTOM</span>
+              </label>
+              <select
+                value={bleButtonConfig.quadPressAction || 'VOICE_LIZZY'}
+                onChange={e => setBleButtonConfig({ quadPressAction: e.target.value as BleButtonAction })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                {BLE_ACTION_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Long Hold Action */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
+                <span>Long Hold (2+ Sec Press)</span>
+                <span className="text-emerald-400 font-extrabold text-[7.5px]">HOLD GESTURE</span>
+              </label>
+              <select
+                value={bleButtonConfig.longPressAction || 'SILENT_PANIC'}
+                onChange={e => setBleButtonConfig({ longPressAction: e.target.value as BleButtonAction })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                {BLE_ACTION_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Multi-Tap Detection Timing Window */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase block">
+                Multi-Tap Timing Window
+              </label>
+              <select
+                value={bleButtonConfig.multiPressWindowMs || 550}
+                onChange={e => setBleButtonConfig({ multiPressWindowMs: Number(e.target.value) })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value={350}>350ms — Fast / Snappy</option>
+                <option value={480}>480ms — Balanced</option>
+                <option value={550}>550ms — Standard (Recommended)</option>
+                <option value={700}>700ms — Relaxed</option>
+                <option value={900}>900ms — Accessible / Slow Tap</option>
+              </select>
+            </div>
+
+            {/* SOS Countdown Duration for iTAG */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase block">
+                iTAG SOS Countdown Duration
+              </label>
+              <select
+                value={bleButtonConfig.countdownOverrideSec ?? 10}
+                onChange={e => setBleButtonConfig({ countdownOverrideSec: Number(e.target.value) })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value={0}>0s — Instant Immediate Dispatch</option>
+                <option value={5}>5 Seconds</option>
+                <option value={10}>10 Seconds [Default]</option>
+                <option value={15}>15 Seconds</option>
+              </select>
+            </div>
+
+            {/* Safety Timeout Duration */}
+            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
+              <label className="text-[8.5px] font-bold text-slate-300 uppercase block">
+                Safety Walk Timer Duration
+              </label>
+              <select
+                value={bleButtonConfig.safetyTimeoutMinutes}
+                onChange={e => setBleButtonConfig({ safetyTimeoutMinutes: Number(e.target.value) })}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
+              >
+                <option value={5}>5 Minutes (Quick transit)</option>
+                <option value={10}>10 Minutes (Short commute)</option>
+                <option value={15}>15 Minutes [Default]</option>
+                <option value={30}>30 Minutes (Extended walk)</option>
+                <option value={60}>60 Minutes (Night shift / Lone worker)</option>
+              </select>
             </div>
 
             {/* Countdown Cancel Toggle */}
             <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
               <div className="flex items-center justify-between">
                 <label className="text-[8.5px] font-bold text-slate-300 uppercase">
-                  Press During 10s Countdown
+                  Press During Countdown
                 </label>
                 <label className="flex items-center space-x-1.5 cursor-pointer">
                   <span className={`text-[7.5px] font-bold ${bleButtonConfig.cancelDuringCountdown ? 'text-emerald-400' : 'text-slate-600'}`}>
@@ -832,70 +1263,7 @@ export const Settings: React.FC = () => {
                 </label>
               </div>
               <p className="text-[7.5px] text-slate-500 mt-1">
-                Pressing the button again while the 10-second countdown is ticking immediately aborts dispatch and silences all alarms directly from your pocket.
-              </p>
-            </div>
-
-            {/* 2 Presses Action */}
-            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
-              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
-                <span>2 Presses (Double Click)</span>
-                <span className="text-cyan-400 font-extrabold text-[7.5px]">UTILITY</span>
-              </label>
-              <select
-                value={bleButtonConfig.doublePressAction}
-                onChange={e => setBleButtonConfig({ doublePressAction: e.target.value as any })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
-              >
-                <option value="FIND_PHONE">🔔 Find My Phone (Rings phone at max volume)</option>
-                <option value="CANCEL">🛡️ Cancel / Disarm Active Alert</option>
-                <option value="SAFETY_TIMEOUT">⏱️ Start Safety Walk Timeout</option>
-                <option value="NONE">⚪ None (Ignore double click)</option>
-              </select>
-              <p className="text-[7.5px] text-slate-500">
-                Triggered when two clicks are detected within a 480ms window.
-              </p>
-            </div>
-
-            {/* 3 Presses Action */}
-            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
-              <label className="text-[8.5px] font-bold text-slate-300 uppercase flex items-center justify-between">
-                <span>3 Presses (Triple Click)</span>
-                <span className="text-amber-400 font-extrabold text-[7.5px]">DEFAULT: TIMEOUT</span>
-              </label>
-              <select
-                value={bleButtonConfig.triplePressAction}
-                onChange={e => setBleButtonConfig({ triplePressAction: e.target.value as any })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
-              >
-                <option value="SAFETY_TIMEOUT">⏱️ Start Safety Walk Timeout (Walk-Alone Timer)</option>
-                <option value="FIND_PHONE">🔔 Find My Phone (Rings phone at max volume)</option>
-                <option value="PANIC">🚨 Emergency SOS (Instant Trigger)</option>
-                <option value="DISABLED">⚪ Disabled (Ignore triple click)</option>
-              </select>
-              <p className="text-[7.5px] text-slate-500">
-                Starts safety check-in countdown. If not checked in before it expires, SOS automatically escalates.
-              </p>
-            </div>
-
-            {/* Safety Timeout Duration */}
-            <div className="space-y-1 bg-slate-900/40 border border-slate-900/80 p-3 rounded-xl">
-              <label className="text-[8.5px] font-bold text-slate-300 uppercase block">
-                Safety Timeout Duration
-              </label>
-              <select
-                value={bleButtonConfig.safetyTimeoutMinutes}
-                onChange={e => setBleButtonConfig({ safetyTimeoutMinutes: Number(e.target.value) })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[9.5px] text-slate-200 focus:outline-none focus:border-cyan-500/50"
-              >
-                <option value={5}>5 Minutes (Quick transit)</option>
-                <option value={10}>10 Minutes (Short commute)</option>
-                <option value={15}>15 Minutes [Default]</option>
-                <option value={30}>30 Minutes (Extended walk)</option>
-                <option value={60}>60 Minutes (Night shift / Lone worker)</option>
-              </select>
-              <p className="text-[7.5px] text-slate-500">
-                Timer length before automatic panic escalation if you fail to check in.
+                Pressing your iTAG again while countdown is ticking immediately aborts dispatch from your pocket.
               </p>
             </div>
 
@@ -918,46 +1286,56 @@ export const Settings: React.FC = () => {
                 </label>
               </div>
               <p className="text-[7.5px] text-slate-500 mt-1">
-                Phone vibrates with distinct patterns (1 long steady buzz = Disarmed, 3 pulses = Timeout armed, pulsing buzz = SOS).
+                Distinct vibration patterns confirm every pocket press without looking at your screen.
               </p>
             </div>
           </div>
 
-          {/* Interactive Hardware Click Pattern Simulator */}
+          {/* Interactive Hardware Click & Hold Pattern Simulator */}
           <div className="p-3 bg-cyan-950/20 border border-cyan-900/30 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="space-y-0.5 text-center sm:text-left">
               <span className="text-[8.5px] font-bold text-cyan-400 uppercase block">
-                🧪 Test Hardware Click Sequences
+                🧪 Test Your iTAG Gestures Live
               </span>
               <p className="text-[7.5px] text-slate-400">
-                Click this button 1, 2, or 3 times rapidly to test your configured actions right in Settings.
+                Tap 1x, 2x, 3x, or 4x within {bleButtonConfig.multiPressWindowMs || 550}ms, or test Long Hold right here.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setTestClicks(prev => prev + 1);
-                handleHardwareButtonPress('SETTINGS_SIMULATOR');
-                setTimeout(() => setTestClicks(0), 1200);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
-            >
-              <span>🔘 Click Button</span>
-              {testClicks > 0 && (
-                <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[8px] animate-pulse">
-                  {testClicks}x
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setTestClicks(prev => prev + 1);
+                  handleHardwareButtonPress('SETTINGS_SIMULATOR');
+                  setTimeout(() => setTestClicks(0), (bleButtonConfig.multiPressWindowMs || 550) + 500);
+                }}
+                className="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+              >
+                <span>🔘 Tap (1x–4x)</span>
+                {testClicks > 0 && (
+                  <span className="px-1.5 py-0.2 bg-white/20 rounded-md text-[8px] animate-pulse">
+                    {testClicks}x
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleHardwareButtonPress('LONG_PRESS:SETTINGS_SIMULATOR')}
+                className="px-3 py-2 bg-emerald-600/25 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[9px] uppercase tracking-wider rounded-xl transition-all active:scale-95"
+              >
+                ✋ Hold
+              </button>
+            </div>
           </div>
         </div>
+        )}
 
-        {/* Security PINs Section */}
-        {currentUser && (
+        {/* Security PINs & Unlock Choice Section */}
+        {currentUser && (activeSection === 'ALL' || activeSection === 'SECURITY') && (
           <div className="space-y-3 border-t border-slate-900/60 pt-4">
             <div className="flex items-center justify-between">
               <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-                🔒 SECURITY PIN SETTINGS
+                🔒 SECURITY &amp; UNLOCK CHOICE
               </h4>
               {hasBiometrics && isPinSettingsUnlocked && (
                 <button
@@ -1054,6 +1432,34 @@ export const Settings: React.FC = () => {
                     placeholder="e.g. 9999"
                   />
                   <p className="text-[7.5px] text-slate-500 mt-1">If forced to cancel by an attacker, enter this to appear like you canceled, but silently escalate to Police.</p>
+                </div>
+
+                {/* Preferred Emergency Unlock Choice */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-900/60">
+                  <label className="text-[9px] font-bold text-slate-400 block uppercase">Primary Unlock Choice</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { id: 'BIOMETRIC', label: 'Biometric / Passcode' },
+                      { id: 'PIN', label: 'SafetyLink PIN' },
+                      { id: 'DURESS', label: 'Duress Priority' }
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setUnlockMethod(opt.id);
+                          useAppStore.getState().addToast(`Unlock preference set to ${opt.label}.`, 'success');
+                        }}
+                        className={`p-2 rounded-xl border text-[8px] font-bold uppercase transition-all ${
+                          unlockMethod === opt.id
+                            ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1323,21 +1729,32 @@ export const Settings: React.FC = () => {
             </button>
           </div>
 
-          {/* ONVIF Camera Onboarding */}
+          {/* ONVIF / Hikvision Mobile Camera Onboarding */}
           <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1 text-slate-200">
-              <span className="text-xl">📹</span>
-              <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">ONVIF Camera Linking</span>
+            <div className="flex items-center justify-between gap-2 mb-1 text-slate-200">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📹</span>
+                <span className="text-[11px] font-extrabold font-display uppercase tracking-wide">Hikvision &amp; ONVIF Camera Linking</span>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400">
+                {useAppStore.getState().cameras.length} Linked
+              </span>
             </div>
             <p className="text-[9px] text-slate-500 leading-normal font-sans">
-              Onboard and link popular South African CCTV networks (e.g. Hikvision, Dahua, Vivotek). Supports ONVIF Profile S/G.
+              Deploy Hikvision, HiLook, or ONVIF cameras straight from your phone via QR / Serial (Hik-Connect P2P), Site Wi-Fi LAN ISAPI, or go2rtc Relay.
             </p>
             <button
-              onClick={() => useAppStore.getState().addToast("ONVIF Discovery protocol scanning local subnets for Hikvision / Dahua IPCs...", "info")}
-              className="w-full py-2 bg-purple-900/30 hover:bg-purple-900/50 border border-purple-500/20 text-purple-400 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
+              type="button"
+              onClick={() => setShowHikvisionManager((v) => !v)}
+              className="w-full py-2 bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-500/20 text-emerald-300 text-[9px] font-bold rounded-xl transition-all uppercase tracking-wider"
             >
-              Scan & Onboard Cameras
+              {showHikvisionManager ? 'Hide Camera Deployment Manager' : 'Open Phone Camera Deployment Manager'}
             </button>
+            {showHikvisionManager && (
+              <div className="pt-3 border-t border-slate-800">
+                <HikvisionCameraManager scope="USER" compact />
+              </div>
+            )}
           </div>
 
           {/* Drone Deployment Environment */}
@@ -1414,34 +1831,36 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Android Device Control & Accessibility Sentinel */}
+      {/* Android Screen Wake, Lock-Screen Overlay & Battery Survival */}
+      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
-            🛡️ DEVICE CONTROL & ACCESSIBILITY
+            🛡️ LOCK-SCREEN OVERLAY &amp; DEVICE SURVIVAL
           </h4>
           <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/30 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            ACTIVE SENTINEL
+            {screenWakeLockEnabled ? 'LOCK-SCREEN READY' : 'STANDARD'}
           </span>
         </div>
         <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 space-y-3">
-          <p className="text-[10px] text-slate-400 font-sans leading-relaxed">
-            Grant SafetyLink Android accessibility, hardware button interception (volume panic triggers), and background battery saver exemption.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <button
-              type="button"
-              onClick={async () => {
-                if (typeof window !== 'undefined' && (window as any).Capacitor?.Plugins?.SafetyLinkEmergency?.openAccessibilitySettings) {
-                  await (window as any).Capacitor.Plugins.SafetyLinkEmergency.openAccessibilitySettings();
-                } else {
-                  useAppStore.getState().addToast('Accessibility settings is available in the Android APK.', 'info');
-                }
+          <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <div>
+              <span className="text-[9.5px] font-bold text-slate-200 block uppercase">Screen Wake &amp; Display Over Lock Screen</span>
+              <span className="text-[8px] text-slate-400">Wakes screen and locks emergency countdown over lock screen until PIN verified.</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={screenWakeLockEnabled}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setScreenWakeLockEnabled(enabled);
+                try { localStorage.setItem('sl_screen_wake_lock', String(enabled)); } catch {}
+                useAppStore.getState().addToast(`Lock-screen wake overlay ${enabled ? 'enabled' : 'disabled'}.`, 'info');
               }}
-              className="py-2.5 px-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 transition-colors"
-            >
-              <span>🔑 Accessibility Settings</span>
-            </button>
+              className="accent-emerald-500 w-4 h-4 cursor-pointer"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
             <button
               type="button"
               onClick={async () => {
@@ -1481,6 +1900,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Cloudflare Private DNS Configuration */}
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
@@ -1579,13 +1999,23 @@ export const Settings: React.FC = () => {
           )}
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t border-slate-900 flex items-center justify-between text-left">
+
+      {/* POPIA Privacy, Data Deletion & Emergency Disclaimer */}
+      <div className="border-t border-slate-900 pt-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left relative z-10">
         <div>
-          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider font-mono">POPIA Privacy &amp; Legal Notice</p>
-          <p className="text-[9px] text-slate-500 font-mono">Protection of Personal Information Act (Act 4 of 2013)</p>
+          <h4 className="text-[9px] font-bold text-slate-300 font-mono uppercase tracking-widest">
+            POPIA Privacy &amp; Emergency Terms
+          </h4>
+          <p className="text-[9px] text-slate-500 mt-0.5">
+            SafetyLink does not replace 10111, 112, or 10177. View data handling and deletion rights.
+          </p>
         </div>
-        <button type="button" onClick={() => setShowPopiaModal(true)} className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-emerald-400 uppercase cursor-pointer">
-          View POPIA
+        <button
+          type="button"
+          onClick={() => setShowPopiaModal(true)}
+          className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 font-mono font-bold text-[9px] uppercase tracking-wider cursor-pointer shrink-0"
+        >
+          View Privacy &amp; Terms
         </button>
       </div>
       <PopiaLegalModal open={showPopiaModal} onClose={() => setShowPopiaModal(false)} />

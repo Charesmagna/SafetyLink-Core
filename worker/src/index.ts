@@ -356,15 +356,28 @@ async function fireAllAlerts(
     // Push Notification: High-priority FCM loud alarm to registered Android devices
     if ((env as any).FCM_SERVICE_ACCOUNT) {
       try {
-        const rows: any = await (env as any).DB?.prepare(
-          'SELECT token FROM device_tokens WHERE phone = ? LIMIT 5'
-        ).bind(to).all().catch(() => ({ results: [] }));
-        const tokens = (rows?.results || []).map((r: any) => r.token).filter(Boolean);
+        const localVariant = to.startsWith('+27') && to.length === 12 ? '0' + to.slice(3) : to;
+        const rows1: any = await (env as any).DB?.prepare(
+          'SELECT token FROM device_tokens WHERE phone = ? OR phone = ? LIMIT 5'
+        ).bind(to, localVariant).all().catch(() => ({ results: [] }));
+        const rows2: any = await (env as any).DB?.prepare(
+          'SELECT token FROM sl_device_tokens WHERE phone = ? OR phone = ? LIMIT 5'
+        ).bind(to, localVariant).all().catch(() => ({ results: [] }));
+        const tokens = Array.from(new Set([
+          ...((rows1?.results || []).map((r: any) => r.token)),
+          ...((rows2?.results || []).map((r: any) => r.token)),
+        ].filter(Boolean)));
         for (const devToken of tokens) {
-          const alarmTitle = 'EMERGENCY: SafetyLink Alert';
-          const alarmBody = `${callerName || callerNumber || 'A user'} pressed panic! Location: ${location}`;
-          const fcmRes = await sendLoudAlarm((env as any).FCM_SERVICE_ACCOUNT, devToken, alarmTitle, alarmBody).catch((e: any) => ({ ok: false, error: e?.message }));
-          results.push({ channel: 'FCM_LOUD_ALARM', provider: 'firebase', to, ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm sent to device' : (fcmRes as any).error });
+          const alarmTitle = '🚨 EMERGENCY: SafetyLink Alert';
+          const alarmBody = `${callerName || callerNumber || 'A SafetyLink user'} pressed panic! Location: ${location}`;
+          const fcmRes = await sendLoudAlarm((env as any).FCM_SERVICE_ACCOUNT, devToken, alarmTitle, alarmBody, {
+            callerName: String(callerName || callerNumber || 'SafetyLink User'),
+            callerNumber: String(callerNumber || ''),
+            location: String(location || 'Location unknown'),
+            ...(typeof lat === 'number' ? { lat: String(lat) } : {}),
+            ...(typeof lng === 'number' ? { lng: String(lng) } : {}),
+          }).catch((e: any) => ({ ok: false, error: e?.message }));
+          results.push({ channel: 'FCM_LOUD_ALARM', provider: 'firebase', to, ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm ring sent to SafetyLink app' : (fcmRes as any).error });
         }
       } catch (err: any) {
         console.warn('[FCM dispatch error]', err);
@@ -458,8 +471,8 @@ app.get('/api/app/beta/versions', async (c) => {
 app.post('/api/device/token', async (c) => {
   const profileToken = c.req.header('X-Profile-Token') || '';
   const body: any = await c.req.json().catch(() => ({}));
-  const phone = body.phone;
-  const token = body.token;
+  const phone = normalizePhone(body.phone || '');
+  const token = String(body.token || '').trim();
   if (!phone || !token) return c.json({ error: 'Missing phone or token' }, 400);
 
   await c.env.DB?.prepare(`
@@ -482,7 +495,7 @@ app.post('/api/device/token', async (c) => {
     `).bind(phone, token, profileToken, Date.now()).run().catch(() => {});
   });
 
-  return c.json({ ok: true, registered: true });
+  return c.json({ ok: true, registered: true, phone });
 });
 
 // Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
@@ -1035,11 +1048,13 @@ app.post('/api/incidents', async (c) => {
 
 // Which providers have keys loaded (no secret values returned)
 app.get('/api/health/providers', (c) => c.json({
+  smsgate: !!(c.env.SMSGATE_USERNAME && c.env.SMSGATE_PASSWORD),
   twilio: !!(c.env.TWILIO_SID && c.env.TWILIO_AUTH_TOKEN && c.env.TWILIO_NUMBER),
   vapi: !!(c.env.VAPI_PRIVATE_KEY && c.env.VAPI_PHONE_NUMBER_ID),
   vapiAssistant: !!c.env.VAPI_ASSISTANT_ID,
   africasTalking: !!(c.env.AT_API_KEY && c.env.AT_USERNAME),
   bland: !!(c.env.BLAND_API_KEY && c.env.BLAND_API_KEY !== 'not_provided'),
+  fcm: !!(c.env as any).FCM_SERVICE_ACCOUNT,
   responseCentre: !!c.env.RESPONSE_CENTRE_NUMBER,
   redis: !!(c.env.UPSTASH_REDIS_REST_URL && c.env.UPSTASH_REDIS_REST_TOKEN),
   alertsEnabled: c.env.ALERTS_ENABLED !== 'false',

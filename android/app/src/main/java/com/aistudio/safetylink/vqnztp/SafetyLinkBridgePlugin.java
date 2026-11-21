@@ -18,6 +18,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class SafetyLinkBridgePlugin extends Plugin {
     private static final String TAG = "SafetyLinkBridge";
     private static SafetyLinkBridgePlugin instance;
+    private static volatile EmergencyService.DispatchResult lastDispatchResult = null;
 
     @Override
     public void load() {
@@ -28,6 +29,10 @@ public class SafetyLinkBridgePlugin extends Plugin {
 
     public static SafetyLinkBridgePlugin getInstance() {
         return instance;
+    }
+
+    public void recordLastResult(EmergencyService.DispatchResult result) {
+        lastDispatchResult = result;
     }
 
     @PluginMethod
@@ -143,6 +148,40 @@ public class SafetyLinkBridgePlugin extends Plugin {
         ret.put("isCountdownActive", PanicService.isCountdownActiveState());
         ret.put("secondsRemaining", PanicService.getSecondsRemainingState());
         ret.put("lastStatus", PanicService.getLastKnownStatus());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getLastResult(PluginCall call) {
+        JSObject ret = new JSObject();
+        EmergencyService.DispatchResult res = lastDispatchResult;
+        if (res != null) {
+            ret.put("hasResult", true);
+            ret.put("incidentId", res.incidentId);
+            ret.put("success", res.success);
+            ret.put("smsStatus", res.smsStatus);
+            ret.put("callStatus", res.callStatus);
+            ret.put("backendSyncStatus", res.backendSyncStatus);
+            ret.put("pcmStatus", res.pcmStatus);
+        } else {
+            ret.put("hasResult", false);
+        }
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void savePushIdentity(PluginCall call) {
+        String phone = call.getString("phone", "");
+        String profileToken = call.getString("profileToken", "");
+        if (phone == null || phone.trim().isEmpty() || profileToken == null || profileToken.trim().isEmpty()) {
+            JSObject ret = new JSObject();
+            ret.put("saved", false);
+            call.resolve(ret);
+            return;
+        }
+        PushRegistrar.saveIdentity(getContext(), phone.trim(), profileToken.trim());
+        JSObject ret = new JSObject();
+        ret.put("saved", true);
         call.resolve(ret);
     }
 
@@ -292,6 +331,15 @@ public class SafetyLinkBridgePlugin extends Plugin {
         ret.put("source", source);
         ret.put("countdownSeconds", countdownSeconds);
         ret.put("status", status);
+        EmergencyService.DispatchResult res = lastDispatchResult;
+        if (res != null && ("DISPATCHED".equals(status) || "PARTIAL_SUCCESS".equals(status) || "FAILED".equals(status))) {
+            ret.put("incidentId", res.incidentId);
+            ret.put("smsStatus", res.smsStatus);
+            ret.put("callStatus", res.callStatus);
+            ret.put("backendSyncStatus", res.backendSyncStatus);
+            ret.put("pcmStatus", res.pcmStatus);
+            ret.put("success", res.success);
+        }
         notifyListeners("onPanicStatusChange", ret);
         notifyListeners("onPanicEvent", ret);
     }
@@ -309,6 +357,12 @@ public class SafetyLinkBridgePlugin extends Plugin {
         notifyListeners("onFindPhoneTriggered", ret);
     }
 
+    public void emitCustomButtonAction(String action) {
+        JSObject ret = new JSObject();
+        ret.put("action", action);
+        notifyListeners("onCustomButtonAction", ret);
+    }
+
     @PluginMethod
     public void setButtonConfig(PluginCall call) {
         try {
@@ -316,10 +370,14 @@ public class SafetyLinkBridgePlugin extends Plugin {
             boolean cancelDuringCountdown = Boolean.TRUE.equals(call.getBoolean("cancelDuringCountdown", true));
             String p2 = call.getString("doublePressAction", ButtonPatternDetector.ACTION_FIND_PHONE);
             String p3 = call.getString("triplePressAction", ButtonPatternDetector.ACTION_SAFETY_TIMEOUT);
+            String p4 = call.getString("quadPressAction", ButtonPatternDetector.ACTION_VOICE_LIZZY);
+            String longPress = call.getString("longPressAction", ButtonPatternDetector.ACTION_SILENT_PANIC);
+            int windowMs = call.getInt("multiPressWindowMs", 550);
+            int countdownSec = call.getInt("countdownOverrideSec", 10);
             int timeoutMins = call.getInt("safetyTimeoutMinutes", 15);
             boolean haptic = Boolean.TRUE.equals(call.getBoolean("hapticFeedback", true));
 
-            ButtonPatternDetector.saveConfig(getContext(), p1, cancelDuringCountdown, p2, p3, timeoutMins, haptic);
+            ButtonPatternDetector.saveConfig(getContext(), p1, cancelDuringCountdown, p2, p3, p4, longPress, windowMs, countdownSec, timeoutMins, haptic);
 
             JSObject ret = new JSObject();
             ret.put("success", true);

@@ -14,24 +14,29 @@ import android.util.Log;
 import com.getcapacitor.JSObject;
 
 /**
- * Intelligent hardware press aggregator and multi-action executor for BLE / iTAG buttons.
+ * Flexible hardware press aggregator and multi-action executor for BLE / iTAG buttons.
  *
  * Configurable via Settings (SharedPreferences "sl_button_map"):
- * - 1 press: PANIC (starts 10s countdown), SILENT_PANIC, or DISABLED
- * - Press during 10s countdown: INSTANT CANCEL / DISARM (enabled by default)
- * - 2 presses: FIND_PHONE (rings alarm tone), CANCEL, SAFETY_TIMEOUT, or NONE
- * - 3 presses: SAFETY_TIMEOUT (starts walk-alone safety timer), FIND_PHONE, PANIC, or DISABLED
- * - Safety Timeout Duration: Configurable in minutes (default: 15)
- * - Haptic Feedback: Distinct pocket vibrations for disarm, timeout armed, and SOS
+ * - 1x, 2x, 3x, 4x presses and Long Hold can each map to any supported action:
+ *   PANIC, INSTANT_PANIC, SILENT_PANIC, CHECK_IN_SAFE, SHARE_GPS_PING,
+ *   SAFETY_TIMEOUT, FIND_PHONE, VOICE_LIZZY, SIREN_ONLY, CANCEL, DISABLED, NONE
+ * - Configurable multi-tap detection window (350ms - 900ms, default 550ms)
+ * - Configurable SOS countdown duration override (0s - 15s, default 10s)
  */
 public final class ButtonPatternDetector {
     private static final String TAG = "ButtonPattern";
     public static final String PREFS = "sl_button_map";
-    private static final long MULTI_PRESS_WINDOW_MS = 480;
+    private static final int DEFAULT_MULTI_PRESS_WINDOW_MS = 550;
 
     public static final String ACTION_NONE = "NONE";
+    public static final String ACTION_DISABLED = "DISABLED";
     public static final String ACTION_PANIC = "PANIC";
+    public static final String ACTION_INSTANT_PANIC = "INSTANT_PANIC";
     public static final String ACTION_SILENT_PANIC = "SILENT_PANIC";
+    public static final String ACTION_CHECK_IN_SAFE = "CHECK_IN_SAFE";
+    public static final String ACTION_SHARE_GPS_PING = "SHARE_GPS_PING";
+    public static final String ACTION_VOICE_LIZZY = "VOICE_LIZZY";
+    public static final String ACTION_SIREN_ONLY = "SIREN_ONLY";
     public static final String ACTION_CANCEL = "CANCEL";
     public static final String ACTION_FIND_PHONE = "FIND_PHONE";
     public static final String ACTION_SAFETY_TIMEOUT = "SAFETY_TIMEOUT";
@@ -40,6 +45,10 @@ public final class ButtonPatternDetector {
     public static final String KEY_CANCEL_DURING_COUNTDOWN = "cancel_during_countdown";
     public static final String KEY_PRESS_2 = "press_2";
     public static final String KEY_PRESS_3 = "press_3";
+    public static final String KEY_PRESS_4 = "press_4";
+    public static final String KEY_LONG_PRESS = "long_press";
+    public static final String KEY_MULTI_PRESS_WINDOW_MS = "multi_press_window_ms";
+    public static final String KEY_COUNTDOWN_OVERRIDE_SEC = "countdown_override_sec";
     public static final String KEY_TIMEOUT_MINUTES = "safety_timeout_minutes";
     public static final String KEY_HAPTIC_FEEDBACK = "haptic_feedback";
 
@@ -49,9 +58,6 @@ public final class ButtonPatternDetector {
     private static Context appContext;
     private static ToneGenerator activeToneGenerator = null;
 
-    /**
-     * Called whenever a physical hardware press arrives from GATT notification.
-     */
     public static void onPress(Context ctx, String deviceAddress) {
         if (ctx == null) return;
         appContext = ctx.getApplicationContext();
@@ -60,7 +66,14 @@ public final class ButtonPatternDetector {
         boolean cancelDuringCountdown = p.getBoolean(KEY_CANCEL_DURING_COUNTDOWN, true);
         boolean hapticEnabled = p.getBoolean(KEY_HAPTIC_FEEDBACK, true);
 
-        // 1. Critical Fail-Safe: If 10s SOS countdown is already active, this press cancels it immediately!
+        // Support direct long-press signaling if caller prefixes LONG_PRESS:
+        if (deviceAddress != null && deviceAddress.startsWith("LONG_PRESS")) {
+            String longAction = p.getString(KEY_LONG_PRESS, ACTION_SILENT_PANIC);
+            executeAction(appContext, longAction, 0, hapticEnabled, p);
+            return;
+        }
+
+        // 1. Critical Fail-Safe: If SOS countdown is already active, cancel immediately when enabled
         if (PanicService.isCountdownActiveState()) {
             if (cancelDuringCountdown) {
                 Log.i(TAG, "Hardware press received during active countdown -> Instant Cancel & Disarm");
@@ -76,18 +89,18 @@ public final class ButtonPatternDetector {
                 }
 
                 if (hapticEnabled) {
-                    // One long steady vibration = Disarmed
                     vibrate(appContext, new long[]{0, 700});
                 }
                 return;
             }
         }
 
-        // 2. Otherwise, aggregate clicks in the short multi-tap window (480ms)
+        // 2. Aggregate clicks in the user's configured multi-tap window
+        int windowMs = Math.max(250, Math.min(1500, p.getInt(KEY_MULTI_PRESS_WINDOW_MS, DEFAULT_MULTI_PRESS_WINDOW_MS)));
         count++;
-        Log.d(TAG, "Hardware click registered from " + deviceAddress + ", count=" + count);
+        Log.d(TAG, "Hardware click registered from " + deviceAddress + ", count=" + count + " (window=" + windowMs + "ms)");
         handler.removeCallbacks(fireRunnable);
-        handler.postDelayed(fireRunnable, MULTI_PRESS_WINDOW_MS);
+        handler.postDelayed(fireRunnable, windowMs);
     }
 
     public static void onPress(Context ctx) {
@@ -100,8 +113,10 @@ public final class ButtonPatternDetector {
             return p.getString(KEY_PRESS_1, ACTION_PANIC);
         } else if (presses == 2) {
             return p.getString(KEY_PRESS_2, ACTION_FIND_PHONE);
-        } else {
+        } else if (presses == 3) {
             return p.getString(KEY_PRESS_3, ACTION_SAFETY_TIMEOUT);
+        } else {
+            return p.getString(KEY_PRESS_4, ACTION_VOICE_LIZZY);
         }
     }
 
@@ -114,6 +129,22 @@ public final class ButtonPatternDetector {
             int timeoutMinutes,
             boolean hapticFeedback
     ) {
+        saveConfig(ctx, press1, cancelDuringCountdown, press2, press3, ACTION_VOICE_LIZZY, ACTION_SILENT_PANIC, DEFAULT_MULTI_PRESS_WINDOW_MS, 10, timeoutMinutes, hapticFeedback);
+    }
+
+    public static void saveConfig(
+            Context ctx,
+            String press1,
+            boolean cancelDuringCountdown,
+            String press2,
+            String press3,
+            String press4,
+            String longPress,
+            int multiPressWindowMs,
+            int countdownOverrideSec,
+            int timeoutMinutes,
+            boolean hapticFeedback
+    ) {
         if (ctx == null) return;
         SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         p.edit()
@@ -121,11 +152,14 @@ public final class ButtonPatternDetector {
                 .putBoolean(KEY_CANCEL_DURING_COUNTDOWN, cancelDuringCountdown)
                 .putString(KEY_PRESS_2, press2 != null ? press2 : ACTION_FIND_PHONE)
                 .putString(KEY_PRESS_3, press3 != null ? press3 : ACTION_SAFETY_TIMEOUT)
+                .putString(KEY_PRESS_4, press4 != null ? press4 : ACTION_VOICE_LIZZY)
+                .putString(KEY_LONG_PRESS, longPress != null ? longPress : ACTION_SILENT_PANIC)
+                .putInt(KEY_MULTI_PRESS_WINDOW_MS, Math.max(250, Math.min(1500, multiPressWindowMs)))
+                .putInt(KEY_COUNTDOWN_OVERRIDE_SEC, Math.max(0, Math.min(30, countdownOverrideSec)))
                 .putInt(KEY_TIMEOUT_MINUTES, Math.max(1, timeoutMinutes))
                 .putBoolean(KEY_HAPTIC_FEEDBACK, hapticFeedback)
                 .apply();
-        Log.i(TAG, "Saved BLE button config: 1=" + press1 + ", cancelOnCountdown=" + cancelDuringCountdown +
-                ", 2=" + press2 + ", 3=" + press3 + ", timeout=" + timeoutMinutes + "m, haptic=" + hapticFeedback);
+        Log.i(TAG, "Saved flexible BLE button config: 1=" + press1 + ", 2=" + press2 + ", 3=" + press3 + ", 4=" + press4 + ", hold=" + longPress + ", window=" + multiPressWindowMs + "ms");
     }
 
     public static JSObject getConfigAsJson(Context ctx) {
@@ -136,6 +170,10 @@ public final class ButtonPatternDetector {
         ret.put("cancelDuringCountdown", p.getBoolean(KEY_CANCEL_DURING_COUNTDOWN, true));
         ret.put("doublePressAction", p.getString(KEY_PRESS_2, ACTION_FIND_PHONE));
         ret.put("triplePressAction", p.getString(KEY_PRESS_3, ACTION_SAFETY_TIMEOUT));
+        ret.put("quadPressAction", p.getString(KEY_PRESS_4, ACTION_VOICE_LIZZY));
+        ret.put("longPressAction", p.getString(KEY_LONG_PRESS, ACTION_SILENT_PANIC));
+        ret.put("multiPressWindowMs", p.getInt(KEY_MULTI_PRESS_WINDOW_MS, DEFAULT_MULTI_PRESS_WINDOW_MS));
+        ret.put("countdownOverrideSec", p.getInt(KEY_COUNTDOWN_OVERRIDE_SEC, 10));
         ret.put("safetyTimeoutMinutes", p.getInt(KEY_TIMEOUT_MINUTES, 15));
         ret.put("hapticFeedback", p.getBoolean(KEY_HAPTIC_FEEDBACK, true));
         return ret;
@@ -148,64 +186,69 @@ public final class ButtonPatternDetector {
 
         SharedPreferences p = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         boolean hapticEnabled = p.getBoolean(KEY_HAPTIC_FEEDBACK, true);
-        int timeoutMinutes = p.getInt(KEY_TIMEOUT_MINUTES, 15);
-
         String action = getActionForPressCount(appContext, presses);
-        Log.i(TAG, "Executing Action for " + presses + " press(es): " + action);
+        executeAction(appContext, action, presses, hapticEnabled, p);
+    }
+
+    private static void executeAction(Context ctx, String action, int presses, boolean hapticEnabled, SharedPreferences p) {
+        int timeoutMinutes = p.getInt(KEY_TIMEOUT_MINUTES, 15);
+        int countdownOverride = p.getInt(KEY_COUNTDOWN_OVERRIDE_SEC, 10);
+        Log.i(TAG, "Executing Action (" + (presses == 0 ? "LONG_PRESS" : presses + "x") + "): " + action);
 
         switch (action) {
-            case ACTION_PANIC: {
+            case ACTION_PANIC:
+            case ACTION_INSTANT_PANIC: {
+                boolean immediate = ACTION_INSTANT_PANIC.equals(action) || countdownOverride == 0;
                 if (hapticEnabled) {
-                    vibrate(appContext, new long[]{0, 350, 150, 350});
+                    vibrate(ctx, new long[]{0, 350, 150, 350});
                 }
-                Intent intent = new Intent(appContext, PanicService.class);
+                Intent intent = new Intent(ctx, PanicService.class);
                 intent.setAction(PanicService.ACTION_TRIGGER_PANIC);
-                intent.putExtra("description", "iTAG Hardware Button Trigger (" + presses + " press)");
+                intent.putExtra("description", "iTAG Hardware Button Trigger (" + (presses == 0 ? "Long Hold" : presses + " press") + ")");
                 intent.putExtra("triggeredBy", "ITAG_PHYSICAL_HARDWARE");
+                if (immediate) intent.putExtra("directDispatch", true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    appContext.startForegroundService(intent);
+                    ctx.startForegroundService(intent);
                 } else {
-                    appContext.startService(intent);
+                    ctx.startService(intent);
                 }
                 break;
             }
 
             case ACTION_SILENT_PANIC: {
                 if (hapticEnabled) {
-                    vibrate(appContext, new long[]{0, 200});
+                    vibrate(ctx, new long[]{0, 200});
                 }
-                Intent intent = new Intent(appContext, PanicService.class);
+                Intent intent = new Intent(ctx, PanicService.class);
                 intent.setAction(PanicService.ACTION_TRIGGER_PANIC);
                 intent.putExtra("description", "iTAG Silent Hardware Panic");
                 intent.putExtra("triggeredBy", "ITAG_SILENT_TRIGGER");
                 intent.putExtra("directDispatch", true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    appContext.startForegroundService(intent);
+                    ctx.startForegroundService(intent);
                 } else {
-                    appContext.startService(intent);
+                    ctx.startService(intent);
                 }
                 break;
             }
 
             case ACTION_CANCEL: {
                 if (hapticEnabled) {
-                    vibrate(appContext, new long[]{0, 700});
+                    vibrate(ctx, new long[]{0, 700});
                 }
-                Intent intent = new Intent(appContext, PanicService.class);
+                Intent intent = new Intent(ctx, PanicService.class);
                 intent.setAction(PanicService.ACTION_CANCEL_PANIC);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    appContext.startForegroundService(intent);
+                    ctx.startForegroundService(intent);
                 } else {
-                    appContext.startService(intent);
+                    ctx.startService(intent);
                 }
                 break;
             }
 
             case ACTION_SAFETY_TIMEOUT: {
-                Log.i(TAG, "Starting Safety Walk Timeout (" + timeoutMinutes + " minutes)");
                 if (hapticEnabled) {
-                    // Three quick distinct pulses: tap-tap-tap
-                    vibrate(appContext, new long[]{0, 100, 100, 100, 100, 100});
+                    vibrate(ctx, new long[]{0, 100, 100, 100, 100, 100});
                 }
                 if (SafetyLinkBridgePlugin.getInstance() != null) {
                     SafetyLinkBridgePlugin.getInstance().emitSafetyTimeoutEvent(timeoutMinutes);
@@ -213,21 +256,34 @@ public final class ButtonPatternDetector {
                 break;
             }
 
-            case ACTION_FIND_PHONE: {
-                Log.i(TAG, "Executing Find My Phone alarm alert");
+            case ACTION_FIND_PHONE:
+            case ACTION_SIREN_ONLY: {
                 if (hapticEnabled) {
-                    vibrate(appContext, new long[]{0, 200, 100, 200, 100, 500});
+                    vibrate(ctx, new long[]{0, 200, 100, 200, 100, 500});
                 }
-                ringFindPhoneAlarm(appContext);
+                ringFindPhoneAlarm(ctx);
                 if (SafetyLinkBridgePlugin.getInstance() != null) {
                     SafetyLinkBridgePlugin.getInstance().emitFindPhoneEvent();
                 }
                 break;
             }
 
+            case ACTION_CHECK_IN_SAFE:
+            case ACTION_SHARE_GPS_PING:
+            case ACTION_VOICE_LIZZY: {
+                if (hapticEnabled) {
+                    vibrate(ctx, new long[]{0, 140, 80, 140});
+                }
+                if (SafetyLinkBridgePlugin.getInstance() != null) {
+                    SafetyLinkBridgePlugin.getInstance().emitCustomButtonAction(action);
+                }
+                break;
+            }
+
+            case ACTION_DISABLED:
             case ACTION_NONE:
             default:
-                Log.d(TAG, "Action is NONE or disabled, ignoring.");
+                Log.d(TAG, "Action is NONE or DISABLED, ignoring.");
                 break;
         }
     }
