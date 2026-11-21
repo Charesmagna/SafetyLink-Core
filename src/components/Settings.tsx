@@ -7,6 +7,7 @@ import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
 import { NativeDispatchService } from '../services/NativeDispatchService';
 import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
+import { PopiaLegalModal } from './PopiaLegalModal';
 
 export const Settings: React.FC = () => {
   const { 
@@ -51,6 +52,7 @@ export const Settings: React.FC = () => {
     loadSimCards
   } = useAppStore();
 
+  const [showPopiaModal, setShowPopiaModal] = useState(false);
   const [filter, setFilter] = useState<'ALL' | 'SYSTEM' | 'BLE' | 'GPS' | 'DISPATCH' | 'SECURITY'>('ALL');
 
   // Biometric gate for sensitive security settings
@@ -340,9 +342,9 @@ export const Settings: React.FC = () => {
               <span>📶</span> Zero-Data USSD "Please Call Me" System
             </h5>
             <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
-              dispatchSettings.ussdEnabled !== false ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
+              Boolean(dispatchSettings.ussdEnabled) ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
             }`}>
-              {dispatchSettings.ussdEnabled !== false ? 'ACTIVE ON PANIC' : 'DISABLED'}
+              {Boolean(dispatchSettings.ussdEnabled) ? 'ACTIVE ON PANIC' : 'DISABLED (DEFAULT)'}
             </span>
           </div>
 
@@ -1577,6 +1579,16 @@ export const Settings: React.FC = () => {
           )}
         </div>
       </div>
+      <div className="mt-4 pt-4 border-t border-slate-900 flex items-center justify-between text-left">
+        <div>
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider font-mono">POPIA Privacy &amp; Legal Notice</p>
+          <p className="text-[9px] text-slate-500 font-mono">Protection of Personal Information Act (Act 4 of 2013)</p>
+        </div>
+        <button type="button" onClick={() => setShowPopiaModal(true)} className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-emerald-400 uppercase cursor-pointer">
+          View POPIA
+        </button>
+      </div>
+      <PopiaLegalModal open={showPopiaModal} onClose={() => setShowPopiaModal(false)} />
     </motion.div>
   );
 };

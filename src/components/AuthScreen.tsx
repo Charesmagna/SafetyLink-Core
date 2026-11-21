@@ -5,6 +5,7 @@ import { LogoSetPart } from './LogoSetPart';
 import { PricingModal } from './PricingModal';
 import { CinematicClosingLogo } from './CinematicClosingLogo';
 import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
+import { PopiaLegalModal } from './PopiaLegalModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from '../utils/cloudinary';
 
@@ -97,6 +98,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   const [showClosingLogo, setShowClosingLogo] = useState(false);
   const [showVoiceAssistant, setShowVoiceAssistant] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showPopia, setShowPopia] = useState(false);
 
   useEffect(() => {
     let listener: any = null;
@@ -1226,7 +1228,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
               <span>✉️</span> info@safetylink.online
             </a>
             <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
-              <span>💬</span> Chat on WhatsApp (+27 68 009 911)
+              <span>💬</span> Chat on WhatsApp (+27 68 007 9911)
             </a>
             <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono transition-colors">
               <span>📢</span> Follow Official WhatsApp Channel
@@ -1240,11 +1242,15 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
           </div>
         </div>
         <p className="text-[9px] text-slate-600 font-mono uppercase tracking-[0.2em]">
-          SECURE ENCRYPTED MESH MATRIX // DEEPMIND SECURITY Blueprints
+          SAFETYLINK SOUTH AFRICA · POPIA COMPLIANT (ACT 4 OF 2013)
         </p>
+        <button type="button" onClick={() => setShowPopia(true)} className="text-[9px] text-emerald-400 hover:text-emerald-300 font-mono uppercase tracking-widest underline cursor-pointer">
+          POPIA Privacy Notice &amp; Terms
+        </button>
         <p className="text-[8px] text-amber-500/60 font-mono uppercase tracking-[0.25em] font-black">
           POWERED BY TM MEDIA SOLUTIONS
         </p>
+        <PopiaLegalModal open={showPopia} onClose={() => setShowPopia(false)} />
       </div>
     </div>
   );

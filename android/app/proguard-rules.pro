@@ -7,7 +7,6 @@
 -optimizationpasses 5
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
--dontpreskip
 -verbose
 
 # Strip source file names and line numbers from stack traces
@@ -57,6 +56,7 @@
 -keep class com.google.android.gms.** { *; }
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
+-dontwarn com.facebook.**
 
 # --- WebView JS bridge (required for Capacitor) ---
 -keepclassmembers class * {

@@ -179,7 +179,7 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
 
   return (
     <div 
-      className="bg-slate-950/35 border border-slate-800/60 rounded-3xl p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl transition-all duration-300"
+      className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-2xl transition-all duration-300 text-white"
       onMouseEnter={() => setIsAutoCycling(false)}
       onMouseLeave={() => setIsAutoCycling(true)}
     >

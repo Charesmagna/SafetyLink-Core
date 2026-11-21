@@ -14,6 +14,8 @@ import { DownloadPage } from './landing/DownloadPage';
 import { ContinuousTopologyOverview } from './landing/ContinuousTopologyOverview';
 import { UpdateBanner } from './UpdateBanner';
 import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
+import { MediaHub } from './MediaHub';
+import { PopiaLegalModal } from './PopiaLegalModal';
 
 type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
 
@@ -38,6 +40,8 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
   const [page, setPage] = useState<Page>('home');
   const [menuOpen, setMenuOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showMediaVault, setShowMediaVault] = useState(false);
+  const [showPopiaModal, setShowPopiaModal] = useState(false);
 
   // Check for updates on mount (will only render banner in APK)
   useEffect(() => {
@@ -148,13 +152,37 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         <div className="flex flex-wrap justify-center gap-4 text-xs">
           <a href="mailto:info@safetylink.online" className="text-blue-400 hover:text-blue-300 font-mono">✉️ info@safetylink.online</a>
           <button onClick={() => navigate('privacy')} className="text-slate-400 hover:text-slate-300 font-mono">Privacy Policy</button>
-          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp Support (+27 68 009 911)</a>
+          <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">💬 WhatsApp Support (+27 68 007 9911)</a>
           <a href="https://whatsapp.com/channel/0029Vb8MGfc0lwgn9sG1bz2s" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">📢 Channel</a>
           <a href="https://chat.whatsapp.com/I4PH58YMv438cSU3iwqyu5" target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300 font-mono">👥 Community Group</a>
           <a href="https://www.facebook.com/share/1D8xnzfY8T/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:text-sky-300 font-mono">📘 Facebook</a>
         </div>
-        <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">© TM Media Solutions · Reg 2018/500191/07 · safetylink.online</p>
+        <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">© TM Media Solutions · Reg 2018/500191/07 · POPIA Compliant (Act 4 of 2013) · safetylink.online</p>
+        <div className="pt-1 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowPopiaModal(true)}
+            className="text-[10px] text-slate-500 hover:text-emerald-400 font-mono uppercase tracking-wider transition-colors"
+          >
+            POPIA &amp; Terms
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowMediaVault(true)}
+            aria-label="R2 Media Vault"
+            title="R2 Media Vault"
+            className="text-slate-600/60 hover:text-emerald-400 transition-colors text-xs leading-none px-1.5 py-0.5 select-none cursor-pointer"
+          >
+            ☾
+          </button>
+        </div>
       </footer>
+      <PopiaLegalModal open={showPopiaModal} onClose={() => setShowPopiaModal(false)} />
+      {showMediaVault && (
+        <div className="fixed inset-0 z-[99999] bg-[#020617] overflow-y-auto">
+          <MediaHub ownerMode onClose={() => setShowMediaVault(false)} />
+        </div>
+      )}
     </div>
   );
 }

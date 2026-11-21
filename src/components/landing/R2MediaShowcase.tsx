@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState } from 'react';
+import { getR2StreamUrl, getR2DownloadUrl } from '../../utils/r2Assets';
 
 interface MediaItem {
   id: string;
@@ -102,7 +103,7 @@ export function R2MediaShowcase() {
   const filtered = activeTab === 'all' ? FEATURED_MEDIA : FEATURED_MEDIA.filter((m) => m.category === activeTab);
 
   return (
-    <section style={{ padding: '80px 40px', background: 'rgba(2,6,23,0.18)', backdropFilter: 'blur(3px)', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+    <section style={{ padding: '80px 40px', background: '#070a0f', color: '#f8fafc', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
       <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px', marginBottom: '32px' }}>
           <div>
@@ -160,7 +161,7 @@ export function R2MediaShowcase() {
                 playsInline
                 preload="metadata"
                 style={{ width: '100%', maxHeight: '520px', objectFit: 'contain' }}
-                src={`/api/r2/stream/${encodeURIComponent(selectedVideo.r2Key)}`}
+                src={getR2StreamUrl(selectedVideo.r2Key)}
               >
                 Your browser does not support HTML5 video streaming.
               </video>
@@ -172,7 +173,7 @@ export function R2MediaShowcase() {
                 <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>{selectedVideo.description}</p>
               </div>
               <a
-                href={`/api/r2/download/${encodeURIComponent(selectedVideo.r2Key)}`}
+                href={getR2DownloadUrl(selectedVideo.r2Key)}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '6px',
@@ -232,7 +233,7 @@ export function R2MediaShowcase() {
                   {isVideo ? (
                     <div className="relative w-full h-[120px] rounded-lg overflow-hidden mb-3 bg-[#05070a] border border-white/5 group-hover:border-emerald-500/30 transition-all">
                       <video
-                        src={`/api/r2/stream/${encodeURIComponent(item.r2Key)}#t=1.5`}
+                        src={`${getR2StreamUrl(item.r2Key)}#t=1.5`}
                         muted
                         playsInline
                         preload="metadata"
@@ -248,7 +249,7 @@ export function R2MediaShowcase() {
                   ) : (
                     <div style={{ width: '100%', height: '120px', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', background: '#05070a', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <img
-                        src={`/api/r2/stream/${encodeURIComponent(item.r2Key)}`}
+                        src={getR2StreamUrl(item.r2Key)}
                         alt={item.title}
                         loading="lazy"
                         onError={(e) => {
@@ -273,7 +274,7 @@ export function R2MediaShowcase() {
                     {isVideo ? (isSelected ? '● Now Playing' : '▶ Watch Video') : '🔍 View Full Blueprint'}
                   </span>
                   <a
-                    href={`/api/r2/download/${encodeURIComponent(item.r2Key)}`}
+                    href={getR2DownloadUrl(item.r2Key)}
                     onClick={(e) => e.stopPropagation()}
                     style={{ color: '#64748b', fontSize: '11px', textDecoration: 'none' }}
                   >
@@ -326,7 +327,7 @@ export function R2MediaShowcase() {
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <a
-                    href={`/api/r2/download/${encodeURIComponent(selectedImage.r2Key)}`}
+                    href={getR2DownloadUrl(selectedImage.r2Key)}
                     style={{
                       padding: '6px 14px',
                       borderRadius: '6px',
@@ -359,7 +360,7 @@ export function R2MediaShowcase() {
 
               <div style={{ overflow: 'auto', padding: '16px', display: 'flex', justifyContent: 'center', background: '#020408' }}>
                 <img
-                  src={`/api/r2/stream/${encodeURIComponent(selectedImage.r2Key)}`}
+                  src={getR2StreamUrl(selectedImage.r2Key)}
                   alt={selectedImage.title}
                   onError={(e) => {
                     e.currentTarget.onerror = null;

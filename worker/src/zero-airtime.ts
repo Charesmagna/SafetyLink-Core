@@ -58,6 +58,28 @@ export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
       last_attempt_at INTEGER,
       last_result TEXT
     )`,
+    `CREATE TABLE IF NOT EXISTS sl_pcm_retries (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      owner_phone TEXT NOT NULL,
+      recipient_phone TEXT NOT NULL,
+      sms_body TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 1,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      last_error TEXT,
+      next_retry_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS sl_gateway_health (
+      gateway_id TEXT PRIMARY KEY,
+      last_seen INTEGER NOT NULL,
+      battery INTEGER,
+      sim_slot TEXT,
+      network TEXT,
+      last_alert_at INTEGER
+    )`,
   ];
   for (const sql of statements) await db.prepare(sql).run();
 
@@ -126,6 +148,121 @@ async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string
   };
 }
 
+async function sendViaSmsGateOnce(env: ZeroEnv, to: string, smsBody: string): Promise<{
+  to: string;
+  channel: 'SMS';
+  provider: 'smsgate';
+  ok: boolean;
+  status?: number;
+  state: string;
+  messageId?: string;
+  detail?: string;
+  retryable: boolean;
+}> {
+  const sgU = (env.SMSGATE_USERNAME || '').trim();
+  const sgP = (env.SMSGATE_PASSWORD || '').trim();
+  if (!sgU || !sgP) {
+    return {
+      to,
+      channel: 'SMS',
+      provider: 'smsgate',
+      ok: false,
+      state: 'UNCONFIGURED',
+      detail: 'SMSGATE credentials missing',
+      retryable: false,
+    };
+  }
+  const base = (env.SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '');
+  const simNumber = Math.max(1, Math.min(2, Number(env.SMSGATE_SIM_NUMBER || 1) || 1));
+  const deviceId = (env.SMSGATE_DEVICE_ID || '').trim();
+  try {
+    const r = await fetch(`${base}/3rdparty/v1/messages`, {
+      method: 'POST',
+      headers: { Authorization: 'Basic ' + btoa(`${sgU}:${sgP}`), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        textMessage: { text: smsBody },
+        phoneNumbers: [to],
+        ...(deviceId ? { deviceId } : {}),
+        simNumber,
+        ttl: 1800,
+        priority: 100,
+      }),
+    });
+    const responseText = (await r.text().catch(() => '')).slice(0, 500);
+    let responseBody: any = {};
+    try { responseBody = responseText ? JSON.parse(responseText) : {}; } catch { /* retain response text */ }
+    const smsOk = r.ok;
+    const retryable = !smsOk && (r.status === 429 || r.status >= 500);
+    return {
+      to,
+      channel: 'SMS',
+      provider: 'smsgate',
+      ok: smsOk,
+      status: r.status,
+      state: smsOk ? 'QUEUED' : 'REJECTED',
+      messageId: responseBody.id || responseBody.messageId || undefined,
+      detail: smsOk ? undefined : responseText,
+      retryable,
+    };
+  } catch (error: any) {
+    return {
+      to,
+      channel: 'SMS',
+      provider: 'smsgate',
+      ok: false,
+      state: 'ERROR',
+      detail: String(error?.message || error).slice(0, 200),
+      retryable: true,
+    };
+  }
+}
+
+async function sendViaSmsGateWithRetry(env: ZeroEnv, to: string, smsBody: string, maxAttempts = 2) {
+  let lastResult = await sendViaSmsGateOnce(env, to, smsBody);
+  for (let attempt = 1; attempt < maxAttempts && !lastResult.ok && lastResult.retryable; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 150 * attempt));
+    lastResult = await sendViaSmsGateOnce(env, to, smsBody);
+  }
+  return {
+    to: lastResult.to,
+    channel: lastResult.channel,
+    provider: lastResult.provider,
+    ok: lastResult.ok,
+    status: lastResult.status,
+    state: lastResult.state,
+    messageId: lastResult.messageId,
+    detail: lastResult.detail,
+    smsBody,
+  };
+}
+
+async function enqueueFailedRetries(env: ZeroEnv, eventId: string, ownerPhone: string, results: any[]): Promise<void> {
+  if (!env.DB) return;
+  const now = Date.now();
+  const nextRetryAt = now + 60_000;
+  for (const r of results) {
+    if (r?.ok === true || !r?.to || !r?.smsBody) continue;
+    await env.DB.prepare(
+      `INSERT INTO sl_pcm_retries (id, event_id, owner_phone, recipient_phone, sms_body, attempts, max_attempts, status, last_error, next_retry_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 1, 5, 'PENDING', ?, ?, ?, ?)`
+    ).bind(
+      crypto.randomUUID(),
+      eventId,
+      ownerPhone,
+      String(r.to),
+      String(r.smsBody),
+      String(r.detail || r.state || 'SMSGate send failed').slice(0, 400),
+      nextRetryAt,
+      now,
+      now
+    ).run().catch(() => {});
+  }
+}
+
+/**
+ * Offline zero-airtime dispatch uses ONLY the RAIN phone SMS Gateway (SMSGate).
+ * Twilio, VAPI, and Telegram are intentionally NOT used on the offline path.
+ */
 async function notifyContacts(env: ZeroEnv, opts: {
   ownerPhone: string;
   ownerName: string;
@@ -135,6 +272,7 @@ async function notifyContacts(env: ZeroEnv, opts: {
   voice: boolean;
   smsPrefix: string;
   note?: string;
+  eventId?: string;
 }): Promise<any[]> {
   const targets = opts.contacts.length
     ? opts.contacts
@@ -142,104 +280,17 @@ async function notifyContacts(env: ZeroEnv, opts: {
   const place = opts.lat && opts.lng ? `https://maps.google.com/?q=${opts.lat},${opts.lng}` : 'Location not available yet';
   const locTxt = opts.lat && opts.lng ? `Last known location: ${place}` : 'Last known location: not available yet';
   const noteTxt = opts.note ? ` Message from ${opts.ownerName}: ${opts.note}.` : '';
-  const smsBody = `SAFETYLINK ALERT: ${opts.ownerName} (${opts.ownerPhone}) pressed the SafetyLink button. ${locTxt}.${noteTxt} Please call them now. SafetyLink does not replace 10111 or 112.`.slice(0, 480);
-  const spoken = `This is SafetyLink. ${opts.ownerName} has triggered a panic alert. ${opts.lat ? 'A map link was sent by message.' : 'No location yet.'} Please respond.`;
-  const twAuth = env.TWILIO_SID && env.TWILIO_AUTH_TOKEN ? btoa(`${env.TWILIO_SID}:${env.TWILIO_AUTH_TOKEN}`) : '';
-  const waFrom = env.TWILIO_WHATSAPP_FROM || env.TWILIO_NUMBER;
+  const smsBody = `${opts.smsPrefix || 'SAFETYLINK ALERT'}: ${opts.ownerName} (${opts.ownerPhone}) pressed the SafetyLink button. ${locTxt}.${noteTxt} Please call them now. SafetyLink does not replace 10111 or 112.`.slice(0, 480);
+
   const results: any[] = [];
-
-  const twPost = (path: string, params: Record<string, string>) =>
-    fetch(`https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_SID}/${path}.json`, {
-      method: 'POST',
-      headers: { Authorization: `Basic ${twAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(params).toString(),
-    });
-
-  await Promise.allSettled(targets.map(async (to, index) => {
-    if (twAuth && waFrom) {
-      const r = await twPost('Messages', { From: `whatsapp:${waFrom}`, To: `whatsapp:${to}`, Body: smsBody }).catch(() => null);
-      results.push({ to, channel: 'WHATSAPP', ok: !!r?.ok, status: r?.status });
-    }
-    let smsOk = false;
-    // Primary route: SMS-Gate Cloud delivers through the registered Rain Android gateway.
-    const sgU = env.SMSGATE_USERNAME, sgP = env.SMSGATE_PASSWORD;
-    if (sgU && sgP) {
-      const base = (env.SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '');
-      const simNumber = Math.max(1, Math.min(2, Number(env.SMSGATE_SIM_NUMBER || 1) || 1));
-      try {
-        const r = await fetch(`${base}/3rdparty/v1/messages`, {
-          method: 'POST',
-          headers: { Authorization: 'Basic ' + btoa(`${sgU}:${sgP}`), 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            textMessage: { text: smsBody },
-            phoneNumbers: [to],
-            ...(env.SMSGATE_DEVICE_ID ? { deviceId: env.SMSGATE_DEVICE_ID } : {}),
-            simNumber,
-            ttl: 1800,
-            priority: 100,
-          }),
-        });
-        const responseText = (await r.text().catch(() => '')).slice(0, 500);
-        let responseBody: any = {};
-        try { responseBody = responseText ? JSON.parse(responseText) : {}; } catch { /* retain response text */ }
-        smsOk = r.ok;
-        results.push({
-          to, channel: 'SMS', provider: 'smsgate',
-          ok: smsOk, status: r.status,
-          state: smsOk ? 'QUEUED' : 'REJECTED',
-          messageId: responseBody.id || responseBody.messageId || undefined,
-          detail: smsOk ? undefined : responseText,
-        });
-      } catch (error: any) {
-        results.push({ to, channel: 'SMS', provider: 'smsgate', ok: false, state: 'ERROR', detail: String(error?.message || error).slice(0, 200) });
-      }
-    }
-    // 2) Backups only if the Rain route did not work
-    if (!smsOk && env.AT_API_KEY && env.AT_USERNAME) {
-      const r = await fetch('https://api.africastalking.com/version1/messaging', {
-        method: 'POST',
-        headers: { apiKey: env.AT_API_KEY, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username: env.AT_USERNAME, to, message: smsBody }).toString(),
-      }).catch(() => null);
-      smsOk = !!r?.ok;
-      results.push({ to, channel: 'SMS', provider: 'africastalking', ok: smsOk, status: r?.status });
-    }
-    if (!smsOk && twAuth && env.TWILIO_NUMBER) {
-      const r = await twPost('Messages', { From: env.TWILIO_NUMBER, To: to, Body: smsBody }).catch(() => null);
-      results.push({ to, channel: 'SMS', provider: 'twilio', ok: !!r?.ok, status: r?.status });
-    }
-    if (!opts.voice || index > 2) return;
-    if (env.VAPI_PRIVATE_KEY && env.VAPI_PHONE_NUMBER_ID) {
-      const body: any = {
-        phoneNumberId: env.VAPI_PHONE_NUMBER_ID,
-        customer: { number: to },
-      };
-      if (env.VAPI_ASSISTANT_ID) {
-        body.assistantId = env.VAPI_ASSISTANT_ID;
-        body.assistantOverrides = { firstMessage: spoken };
-      } else {
-        body.assistant = { firstMessage: spoken, model: { provider: 'openai', model: 'gpt-4o-mini' }, voice: { provider: '11labs', voiceId: '21m00Tcm4TlvDq8ikWAM' }, maxDurationSeconds: 45 };
-      }
-      const r = await fetch('https://api.vapi.ai/call', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${env.VAPI_PRIVATE_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }).catch(() => null);
-      if (r?.ok) {
-        results.push({ to, channel: 'VOICE', provider: 'vapi', ok: true });
-        return;
-      }
-      results.push({ to, channel: 'VOICE', provider: 'vapi', ok: false, status: r?.status });
-    }
-    if (twAuth && env.TWILIO_NUMBER) {
-      const r = await twPost('Calls', {
-        From: env.TWILIO_NUMBER,
-        To: to,
-        Twiml: `<Response><Say voice="alice">${spoken}</Say></Response>`,
-      }).catch(() => null);
-      results.push({ to, channel: 'VOICE', provider: 'twilio', ok: !!r?.ok, status: r?.status });
-    }
+  await Promise.allSettled(targets.map(async (to) => {
+    const res = await sendViaSmsGateWithRetry(env, to, smsBody, 2);
+    results.push(res);
   }));
+
+  if (opts.eventId) {
+    await enqueueFailedRetries(env, opts.eventId, opts.ownerPhone, results);
+  }
   return results;
 }
 
@@ -252,7 +303,7 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
   if (!saved.contacts.length && saved.name === phone) {
     const known = await env.DB.prepare('SELECT phone FROM sl_profiles WHERE phone=?').bind(phone).first();
     if (!known) {
-      // Unknown caller: never alert strangers. Send the command centre a single SMS so a person can act.
+      // Unknown caller: never alert strangers. Send the command centre a single SMS via Rain SMSGate.
       const centre = toE164(env.RESPONSE_CENTRE_NUMBER || '');
       if (centre) {
         await notifyContacts(env, { ownerPhone: phone, ownerName: 'Unregistered caller', contacts: [centre], voice: false, smsPrefix: 'UNKNOWN CALLER' });
@@ -294,9 +345,10 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
       contacts: saved.contacts,
       lat: saved.lat,
       lng: saved.lng,
-      voice: true,
-      smsPrefix: 'SAFETYLINK PANIC',
+      voice: false,
+      smsPrefix: 'SAFETYLINK ALERT',
       note: saved.note,
+      eventId,
     });
   } catch (error: any) {
     const detail = String(error?.message || error).slice(0, 500);
@@ -318,13 +370,14 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
   const acceptedChannels = channelStates.filter(Boolean).length;
   const failedChannels = channelStates.length - acceptedChannels;
   const dispatchStatus = acceptedChannels === 0 ? 'FAILED' : failedChannels > 0 ? 'PARTIAL' : 'ACCEPTED';
+  const sanitizedResults = results.map(({ smsBody: _b, ...rest }: any) => rest);
   const summary = {
     attemptedChannels: channelStates.length,
     acceptedChannels,
     failedChannels,
     providerAccepted: acceptedChannels > 0,
     handsetDeliveryConfirmed: false,
-    results,
+    results: sanitizedResults,
   };
   await env.DB.prepare(
     'UPDATE sl_pcm_events SET dispatch_status=?, last_result=? WHERE id=?'
@@ -352,6 +405,49 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
   };
 }
 
+export async function processPendingPcmRetries(env: ZeroEnv): Promise<{ processed: number; sent: number; failed: number }> {
+  if (!env.DB) return { processed: 0, sent: 0, failed: 0 };
+  await ensureZeroAirtimeSchema(env.DB);
+  const now = Date.now();
+  const { results: rows } = await env.DB.prepare(
+    `SELECT id, recipient_phone, sms_body, attempts, max_attempts FROM sl_pcm_retries
+     WHERE status = 'PENDING' AND next_retry_at <= ? AND attempts < max_attempts
+     ORDER BY next_retry_at ASC LIMIT 20`
+  ).bind(now).all<{ id: string; recipient_phone: string; sms_body: string; attempts: number; max_attempts: number }>();
+
+  let processed = 0;
+  let sent = 0;
+  let failed = 0;
+
+  for (const row of rows || []) {
+    processed++;
+    const attemptRes = await sendViaSmsGateOnce(env, row.recipient_phone, row.sms_body);
+    const nextAttempts = Number(row.attempts || 1) + 1;
+    const updatedAt = Date.now();
+    if (attemptRes.ok) {
+      sent++;
+      await env.DB.prepare(
+        `UPDATE sl_pcm_retries SET status = 'PROVIDER_ACCEPTED', attempts = ?, last_error = NULL, updated_at = ? WHERE id = ?`
+      ).bind(nextAttempts, updatedAt, row.id).run();
+    } else {
+      failed++;
+      const exhausted = nextAttempts >= Number(row.max_attempts || 5);
+      const nextRetryAt = updatedAt + Math.min(30 * 60_000, 60_000 * Math.pow(2, nextAttempts - 1));
+      await env.DB.prepare(
+        `UPDATE sl_pcm_retries SET status = ?, attempts = ?, last_error = ?, next_retry_at = ?, updated_at = ? WHERE id = ?`
+      ).bind(
+        exhausted ? 'DEAD' : 'PENDING',
+        nextAttempts,
+        String(attemptRes.detail || attemptRes.state || 'Retry failed').slice(0, 400),
+        nextRetryAt,
+        updatedAt,
+        row.id
+      ).run();
+    }
+  }
+  return { processed, sent, failed };
+}
+
 export async function locatePcm(env: ZeroEnv, body: any): Promise<{ status: number; json: any }> {
   if (!env.DB) return { status: 503, json: { error: 'Database not configured' } };
   const phone = toE164(body?.phone || '');
@@ -374,10 +470,103 @@ export async function locatePcm(env: ZeroEnv, body: any): Promise<{ status: numb
     lng,
     voice: false,
     smsPrefix: 'SAFETYLINK LOCATION',
+    eventId: event.id,
   });
-  return { status: 200, json: { ok: true, status: 'LOCATION_SENT', results } };
+  return { status: 200, json: { ok: true, status: 'LOCATION_SENT', results: results.map(({ smsBody: _b, ...r }: any) => r) } };
 }
 
 export function gatewayNumber(env: ZeroEnv): string {
   return toE164(env.RAIN_GATEWAY_MSISDN || '');
+}
+
+const GATEWAY_STALE_MS = 15 * 60_000;
+const GATEWAY_ALERT_COOLDOWN_MS = 60 * 60_000;
+
+export async function recordGatewayHeartbeat(
+  env: ZeroEnv,
+  body: { gatewayId?: string; battery?: number; simSlot?: string; network?: string }
+): Promise<{ status: number; json: any }> {
+  if (!env.DB) return { status: 503, json: { error: 'Database not configured' } };
+  await ensureZeroAirtimeSchema(env.DB);
+  const gatewayId = String(body?.gatewayId || 'rain-sim-1').trim().slice(0, 64) || 'rain-sim-1';
+  const now = Date.now();
+  const battery = Number.isFinite(Number(body?.battery)) ? Math.max(0, Math.min(100, Math.round(Number(body.battery)))) : null;
+  const simSlot = body?.simSlot ? String(body.simSlot).slice(0, 24) : null;
+  const network = body?.network ? String(body.network).slice(0, 48) : null;
+  await env.DB.prepare(
+    `INSERT INTO sl_gateway_health (gateway_id, last_seen, battery, sim_slot, network, last_alert_at)
+     VALUES (?, ?, ?, ?, ?, NULL)
+     ON CONFLICT(gateway_id) DO UPDATE SET last_seen=excluded.last_seen, battery=COALESCE(excluded.battery, sl_gateway_health.battery), sim_slot=COALESCE(excluded.sim_slot, sl_gateway_health.sim_slot), network=COALESCE(excluded.network, sl_gateway_health.network)`
+  ).bind(gatewayId, now, battery, simSlot, network).run();
+  return { status: 200, json: { ok: true, gatewayId, lastSeen: now, battery, simSlot, network } };
+}
+
+export async function getGatewayHealth(env: ZeroEnv): Promise<{ status: number; json: any }> {
+  if (!env.DB) return { status: 503, json: { error: 'Database not configured' } };
+  await ensureZeroAirtimeSchema(env.DB);
+  const now = Date.now();
+  const { results: gateways } = await env.DB.prepare(
+    'SELECT gateway_id, last_seen, battery, sim_slot, network, last_alert_at FROM sl_gateway_health ORDER BY last_seen DESC LIMIT 10'
+  ).all<{ gateway_id: string; last_seen: number; battery: number | null; sim_slot: string | null; network: string | null; last_alert_at: number | null }>();
+  const pendingRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS cnt FROM sl_pcm_retries WHERE status = 'PENDING'"
+  ).first<{ cnt: number }>();
+
+  const list = (gateways || []).map((g) => {
+    const ageMs = Math.max(0, now - Number(g.last_seen || 0));
+    return {
+      gatewayId: g.gateway_id,
+      lastSeen: g.last_seen,
+      ageSeconds: Math.round(ageMs / 1000),
+      online: ageMs <= GATEWAY_STALE_MS,
+      battery: g.battery,
+      simSlot: g.sim_slot,
+      network: g.network,
+    };
+  });
+
+  return {
+    status: 200,
+    json: {
+      ok: true,
+      anyOnline: list.some((g) => g.online),
+      staleThresholdMinutes: Math.round(GATEWAY_STALE_MS / 60_000),
+      pendingRetries: Number(pendingRow?.cnt || 0),
+      gateways: list,
+    },
+  };
+}
+
+export async function checkGatewayStaleAlert(env: ZeroEnv): Promise<{ checked: number; stale: number; alerted: number }> {
+  if (!env.DB) return { checked: 0, stale: 0, alerted: 0 };
+  await ensureZeroAirtimeSchema(env.DB);
+  const now = Date.now();
+  const { results: gateways } = await env.DB.prepare(
+    'SELECT gateway_id, last_seen, last_alert_at FROM sl_gateway_health'
+  ).all<{ gateway_id: string; last_seen: number; last_alert_at: number | null }>();
+
+  let stale = 0;
+  let alerted = 0;
+  const centre = toE164(env.RESPONSE_CENTRE_NUMBER || '');
+
+  for (const g of gateways || []) {
+    const ageMs = now - Number(g.last_seen || 0);
+    if (ageMs <= GATEWAY_STALE_MS) continue;
+    stale++;
+    const lastAlert = Number(g.last_alert_at || 0);
+    if (lastAlert && now - lastAlert < GATEWAY_ALERT_COOLDOWN_MS) continue;
+    console.warn('[PCM Gateway Watchdog] Stale Rain relay detected', {
+      gatewayId: g.gateway_id,
+      silentMinutes: Math.round(ageMs / 60_000),
+    });
+    if (centre && env.SMSGATE_USERNAME && env.SMSGATE_PASSWORD) {
+      const msg = `SAFETYLINK WATCHDOG: Rain relay ${g.gateway_id} has not sent a heartbeat for ${Math.round(ageMs / 60_000)} minutes. Check power, SIM, and SMS Forwarder app.`;
+      await sendViaSmsGateOnce(env, centre, msg).catch(() => {});
+    }
+    await env.DB.prepare('UPDATE sl_gateway_health SET last_alert_at=? WHERE gateway_id=?')
+      .bind(now, g.gateway_id).run().catch(() => {});
+    alerted++;
+  }
+
+  return { checked: (gateways || []).length, stale, alerted };
 }

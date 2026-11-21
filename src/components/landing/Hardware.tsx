@@ -57,10 +57,10 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
   const activeDeviceImg = currentPool[hwRotationTick % currentPool.length];
 
   return (
-    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'transparent', backdropFilter:'blur(2px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HARDWARE ECOSYSTEM</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>

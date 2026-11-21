@@ -1,15 +1,29 @@
 import { verifyForwarderSignature } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
+import { sendLoudAlarm } from './fcm';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
+import { buildPayfastSignature } from './payfast';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { gatewayNumber, inboundPcm, locatePcm, syncProfile } from './zero-airtime';
+import {
+  checkGatewayStaleAlert,
+  gatewayNumber,
+  getGatewayHealth,
+  inboundPcm,
+  locatePcm,
+  processPendingPcmRetries,
+  recordGatewayHeartbeat,
+  syncProfile,
+} from './zero-airtime';
 
 export interface Env {
   DB?: D1Database;
+  RELEASES?: any;
+  MEDIA?: any;
+  FCM_SERVICE_ACCOUNT?: string;
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
@@ -34,9 +48,13 @@ export interface Env {
   SMSGATE_USERNAME?: string;
   SMSGATE_PASSWORD?: string;
   SMSGATE_BASE_URL?: string;
-  // Paystack
+  // Paystack & PayFast
   PAYSTACK_SECRET_KEY: string;
   PAYSTACK_PUBLIC_KEY: string;
+  PAYFAST_MERCHANT_ID?: string;
+  PAYFAST_MERCHANT_KEY?: string;
+  PAYFAST_PASSPHRASE?: string;
+  PAYFAST_SANDBOX?: string;
   // Cloudinary
   CLOUDINARY_KEY: string;
   CLOUDINARY_SECRET: string;
@@ -63,7 +81,10 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 app.use('*', cors({
-  origin: ['https://safetylink.online', 'http://localhost:5173', 'capacitor://localhost', 'http://localhost', 'https://localhost'],
+  origin: (origin) => origin || '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Range', 'X-Profile-Token', 'X-PCM-Token', 'X-Signature', 'X-Hmac-Sha256'],
+  exposeHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
   credentials: true,
 }));
 
@@ -74,14 +95,38 @@ const hashPassword = async (password: string, salt: string) => {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-const makeToken = (payload: object) => btoa(JSON.stringify({ ...payload, exp: Date.now() + 7 * 86400_000 }));
+const toB64Url = (input: string) =>
+  btoa(unescape(encodeURIComponent(input))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-const verifyToken = (token: string) => {
+const fromB64Url = (b64: string) => {
+  const pad = b64.length % 4 === 0 ? '' : '='.repeat(4 - (b64.length % 4));
+  const norm = b64.replace(/-/g, '+').replace(/_/g, '/') + pad;
+  return decodeURIComponent(escape(atob(norm)));
+};
+
+const makeToken = async (env: Env, payload: Record<string, any>): Promise<string> => {
+  const secret = String(env.JWT_SECRET || '').trim();
+  if (!secret) throw new Error('JWT_SECRET is not configured on the Worker.');
+  const body = toB64Url(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + 7 * 86400_000 }));
+  const sig = await hexHmac(secret, body);
+  return `${body}.${sig}`;
+};
+
+const verifyToken = async (env: Env, token: string): Promise<any> => {
   try {
-    const p = JSON.parse(atob(token));
-    if (p.exp < Date.now()) throw new Error('expired');
+    const parts = String(token || '').split('.');
+    if (parts.length !== 2) return null;
+    const [body, givenSig] = parts;
+    const secret = String(env.JWT_SECRET || '').trim();
+    if (!secret) return null;
+    const expectedSig = await hexHmac(secret, body);
+    if (!safeEq(givenSig, expectedSig)) return null;
+    const p = JSON.parse(fromB64Url(body));
+    if (!p.exp || p.exp < Date.now()) return null;
     return p;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 };
 
 const checkTrialExpired = async (db: D1Database, orgId: string) => {
@@ -94,9 +139,18 @@ const checkTrialExpired = async (db: D1Database, orgId: string) => {
 const authMiddleware = async (c: any, next: any) => {
   const auth = c.req.header('Authorization');
   if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Unauthorized' }, 401 as any);
-  const payload = verifyToken(auth.slice(7));
-  if (!payload) return c.json({ error: 'Invalid or expired token' }, 401);
-  if (await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
+  const payload = await verifyToken(c.env, auth.slice(7));
+  if (!payload) return c.json({ error: 'Invalid or expired signed token' }, 401);
+  if (payload.userId && c.env.DB) {
+    const row: any = await c.env.DB.prepare('SELECT status, token_version FROM users WHERE id = ?').bind(payload.userId).first().catch(() => null);
+    if (row && (row.status === 'suspended' || row.status === 'deactivated')) {
+      return c.json({ error: `Account is ${row.status}. Contact SafetyLink Administrator.` }, 403);
+    }
+    if (row && typeof row.token_version === 'number' && typeof payload.tokenVersion === 'number' && row.token_version !== payload.tokenVersion) {
+      return c.json({ error: 'Session revoked. Please sign in again.' }, 401);
+    }
+  }
+  if (payload.orgId && await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
   c.set('orgId', payload.orgId);
   c.set('email', payload.email);
   await next();
@@ -298,6 +352,24 @@ async function fireAllAlerts(
         }));
       }
     }
+
+    // Push Notification: High-priority FCM loud alarm to registered Android devices
+    if ((env as any).FCM_SERVICE_ACCOUNT) {
+      try {
+        const rows: any = await (env as any).DB?.prepare(
+          'SELECT token FROM device_tokens WHERE phone = ? LIMIT 5'
+        ).bind(to).all().catch(() => ({ results: [] }));
+        const tokens = (rows?.results || []).map((r: any) => r.token).filter(Boolean);
+        for (const devToken of tokens) {
+          const alarmTitle = 'EMERGENCY: SafetyLink Alert';
+          const alarmBody = `${callerName || callerNumber || 'A user'} pressed panic! Location: ${location}`;
+          const fcmRes = await sendLoudAlarm((env as any).FCM_SERVICE_ACCOUNT, devToken, alarmTitle, alarmBody).catch((e: any) => ({ ok: false, error: e?.message }));
+          results.push({ channel: 'FCM_LOUD_ALARM', provider: 'firebase', to, ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm sent to device' : (fcmRes as any).error });
+        }
+      } catch (err: any) {
+        console.warn('[FCM dispatch error]', err);
+      }
+    }
   }));
 
   if (env.PIPEDREAM_WEBHOOK_URL) {
@@ -312,13 +384,14 @@ async function fireAllAlerts(
 // ── DB INIT ───────────────────────────────────────────────────────────────────
 // Latest APK, served from R2 (the repo can stay private)
 // Three downloads: stable 2.0 (/download/safetylink.apk), beta (/download/beta/...), legacy 1.x (/download/v1/...)
-const dl = (key: string, file: string) => async (c: any) => {
-  const obj = await (c.env as any).RELEASES?.get(key);
+const dl = (key: string, file: string, fallbackKey?: string) => async (c: any) => {
+  const releases = (c.env as any).RELEASES;
+  const obj = (await releases?.get(key)) || (fallbackKey ? await releases?.get(fallbackKey) : null);
   if (!obj) return c.json({ error: 'Not published yet' }, 404);
   return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': `attachment; filename="${file}"`, 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
 };
-app.get('/download/beta/safetylink.apk', dl('safetylink-beta-latest.apk', 'SafetyLink-beta.apk'));
-app.get('/download/v1/safetylink.apk', dl('safetylink-v1-latest.apk', 'SafetyLink-1.x-legacy.apk'));
+app.get('/download/beta/safetylink.apk', dl('safetylink-beta-latest.apk', 'SafetyLink-beta.apk', 'safetylink-latest.apk'));
+app.get('/download/v1/safetylink.apk', dl('safetylink-v1-latest.apk', 'SafetyLink-1.x-legacy.apk', 'safetylink-latest.apk'));
 app.get('/api/app/beta/versions', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('versions-beta/index.json');
   const list = obj ? await obj.json().catch(() => []) : [];
@@ -338,19 +411,262 @@ app.get('/download/safetylink.apk', async (c) => {
   });
 });
 
-// Version 2 Development APK, served from R2
+// Version 2 Official APK, served from R2 (tracks latest main build, falling back to safetylink-v2-latest.apk)
 app.get('/download/v2/safetylink.apk', async (c) => {
-  const obj: any = (await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk')) || (await (c.env as any).RELEASES?.get('safetylink-latest.apk'));
+  const obj: any = (await (c.env as any).RELEASES?.get('safetylink-latest.apk')) || (await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk'));
   if (!obj) return c.json({ error: 'No v2 release available yet' }, 404 as any);
   return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/vnd.android.package-archive',
-      'Content-Disposition': 'attachment; filename="SafetyLink-v2-dev.apk"',
+      'Content-Disposition': 'attachment; filename="SafetyLink-v2.apk"',
       'Content-Length': String(obj.size),
       'Cache-Control': 'no-cache',
     },
   });
 });
+
+app.get('/api/app/latest', async (c) => {
+  const obj: any =
+    (await (c.env as any).RELEASES?.get('versions/index.json')) ||
+    (await (c.env as any).RELEASES?.get('versions-beta/index.json'));
+  const list = obj ? await obj.json().catch(() => []) : [];
+  const latest = Array.isArray(list) && list.length > 0 ? list[0] : null;
+  return c.json({
+    version: latest?.version || '2.0',
+    apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk',
+    downloadUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk',
+    notes: 'SafetyLink Version 2 Release',
+    date: latest?.date || new Date().toISOString()
+  });
+});
+
+app.get('/api/app/versions', async (c) => {
+  const obj: any =
+    (await (c.env as any).RELEASES?.get('versions/index.json')) ||
+    (await (c.env as any).RELEASES?.get('versions-beta/index.json'));
+  const list = obj ? await obj.json().catch(() => []) : [];
+  return c.json({ versions: Array.isArray(list) ? list : [] });
+});
+
+app.get('/api/app/beta/versions', async (c) => {
+  const obj: any = await (c.env as any).RELEASES?.get('versions-beta/index.json');
+  const list = obj ? await obj.json().catch(() => []) : [];
+  return c.json({ versions: Array.isArray(list) ? list : [] });
+});
+
+// Device FCM Token Registration for Android Push Ringing
+app.post('/api/device/token', async (c) => {
+  const profileToken = c.req.header('X-Profile-Token') || '';
+  const body: any = await c.req.json().catch(() => ({}));
+  const phone = body.phone;
+  const token = body.token;
+  if (!phone || !token) return c.json({ error: 'Missing phone or token' }, 400);
+
+  await c.env.DB?.prepare(`
+    CREATE TABLE IF NOT EXISTS device_tokens (
+      phone TEXT PRIMARY KEY,
+      token TEXT NOT NULL,
+      profile_token TEXT,
+      updated_at INTEGER NOT NULL
+    )
+  `).run().catch(() => {});
+
+  await c.env.DB?.prepare(`
+    INSERT INTO device_tokens (phone, token, profile_token, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(phone) DO UPDATE SET token=excluded.token, profile_token=excluded.profile_token, updated_at=excluded.updated_at
+  `).bind(phone, token, profileToken, Date.now()).run().catch(async () => {
+    await c.env.DB?.prepare(`
+      INSERT OR REPLACE INTO device_tokens (phone, token, profile_token, updated_at)
+      VALUES (?, ?, ?, ?)
+    `).bind(phone, token, profileToken, Date.now()).run().catch(() => {});
+  });
+
+  return c.json({ ok: true, registered: true });
+});
+
+// Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
+async function getR2AssetFromEnv(env: any, rawKey: string, rangeHeader?: string | null) {
+  const key = decodeURIComponent(rawKey).replace(/^\/+/, '');
+  const candidates = key.startsWith('Safetylink/') ? [key, key.replace(/^Safetylink\//, '')] : ['Safetylink/' + key, key];
+
+  let parsedRange: { offset: number; length?: number; end?: number } | undefined;
+  let rangeStart = 0;
+  let hasEnd = false;
+  let requestedEnd = 0;
+  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+    const [s, e] = rangeHeader.replace(/^bytes=/, '').split('-');
+    rangeStart = parseInt(s, 10) || 0;
+    if (e && !isNaN(parseInt(e, 10))) {
+      hasEnd = true;
+      requestedEnd = parseInt(e, 10);
+      parsedRange = { offset: rangeStart, length: Math.max(1, requestedEnd - rangeStart + 1) };
+    } else {
+      parsedRange = { offset: rangeStart };
+    }
+  }
+
+  for (const bucket of [env.MEDIA, env.RELEASES]) {
+    if (!bucket) continue;
+    for (const candidate of candidates) {
+      const obj = parsedRange
+        ? await bucket.get(candidate, { range: parsedRange }).catch(() => null)
+        : await bucket.get(candidate).catch(() => null);
+      if (obj) {
+        return { obj, key: candidate, hasRange: Boolean(parsedRange), rangeStart, hasEnd, requestedEnd };
+      }
+    }
+  }
+  return null;
+}
+
+app.get('/api/r2/assets', async (c) => {
+  const prefix = c.req.query('prefix') || 'Safetylink/';
+  const bucket = c.env.MEDIA || c.env.RELEASES;
+  if (!bucket) {
+    return c.json({ success: false, assets: [], error: 'R2 bucket binding not configured' }, 503);
+  }
+  const assets: any[] = [];
+  const categories: Record<string, number> = {};
+  let cursor: string | undefined;
+  do {
+    const listed: any = await bucket.list({ prefix, cursor, limit: 500 });
+    for (const obj of listed?.objects || []) {
+      const key = String(obj.key || '');
+      if (!key || key.endsWith('/')) continue;
+      const ext = key.split('.').pop()?.toLowerCase() || '';
+      const category = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif'].includes(ext)
+        ? 'images'
+        : ['mp4', 'webm', 'mov', 'avi', 'mkv', 'm4v'].includes(ext)
+          ? 'videos'
+          : ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'].includes(ext)
+            ? 'audio'
+            : ['pdf', 'doc', 'docx', 'txt', 'md', 'xls', 'xlsx', 'csv'].includes(ext)
+              ? 'documents'
+              : 'other';
+      categories[category] = (categories[category] || 0) + 1;
+      const size = Number(obj.size || 0);
+      assets.push({
+        key,
+        name: key.split('/').pop() || key,
+        category,
+        extension: ext,
+        sizeBytes: size,
+        sizeFormatted: size >= 1048576 ? `${(size / 1048576).toFixed(2)} MB` : size >= 1024 ? `${(size / 1024).toFixed(2)} KB` : `${size} B`,
+        lastModified: obj.uploaded ? new Date(obj.uploaded).toISOString() : undefined,
+        streamUrl: `/api/r2/stream/${encodeURIComponent(key)}`,
+        downloadUrl: `/api/r2/download/${encodeURIComponent(key)}`,
+      });
+    }
+    cursor = listed?.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
+  return c.json({
+    success: true,
+    bucket: c.env.MEDIA ? 'media' : 'safetylink-releases',
+    prefix,
+    totalCount: assets.length,
+    categories,
+    assets,
+  });
+});
+
+app.get('/api/r2/stream/*', async (c) => {
+  const url = new URL(c.req.url);
+  const path = url.pathname.replace(/^\/api\/r2\/stream\//, '');
+  const rangeHeader = c.req.header('Range');
+  const found = await getR2AssetFromEnv(c.env, path, rangeHeader);
+  if (!found) {
+    return c.json({ error: 'Asset not found in R2 storage' }, 404);
+  }
+  const { obj, key, hasRange, rangeStart, hasEnd, requestedEnd } = found;
+  const ext = key.split('.').pop()?.toLowerCase() || '';
+  const mimeMap: Record<string, string> = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp',
+    svg: 'image/svg+xml', gif: 'image/gif', mp4: 'video/mp4', webm: 'video/webm',
+    mov: 'video/quicktime', mp3: 'audio/mpeg', wav: 'audio/wav', m4a: 'audio/mp4',
+    pdf: 'application/pdf', apk: 'application/vnd.android.package-archive'
+  };
+  const totalSize = Number(obj.size || 0);
+  const headers: Record<string, string> = {
+    'Content-Type': mimeMap[ext] || 'application/octet-stream',
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'public, max-age=86400',
+    'Access-Control-Allow-Origin': '*',
+  };
+  if (hasRange && totalSize > 0) {
+    const end = hasEnd ? Math.min(requestedEnd, totalSize - 1) : totalSize - 1;
+    const len = Math.max(0, end - rangeStart + 1);
+    headers['Content-Range'] = `bytes ${rangeStart}-${end}/${totalSize}`;
+    headers['Content-Length'] = String(len);
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers['Content-Length'] = String(totalSize);
+  return new Response(obj.body, { status: 200, headers });
+});
+
+app.get('/api/r2/download/*', async (c) => {
+  const url = new URL(c.req.url);
+  const path = url.pathname.replace(/^\/api\/r2\/download\//, '');
+  const found = await getR2AssetFromEnv(c.env, path, null);
+  if (!found) {
+    return c.json({ error: 'Asset not found in R2 storage' }, 404);
+  }
+  const { obj, key } = found;
+  const filename = key.split('/').pop() || 'download';
+  return new Response(obj.body, {
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': String(obj.size),
+      'Cache-Control': 'no-cache',
+      'Access-Control-Allow-Origin': '*',
+    }
+  });
+});
+
+async function handleR2Delete(c: any) {
+  if (!(await adminAuthorised(c.env, c.req.raw))) {
+    return c.json({ error: 'Superadmin authorisation required to delete R2 media files' }, 401 as any);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as any;
+  const rawKey = String(body?.key || c.req.query('key') || '').trim();
+  const key = decodeURIComponent(rawKey).replace(/^\/+/, '');
+  if (!key || key.includes('..') || key.endsWith('/')) {
+    return c.json({ error: 'Valid R2 object key is required' }, 400 as any);
+  }
+  const candidates = key.startsWith('Safetylink/') ? [key, key.replace(/^Safetylink\//, '')] : [key, 'Safetylink/' + key];
+  const deletedFrom: string[] = [];
+  for (const [label, bucket] of [['media', c.env.MEDIA], ['safetylink-releases', c.env.RELEASES]] as const) {
+    if (!bucket) continue;
+    for (const candidate of candidates) {
+      try {
+        const head = await bucket.head(candidate).catch(() => null);
+        if (head) {
+          await bucket.delete(candidate);
+          deletedFrom.push(`${label}:${candidate}`);
+        }
+      } catch {}
+    }
+  }
+  if (deletedFrom.length === 0) {
+    // Attempt direct delete on primary bucket as idempotent fallback
+    const primary = c.env.MEDIA || c.env.RELEASES;
+    if (primary) {
+      await primary.delete(key).catch(() => {});
+      deletedFrom.push(`primary:${key}`);
+    }
+  }
+  await c.env.DB?.prepare('INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), 'SUPERADMIN', 'R2_MEDIA_DELETE', key, JSON.stringify({ deletedFrom }), Date.now())
+    .run()
+    .catch(() => {});
+  return c.json({ ok: true, key, deletedFrom });
+}
+
+app.delete('/api/r2/assets', async (c) => handleR2Delete(c));
+app.post('/api/r2/delete', async (c) => handleR2Delete(c));
+
 
 app.get('/api/init-db', async (c) => {
   const initStatements = `
@@ -383,12 +699,40 @@ app.get('/api/init-db', async (c) => {
       resolved INTEGER DEFAULT 0,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS org_join_requests (
+      id TEXT PRIMARY KEY,
+      org_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      username TEXT,
+      full_name TEXT,
+      phone TEXT,
+      email TEXT,
+      requested_role TEXT DEFAULT 'Community Member',
+      status TEXT DEFAULT 'PENDING',
+      created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      actor TEXT,
+      action TEXT NOT NULL,
+      target_id TEXT,
+      details TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS app_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `;
   for (const stmt of initStatements.split(';')) {
     if (stmt.trim()) await c.env.DB!.prepare(stmt).run();
   }
-  // Add the password column to existing databases (ignored if it already exists)
   await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN password_hash TEXT').run().catch(() => {});
+  await c.env.DB!.prepare("ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'").run().catch(() => {});
+  await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN app_version TEXT').run().catch(() => {});
+  await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN device_model TEXT').run().catch(() => {});
+  await c.env.DB!.prepare('ALTER TABLE users ADD COLUMN token_version INTEGER DEFAULT 1').run().catch(() => {});
 
   return c.json({ ok: true });
 });
@@ -410,16 +754,17 @@ const handleRegisterOrg = async (c: any) => {
   const lastNum = last?.id ? parseInt(String(last.id).split('-').pop() || '0', 10) : 0;
   const orgId = `SL-${abbrev}-${String((isNaN(lastNum) ? 0 : lastNum) + 1).padStart(3, '0')}`;
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
+  const now = Date.now();
   try {
     await c.env.DB!.prepare(
       'INSERT INTO organisations (id, name, contact_name, contact_email, password_hash, created_at) VALUES (?,?,?,?,?,?)'
-    ).bind(orgId, orgName, contactName, email.toLowerCase(), hash, Date.now()).run();
+    ).bind(orgId, orgName, contactName, email.toLowerCase(), hash, now).run();
 
     // 14-day trial. The server records it; the admin decides later whether an expired trial is blocked.
-    const trialEndsAt = new Date(Date.now() + 14*24*60*60*1000).toISOString();
+    const trialEndsAt = new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString();
     await c.env.DB?.prepare('CREATE TABLE IF NOT EXISTS org_trials (org_id TEXT PRIMARY KEY, trial_ends_at TEXT NOT NULL)').run().catch(() => {});
     await c.env.DB?.prepare('INSERT OR REPLACE INTO org_trials (org_id, trial_ends_at) VALUES (?, ?)').bind(orgId, trialEndsAt).run().catch(() => {});
-    const token = makeToken({ orgId, email });
+    const token = await makeToken(c.env, { orgId, email: email.toLowerCase() });
     return c.json({
       success: true,
       token,
@@ -427,8 +772,18 @@ const handleRegisterOrg = async (c: any) => {
       org_code: orgId,
       orgName,
       name: orgName,
-      email,
-      organization: { id: orgId, name: orgName, org_code: orgId, contactEmail: email }
+      email: email.toLowerCase(),
+      trialEndsAt,
+      organization: {
+        id: orgId,
+        name: orgName,
+        org_code: orgId,
+        contactName,
+        contactEmail: email.toLowerCase(),
+        approved: true,
+        subscriptionStatus: 'trial',
+        createdAt: now,
+      }
     });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Email already registered' }, 409);
@@ -446,15 +801,49 @@ app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
   const email = body.email;
   const phone = body.phone;
   const orgCode = body.orgCode || body.org_code;
-  const role = body.role || 'Client'; // 'Responder' | 'Client' | 'Resident'
+  const role = body.role || 'Community Member';
+  const appVersion = body.appVersion || body.app_version || '1.1.1170';
+  const deviceModel = body.deviceModel || body.device_model || '';
   if (!username || !password) return c.json({ error: 'Username and password required' }, 400);
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const id = crypto.randomUUID();
+  const now = Date.now();
   try {
     await c.env.DB!.prepare(
-      'INSERT INTO users (id, org_id, username, email, phone, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?,?)'
-    ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, Date.now()).run();
-    return c.json({ token: makeToken({ userId: id, orgId: orgCode || null, username, role }), userId: id, username, role });
+      "INSERT INTO users (id, org_id, username, email, phone, role, password_hash, status, app_version, device_model, token_version, last_seen, created_at) VALUES (?,?,?,?,?,?,?,'active',?,?,1,?,?)"
+    ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, appVersion, deviceModel, now, now).run().catch(async () => {
+      await c.env.DB!.prepare(
+        'INSERT INTO users (id, org_id, username, email, phone, role, password_hash, created_at) VALUES (?,?,?,?,?,?,?,?)'
+      ).bind(id, orgCode || null, username, email || null, phone || null, role, hash, now).run();
+    });
+
+    if (orgCode) {
+      await c.env.DB!.prepare(
+        `INSERT OR IGNORE INTO org_join_requests (id, org_id, user_id, username, full_name, phone, email, requested_role, status, created_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?)`
+      ).bind(crypto.randomUUID(), orgCode.toUpperCase(), id, username, body.fullName || username, phone || '', email || '', role, now).run().catch(() => {});
+    }
+
+    const token = await makeToken(c.env, { userId: id, orgId: orgCode || null, username, role, tokenVersion: 1 });
+    return c.json({
+      token,
+      userId: id,
+      orgId: orgCode || null,
+      org_code: orgCode || null,
+      username,
+      role,
+      user: {
+        id,
+        username,
+        fullName: body.fullName || username,
+        email: email || '',
+        phone: phone || '',
+        role,
+        orgId: orgCode || '',
+        org_code: orgCode || '',
+        orgCode: orgCode || '',
+        accountStatus: 'active',
+      }
+    });
   } catch (e: any) {
     if (e.message?.includes('UNIQUE')) return c.json({ error: 'Username taken' }, 409);
     return c.json({ error: 'Registration failed' }, 500);
@@ -463,30 +852,89 @@ app.on('POST', ['/api/auth/register-user', '/api/register'], async (c) => {
 
 const handleLogin = async (c: any) => {
   const body: any = await c.req.json();
-  const username = body.username;
-  const password = body.password || body.admin_password;
-  const orgCode = body.orgCode || body.org_code;
+  const username = String(body.username || '').trim();
+  const password = body.password || body.admin_password || '';
+  const orgCode = String(body.orgCode || body.org_code || '').trim();
+  const appVersion = String(body.appVersion || body.app_version || '');
+  const deviceModel = String(body.deviceModel || body.device_model || '');
+  const ip = c.req.header('CF-Connecting-IP') || 'unknown';
 
-  if (!username || !password) return c.json({ error: 'Credentials required' }, 400);
+  if ((!username && !orgCode) || !password) return c.json({ error: 'Credentials required' }, 400);
 
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
-  const user = await c.env.DB!.prepare(
-    'SELECT id, username, org_id, role, email, phone FROM users WHERE username = ? AND password_hash = ?'
-  ).bind(username, hash).first().catch(() => null) as any;
+  let user: any = null;
+  if (username) {
+    if (orgCode) {
+      user = await c.env.DB!.prepare(
+        'SELECT id, username, org_id, role, email, phone, status, token_version FROM users WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND UPPER(COALESCE(org_id, "")) = UPPER(?) AND password_hash = ?'
+      ).bind(username, username, orgCode, hash).first().catch(() => null);
+    }
+    if (!user) {
+      user = await c.env.DB!.prepare(
+        'SELECT id, username, org_id, role, email, phone, status, token_version FROM users WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND password_hash = ?'
+      ).bind(username, username, hash).first().catch(() => null);
+    }
+  }
   if (!user) {
-    // Try org login
     const targetOrgCode = (orgCode || username || '').toUpperCase();
     const org = await c.env.DB!.prepare(
-      'SELECT id, name FROM organisations WHERE id = ? AND password_hash = ?'
-    ).bind(targetOrgCode, hash).first().catch(() => null) as any;
-    if (!org) return c.json({ error: 'Invalid credentials' }, 401);
+      'SELECT id, name, contact_name, contact_email, created_at FROM organisations WHERE (UPPER(id) = UPPER(?) OR UPPER(id) = UPPER(?) OR LOWER(contact_email) = LOWER(?) OR LOWER(name) = LOWER(?)) AND password_hash = ?'
+    ).bind(targetOrgCode, username, username, username, hash).first().catch(() => null) as any;
+    if (!org) {
+      await recordAttempt(c.env.DB, ip, false).catch(() => {});
+      return c.json({ error: 'Invalid credentials' }, 401);
+    }
     if (await checkTrialExpired(c.env.DB, org.id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-    const token = makeToken({ orgId: org.id, username });
-    return c.json({ token, orgId: org.id, org_code: org.id, orgName: org.name, org_name: org.name });
+    const token = await makeToken(c.env, { orgId: org.id, username: username || org.id, email: org.contact_email || '' });
+    return c.json({
+      token,
+      orgId: org.id,
+      org_code: org.id,
+      orgName: org.name,
+      org_name: org.name,
+      role: 'ORG',
+      organization: {
+        id: org.id,
+        name: org.name,
+        org_code: org.id,
+        contactName: org.contact_name || org.name,
+        contactEmail: org.contact_email || '',
+        approved: true,
+        subscriptionStatus: 'trial',
+        createdAt: org.created_at || Date.now(),
+      }
+    });
+  }
+  if (user.status === 'suspended' || user.status === 'deactivated') {
+    return c.json({ error: `Account is ${user.status}. Please contact support.` }, 403);
   }
   if (user.org_id && await checkTrialExpired(c.env.DB, user.org_id)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-  const token = makeToken({ userId: user.id, orgId: user.org_id, username: user.username, role: user.role });
-  return c.json({ token, userId: user.id, orgId: user.org_id, org_code: user.org_id, username: user.username, role: user.role || 'User', email: user.email, phone: user.phone });
+  await c.env.DB!.prepare('UPDATE users SET last_seen = ?, app_version = COALESCE(NULLIF(?, ""), app_version), device_model = COALESCE(NULLIF(?, ""), device_model) WHERE id = ?')
+    .bind(Date.now(), appVersion, deviceModel, user.id).run().catch(() => {});
+
+  const token = await makeToken(c.env, { userId: user.id, orgId: user.org_id, username: user.username, role: user.role, tokenVersion: user.token_version || 1 });
+  return c.json({
+    token,
+    userId: user.id,
+    orgId: user.org_id,
+    org_code: user.org_id,
+    username: user.username,
+    role: user.role || 'User',
+    email: user.email,
+    phone: user.phone,
+    user: {
+      id: user.id,
+      username: user.username,
+      fullName: user.username,
+      orgId: user.org_id || '',
+      org_code: user.org_id || '',
+      orgCode: user.org_id || '',
+      role: user.role || 'User',
+      email: user.email || '',
+      phone: user.phone || '',
+      accountStatus: user.status || 'active',
+    }
+  });
 };
 
 app.post('/api/auth/login', handleLogin);
@@ -641,73 +1089,6 @@ app.get('/pcm/:token', (c) => {
   return c.json({ ok: true, service: 'SafetyLink PCM webhook', ready: true }, 200);
 });
 app.get('/pcm', (c) => c.json({ ok: true, service: 'SafetyLink PCM webhook', hint: 'POST with token' }, 200));
-// Device token route (required by installed app versions).
-app.post('/api/device/token', async (c) => {
-  const profileToken = c.req.header('X-Profile-Token') || '';
-  const body: any = await c.req.json().catch(() => ({}));
-  const phone = body.phone;
-  const token = body.token;
-  if (!phone || !token) return c.json({ error: 'Missing phone or token' }, 400);
-
-  await c.env.DB?.prepare(`
-    CREATE TABLE IF NOT EXISTS device_tokens (
-      phone TEXT PRIMARY KEY,
-      token TEXT NOT NULL,
-      profile_token TEXT,
-      updated_at INTEGER NOT NULL
-    )
-  `).run().catch(() => {});
-
-  await c.env.DB?.prepare(`
-    INSERT INTO device_tokens (phone, token, profile_token, updated_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(phone) DO UPDATE SET token=excluded.token, profile_token=excluded.profile_token, updated_at=excluded.updated_at
-  `).bind(phone, token, profileToken, Date.now()).run().catch(async () => {
-    await c.env.DB?.prepare(`
-      INSERT OR REPLACE INTO device_tokens (phone, token, profile_token, updated_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(phone, token, profileToken, Date.now()).run().catch(() => {});
-  });
-
-  return c.json({ ok: true, registered: true });
-});
-
-// Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
-async function getR2AssetFromEnv(env: any, rawKey: string, rangeHeader?: string | null) {
-  const key = decodeURIComponent(rawKey).replace(/^\/+/, '');
-  const candidates = key.startsWith('Safetylink/') ? [key, key.replace(/^Safetylink\//, '')] : ['Safetylink/' + key, key];
-
-  let parsedRange: { offset: number; length?: number; end?: number } | undefined;
-  let rangeStart = 0;
-  let hasEnd = false;
-  let requestedEnd = 0;
-  if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-    const [s, e] = rangeHeader.replace(/^bytes=/, '').split('-');
-    rangeStart = parseInt(s, 10) || 0;
-    if (e && !isNaN(parseInt(e, 10))) {
-      hasEnd = true;
-      requestedEnd = parseInt(e, 10);
-      parsedRange = { offset: rangeStart, length: Math.max(1, requestedEnd - rangeStart + 1) };
-    } else {
-      parsedRange = { offset: rangeStart };
-    }
-  }
-
-  for (const bucket of [env.MEDIA, env.RELEASES]) {
-    if (!bucket) continue;
-    for (const candidate of candidates) {
-      const obj = parsedRange
-        ? await bucket.get(candidate, { range: parsedRange }).catch(() => null)
-        : await bucket.get(candidate).catch(() => null);
-      if (obj) {
-        return { obj, key: candidate, hasRange: Boolean(parsedRange), rangeStart, hasEnd, requestedEnd };
-      }
-    }
-  }
-  return null;
-}
-
-
 app.post('/webhook/pcm', async (c) => handlePcmWebhook(c));
 app.post('/webhook/pcm/:token', async (c) => handlePcmWebhook(c));
 // Some forwarder apps test the address with a GET request: answer 200 when the token is right
@@ -752,6 +1133,33 @@ app.get('/api/pcm/gateway', (c) => c.json({ number: gatewayNumber(c.env) || null
 app.post('/api/pcm/locate', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const outcome = await locatePcm(c.env, body);
+  return c.json(outcome.json, outcome.status as any);
+});
+
+app.post('/api/pcm/retry', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const outcome = await processPendingPcmRetries(c.env);
+  return c.json({ ok: true, ...outcome });
+});
+
+app.post('/api/pcm/heartbeat', async (c) => {
+  const expected = (c.env.PCM_WEBHOOK_TOKEN || '').trim();
+  const hmacSecrets = [c.env.PCM_WEBHOOK_SECRET, c.env.PCM_WEBHOOK_TOKEN].map((v: any) => String(v || '').trim()).filter(Boolean);
+  if (!expected && hmacSecrets.length === 0) return c.json({ error: 'PCM webhook not configured' }, 503 as any);
+  const raw = await c.req.text();
+  const givenTok = (c.req.query('token') || c.req.header('x-pcm-token') || '').trim();
+  const signatureHeader = (c.req.header('X-Signature') || c.req.header('X-Hmac-Sha256') || '').trim();
+  const tokenOk = !!expected && !!givenTok && safeEq(givenTok, expected);
+  const sigOk = await verifyForwarderSignature(raw, signatureHeader, hmacSecrets);
+  if (!tokenOk && !sigOk) return c.json({ error: 'Unauthorized' }, 401 as any);
+  let body: any = {};
+  try { body = raw ? JSON.parse(raw) : {}; } catch { body = {}; }
+  const outcome = await recordGatewayHeartbeat(c.env, body);
+  return c.json(outcome.json, outcome.status as any);
+});
+
+app.get('/api/pcm/health', async (c) => {
+  const outcome = await getGatewayHealth(c.env);
   return c.json(outcome.json, outcome.status as any);
 });
 
@@ -843,41 +1251,130 @@ async function handlePcmWebhookInner(c: any) {
 
 // ── USER HEARTBEAT ────────────────────────────────────────────────────────────
 app.post('/api/user/heartbeat', async (c) => {
-  const { userId, orgId, lat, lng, sosActive } = (await c.req.json()) as any;
+  const { userId, lat, lng, sosActive, appVersion, deviceModel } = (await c.req.json()) as any;
   if (!userId) return c.json({ error: 'Missing userId' }, 400);
   const now = Date.now();
-  await c.env.DB!.prepare('UPDATE users SET last_seen=?, lat=?, lng=?, sos_active=? WHERE id=?')
-    .bind(now, lat || null, lng || null, sosActive ? 1 : 0, userId).run().catch(() => {});
+  await c.env.DB!.prepare(
+    'UPDATE users SET last_seen=?, lat=?, lng=?, sos_active=?, app_version=COALESCE(?, app_version), device_model=COALESCE(?, device_model) WHERE id=?'
+  ).bind(now, lat || null, lng || null, sosActive ? 1 : 0, appVersion || null, deviceModel || null, userId).run().catch(() => {});
   return c.json({ ok: true });
 });
 
-// ── ORG MEMBERS (live map) ────────────────────────────────────────────────────
+// ── APP VERSION POLICY (Minimum Version Gate) ─────────────────────────────────
+app.get('/api/app/version-policy', async (c) => {
+  const row: any = await c.env.DB?.prepare("SELECT value FROM app_config WHERE key = 'min_supported_version'").first().catch(() => null);
+  return c.json({
+    minSupportedVersion: row?.value || '1.0.0',
+    latestVersion: '1.1.1170',
+    updateUrl: 'https://safetylink.online/#/download',
+  });
+});
+
+app.post('/api/admin/version-policy', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const { minSupportedVersion } = (await c.req.json().catch(() => ({}))) as any;
+  if (!minSupportedVersion) return c.json({ error: 'minSupportedVersion required' }, 400);
+  await c.env.DB?.prepare(
+    "INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('min_supported_version', ?, ?)"
+  ).bind(String(minSupportedVersion), Date.now()).run().catch(() => {});
+  return c.json({ ok: true, minSupportedVersion: String(minSupportedVersion) });
+});
+
+// ── ORG MEMBERS & JOIN REQUESTS ───────────────────────────────────────────────
+const isOrgAuthorized = (c: any, targetOrgId: string): boolean => {
+  const tokenOrg = String(c.get('orgId') || '').trim().toUpperCase();
+  const paramOrg = String(targetOrgId || '').trim().toUpperCase();
+  return Boolean(tokenOrg && (tokenOrg === paramOrg || tokenOrg === 'SL-ADMIN-0000'));
+};
+
 app.get('/api/org/:orgId/members', authMiddleware, async (c) => {
   const orgId = c.req.param('orgId');
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
   if (!c.env.DB) return c.json([]);
   const { results } = await c.env.DB.prepare(
-    'SELECT id, username, role, last_seen, lat, lng, sos_active FROM users WHERE org_id=? ORDER BY last_seen DESC LIMIT 200'
+    'SELECT id, username, email, phone, role, status, app_version, device_model, last_seen, lat, lng, sos_active FROM users WHERE UPPER(org_id)=UPPER(?) ORDER BY last_seen DESC LIMIT 200'
   ).bind(orgId).all();
   return c.json(results);
+});
+
+app.get('/api/org/:orgId/join-requests', authMiddleware, async (c) => {
+  const orgId = c.req.param('orgId');
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  if (!c.env.DB) return c.json({ requests: [] });
+  const { results } = await c.env.DB.prepare(
+    "SELECT * FROM org_join_requests WHERE UPPER(org_id)=UPPER(?) AND status='PENDING' ORDER BY created_at DESC LIMIT 100"
+  ).bind(orgId).all().catch(() => ({ results: [] }));
+  return c.json({ requests: results || [] });
+});
+
+app.post('/api/org/:orgId/join-requests', authMiddleware, async (c) => {
+  const orgId = c.req.param('orgId').toUpperCase();
+  const body: any = await c.req.json().catch(() => ({}));
+  const reqId = crypto.randomUUID();
+  await c.env.DB?.prepare(
+    `INSERT INTO org_join_requests (id, org_id, user_id, username, full_name, phone, email, requested_role, status, created_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?)`
+  ).bind(reqId, orgId, body.userId || reqId, body.username || '', body.fullName || '', body.phone || '', body.email || c.get('email') || '', body.requestedRole || 'Community Member', Date.now()).run();
+  return c.json({ ok: true, id: reqId, status: 'PENDING' });
+});
+
+app.post('/api/org/:orgId/join-requests/:requestId/approve', authMiddleware, async (c) => {
+  const { orgId, requestId } = c.req.param();
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  const reqRow: any = await c.env.DB?.prepare('SELECT * FROM org_join_requests WHERE id=? AND UPPER(org_id)=UPPER(?)').bind(requestId, orgId).first().catch(() => null);
+  if (!reqRow) return c.json({ error: 'Join request not found' }, 404);
+  await c.env.DB?.prepare("UPDATE org_join_requests SET status='APPROVED' WHERE id=?").bind(requestId).run();
+  await c.env.DB?.prepare('UPDATE users SET org_id=?, role=? WHERE id=?').bind(orgId.toUpperCase(), reqRow.requested_role || 'Community Member', reqRow.user_id).run().catch(() => {});
+  return c.json({ ok: true, status: 'APPROVED' });
+});
+
+app.post('/api/org/:orgId/join-requests/:requestId/reject', authMiddleware, async (c) => {
+  const { orgId, requestId } = c.req.param();
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  await c.env.DB?.prepare("UPDATE org_join_requests SET status='REJECTED' WHERE id=? AND UPPER(org_id)=UPPER(?)").bind(requestId, orgId).run();
+  return c.json({ ok: true, status: 'REJECTED' });
 });
 
 // ── INCIDENTS ─────────────────────────────────────────────────────────────────
 app.get('/api/org/:orgId/incidents', authMiddleware, async (c) => {
   const orgId = c.req.param('orgId');
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
   if (!c.env.DB) return c.json([]);
   const { results } = await c.env.DB.prepare(
-    'SELECT * FROM incidents WHERE org_id=? ORDER BY created_at DESC LIMIT 100'
+    'SELECT * FROM incidents WHERE UPPER(org_id)=UPPER(?) ORDER BY created_at DESC LIMIT 100'
   ).bind(orgId).all();
   return c.json(results);
 });
 
 app.post('/api/org/:orgId/incidents/:id/resolve', authMiddleware, async (c) => {
-  const { id } = c.req.param();
-  await c.env.DB!.prepare('UPDATE incidents SET resolved=1 WHERE id=?').bind(id).run();
+  const { orgId, id } = c.req.param();
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  await c.env.DB!.prepare('UPDATE incidents SET resolved=1 WHERE id=? AND UPPER(org_id)=UPPER(?)').bind(id, orgId).run();
   return c.json({ ok: true });
 });
 
 // ── SUPERADMIN ────────────────────────────────────────────────────────────────
+app.post('/api/admin/users/:id/status', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const { id } = c.req.param();
+  const body: any = await c.req.json().catch(() => ({}));
+  const action = String(body.action || '').toUpperCase(); // ACTIVATE | DEACTIVATE | SUSPEND | REVOKE_SESSIONS
+  if (action === 'REVOKE_SESSIONS') {
+    await c.env.DB?.prepare('UPDATE users SET token_version = COALESCE(token_version, 1) + 1 WHERE id = ?').bind(id).run();
+  } else {
+    const nextStatus = action === 'SUSPEND' ? 'suspended' : action === 'DEACTIVATE' ? 'deactivated' : 'active';
+    await c.env.DB?.prepare('UPDATE users SET status = ? WHERE id = ?').bind(nextStatus, id).run();
+  }
+  await c.env.DB?.prepare('INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), 'SUPERADMIN', action, id, body.reason || '', Date.now()).run().catch(() => {});
+  return c.json({ ok: true, id, action });
+});
+
+app.get('/api/admin/audit-logs', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const { results } = await c.env.DB!.prepare('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100').all().catch(() => ({ results: [] }));
+  return c.json({ logs: results || [] });
+});
+
 app.get('/api/superadmin/orgs', authMiddleware, async (c) => {
   if (c.get('orgId') !== 'SL-ADMIN-0000') return c.json({ error: 'Forbidden' }, 403);
   const { results } = await c.env.DB!.prepare('SELECT id, name, contact_email, created_at FROM organisations').all();
@@ -890,22 +1387,69 @@ app.post('/api/superadmin/orgs/:id/unlock', authMiddleware, async (c) => {
   return c.json({ ok: true });
 });
 
-// ── PAYFAST CHECKOUT ──────────────────────────────────────────────────────────
+// ── PAYFAST CHECKOUT & VERIFIED ITN ───────────────────────────────────────────
 app.post('/api/payfast/checkout', async (c) => {
-  const { plan_name, amount, email } = (await c.req.json()) as any;
-  // PayFast ITN — return redirect URL for client
-  const pfData = {
-    merchant_id: '10000100',
-    merchant_key: 'key_here',
+  const merchantId = (c.env.PAYFAST_MERCHANT_ID || '').trim();
+  const merchantKey = (c.env.PAYFAST_MERCHANT_KEY || '').trim();
+  if (!merchantId || !merchantKey) {
+    return c.json({ error: 'PayFast merchant credentials are not configured on this server.' }, 503 as any);
+  }
+  const { plan_name, amount, email, orgId, userId } = (await c.req.json().catch(() => ({}))) as any;
+  const parsedAmount = Number(amount);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    return c.json({ error: 'Valid payment amount is required.' }, 400 as any);
+  }
+  const pfData: Record<string, string> = {
+    merchant_id: merchantId,
+    merchant_key: merchantKey,
     return_url: 'https://safetylink.online/#/payment-success',
     cancel_url: 'https://safetylink.online/#/payment-cancel',
-    notify_url: 'https://safetylink-api.workers.dev/api/payfast/notify',
-    email_address: email || 'user@safetylink.online',
-    amount: parseFloat(amount).toFixed(2),
-    item_name: `SafetyLink ${plan_name}`,
+    notify_url: 'https://api.safetylink.online/api/payfast/notify',
+    email_address: String(email || 'user@safetylink.online').trim(),
+    m_payment_id: `SL-${Date.now()}`,
+    amount: parsedAmount.toFixed(2),
+    item_name: `SafetyLink ${String(plan_name || 'Plan').slice(0, 64)}`,
   };
-  const query = new URLSearchParams(pfData as any).toString();
-  return c.json({ success: true, url: `https://www.payfast.co.za/eng/process?${query}` });
+  if (orgId) pfData.custom_str1 = String(orgId).trim().slice(0, 64);
+  if (userId) pfData.custom_str2 = String(userId).trim().slice(0, 64);
+  pfData.signature = buildPayfastSignature(pfData, c.env.PAYFAST_PASSPHRASE);
+  const host = String(c.env.PAYFAST_SANDBOX || '').toLowerCase() === 'true'
+    ? 'https://sandbox.payfast.co.za/eng/process'
+    : 'https://www.payfast.co.za/eng/process';
+  const query = new URLSearchParams(pfData).toString();
+  return c.json({ success: true, url: `${host}?${query}` });
+});
+
+app.post('/api/payfast/notify', async (c) => {
+  const merchantId = (c.env.PAYFAST_MERCHANT_ID || '').trim();
+  if (!merchantId) return c.json({ error: 'PayFast not configured' }, 503 as any);
+  const raw = await c.req.text();
+  const params = new URLSearchParams(raw);
+  const incoming: Record<string, string> = {};
+  for (const [k, v] of params.entries()) incoming[k] = v;
+  const givenSig = String(incoming.signature || '').trim().toLowerCase();
+  if (!givenSig || incoming.merchant_id !== merchantId) {
+    return c.json({ error: 'Invalid PayFast ITN merchant or signature' }, 401 as any);
+  }
+  const expectedSig = buildPayfastSignature(incoming, c.env.PAYFAST_PASSPHRASE);
+  if (!safeEq(givenSig, expectedSig)) {
+    return c.json({ error: 'PayFast ITN signature mismatch' }, 401 as any);
+  }
+  const paymentStatus = String(incoming.payment_status || '').toUpperCase();
+  const orgId = String(incoming.custom_str1 || '').trim();
+  if (paymentStatus === 'COMPLETE' && orgId && c.env.DB) {
+    await c.env.DB.prepare(
+      'INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)'
+    ).bind(
+      crypto.randomUUID(),
+      'PAYFAST_ITN',
+      'PAYMENT_COMPLETE',
+      orgId,
+      JSON.stringify({ pf_payment_id: incoming.pf_payment_id, amount_gross: incoming.amount_gross }),
+      Date.now()
+    ).run().catch(() => {});
+  }
+  return c.json({ ok: true, payment_status: paymentStatus });
 });
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────────
@@ -918,15 +1462,40 @@ app.get('/api/health', (c) => c.json({
 
 // ── OFFLINE SYNC ──────────────────────────────────────────────────────────────
 app.post('/api/sync/offline', async (c) => {
-  const { orgId, payload } = await c.req.json<any>();
-  if (!orgId || !Array.isArray(payload)) return c.json({ error: 'Invalid payload' }, 400);
-  const now = Date.now();
-  for (const item of payload) {
-    await c.env.DB!.prepare(
-      'INSERT OR IGNORE INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
-    ).bind(item.id || crypto.randomUUID(), orgId, 'OFFLINE', 'OFFLINE_SYNC', item.lat || null, item.lng || null, item.timestamp || now).run().catch(() => {});
+  const body = await c.req.json<any>().catch(() => ({}));
+  const orgId = body.orgId || body.org_id || 'INDIVIDUAL';
+  const items = Array.isArray(body.payload) ? body.payload : (Array.isArray(body.incidents) ? body.incidents : []);
+  if (items.length === 0 && !Array.isArray(body.payload) && !Array.isArray(body.incidents)) {
+    return c.json({ error: 'Invalid payload' }, 400);
   }
-  return c.json({ ok: true, synced: payload.length });
+  const now = Date.now();
+  const failedItems: any[] = [];
+  for (const item of items) {
+    try {
+      await c.env.DB!.prepare(
+        'INSERT OR IGNORE INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
+      ).bind(
+        item.id || item.incidentId || crypto.randomUUID(),
+        item.orgId || orgId || 'INDIVIDUAL',
+        item.triggeredBy || item.userId || 'OFFLINE',
+        'OFFLINE_SYNC',
+        item.lat ?? item.latitude ?? null,
+        item.lng ?? item.longitude ?? null,
+        item.timestamp || now
+      ).run();
+    } catch {
+      failedItems.push(item);
+    }
+  }
+  return c.json({ ok: true, synced: items.length - failedItems.length, failedItems });
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled(_controller: any, env: Env, ctx: any) {
+    ctx.waitUntil(Promise.all([
+      processPendingPcmRetries(env),
+      checkGatewayStaleAlert(env),
+    ]));
+  },
+};

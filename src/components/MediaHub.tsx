@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import fallbackManifest from '../utils/r2AssetManifest.json';
+import { fetchR2Assets, normalizeR2AssetUrls, loginR2Admin, deleteR2Asset } from '../utils/r2Assets';
 
 export interface R2Asset {
   key: string;
@@ -14,16 +15,32 @@ export interface R2Asset {
   downloadUrl: string;
 }
 
-export const MediaHub: React.FC = () => {
-  const [assets, setAssets] = useState<R2Asset[]>(fallbackManifest as R2Asset[]);
+interface MediaHubProps {
+  onClose?: () => void;
+  ownerMode?: boolean;
+}
+
+const INITIAL_FALLBACK_ASSETS: R2Asset[] = (fallbackManifest as R2Asset[]).map((asset) => normalizeR2AssetUrls(asset));
+
+export const MediaHub: React.FC<MediaHubProps> = ({ onClose, ownerMode = false }) => {
+  const [assets, setAssets] = useState<R2Asset[]>(INITIAL_FALLBACK_ASSETS);
   const [loading, setLoading] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<R2Asset | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [adminToken, setAdminToken] = useState<string>('');
+  const [showAuthBar, setShowAuthBar] = useState<boolean>(ownerMode);
+  const [adminEmail, setAdminEmail] = useState<string>('safetylink');
+  const [adminPassword, setAdminPassword] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string>('');
   const [r2Status, setR2Status] = useState<{ connected: boolean; bucket: string; count: number }>({
     connected: true,
     bucket: 'media',
-    count: fallbackManifest.length,
+    count: INITIAL_FALLBACK_ASSETS.length,
   });
 
   // Fetch live R2 assets from backend API
@@ -32,17 +49,14 @@ export const MediaHub: React.FC = () => {
     const fetchAssets = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/r2/assets');
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
-            setAssets(data.assets);
-            setR2Status({
-              connected: true,
-              bucket: data.bucket || 'media',
-              count: data.totalCount || data.assets.length,
-            });
-          }
+        const data = await fetchR2Assets('Safetylink/');
+        if (isMounted && data.assets && Array.isArray(data.assets) && data.assets.length > 0) {
+          setAssets(data.assets);
+          setR2Status({
+            connected: true,
+            bucket: data.bucket || 'media',
+            count: data.totalCount || data.assets.length,
+          });
         }
       } catch (err) {
         console.warn('[MediaHub] Using verified local R2 fallback manifest:', err);
@@ -98,12 +112,48 @@ export const MediaHub: React.FC = () => {
       .replace(/-/g, ' ');
   };
 
+  const handleAdminUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    const res = await loginR2Admin(adminEmail, adminPassword);
+    setAuthLoading(false);
+    if (res.ok && res.token) {
+      setAdminToken(res.token);
+      setAdminPassword('');
+      setShowAuthBar(false);
+      setStatusMessage('Owner delete controls unlocked for this session.');
+    } else {
+      setAuthError(res.error || 'Authentication failed');
+    }
+  };
+
+  const handleDeleteAsset = async (asset: R2Asset) => {
+    if (!adminToken) {
+      setShowAuthBar(true);
+      return;
+    }
+    setDeletingKey(asset.key);
+    setStatusMessage('');
+    const res = await deleteR2Asset(asset.key, adminToken);
+    setDeletingKey(null);
+    setConfirmDeleteKey(null);
+    if (res.ok) {
+      setAssets((prev) => prev.filter((a) => a.key !== asset.key));
+      setR2Status((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) }));
+      if (selectedAsset?.key === asset.key) setSelectedAsset(null);
+      setStatusMessage(`Deleted "${asset.name}" from Cloudflare R2.`);
+    } else {
+      setStatusMessage(`Delete failed: ${res.error || 'Unknown error'}`);
+    }
+  };
+
   return (
-    <div className="w-full flex flex-col bg-slate-950/80 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="w-full flex flex-col bg-slate-950/95 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md">
       {/* ── HEADER & TELEMETRY BAR ── */}
       <div className="p-5 border-b border-slate-800/80 bg-slate-900/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#10b981]" />
             <h2 className="text-base font-black text-white font-mono tracking-wider uppercase">
               Cloudflare R2 Media Vault
@@ -111,31 +161,95 @@ export const MediaHub: React.FC = () => {
             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
               {r2Status.count} ASSETS LIVE
             </span>
+            {adminToken ? (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/30">
+                DELETE UNLOCKED
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowAuthBar((v) => !v)}
+                className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 transition-colors cursor-pointer"
+              >
+                {showAuthBar ? 'Hide Owner Unlock' : 'Unlock Delete Mode'}
+              </button>
+            )}
           </div>
           <p className="text-xs text-slate-400 mt-1 font-mono">
-            Direct streaming pipeline connecting Cloudflare R2 bucket <span className="text-emerald-400 font-semibold">{r2Status.bucket}</span> to responsive client nodes.
+            Direct streaming &amp; management pipeline for Cloudflare R2 bucket <span className="text-emerald-400 font-semibold">{r2Status.bucket}</span>.
           </p>
         </div>
 
-        {/* Search Input */}
-        <div className="relative min-w-[240px]">
-          <input
-            type="text"
-            placeholder="Search 138+ R2 media files..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
-          />
-          {searchQuery && (
+        {/* Search Input & Optional Close */}
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <input
+              type="text"
+              placeholder="Search R2 media files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono transition-colors"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-white"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {onClose && (
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-white"
+              type="button"
+              onClick={onClose}
+              aria-label="Close Media Vault"
+              className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-bold flex items-center justify-center shrink-0 cursor-pointer"
             >
-              ×
+              ✕
             </button>
           )}
         </div>
       </div>
+
+      {/* ── OWNER ADMIN UNLOCK BAR (FOR PERMANENT R2 DELETION) ── */}
+      {showAuthBar && !adminToken && (
+        <form onSubmit={handleAdminUnlock} className="px-5 py-3 bg-amber-950/30 border-b border-amber-500/20 flex flex-wrap items-center gap-2.5">
+          <span className="text-[11px] font-mono font-bold text-amber-300 uppercase">Owner R2 Delete Unlock:</span>
+          <input
+            type="text"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            placeholder="Admin ID / Email"
+            className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono w-40"
+            required
+          />
+          <input
+            type="password"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            placeholder="Superadmin Password"
+            className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono w-48"
+            required
+          />
+          <button
+            type="submit"
+            disabled={authLoading}
+            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono text-xs font-black uppercase cursor-pointer disabled:opacity-50"
+          >
+            {authLoading ? 'Verifying...' : 'Unlock'}
+          </button>
+          {authError && <span className="text-[11px] font-mono text-red-400">{authError}</span>}
+        </form>
+      )}
+
+      {statusMessage && (
+        <div className="px-5 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-emerald-300">
+          <span>{statusMessage}</span>
+          <button type="button" onClick={() => setStatusMessage('')} className="text-slate-400 hover:text-white ml-4">✕</button>
+        </div>
+      )}
 
       {/* ── CATEGORY TABS ── */}
       <div className="px-5 py-3 border-b border-slate-800/60 bg-slate-900/30 flex items-center gap-2 overflow-x-auto scrollbar-none">
@@ -262,8 +376,9 @@ export const MediaHub: React.FC = () => {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-800">
                       <button
+                        type="button"
                         onClick={() => setSelectedAsset(asset)}
-                        className="flex-1 py-1.5 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-[10px] font-mono font-bold text-emerald-400 text-center transition-colors"
+                        className="flex-1 py-1.5 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-[10px] font-mono font-bold text-emerald-400 text-center transition-colors cursor-pointer"
                       >
                         {isVideo ? 'Play Video' : isDoc ? 'Inspect' : 'View'}
                       </button>
@@ -275,6 +390,28 @@ export const MediaHub: React.FC = () => {
                       >
                         ⬇
                       </a>
+                      {adminToken && (
+                        confirmDeleteKey === asset.key ? (
+                          <button
+                            type="button"
+                            disabled={deletingKey === asset.key}
+                            onClick={() => handleDeleteAsset(asset)}
+                            className="py-1.5 px-2 bg-red-600 hover:bg-red-500 rounded-lg text-[10px] font-mono font-black text-white transition-colors cursor-pointer disabled:opacity-50"
+                            title="Confirm permanent R2 deletion"
+                          >
+                            {deletingKey === asset.key ? '...' : 'Confirm'}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteKey(asset.key)}
+                            className="py-1.5 px-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/30 rounded-lg text-[10px] font-mono font-bold text-red-400 transition-colors cursor-pointer"
+                            title="Delete from Cloudflare R2"
+                          >
+                            🗑
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -308,6 +445,16 @@ export const MediaHub: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                {adminToken && (
+                  <button
+                    type="button"
+                    disabled={deletingKey === selectedAsset.key}
+                    onClick={() => handleDeleteAsset(selectedAsset)}
+                    className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {deletingKey === selectedAsset.key ? 'Deleting...' : 'Delete File'}
+                  </button>
+                )}
                 <a
                   href={selectedAsset.downloadUrl}
                   download={selectedAsset.name}
@@ -317,8 +464,9 @@ export const MediaHub: React.FC = () => {
                   <span>⬇</span>
                 </a>
                 <button
+                  type="button"
                   onClick={() => setSelectedAsset(null)}
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-lg transition-colors"
+                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white flex items-center justify-center font-bold text-lg transition-colors cursor-pointer"
                 >
                   ✕
                 </button>

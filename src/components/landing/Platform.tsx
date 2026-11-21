@@ -45,7 +45,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const startTour = () => { stopTour(); let n = 1; tourIntervalRef.current = setInterval(() => { n = n >= 4 ? 1 : n + 1; setActivePanel(n); }, 3000); };
 
   return (
-    <div style={{ background:'transparent', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
+    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
       {showVideoModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.92)', zIndex:999999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
@@ -55,7 +55,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
       )}
 
       {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'rgba(7,10,15,0.25)', backdropFilter:'blur(8px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HOW IT WORKS</div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>

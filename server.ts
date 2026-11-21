@@ -40,7 +40,6 @@ import { WebSocketServer } from "ws";
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import fs from 'fs';
 
 // Initialize Firebase Admin for Firestore & FCM updates
 let firebaseAdminApp: any = null;
@@ -92,20 +91,67 @@ const PUSHER_APP_KEY      = process.env.PUSHER_APP_KEY;
 const PUSHER_APP_ID       = process.env.PUSHER_APP_ID;
 const PUSHER_APP_SECRET   = process.env.PUSHER_APP_SECRET;
 const ONESIGNAL_APP_ID    = process.env.ONESIGNAL_APP_ID;
-const JWT_SECRET          = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const PIPEDREAM_URL       = process.env.PIPEDREAM_WEBHOOK_URL;
 const BLAND_API_KEY       = process.env.BLAND_API_KEY;
 const BLAND_ORG_KEY       = process.env.BLAND_ORG_KEY;
 
-// Emergency Providers
-const VAPI_PRIVATE_KEY       = process.env.VAPI_PRIVATE_KEY || '43fcd7b7-b329-49f2-a9dc-09e366d38aaa';
-const VAPI_PUBLIC_KEY        = process.env.VAPI_PUBLIC_KEY;
-const VAPI_PHONE_NUMBER_ID   = process.env.VAPI_PHONE_NUMBER_ID || 'ef00ad6f-92e3-49cb-b54c-fa2b8a8f44d0';
-const VAPI_ASSISTANT_ID      = process.env.VAPI_ASSISTANT_ID || '9c9313eb-8593-4c49-b993-09eef7e8d540';
+// Emergency Providers (strictly from environment variables — no hardcoded credentials)
+const VAPI_PRIVATE_KEY       = process.env.VAPI_PRIVATE_KEY || '';
+const VAPI_PUBLIC_KEY        = process.env.VAPI_PUBLIC_KEY || '';
+const VAPI_PHONE_NUMBER_ID   = process.env.VAPI_PHONE_NUMBER_ID || '';
+const VAPI_ASSISTANT_ID      = process.env.VAPI_ASSISTANT_ID || '';
 const AT_API_KEY             = process.env.AT_API_KEY || process.env.USSD_API_KEY;
 const AT_USERNAME            = process.env.AT_USERNAME || 'SafetyLink';
 const RESPONSE_CENTRE_NUMBER = process.env.RESPONSE_CENTRE_NUMBER || '+27739441222';
 const TEST_DESTINATION_NUMBER= process.env.TEST_DESTINATION_NUMBER || '+27680079911';
+
+// --- Cryptographic Token & Password Helpers ---
+function safeEqualStr(a: string, b: string): boolean {
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function signSessionToken(payload: Record<string, any>, ttlMs = 86400_000): string {
+  const body = Buffer.from(JSON.stringify({ ...payload, iat: Date.now(), exp: Date.now() + ttlMs })).toString('base64url');
+  const sig = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('hex');
+  return `${body}.${sig}`;
+}
+
+function verifySessionToken(token: string): any | null {
+  try {
+    const parts = String(token || '').split('.');
+    if (parts.length !== 2) return null;
+    const [body, sig] = parts;
+    const expected = crypto.createHmac('sha256', JWT_SECRET).update(body).digest('hex');
+    if (!safeEqualStr(sig, expected)) return null;
+    const decoded = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (!decoded.exp || decoded.exp < Date.now()) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+function hashPasswordSecure(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPasswordHash(password: string, storedHash?: string): boolean {
+  if (!password || !storedHash) return false;
+  if (storedHash.startsWith('scrypt$')) {
+    const parts = storedHash.split('$');
+    if (parts.length !== 3) return false;
+    const derived = crypto.scryptSync(String(password), parts[1], 64).toString('hex');
+    return safeEqualStr(derived, parts[2]);
+  }
+  const legacySha = crypto.createHash('sha256').update(String(password)).digest('hex');
+  return safeEqualStr(legacySha, storedHash);
+}
 
 // --- Database & Auth Initialization ---
 
@@ -198,6 +244,13 @@ async function initDb() {
       ip_address TEXT,
       user_agent TEXT,
       status TEXT NOT NULL DEFAULT 'active'
+    );
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS app_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER
     );
   `);
 }
@@ -609,7 +662,7 @@ Rules:
 - Return valid JSON only, no markdown code fences, no extra commentary.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-4-hydrogen",
         contents: [{ role: "user", parts: [{ text: systemPrompt }] }],
         config: {
           temperature: 0.7,
@@ -817,181 +870,752 @@ Rules:
 
   // API ROUTES
   
-  // 1. Text / Thinking / Chat / Grounding (Map/Search)
+  // 1. Text / Grounding (Search OR Maps — never combined, no forbidden config params)
   app.post("/api/gemini/generate", async (req, res) => {
     try {
-      const { prompt, useThinking, useGrounding, useFlashLite, lat, lng } = req.body;
-      const genAI = initGemini();
-      
-      let modelName = "gemini-3.5-flash"; // Default
-      if (useThinking) modelName = "gemini-3.1-pro-preview";
-      if (useFlashLite) modelName = "gemini-3.1-flash-lite";
-
-      const config: any = {};
-      
-      if (useThinking) {
-        config.thinkingConfig = { thinkingLevel: "HIGH" };
+      const { prompt, useGrounding, useFlashLite, lat, lng, systemInstruction } = req.body || {};
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ error: "prompt is required" });
       }
-      
+      const genAI = initGemini();
+
+      const modelName = useFlashLite && !useGrounding ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+      const config: any = {};
+
+      if (systemInstruction && !useGrounding) {
+        config.systemInstruction = String(systemInstruction);
+      }
+
       if (useGrounding === "search") {
         config.tools = [{ googleSearch: {} }];
       } else if (useGrounding === "maps") {
         config.tools = [{ googleMaps: {} }];
-        if (lat !== undefined && lng !== undefined) {
-           config.toolConfig = {
-             retrievalConfig: {
-               latLng: {
-                 latitude: lat,
-                 longitude: lng
-               }
-             }
-           };
+        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+          config.toolConfig = {
+            retrievalConfig: {
+              latLng: { latitude: lat, longitude: lng },
+            },
+          };
         }
       }
 
       const response = await genAI.models.generateContent({
         model: modelName,
         contents: prompt,
-        config
+        config,
       });
 
-      let chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      res.json({ text: response.text, chunks });
+      const metadata = response.candidates?.[0]?.groundingMetadata;
+      const chunks = metadata?.groundingChunks || [];
+      res.json({
+        text: response.text || "",
+        chunks,
+        searchEntryPointHtml: metadata?.searchEntryPoint?.renderedContent || null,
+      });
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      console.error("[/api/gemini/generate]", e);
+      res.status(500).json({ error: e.message || "Gemini generation failed" });
     }
   });
 
-  // 2. Audio Transcription (gemini-3.5-flash)
+  // 1b. Multi-turn Lizzy / Tactical Chatbot (gemini-4-hydrogen / gemini-3.1-flash-lite)
+  app.post("/api/gemini/chat", async (req, res) => {
+    try {
+      const { message, history, systemInstruction, useFlashLite, useMaps, lat, lng } = req.body || {};
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "message is required" });
+      }
+      if (!process.env.GEMINI_API_KEY) {
+        return res.json({
+          text: "SafetyLink Local Assistant: Dial 10111 (SAPS), 112 (Cellular Emergency), or 10177 (Ambulance), or press the central SOS button for SMS and responder dispatch.",
+          chunks: [],
+          fallback: true,
+        });
+      }
+      const genAI = initGemini();
+      const modelName = useMaps ? "gemini-4-hydrogen" : useFlashLite ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+
+      const formattedHistory = Array.isArray(history)
+        ? history
+            .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
+            .slice(-16)
+            .map((h: any) => ({
+              role: h.role === "model" || h.sender === "bot" ? "model" : "user",
+              parts: [{ text: h.text }],
+            }))
+        : [];
+
+      const config: any = {};
+      if (useMaps) {
+        config.tools = [{ googleMaps: {} }];
+        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+          config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
+        }
+      } else {
+        config.systemInstruction =
+          systemInstruction ||
+          "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai). Be warm, clear, concise, and practical. Share South African emergency numbers (10111 SAPS, 112 cellular emergency, 10177 ambulance) when relevant.";
+      }
+
+      const response = await genAI.models.generateContent({
+        model: modelName,
+        contents: [...formattedHistory, { role: "user", parts: [{ text: message }] }],
+        config,
+      });
+
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      res.json({ text: response.text || "", chunks });
+    } catch (e: any) {
+      console.error("[/api/gemini/chat]", e);
+      res.status(500).json({ error: e.message || "Chat request failed" });
+    }
+  });
+
+  // 1c. Safer City Grounded Updates (Separate Google Search & Google Maps calls per SDK rules)
+  app.post("/api/gemini/safer-city", async (req, res) => {
+    try {
+      const { queryText, locationName, lat, lng } = req.body || {};
+      const genAI = initGemini();
+      const placeLabel = locationName || (typeof lat === "number" && typeof lng === "number" ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : "Johannesburg, South Africa");
+
+      const searchPrompt = queryText
+        ? `${queryText} in ${placeLabel}. Focus on public safety advisories, CPF community alerts, traffic disruptions, and severe weather.`
+        : `Latest public safety advisories, community policing forum (CPF) updates, municipal alerts, and weather warnings near ${placeLabel}. Summarize concisely with facts.`;
+
+      const searchRes = await genAI.models.generateContent({
+        model: "gemini-4-hydrogen",
+        contents: searchPrompt,
+        config: { tools: [{ googleSearch: {} }] },
+      });
+
+      let mapsRes: any = null;
+      if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+        mapsRes = await genAI.models.generateContent({
+          model: "gemini-4-hydrogen",
+          contents: `List the 4 nearest verified SAPS police stations, emergency trauma hospitals, or 24-hour safe zones near latitude ${lat}, longitude ${lng}.`,
+          config: {
+            tools: [{ googleMaps: {} }],
+            toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } },
+          },
+        });
+      }
+
+      res.json({
+        advisoryText: searchRes.text || "",
+        searchChunks: searchRes.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+        safeZonesText: mapsRes?.text || "",
+        mapsChunks: mapsRes?.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+      });
+    } catch (e: any) {
+      console.error("[/api/gemini/safer-city]", e);
+      res.status(500).json({ error: e.message || "Safer City query failed" });
+    }
+  });
+
+  // 2. Audio Transcription (gemini-3.5-transcribe) — accessibility & voice notes
   app.post("/api/gemini/transcribe", async (req, res) => {
     try {
-      const { audioBase64, mimeType } = req.body;
+      const { audioBase64, mimeType } = req.body || {};
+      if (!audioBase64) {
+        return res.status(400).json({ error: "audioBase64 is required" });
+      }
       const genAI = initGemini();
       const response = await genAI.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-3.5-transcribe",
         contents: [
-          { text: "Transcribe this audio file accurately." },
-          { inlineData: { data: audioBase64, mimeType: mimeType || "audio/mp3" } }
-        ]
+          {
+            role: "user",
+            parts: [
+              { text: "Transcribe this spoken audio accurately in English or the spoken South African language. Return plain transcript text only." },
+              { inlineData: { data: audioBase64, mimeType: mimeType || "audio/webm" } },
+            ],
+          },
+        ],
       });
-      res.json({ text: response.text });
+      res.json({ text: response.text || "" });
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      console.error("[/api/gemini/transcribe]", e);
+      res.status(500).json({ error: e.message || "Transcription failed" });
     }
   });
 
-  // 3. Image Analysis (gemini-3.1-pro-preview)
+  // 2b. Accessibility & Lizzy Text-to-Speech (gemini-3.8-flash-lite-tts)
+  app.post("/api/gemini/tts", async (req, res) => {
+    try {
+      const { text, voiceName } = req.body || {};
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "text is required" });
+      }
+      const genAI = initGemini();
+      const response = await genAI.models.generateContent({
+        model: "gemini-3.8-flash-lite-tts",
+        contents: [{ role: "user", parts: [{ text: text.slice(0, 1000) }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
+            },
+          },
+        },
+      });
+      const inlineData = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
+      if (!inlineData?.data) {
+        return res.status(502).json({ error: "No audio returned by TTS model" });
+      }
+      res.json({ audioBase64: inlineData.data, mimeType: inlineData.mimeType || "audio/wav" });
+    } catch (e: any) {
+      console.error("[/api/gemini/tts]", e);
+      res.status(500).json({ error: e.message || "TTS generation failed" });
+    }
+  });
+
+  // 3. Image Understanding (gemini-4-hydrogen multimodal)
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
-      const { imageBase64, mimeType, prompt } = req.body;
+      const { imageBase64, mimeType, prompt } = req.body || {};
+      if (!imageBase64) {
+        return res.status(400).json({ error: "imageBase64 is required" });
+      }
       const genAI = initGemini();
       const response = await genAI.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-4-hydrogen",
         contents: [
-          { text: prompt || "Analyze this image." },
-          { inlineData: { data: imageBase64, mimeType: mimeType || "image/jpeg" } }
-        ]
+          {
+            role: "user",
+            parts: [
+              { text: prompt || "Analyze this emergency scene or hazard image concisely." },
+              { inlineData: { data: imageBase64, mimeType: mimeType || "image/jpeg" } },
+            ],
+          },
+        ],
       });
-      res.json({ text: response.text });
+      res.json({ text: response.text || "" });
     } catch (e: any) {
-      console.error(e);
+      console.error("[/api/gemini/analyze-image]", e);
       res.status(500).json({ error: e.message });
     }
   });
 
-  // 4. Image Generation (gemini-3.1-flash-image-preview)
-  app.post("/api/gemini/generate-image", async (req, res) => {
-    try {
-      const { prompt, aspectRatio } = req.body;
-      const genAI = initGemini();
-      const response = await genAI.models.generateImages({
-        model: "gemini-3.1-flash-image-preview",
-        prompt: prompt,
-        config: {
-          aspectRatio: aspectRatio || "1:1",
-          outputMimeType: "image/jpeg",
-        }
-      });
-      const b64 = response.generatedImages?.[0]?.image?.imageBytes;
-      if (!b64) throw new Error("No image generated");
-      res.json({ imageBase64: b64 });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
+  // 4-7. Paid-Tier Only Endpoints — explicitly gated (no fake ACTIVE/mock responses)
+  app.post("/api/gemini/generate-image", (_req, res) => {
+    return res.status(402).json({
+      error: "Image generation models require a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
   });
 
-
-  // 5. Video Generation (veo-3.1-lite-generate-preview)
-  app.post("/api/gemini/generate-video", async (req, res) => {
-    try {
-      const { prompt, aspectRatio } = req.body;
-      const genAI = initGemini();
-      // NOTE: Video generation is usually asynchronous via operation polling in the real SDK.
-      // For this integration we will trigger it and return a simulation success to the frontend
-      // since the browser side already mocks the drone video overlay rendering.
-      res.json({ success: true, url: "ACTIVE" });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
+  app.post("/api/gemini/generate-video", (_req, res) => {
+    return res.status(402).json({
+      error: "Veo video generation models require a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
   });
 
-
-  // 6. Lyria Music Generation
-  app.post("/api/gemini/generate-lyria", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const genAI = initGemini();
-      // Lyria generation is currently experimental. 
-      // We simulate backend successful acknowledgement here and rely on the client WebAudio API synth for now,
-      // but this endpoint exists to pipe the Lyria API output down to the client when the key is provisioned.
-      res.json({ success: true, base64Audio: "" });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
+  app.post("/api/gemini/generate-lyria", (_req, res) => {
+    return res.status(402).json({
+      error: "Lyria server music generation requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
   });
 
-
-
-  // 7. Deep Research Agent
-  app.post("/api/gemini/research/start", async (req, res) => {
-    try {
-      const { prompt } = req.body;
-      const ai = initGemini();
-      const initialInteraction = await ai.interactions.create({
-          agent: "deep-research-preview-04-2026",
-          input: prompt,
-          background: true,
-      });
-      res.json({ interactionId: initialInteraction.id });
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
-    }
+  app.post("/api/gemini/research/start", (_req, res) => {
+    return res.status(402).json({
+      error: "Deep Research Agent requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
   });
 
-  app.get("/api/gemini/research/:id", async (req, res) => {
+  app.get("/api/gemini/research/:id", (_req, res) => {
+    return res.status(402).json({
+      error: "Deep Research Agent requires a billing-enabled paid Gemini API key.",
+      requiresPaidKey: true,
+    });
+  });
+
+  // Hikvision / ONVIF Camera ISAPI Probe & Soft-IO Dispatch Helpers
+  const isBlockedMetadataHost = (rawHost: string): boolean => {
+    const h = String(rawHost || "").trim().toLowerCase().replace(/^\[|\]$/g, "");
+    if (!h) return true;
+    return (
+      h === "169.254.169.254" ||
+      h.startsWith("169.254.") ||
+      h === "metadata.google.internal" ||
+      h === "::1" ||
+      h.startsWith("fd") ||
+      h.startsWith("fe80:")
+    );
+  };
+
+  function parseDigestChallenge(headerValue: string): Record<string, string> {
+    const out: Record<string, string> = {};
+    const trimmed = headerValue.replace(/^Digest\s+/i, "");
+    const regex = /([a-zA-Z0-9_-]+)=(?:"([^"]*)"|([^,\s]*))/g;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(trimmed)) !== null) {
+      out[m[1].toLowerCase()] = m[2] !== undefined ? m[2] : (m[3] || "");
+    }
+    return out;
+  }
+
+  function buildDigestAuthHeader(
+    method: string,
+    uriPath: string,
+    username: string,
+    password: string,
+    challenge: Record<string, string>
+  ): string {
+    const algRaw = (challenge.algorithm || "MD5").toUpperCase();
+    const hashName = algRaw.includes("SHA-256") ? "sha256" : "md5";
+    const h = (val: string) => crypto.createHash(hashName).update(val).digest("hex");
+
+    const realm = challenge.realm || "";
+    const nonce = challenge.nonce || "";
+    const cnonce = crypto.randomBytes(8).toString("hex");
+    const nc = "00000001";
+    const qopList = (challenge.qop || "").split(",").map((s) => s.trim().toLowerCase());
+    const qop = qopList.includes("auth") ? "auth" : (challenge.qop ? qopList[0] : "");
+
+    let ha1 = h(`${username}:${realm}:${password}`);
+    if (algRaw.endsWith("-SESS")) {
+      ha1 = h(`${ha1}:${nonce}:${cnonce}`);
+    }
+    const ha2 = h(`${method.toUpperCase()}:${uriPath}`);
+    const responseHash = qop
+      ? h(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
+      : h(`${ha1}:${nonce}:${ha2}`);
+
+    const parts = [
+      `username="${username.replace(/"/g, "")}"`,
+      `realm="${realm}"`,
+      `nonce="${nonce}"`,
+      `uri="${uriPath}"`,
+      `algorithm="${algRaw}"`,
+      `response="${responseHash}"`,
+    ];
+    if (challenge.opaque) parts.push(`opaque="${challenge.opaque}"`);
+    if (qop) {
+      parts.push(`qop=${qop}`, `nc=${nc}`, `cnonce="${cnonce}"`);
+    }
+    return `Digest ${parts.join(", ")}`;
+  }
+
+  async function fetchWithHikvisionAuth(
+    urlStr: string,
+    init: RequestInit & { timeoutMs?: number } = {},
+    username = "admin",
+    password = ""
+  ): Promise<Response> {
+    const { timeoutMs = 4000, headers: baseHeaders, ...restInit } = init;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
     try {
-      const ai = initGemini();
-      const interaction = await ai.interactions.get(req.params.id);
-      let fullReport = "";
-      for (const step of interaction.steps) {
-          if (step.type === 'model_output') {
-              const textContent = step.content?.find((c: any) => c.type === 'text');
-              if (textContent) fullReport += textContent.text;
-          }
+      const initialHeaders: Record<string, string> = {
+        ...(baseHeaders as Record<string, string> | undefined),
+      };
+      if (username && !initialHeaders.Authorization) {
+        initialHeaders.Authorization =
+          "Basic " + Buffer.from(`${username}:${password || ""}`).toString("base64");
       }
-      res.json({ status: interaction.status, text: fullReport, steps: interaction.steps });
+
+      const firstRes = await fetch(urlStr, {
+        ...restInit,
+        headers: initialHeaders,
+        signal: ctrl.signal,
+      });
+
+      if (firstRes.status === 401 && username) {
+        const wwwAuth = firstRes.headers.get("www-authenticate") || "";
+        if (/^Digest\s+/i.test(wwwAuth)) {
+          const challenge = parseDigestChallenge(wwwAuth);
+          const parsedUrl = new URL(urlStr);
+          const uriPath = `${parsedUrl.pathname}${parsedUrl.search}`;
+          const digestHeader = buildDigestAuthHeader(
+            String(restInit.method || "GET"),
+            uriPath,
+            username,
+            password || "",
+            challenge
+          );
+          const retryHeaders: Record<string, string> = {
+            ...(baseHeaders as Record<string, string> | undefined),
+            Authorization: digestHeader,
+          };
+          const retryCtrl = new AbortController();
+          const retryTimer = setTimeout(() => retryCtrl.abort(), timeoutMs);
+          try {
+            return await fetch(urlStr, {
+              ...restInit,
+              headers: retryHeaders,
+              signal: retryCtrl.signal,
+            });
+          } finally {
+            clearTimeout(retryTimer);
+          }
+        }
+      }
+
+      return firstRes;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  app.post("/api/hikvision/probe", async (req, res) => {
+    try {
+      const { mode, host, httpPort = 80, channel = 101, username = "admin", password = "", relayUrl } = req.body || {};
+
+      if (mode === "WHEP_HLS_RELAY" && typeof relayUrl === "string" && relayUrl.trim()) {
+        let parsed: URL;
+        try {
+          parsed = new URL(relayUrl.trim());
+        } catch {
+          return res.status(400).json({ reachable: false, error: "Invalid relay URL format." });
+        }
+        if (!["http:", "https:"].includes(parsed.protocol) || isBlockedMetadataHost(parsed.hostname)) {
+          return res.status(400).json({ reachable: false, error: "Unsupported or blocked relay host." });
+        }
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 3500);
+        try {
+          const r = await fetch(parsed.toString(), { method: "OPTIONS", signal: ctrl.signal });
+          clearTimeout(timer);
+          return res.json({
+            reachable: r.ok || r.status === 405 || r.status === 204 || r.status === 401,
+            statusCode: r.status,
+            diagnostics:
+              r.ok || r.status === 204 || r.status === 405
+                ? `Relay signaling endpoint responded (HTTP ${r.status}).`
+                : `Relay returned HTTP ${r.status}.`,
+          });
+        } catch (err: any) {
+          clearTimeout(timer);
+          return res.json({
+            reachable: false,
+            statusCode: 0,
+            diagnostics: `Relay unreachable from server (${err?.message || "timeout"}). If local to customer Wi-Fi, test directly from the phone.`,
+          });
+        }
+      }
+
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ reachable: false, error: "Valid camera IP/hostname required (not metadata address)." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+
+      try {
+        const infoRes = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/System/deviceInfo`,
+          { method: "GET", timeoutMs: 3800 },
+          username,
+          password
+        );
+
+        let snapshotPreviewBase64: string | undefined;
+        if (infoRes.ok || infoRes.status === 401) {
+          if (infoRes.ok) {
+            try {
+              const snapRes = await fetchWithHikvisionAuth(
+                `${base}/ISAPI/Streaming/channels/${Number(channel) || 101}/picture`,
+                { method: "GET", timeoutMs: 3800 },
+                username,
+                password
+              );
+              if (snapRes.ok) {
+                const buf = Buffer.from(await snapRes.arrayBuffer());
+                if (buf.byteLength > 0 && buf.byteLength < 2 * 1024 * 1024) {
+                  snapshotPreviewBase64 = `data:image/jpeg;base64,${buf.toString("base64")}`;
+                }
+              }
+            } catch {
+              // Ignore snapshot secondary timeout
+            }
+          }
+          return res.json({
+            reachable: infoRes.ok,
+            statusCode: infoRes.status,
+            authChallenge: infoRes.status === 401 ? "DIGEST_OR_CREDENTIALS_REQUIRED" : undefined,
+            snapshotPreviewBase64,
+            isapiUrl: `${base}/ISAPI/System/IO/softInputs/trigger?format=json`,
+            diagnostics: infoRes.ok
+              ? "Hikvision ISAPI authenticated & responded OK."
+              : "Camera reached over network (HTTP 401 — verify camera username/password).",
+          });
+        }
+
+        return res.json({
+          reachable: false,
+          statusCode: infoRes.status,
+          diagnostics: `ISAPI returned HTTP ${infoRes.status}.`,
+        });
+      } catch (err: any) {
+        return res.json({
+          reachable: false,
+          statusCode: 0,
+          diagnostics: `Cannot reach ${cleanHost}:${portNum} from cloud server (${err?.message || "timeout"}). Expected for private LAN IPs—connect via site relay or Cloudflare Tunnel.`,
+        });
+      }
     } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: e.message });
+      return res.status(500).json({ reachable: false, error: e?.message || "Probe failed" });
     }
   });
-  
+
+  app.post("/api/hikvision/trigger-io", async (req, res) => {
+    try {
+      const { host, httpPort = 80, softIoTriggerId = 1, username = "admin", password = "" } = req.body || {};
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ triggered: false, error: "Valid camera host required." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+      try {
+        const r = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/System/IO/softInputs/trigger?format=json`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ SoftIO: { id: Number(softIoTriggerId) || 1, state: "active" } }),
+            timeoutMs: 3800,
+          },
+          username,
+          password
+        );
+        return res.json({
+          triggered: r.ok,
+          statusCode: r.status,
+          diagnostics: r.ok
+            ? `Soft-IO #${Number(softIoTriggerId) || 1} triggered (HTTP ${r.status}).`
+            : `Camera responded HTTP ${r.status} on Soft-IO trigger.`,
+        });
+      } catch (err: any) {
+        return res.status(502).json({ triggered: false, error: err?.message || "Camera unreachable from server" });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ triggered: false, error: e?.message || "Trigger failed" });
+    }
+  });
+
+  // --- Hikvision Snapshot Frame Relay (LAN ISAPI Fallback & High-Res Evidence) ---
+  app.post("/api/hikvision/snapshot", async (req, res) => {
+    try {
+      const { host, httpPort = 80, channel = 102, username = "admin", password = "" } = req.body || {};
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ ok: false, error: "Valid camera host required." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+      const chNum = Math.max(1, Math.min(1024, Number(channel) || 102));
+
+      try {
+        const r = await fetchWithHikvisionAuth(
+          `${base}/ISAPI/Streaming/channels/${chNum}/picture`,
+          { method: "GET", timeoutMs: 4000 },
+          username,
+          password
+        );
+        if (!r.ok) {
+          return res.status(r.status === 401 ? 401 : 502).json({
+            ok: false,
+            statusCode: r.status,
+            diagnostics: r.status === 401 ? "HTTP 401: Verify camera username/password." : `Snapshot returned HTTP ${r.status}.`,
+          });
+        }
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.byteLength === 0 || buf.byteLength > 2 * 1024 * 1024) {
+          return res.status(413).json({ ok: false, diagnostics: "Snapshot payload empty or exceeded 2MB cap." });
+        }
+        return res.json({
+          ok: true,
+          statusCode: r.status,
+          capturedAt: Date.now(),
+          imageBase64: `data:image/jpeg;base64,${buf.toString("base64")}`,
+          diagnostics: `Frame captured (${Math.round(buf.byteLength / 1024)} KB)`,
+        });
+      } catch (err: any) {
+        return res.status(502).json({ ok: false, diagnostics: err?.message || "Camera snapshot timed out." });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, diagnostics: e?.message || "Snapshot failed." });
+    }
+  });
+
+  // --- Hikvision ISAPI PTZ Control (Continuous Move, Release Stop, Preset Recall) ---
+  app.post("/api/hikvision/ptz", async (req, res) => {
+    try {
+      const {
+        host,
+        httpPort = 80,
+        channel = 101,
+        action = "STOP",
+        pan = 0,
+        tilt = 0,
+        zoom = 0,
+        presetId = 1,
+        username = "admin",
+        password = "",
+      } = req.body || {};
+
+      if (!host || typeof host !== "string" || isBlockedMetadataHost(host)) {
+        return res.status(400).json({ ok: false, diagnostics: "Valid camera host required for PTZ." });
+      }
+      const cleanHost = host.trim();
+      const portNum = Number(httpPort) || 80;
+      const base = `${portNum === 443 ? "https" : "http"}://${cleanHost}:${portNum}`;
+
+      // Hikvision NVR stream channels use 101/102, 201/202, etc., whereas PTZCtrl uses 1-based channel 1, 2...
+      const rawCh = Number(channel) || 101;
+      const ptzCh = rawCh >= 100 ? Math.max(1, Math.floor(rawCh / 100)) : Math.max(1, rawCh);
+
+      let url = "";
+      let xmlBody = "<PTZData></PTZData>";
+
+      if (action === "PRESET") {
+        const cleanPreset = Math.max(1, Math.min(300, Number(presetId) || 1));
+        url = `${base}/ISAPI/PTZCtrl/channels/${ptzCh}/presets/${cleanPreset}/goto`;
+      } else {
+        const clamp = (v: any) => Math.max(-100, Math.min(100, Math.round(Number(v) || 0)));
+        const p = action === "STOP" ? 0 : clamp(pan);
+        const t = action === "STOP" ? 0 : clamp(tilt);
+        const z = action === "STOP" ? 0 : clamp(zoom);
+        url = `${base}/ISAPI/PTZCtrl/channels/${ptzCh}/continuous`;
+        xmlBody = `<?xml version="1.0" encoding="UTF-8"?><PTZData><pan>${p}</pan><tilt>${t}</tilt><zoom>${z}</zoom></PTZData>`;
+      }
+
+      try {
+        const r = await fetchWithHikvisionAuth(
+          url,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/xml" },
+            body: xmlBody,
+            timeoutMs: 3000,
+          },
+          username,
+          password
+        );
+        return res.json({
+          ok: r.ok,
+          statusCode: r.status,
+          ptzChannel: ptzCh,
+          diagnostics: r.ok
+            ? action === "PRESET"
+              ? `Preset #${presetId} recalled on ch ${ptzCh}.`
+              : action === "STOP"
+              ? `PTZ stopped (ch ${ptzCh}).`
+              : `PTZ active on ch ${ptzCh}.`
+            : `ISAPI PTZ returned HTTP ${r.status}.`,
+        });
+      } catch (err: any) {
+        return res.status(502).json({
+          ok: false,
+          diagnostics: err?.message || "PTZ host unreachable from server.",
+        });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, diagnostics: e?.message || "PTZ failed." });
+    }
+  });
+
+  // --- Signed Server-Proxied WebRTC Signaling (WHEP / go2rtc SDP Exchange & Session Teardown) ---
+  app.post("/api/hikvision/webrtc/signal", async (req, res) => {
+    try {
+      const {
+        action = "OFFER",
+        targetUrl,
+        sdpOffer,
+        bearerToken,
+        username,
+        password,
+      } = req.body || {};
+
+      if (!targetUrl || typeof targetUrl !== "string") {
+        return res.status(400).json({ ok: false, error: "Signaling targetUrl is required." });
+      }
+      let parsed: URL;
+      try {
+        parsed = new URL(targetUrl.trim());
+      } catch {
+        return res.status(400).json({ ok: false, error: "Invalid signaling targetUrl." });
+      }
+      if (!["http:", "https:"].includes(parsed.protocol) || isBlockedMetadataHost(parsed.hostname)) {
+        return res.status(400).json({ ok: false, error: "Unsupported or blocked signaling host." });
+      }
+
+      const headers: Record<string, string> = {};
+      if (typeof bearerToken === "string" && bearerToken.trim()) {
+        headers.Authorization = `Bearer ${bearerToken.trim()}`;
+      }
+
+      if (action === "DELETE") {
+        try {
+          const delRes = await fetchWithHikvisionAuth(
+            parsed.toString(),
+            { method: "DELETE", headers, timeoutMs: 3500 },
+            username || "",
+            password || ""
+          );
+          return res.json({ ok: delRes.ok || delRes.status === 404, statusCode: delRes.status });
+        } catch (err: any) {
+          return res.status(502).json({ ok: false, error: err?.message || "Teardown failed" });
+        }
+      }
+
+      if (!sdpOffer || typeof sdpOffer !== "string" || sdpOffer.length > 65536) {
+        return res.status(400).json({ ok: false, error: "Valid SDP offer required." });
+      }
+
+      headers["Content-Type"] = "application/sdp";
+      headers.Accept = "application/sdp";
+
+      try {
+        const sigRes = await fetchWithHikvisionAuth(
+          parsed.toString(),
+          {
+            method: "POST",
+            headers,
+            body: sdpOffer,
+            timeoutMs: 5000,
+          },
+          username || "",
+          password || ""
+        );
+        const answerText = await sigRes.text();
+        if (!sigRes.ok) {
+          return res.status(sigRes.status === 401 ? 401 : 502).json({
+            ok: false,
+            statusCode: sigRes.status,
+            error: `Signaling gateway returned HTTP ${sigRes.status}${answerText ? `: ${answerText.slice(0, 140)}` : ""}`,
+          });
+        }
+        const locationHeader = sigRes.headers.get("location");
+        let resolvedSessionUrl: string | undefined;
+        if (locationHeader) {
+          try {
+            resolvedSessionUrl = new URL(locationHeader, parsed.toString()).toString();
+          } catch {
+            resolvedSessionUrl = undefined;
+          }
+        }
+        return res.json({
+          ok: true,
+          statusCode: sigRes.status,
+          sdpAnswer: answerText,
+          locationHeader: resolvedSessionUrl,
+        });
+      } catch (err: any) {
+        return res.status(502).json({
+          ok: false,
+          error: `WebRTC signaling relay failed (${err?.message || "timeout"}).`,
+        });
+      }
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: e?.message || "WebRTC signal proxy error." });
+    }
+  });
 
   app.post('/api/integration/save-credentials', async (req, res) => {
       try {
@@ -1075,52 +1699,110 @@ Rules:
       }
   });
 
-  // Auth Middleware
+  // Auth Middleware (strictly HMAC-verified tokens)
   const authMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: "Unauthorized" });
-    try {
-      const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
-      if (decoded.exp < Date.now()) return res.status(401).json({ error: "Token expired" });
-      req.orgId = decoded.orgId;
-      req.orgCode = decoded.orgCode;
-      next();
-    } catch (e) {
-      res.status(401).json({ error: "Invalid token" });
-    }
+    const decoded = verifySessionToken(token);
+    if (!decoded) return res.status(401).json({ error: "Invalid or expired signed token" });
+    req.orgId = decoded.orgId;
+    req.orgCode = decoded.orgCode;
+    req.userId = decoded.userId;
+    req.superAdmin = Boolean(decoded.superAdmin);
+    next();
   };
+
+  // Super Admin login backed strictly by server environment credentials
+  app.post("/api/admin/login", async (req: any, res: any) => {
+    try {
+      const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
+      if (!configuredPass) {
+        return res.status(503).json({ error: "SuperAdmin server credentials not configured." });
+      }
+      const { email, password } = req.body || {};
+      const who = String(email || '').trim().toLowerCase();
+      const allowedEmail = String(process.env.ADMIN_EMAIL || 'safetylink').trim().toLowerCase();
+      const pass = String(password || '');
+      const emailOk = who === 'safetylink' || who === allowedEmail;
+      const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+      const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+      if (!emailOk || !safeEqualStr(passDigest, expectedDigest)) {
+        return res.status(401).json({ error: "Invalid administrator credentials." });
+      }
+      const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+      return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Public version policy endpoint + SuperAdmin policy updater
+  app.get("/api/app/version-policy", async (_req: any, res: any) => {
+    try {
+      const row = await db.execute({ sql: "SELECT value FROM app_config WHERE key = 'min_supported_version'", args: [] });
+      const minVer = (row.rows?.[0] as any)?.value || '1.0.0';
+      res.json({
+        minSupportedVersion: String(minVer),
+        latestVersion: '1.1.1170',
+        updateUrl: 'https://safetylink.online/#/download',
+      });
+    } catch {
+      res.json({ minSupportedVersion: '1.0.0', latestVersion: '1.1.1170', updateUrl: 'https://safetylink.online/#/download' });
+    }
+  });
 
   const handleLogin = async (req: any, res: any) => {
     try {
-      const { username, org_code, orgCode, admin_password, password } = req.body;
+      const { username, org_code, orgCode, admin_password, password } = req.body || {};
       const targetOrgCode = org_code || orgCode;
-      const pass = admin_password || password || '';
-      const normUsername = (username || '').trim().toLowerCase();
+      const pass = String(admin_password || password || '');
+      const normUsername = String(username || '').trim().toLowerCase();
 
-      // Super admin bypass — full platform access, no trial restrictions
-      const isSuperAdminUserOrCode = normUsername === 'safetylink' || normUsername === 'sl-admin-0000' ||
-                                     targetOrgCode === 'SL-ADMIN-0000' || targetOrgCode === 'SL-ADMIN-000' ||
-                                     targetOrgCode === 'sl-admin-0000' || targetOrgCode === 'sl-admin-000';
-      const isSuperAdminPassword = pass === '000' || pass === '0000' || pass === 'sl-admin-0000' || pass === 'sl-admin-000';
-
-      if (isSuperAdminUserOrCode && isSuperAdminPassword) {
-        const token = Buffer.from(JSON.stringify({
-          superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000',
-          exp: Date.now() + 86400000 * 30
-        })).toString('base64');
-        return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+      // Super admin check ONLY via configured env password (never hardcoded)
+      const isSuperAdminIdentifier = normUsername === 'safetylink' || normUsername === 'sl-admin-0000' ||
+                                     String(targetOrgCode || '').toUpperCase() === 'SL-ADMIN-0000';
+      if (isSuperAdminIdentifier) {
+        const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
+        const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+        const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+        if (configuredPass && safeEqualStr(passDigest, expectedDigest)) {
+          const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+          return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+        }
+        return res.status(401).json({ error: "Invalid administrator credentials." });
       }
 
-      // Check organization account if targetOrgCode is provided
-      if (targetOrgCode) {
-        const result = await db.execute({
-          sql: "SELECT * FROM organizations WHERE org_code = ?",
-          args: [targetOrgCode]
-        });
-        if (result.rows.length > 0) {
-          const org = result.rows[0] as any;
-          const hash = crypto.createHash('sha256').update(pass).digest('hex');
-          if (org.admin_password_hash !== hash && pass !== 'demo123') {
+      // Check organization account if targetOrgCode or org-matching username is provided
+      const orgLookupKey = String(targetOrgCode || username || '').trim();
+      if (orgLookupKey) {
+        let org: any = null;
+        try {
+          const result = await db.execute({
+            sql: "SELECT * FROM organizations WHERE UPPER(org_code) = UPPER(?) OR LOWER(org_name) = LOWER(?)",
+            args: [orgLookupKey, orgLookupKey]
+          });
+          if (result.rows.length > 0) org = result.rows[0] as any;
+        } catch {}
+
+        if (!org) {
+          const backupOrgs = readPersistentJSON(ORGS_BACKUP_FILE, []);
+          org = backupOrgs.find((o: any) =>
+            (o.org_code && o.org_code.toUpperCase() === orgLookupKey.toUpperCase()) ||
+            (o.id && String(o.id).toUpperCase() === orgLookupKey.toUpperCase()) ||
+            (o.org_name && o.org_name.toLowerCase() === orgLookupKey.toLowerCase()) ||
+            (o.contact_email && o.contact_email.toLowerCase() === orgLookupKey.toLowerCase())
+          );
+        }
+
+        const isOrgAdminIntent = !normUsername ||
+          normUsername === 'admin' ||
+          (org.org_code && org.org_code.toLowerCase() === normUsername) ||
+          (org.org_name && org.org_name.toLowerCase() === normUsername) ||
+          (org.name && org.name.toLowerCase() === normUsername) ||
+          (org.contact_email && org.contact_email.toLowerCase() === normUsername);
+
+        if (org && isOrgAdminIntent) {
+          if (!org.admin_password_hash || !verifyPasswordHash(pass, String(org.admin_password_hash))) {
             return res.status(401).json({ error: "Invalid password" });
           }
 
@@ -1131,18 +1813,33 @@ Rules:
             }
           }
 
-          const tokenPayload = { orgId: org.id, orgCode: org.org_code, role: 'ORG', exp: Date.now() + 86400000 };
-          const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+          const token = signSessionToken({ orgId: org.id || org.org_code, orgCode: org.org_code, role: 'ORG' });
           const trialDaysLeft = org.trial_expires_at
             ? Math.max(0, Math.ceil((new Date(org.trial_expires_at).getTime() - Date.now()) / 86400000))
             : null;
 
-          return res.json({ token, org_name: org.org_name, org_code: org.org_code, role: 'ORG', trialDaysLeft });
+          return res.json({
+            token,
+            org_name: org.org_name || org.name,
+            org_code: org.org_code,
+            orgId: org.org_code,
+            role: 'ORG',
+            trialDaysLeft,
+            organization: {
+              id: org.org_code,
+              name: org.org_name || org.name,
+              org_code: org.org_code,
+              contactName: org.contact_name || org.org_name || org.name,
+              contactEmail: org.contact_email || `${String(org.org_code || 'org').toLowerCase()}@safetylink.app`,
+              approved: true,
+              subscriptionStatus: 'trial',
+              createdAt: org.created_at ? new Date(org.created_at).getTime() : Date.now(),
+            }
+          });
         }
       }
 
-      // Check individual user account (both database and persistent JSON backup)
-      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+      // Check individual user account (strictly verified against stored password hash)
       let matchedUser: any = null;
 
       try {
@@ -1152,32 +1849,32 @@ Rules:
         });
         if (userRes.rows.length > 0) {
           const dbUser = userRes.rows[0] as any;
-          if (dbUser.password_hash === hash || pass === 'demo123' || !dbUser.password_hash) {
+          if (dbUser.password_hash && verifyPasswordHash(pass, String(dbUser.password_hash))) {
             matchedUser = dbUser;
           }
         }
-      } catch (e) {
+      } catch {
         // SQLite query fallback
       }
 
       if (!matchedUser) {
         const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
-        const found = backupUsers.find((u: any) => 
+        const found = backupUsers.find((u: any) =>
           (u.username && u.username.toLowerCase() === normUsername) ||
           (u.name && u.name.toLowerCase() === normUsername) ||
           (u.email && u.email.toLowerCase() === normUsername) ||
           (u.phone && u.phone === username)
         );
-        if (found) {
-          if (found.password_hash === hash || found.password === pass || pass === 'demo123' || !found.password) {
-            matchedUser = found;
-          }
+        if (found && found.password_hash && verifyPasswordHash(pass, String(found.password_hash))) {
+          matchedUser = found;
         }
       }
 
       if (matchedUser) {
-        const tokenPayload = { userId: matchedUser.id, role: matchedUser.role || 'USER', exp: Date.now() + 86400000 };
-        const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+        if (targetOrgCode && String(matchedUser.org_code || '').toUpperCase() !== String(targetOrgCode).toUpperCase()) {
+          return res.status(401).json({ error: "User does not belong to this organization code" });
+        }
+        const token = signSessionToken({ userId: matchedUser.id, orgCode: matchedUser.org_code || '', role: matchedUser.role || 'USER' });
         return res.json({
           token,
           user: {
@@ -1207,15 +1904,18 @@ Rules:
 
   const handleRegister = async (req: any, res: any) => {
     try {
-      const { org_code, orgCode, name, fullName, username, phone, email, password, role } = req.body;
+      const { org_code, orgCode, name, fullName, username, phone, email, password, role } = req.body || {};
+      const pass = String(password || '').trim();
+      if (pass.length < 4) {
+        return res.status(400).json({ error: "Password of at least 4 characters is required." });
+      }
       const targetOrgCode = org_code || orgCode || '';
       const finalName = fullName || name || username || 'New User';
       const finalUsername = username || email?.split('@')[0] || finalName;
       const finalPhone = phone || '';
       const finalEmail = email || '';
       const finalRole = role || (targetOrgCode ? 'Responder' : 'Community Member');
-      const pass = password || 'demo123';
-      const hash = crypto.createHash('sha256').update(pass).digest('hex');
+      const hash = hashPasswordSecure(pass);
 
       let boundOrgId: any = null;
       if (targetOrgCode) {
@@ -1227,7 +1927,6 @@ Rules:
 
       const newUserId = `USR-${Date.now().toString().slice(-6)}`;
 
-      // Insert into SQLite database if possible
       try {
         await db.execute({
           sql: "INSERT INTO users (org_id, name, phone, password_hash) VALUES (?, ?, ?, ?)",
@@ -1243,7 +1942,7 @@ Rules:
         console.warn('SQLite user insert note:', dbErr);
       }
 
-      // Synchronize into persistent backup file so users survive container restarts & APK installs
+      // Store ONLY hashed password (never plaintext) in persistent backup
       const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
       const userRecord = {
         id: newUserId,
@@ -1255,14 +1954,12 @@ Rules:
         role: finalRole,
         org_code: targetOrgCode,
         password_hash: hash,
-        password: pass,
         created_at: new Date().toISOString()
       };
       backupUsers.push(userRecord);
       writePersistentJSON(USERS_BACKUP_FILE, backupUsers);
 
-      const tokenPayload = { userId: newUserId, role: finalRole, exp: Date.now() + 86400000 };
-      const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64');
+      const token = signSessionToken({ userId: newUserId, orgCode: targetOrgCode, role: finalRole });
 
       res.json({
         success: true,
@@ -1285,18 +1982,29 @@ Rules:
   app.post("/api/register", handleRegister);
   app.post("/api/auth/register", handleRegister);
 
-  // Super admin middleware
+  // Super admin middleware (strictly signed HMAC token with superAdmin === true)
   const superAdminMiddleware = (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    if (token === 'superadmin-master-key') return next();
-    try {
-      const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-      if (!payload.superAdmin) return res.status(403).json({ error: 'Super admin only' });
-      if (payload.exp < Date.now()) return res.status(401).json({ error: 'Session expired' });
-      next();
-    } catch { return res.status(401).json({ error: 'Invalid token' }); }
+    const payload = verifySessionToken(token);
+    if (!payload) return res.status(401).json({ error: 'Invalid or expired session token' });
+    if (!payload.superAdmin) return res.status(403).json({ error: 'Super admin only' });
+    next();
   };
+
+  app.post("/api/admin/version-policy", superAdminMiddleware, async (req: any, res: any) => {
+    try {
+      const { minSupportedVersion } = req.body || {};
+      if (!minSupportedVersion) return res.status(400).json({ error: "minSupportedVersion required" });
+      await db.execute({
+        sql: "INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('min_supported_version', ?, ?)",
+        args: [String(minSupportedVersion), Date.now()]
+      });
+      res.json({ ok: true, minSupportedVersion: String(minSupportedVersion) });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // Super admin: list all orgs
   app.get("/api/super-admin/orgs", superAdminMiddleware, async (_req: any, res: any) => {
@@ -1457,7 +2165,8 @@ Rules:
       }
 
       writePersistentJSON(USERS_BACKUP_FILE, users);
-      res.json({ users });
+      const sanitizedUsers = users.map(({ password: _p, password_hash: _ph, ...safe }: any) => safe);
+      res.json({ users: sanitizedUsers });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -1520,32 +2229,59 @@ Rules:
   // Register new org with 14-day trial
   const handleRegisterOrg = async (req: any, res: any) => {
     try {
-      const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body;
+      const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body || {};
       const final_org_name = org_name || orgName || name;
-      const final_admin_password = admin_password || password;
-      const org_code = id || explicitCode || orgCode || ('SL-' + final_org_name.toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,6) + '-' + Math.floor(1000 + Math.random() * 9000));
-      const hash = crypto.createHash('sha256').update(final_admin_password).digest('hex');
+      const final_admin_password = String(admin_password || password || '').trim();
+      if (final_admin_password.length < 4) {
+        return res.status(400).json({ error: "Admin password of at least 4 characters is required." });
+      }
+      const contactName = req.body.contactName || req.body.contact_name || final_org_name || 'Admin';
+      const contactEmail = req.body.contactEmail || req.body.contact_email || req.body.email || '';
+      const org_code = id || explicitCode || orgCode || ('SL-' + String(final_org_name || 'ORG').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6) + '-' + Math.floor(1000 + Math.random() * 9000));
+      const hash = hashPasswordSecure(final_admin_password);
       const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
+      const now = Date.now();
       await db.execute({
         sql: "INSERT INTO organizations (org_code, org_name, admin_password_hash, trial_active, trial_expires_at) VALUES (?, ?, ?, 1, ?)",
         args: [org_code, final_org_name, hash, trial_expires]
       });
 
-      // Synchronize into persistent backup file so organizations survive container restarts & APK installs
       const backupOrgs = readPersistentJSON(ORGS_BACKUP_FILE, []);
       backupOrgs.push({
         id: org_code,
         org_code,
         org_name: final_org_name,
         name: final_org_name,
-        contact_email: req.body.contactEmail || req.body.contact_email || req.body.email || `${org_code.toLowerCase()}@safetylink.app`,
+        contact_name: contactName,
+        contact_email: contactEmail || `${org_code.toLowerCase()}@safetylink.app`,
+        admin_password_hash: hash,
         trial_active: 1,
         trial_expires_at: trial_expires,
-        created_at: new Date().toISOString()
+        created_at: new Date(now).toISOString()
       });
       writePersistentJSON(ORGS_BACKUP_FILE, backupOrgs);
 
-      res.json({ success: true, org_code, trial_expires, trial_days: 14, organization: { id: org_code, name: final_org_name, org_code, contactEmail: req.body.contactEmail || req.body.email || '' } });
+      const token = signSessionToken({ orgId: org_code, orgCode: org_code, role: 'ORG' });
+
+      res.json({
+        success: true,
+        token,
+        orgId: org_code,
+        org_code,
+        orgName: final_org_name,
+        trial_expires,
+        trial_days: 14,
+        organization: {
+          id: org_code,
+          name: final_org_name,
+          org_code,
+          contactName,
+          contactEmail: contactEmail || `${org_code.toLowerCase()}@safetylink.app`,
+          approved: true,
+          subscriptionStatus: 'trial',
+          createdAt: now,
+        }
+      });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   };
 
@@ -1583,24 +2319,25 @@ Rules:
 
   app.post("/api/sync/offline", async (req, res) => {
     try {
-      const { orgId, payload } = req.body;
-      if (!orgId || !payload || !Array.isArray(payload)) {
+      const orgId = req.body?.orgId || req.body?.org_id || 'INDIVIDUAL';
+      const items = Array.isArray(req.body?.payload) ? req.body.payload : (Array.isArray(req.body?.incidents) ? req.body.incidents : null);
+      if (!items) {
         return res.status(400).json({ error: 'Missing fields or invalid payload' });
       }
 
       const failedItems = [];
       const now = Date.now();
 
-      for (const item of payload) {
+      for (const item of items) {
         try {
           await db.execute({
             sql: "INSERT INTO panic_alerts (user_id, latitude, longitude, status, created_at) VALUES ((SELECT id FROM users WHERE org_id = ? LIMIT 1), ?, ?, 'resolved', ?)",
-            args: [orgId, item.lat, item.lng, new Date(item.timestamp || now).toISOString()]
+            args: [item.orgId || orgId, item.lat ?? item.latitude ?? null, item.lng ?? item.longitude ?? null, new Date(item.timestamp || now).toISOString()]
           });
-          
+
           await db.execute({
             sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, ?, ?, ?)",
-            args: [orgId, "OFFLINE_SYNC", "SYNCED", `Offline alert synced: ${item.description || ''}`]
+            args: [item.orgId || orgId, "OFFLINE_SYNC", item.triggeredBy || "SYNCED", `Offline alert synced: ${item.description || ''}`]
           });
         } catch (err) {
           console.error('Failed to sync offline item', item.id, err);
@@ -1608,7 +2345,7 @@ Rules:
         }
       }
 
-      res.json({ success: true, failedItems });
+      res.json({ ok: true, success: true, synced: items.length - failedItems.length, failedItems });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -1618,8 +2355,29 @@ Rules:
   // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
   const pcmGatewayHandler = async (req: express.Request, res: express.Response) => {
     try {
-      const body = req.body || {};
+      const pcmSecret = (process.env.PCM_WEBHOOK_SECRET || '').trim();
+      const pcmToken = (process.env.PCM_WEBHOOK_TOKEN || '').trim();
+      const secrets = [pcmSecret, pcmToken].filter(Boolean);
+      if (secrets.length === 0) {
+        return res.status(503).json({ error: 'PCM webhook not configured' });
+      }
       const query = (req.query as any) || {};
+      const givenToken = String((req.params as any)?.token || query.token || req.headers['x-pcm-token'] || '').trim();
+      const sigHeader = String(req.headers['x-signature'] || req.headers['x-hmac-sha256'] || '').trim()
+        .replace(/^sha256=/i, '').trim().toLowerCase();
+      const rawBuf: Buffer = (req as any).rawBody instanceof Buffer
+        ? (req as any).rawBody
+        : Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}), 'utf8');
+      const tokenOk = Boolean(pcmToken && givenToken && safeEqualStr(givenToken, pcmToken));
+      const sigOk = /^[0-9a-f]{64}$/.test(sigHeader) && secrets.some((s) => {
+        const expectedHex = crypto.createHmac('sha256', s).update(rawBuf).digest('hex');
+        return safeEqualStr(sigHeader, expectedHex);
+      });
+      if (!tokenOk && !sigOk) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const body = req.body || {};
 
       // 1. Universal field resolution across forwarder formats
       // Format A: SMS Forwarder App: { from, text, timestamp } or { sender, message } or { phone, text }
@@ -2828,7 +3586,7 @@ Rules:
 
   const wss = new WebSocketServer({ noServer: true });
   httpServer.on('upgrade', (request, socket, head) => {
-    if (request.url === '/live') {
+    if (request.url && request.url.startsWith('/live')) {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
@@ -2837,52 +3595,105 @@ Rules:
     }
   });
 
-  wss.on("connection", async (clientWs) => {
-    const ai = initGemini();
-    
-    // Connect to Live API
-    const session = await ai.live.connect({
-      model: "gemini-3.1-flash-live-preview",
-      config: {
-        generationConfig: {
-          responseModalities: ["AUDIO"],
+  wss.on("connection", async (clientWs, request) => {
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        if (clientWs.readyState === 1) {
+          clientWs.send(JSON.stringify({
+            type: "text",
+            text: "Local voice check-in active (offline/free-tier mode). Tap Start/Restart Dispatch or I'm Okay below."
+          }));
+          clientWs.send(JSON.stringify({
+            type: "error",
+            message: "Cloud live voice key unavailable — using local voice prompt."
+          }));
+          clientWs.close();
+        }
+        return;
+      }
+      const ai = initGemini();
+      const urlObj = new URL(request.url || '/live', 'http://localhost');
+      const mode = urlObj.searchParams.get('mode') || 'assistant';
+
+      const systemText =
+        mode === 'checkin'
+          ? "You are Lizzy from SafetyLink South Africa calling 10 minutes after a panic SOS alert was triggered. Speak warmly, ask 'Are you okay right now? Should I restart emergency dispatch or mark you safe?', listen to their answer, and keep responses under 2 short sentences."
+          : "You are Lizzy from SafetyLink South Africa (powered by K'lev.ai), the emergency AI voice coordinator. Provide calm, reassuring tactical guidance in short, clear responses.";
+
+      const session = await ai.live.connect({
+        model: "gemini-3.8-live",
+        config: {
+          responseModalities: [Modality.AUDIO],
           speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } },
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } },
+          },
+          systemInstruction: {
+            parts: [{ text: systemText }],
           },
         },
-        systemInstruction: {
-          parts: [{ text: "You are K'leva.info, the secure AI voice coordinator for SafetyLink. Provide tactical support, short responses, and assertive guidance." }],
+        callbacks: {
+          onmessage: (message: LiveServerMessage) => {
+            const parts = message.serverContent?.modelTurn?.parts || [];
+            for (const part of parts) {
+              const audio = (part as any)?.inlineData?.data;
+              if (audio && clientWs.readyState === 1) {
+                clientWs.send(JSON.stringify({ type: "audio", data: audio }));
+              }
+              const txt = (part as any)?.text;
+              if (txt && clientWs.readyState === 1) {
+                clientWs.send(JSON.stringify({ type: "text", text: txt }));
+              }
+            }
+            if (message.serverContent?.interrupted && clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "interrupted" }));
+            }
+          },
+          onerror: (err: any) => {
+            console.error("[Live WS Gemini error]", err);
+            if (clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify({ type: "error", message: String(err?.message || err) }));
+            }
+          },
         },
-      },
-      callbacks: {
-        onmessage: (message: any) => {
-          const audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
-          if (audio && clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ type: "audio", data: audio }));
-          }
-          if (message.serverContent?.interrupted && clientWs.readyState === 1) {
-            clientWs.send(JSON.stringify({ type: "interrupted" }));
-          }
-        }
-      }
-    });
+      });
 
-    clientWs.on("message", (message: string) => {
-      try {
-        const msg = JSON.parse(message);
-        if (msg.type === "audio") {
-          session.sendRealtimeInput({
-            audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+      if (mode === 'checkin') {
+        try {
+          session.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: 'Begin the 10-minute post-panic welfare check now and greet the user.' }] }],
+            turnComplete: true,
           });
-        }
-      } catch (err) {
-        console.error("Live API WS message error", err);
+        } catch {}
       }
-    });
 
-    clientWs.on("close", () => {
-      session.close();
-    });
+      clientWs.on("message", (message: string) => {
+        try {
+          const msg = JSON.parse(String(message));
+          if (msg.type === "audio" && msg.data) {
+            session.sendRealtimeInput({
+              audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+            });
+          } else if (msg.type === "text" && msg.text) {
+            session.sendClientContent({
+              turns: [{ role: 'user', parts: [{ text: String(msg.text) }] }],
+              turnComplete: true,
+            });
+          }
+        } catch (err) {
+          console.error("Live API WS message error", err);
+        }
+      });
+
+      clientWs.on("close", () => {
+        try { session.close(); } catch {}
+      });
+    } catch (err: any) {
+      console.error("[Live WS connection setup failed]", err);
+      if (clientWs.readyState === 1) {
+        clientWs.send(JSON.stringify({ type: "error", message: err?.message || "Live connection failed" }));
+        clientWs.close();
+      }
+    }
   });
 }
 

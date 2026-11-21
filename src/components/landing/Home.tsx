@@ -1,5 +1,5 @@
 import { ASSETS } from '../../utils/cloudinary';
-import { R2_MEDIA } from '../../utils/r2Assets';
+import { R2_MEDIA, getR2StreamUrl } from '../../utils/r2Assets';
 import { useEditorialStore } from '../../utils/editorialStore';
 import { R2MediaShowcase } from './R2MediaShowcase';
 
@@ -181,7 +181,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             <source src="/splash-video.mp4" type="video/mp4" />
             <source src="/media/videos/hero_background.mp4" type="video/mp4" />
             <source src="/media/videos/petal_20260906_213751.mp4" type="video/mp4" />
-            <source src="/api/r2/stream/Safetylink/SafetyLink%203D%20Animation%20Logo.mp4" type="video/mp4" />
+            <source src={getR2StreamUrl("SafetyLink 3D Animation Logo.mp4")} type="video/mp4" />
           </video>
           {/* High-tech Vignette & Radial Darkening Overlays */}
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(2,6,23,0.3) 0%, rgba(2,6,23,0.85) 75%, #020617 100%)' }} />
@@ -679,17 +679,27 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
           <h2 style={{ fontSize:'clamp(28px,5vw,52px)', fontWeight:900, letterSpacing:'-.03em', lineHeight:1, marginBottom:'20px' }}>Available on every<br/>platform.</h2>
           <p style={{ fontSize:'15px', lineHeight:1.7, color:'#8892a4', maxWidth:'560px', marginBottom:'48px' }}>Android APK, Windows Command Deck, and Progressive Web App. One account, all devices.</p>
 
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'20px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:'20px' }}>
             {[
               {
-                icon: '📱',
-                label: `Android APK (${releaseVersion})`,
-                sub: 'Signed release APK with background monitoring & BLE keyfob integration.',
-                href: apkDownloadUrl || `https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk`,
-                btn: `Download Official APK (${releaseVersion})`,
+                icon: '🛡️',
+                label: `SafetyLink Version 2 APK (${releaseVersion})`,
+                sub: 'Official Version 2 signed Android APK with Zero-Airtime Please Call Me relay, Rain SIM retries, BLE iTAG & POPIA compliance.',
+                href: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk',
+                btn: `Download Version 2 APK`,
                 c: '#00e676',
                 cr: '0,230,118',
                 img: ASSETS.appLogin,
+                download: true,
+              },
+              {
+                icon: '📱',
+                label: 'SafetyLink Version 1 (Legacy APK)',
+                sub: 'Classic Version 1 production Android APK for existing deployments and legacy handsets.',
+                href: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk',
+                btn: 'Download Version 1 APK',
+                c: '#94a3b8',
+                cr: '148,163,184',
                 download: true,
               },
               {

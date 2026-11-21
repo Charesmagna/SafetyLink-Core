@@ -108,7 +108,7 @@ interface AppState {
   // Actions
   registerUser: (user: Omit<UserProfile, 'id' | 'createdAt'> & { password?: string; autoLogin?: boolean }) => Promise<{ success: boolean; error?: string }>;
   registerOrganization: (org: Omit<Organization, 'id' | 'createdAt'> & { id?: string, password?: string }) => Promise<Organization | null>;
-  login: (username: string, password?: string, orgCode?: string, skipPasswordCheck?: boolean) => Promise<{ success: boolean; error?: string; role: 'USER' | 'ORG' | 'ADMIN' }>;
+  login: (username: string, password?: string, orgCode?: string, skipPasswordCheck?: boolean) => Promise<{ success: boolean; error?: string; role?: 'USER' | 'ORG' | 'ADMIN' }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string; role?: string }>;
   fetchSuperAdminData: () => Promise<void>;
   unlockOrganizationTrial: (id: string) => Promise<void>;

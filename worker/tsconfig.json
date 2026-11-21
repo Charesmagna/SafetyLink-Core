@@ -1,1 +1,14 @@
-{"compilerOptions": {"target": "es2021", "module": "esnext", "lib": ["es2021"], "types": ["@cloudflare/workers-types"]}}
+{
+  "compilerOptions": {
+    "target": "es2021",
+    "module": "esnext",
+    "lib": ["es2021"],
+    "types": ["@cloudflare/workers-types"],
+    "skipLibCheck": true,
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["tests"]
+}
