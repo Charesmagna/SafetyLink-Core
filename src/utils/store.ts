@@ -1,12 +1,26 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord, CameraDevice, CameraLocalCredentials, CameraEvidenceSnapshot } from '../types';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
+
+let _firebaseBundlePromise: Promise<{
+  lib: typeof import('../lib/firebase');
+  authMod: typeof import('firebase/auth');
+  fsMod: typeof import('firebase/firestore');
+}> | null = null;
+
+function loadFirebase() {
+  if (!_firebaseBundlePromise) {
+    _firebaseBundlePromise = Promise.all([
+      import('../lib/firebase'),
+      import('firebase/auth'),
+      import('firebase/firestore'),
+    ]).then(([lib, authMod, fsMod]) => ({ lib, authMod, fsMod }));
+  }
+  return _firebaseBundlePromise;
+}
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
@@ -690,35 +704,52 @@ const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 export const useAppStore = create<AppState>((set, get) => ({
   updateInfo: null,
   initMeshSync: () => {
-    let unsubscribe: any = null;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
     const state = get();
     if (state.firestoreSync && state.currentUser) {
-      const q = query(collection(db, 'users'), where('orgCode', '==', state.currentUser.orgCode || ''));
-      unsubscribe = onSnapshot(q, (snapshot) => {
-         const nodes: any[] = [];
-         snapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.id !== state.currentUser?.id && data.lat && data.lng) {
-               nodes.push({
-                  id: data.id,
-                  name: data.username || 'Responder',
-                  lat: data.lat,
-                  lng: data.lng,
-                  status: data.activeSOS ? 'ACTIVE' : 'SECURE',
-                  type: 'RESPONDER',
-                  battery: data.battery || 100
-               });
+      loadFirebase()
+        .then(({ lib, fsMod }) => {
+          if (cancelled) return;
+          const q = fsMod.query(
+            fsMod.collection(lib.db, 'users'),
+            fsMod.where('orgCode', '==', state.currentUser?.orgCode || '')
+          );
+          unsubscribe = fsMod.onSnapshot(
+            q,
+            (snapshot) => {
+              const nodes: any[] = [];
+              snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                if (data.id !== state.currentUser?.id && data.lat && data.lng) {
+                  nodes.push({
+                    id: data.id,
+                    name: data.username || 'Responder',
+                    lat: data.lat,
+                    lng: data.lng,
+                    status: data.activeSOS ? 'ACTIVE' : 'SECURE',
+                    type: 'RESPONDER',
+                    battery: data.battery || 100,
+                  });
+                }
+              });
+              const currentState = get();
+              const localNodes = currentState.meshNodes.filter((n) => n.type !== 'RESPONDER');
+              set({ meshNodes: [...localNodes, ...nodes] });
+            },
+            (error) => {
+              console.warn('Mesh sync listener error:', error);
             }
-         });
-         // Merge with local nodes (drones, cameras, etc.)
-         const currentState = get();
-         const localNodes = currentState.meshNodes.filter(n => n.type !== 'RESPONDER');
-         set({ meshNodes: [...localNodes, ...nodes] });
-      }, (error) => {
-         console.warn('Mesh sync listener error:', error);
-      });
+          );
+        })
+        .catch((error) => {
+          console.warn('Lazy Firebase mesh sync init note:', error);
+        });
     }
-    return () => { if (unsubscribe) unsubscribe(); };
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
   },
   
   setUpdateInfo: (updateInfo: UpdateInfo | null) => set({ updateInfo }),
@@ -1956,9 +1987,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
+      const { lib, authMod, fsMod } = await loadFirebase();
       const emailToUse = rawUsername.includes('@') ? rawUsername : `${rawUsername}@safetylink.app`;
-      const userCred = await signInWithEmailAndPassword(auth, emailToUse, rawPassword || '');
-      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+      const userCred = await authMod.signInWithEmailAndPassword(lib.auth, emailToUse, rawPassword || '');
+      const userDoc = await fsMod.getDoc(fsMod.doc(lib.db, 'users', userCred.user.uid));
       const userData = userDoc.exists() ? userDoc.data() : { username: rawUsername, orgCode: rawOrgCode };
       const token = await userCred.user.getIdToken();
 
@@ -1979,7 +2011,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   signInWithGoogle: async () => {
     try {
-      const provider = new GoogleAuthProvider();
+      const { lib, authMod, fsMod } = await loadFirebase();
+      const provider = new authMod.GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -1995,7 +2028,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const idTokenRes = await FirebaseAuthentication.getIdToken().catch(() => ({ token: '' }));
         token = idTokenRes?.token || nativeRes?.credential?.idToken || '';
       } else {
-        userCred = await signInWithPopup(auth, provider);
+        userCred = await authMod.signInWithPopup(lib.auth, provider);
         token = typeof userCred.user?.getIdToken === 'function' ? await userCred.user.getIdToken() : '';
       }
 
@@ -2020,7 +2053,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       let existingDoc: any = null;
       try {
-        const userDoc = await getDoc(doc(db, 'users', gUser.uid));
+        const userDoc = await fsMod.getDoc(fsMod.doc(lib.db, 'users', gUser.uid));
         if (userDoc.exists()) {
           existingDoc = userDoc.data();
         }
@@ -2058,13 +2091,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Persist clean public profile to Firestore without failing sign-in on strict rules
       try {
         if (!existingDoc) {
-          await setDoc(doc(db, 'users', gUser.uid), {
+          await fsMod.setDoc(fsMod.doc(lib.db, 'users', gUser.uid), {
             uid: gUser.uid,
             username: userData.username.slice(0, 64),
             fullName: userData.fullName.slice(0, 120),
             role: 'Community Member',
             orgCode: userData.orgCode || '',
-            createdAt: serverTimestamp(),
+            createdAt: fsMod.serverTimestamp(),
           });
         }
       } catch (dbErr) {
@@ -2486,16 +2519,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Push geo-location to Firestore if authenticated and sync is on
     const state = get();
     if (state.currentUser && state.currentUser.id && state.firestoreSync) {
-      try {
-        updateDoc(doc(db, 'users', state.currentUser.id), {
-          lat: lat,
-          lng: lng,
-          lastLocationUpdate: Date.now(),
-          gpsAccuracy: accuracy
-        }).catch(err => {
-           console.log('Non-critical: Firebase location sync skipped/failed offline', err.message);
+      const uid = state.currentUser.id;
+      loadFirebase()
+        .then(({ lib, fsMod }) =>
+          fsMod.updateDoc(fsMod.doc(lib.db, 'users', uid), {
+            lat: lat,
+            lng: lng,
+            lastLocationUpdate: Date.now(),
+            gpsAccuracy: accuracy
+          })
+        )
+        .catch((err) => {
+          console.log('Non-critical: Firebase location sync skipped/failed offline', err?.message || err);
         });
-      } catch (err) {}
     }
   },
 
@@ -3490,7 +3526,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const org = get().currentOrg;
     const camId = `cam-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const resolvedOrgId = String(cam.orgId || org?.id || user?.orgCode || 'INDIVIDUAL').slice(0, 64);
-    const resolvedOwnerUid = String(auth.currentUser?.uid || user?.id || org?.id || 'local-owner').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+    const resolvedOwnerUid = String(user?.id || org?.id || 'local-owner').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
     const {
       username,
       password,
@@ -3563,43 +3599,46 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_hikvision_cameras', updated);
     get().addAuditLog('SYSTEM', 'INFO', 'Hikvision CCTV Camera Onboarded', `${newCam.name} (${newCam.mode}) scoped to ${resolvedOrgId}`);
 
-    if (auth.currentUser?.emailVerified) {
-      const fsPayload: Record<string, any> = {
-        id: camId,
-        ownerUid: auth.currentUser.uid,
-        orgId: resolvedOrgId,
-        name: newCam.name.slice(0, 100),
-        brand: newCam.brand,
-        mode: newCam.mode,
-        signalingMode: newCam.signalingMode,
-        streamProfile: newCam.streamProfile,
-        channel: Number(newCam.channel) || 101,
-        httpPort: Number(newCam.httpPort) || 80,
-        rtspPort: Number(newCam.rtspPort) || 554,
-        ptzEnabled: Boolean(newCam.ptzEnabled),
-        twoWayAudioEnabled: Boolean(newCam.twoWayAudioEnabled),
-        ptzPresets: (newCam.ptzPresets || []).slice(0, 8).map((p) => ({
-          presetId: Number(p.presetId) || 1,
-          label: String(p.label || 'Preset').slice(0, 40),
-        })),
-        stunServers: (newCam.stunServers || []).slice(0, 5),
-        turnUrls: (newCam.turnUrls || []).slice(0, 4),
-        softIoTriggerId: Number(newCam.softIoTriggerId) || 1,
-        triggerOnPanic: Boolean(newCam.triggerOnPanic),
-        status: newCam.status,
-        createdAt: serverTimestamp(),
-      };
-      if (newCam.serialNumber) fsPayload.serialNumber = newCam.serialNumber.slice(0, 64);
-      if (newCam.host) fsPayload.host = newCam.host.slice(0, 128);
-      if (newCam.whepUrl) fsPayload.whepUrl = newCam.whepUrl.slice(0, 512);
-      setDoc(doc(db, 'cameras', camId), fsPayload).catch((err) => {
-        try {
-          handleFirestoreError(err, OperationType.CREATE, `cameras/${camId}`);
-        } catch {
-          // Local storage preserves offline creation without blocking operator
-        }
-      });
-    }
+    loadFirebase()
+      .then(({ lib, fsMod }) => {
+        if (!lib.auth.currentUser?.emailVerified) return;
+        const fsPayload: Record<string, any> = {
+          id: camId,
+          ownerUid: lib.auth.currentUser.uid,
+          orgId: resolvedOrgId,
+          name: newCam.name.slice(0, 100),
+          brand: newCam.brand,
+          mode: newCam.mode,
+          signalingMode: newCam.signalingMode,
+          streamProfile: newCam.streamProfile,
+          channel: Number(newCam.channel) || 101,
+          httpPort: Number(newCam.httpPort) || 80,
+          rtspPort: Number(newCam.rtspPort) || 554,
+          ptzEnabled: Boolean(newCam.ptzEnabled),
+          twoWayAudioEnabled: Boolean(newCam.twoWayAudioEnabled),
+          ptzPresets: (newCam.ptzPresets || []).slice(0, 8).map((p) => ({
+            presetId: Number(p.presetId) || 1,
+            label: String(p.label || 'Preset').slice(0, 40),
+          })),
+          stunServers: (newCam.stunServers || []).slice(0, 5),
+          turnUrls: (newCam.turnUrls || []).slice(0, 4),
+          softIoTriggerId: Number(newCam.softIoTriggerId) || 1,
+          triggerOnPanic: Boolean(newCam.triggerOnPanic),
+          status: newCam.status,
+          createdAt: fsMod.serverTimestamp(),
+        };
+        if (newCam.serialNumber) fsPayload.serialNumber = newCam.serialNumber.slice(0, 64);
+        if (newCam.host) fsPayload.host = newCam.host.slice(0, 128);
+        if (newCam.whepUrl) fsPayload.whepUrl = newCam.whepUrl.slice(0, 512);
+        fsMod.setDoc(fsMod.doc(lib.db, 'cameras', camId), fsPayload).catch((err) => {
+          try {
+            lib.handleFirestoreError(err, lib.OperationType.CREATE, `cameras/${camId}`);
+          } catch {
+            // Local storage preserves offline creation without blocking operator
+          }
+        });
+      })
+      .catch(() => {});
     return newCam;
   },
 
@@ -3629,42 +3668,45 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     set({ cameras: updated });
     setStoredJSON('sl_hikvision_cameras', updated);
-    if (auth.currentUser?.emailVerified) {
-      const target = updated.find((c) => c.id === id);
-      if (target) {
-        const fsUpdate: Record<string, any> = {
-          name: target.name.slice(0, 100),
-          brand: target.brand,
-          mode: target.mode,
-          signalingMode: target.signalingMode || 'WHEP_DIRECT',
-          streamProfile: target.streamProfile || 'SUB_MOBILE',
-          channel: Number(target.channel) || 101,
-          httpPort: Number(target.httpPort) || 80,
-          rtspPort: Number(target.rtspPort) || 554,
-          ptzEnabled: Boolean(target.ptzEnabled ?? true),
-          twoWayAudioEnabled: Boolean(target.twoWayAudioEnabled ?? true),
-          ptzPresets: (target.ptzPresets || []).slice(0, 8).map((p) => ({
-            presetId: Number(p.presetId) || 1,
-            label: String(p.label || 'Preset').slice(0, 40),
-          })),
-          stunServers: (target.stunServers || []).slice(0, 5),
-          turnUrls: (target.turnUrls || []).slice(0, 4),
-          softIoTriggerId: Number(target.softIoTriggerId) || 1,
-          triggerOnPanic: Boolean(target.triggerOnPanic),
-          status: target.status,
-          updatedAt: serverTimestamp(),
-        };
-        if (target.serialNumber) fsUpdate.serialNumber = target.serialNumber.slice(0, 64);
-        if (target.host) fsUpdate.host = target.host.slice(0, 128);
-        if (target.whepUrl) fsUpdate.whepUrl = target.whepUrl.slice(0, 512);
-        updateDoc(doc(db, 'cameras', id), fsUpdate).catch((err) => {
-          try {
-            handleFirestoreError(err, OperationType.UPDATE, `cameras/${id}`);
-          } catch {
-            // Non-blocking fallback for offline editing
-          }
-        });
-      }
+    const target = updated.find((c) => c.id === id);
+    if (target) {
+      loadFirebase()
+        .then(({ lib, fsMod }) => {
+          if (!lib.auth.currentUser?.emailVerified) return;
+          const fsUpdate: Record<string, any> = {
+            name: target.name.slice(0, 100),
+            brand: target.brand,
+            mode: target.mode,
+            signalingMode: target.signalingMode || 'WHEP_DIRECT',
+            streamProfile: target.streamProfile || 'SUB_MOBILE',
+            channel: Number(target.channel) || 101,
+            httpPort: Number(target.httpPort) || 80,
+            rtspPort: Number(target.rtspPort) || 554,
+            ptzEnabled: Boolean(target.ptzEnabled ?? true),
+            twoWayAudioEnabled: Boolean(target.twoWayAudioEnabled ?? true),
+            ptzPresets: (target.ptzPresets || []).slice(0, 8).map((p) => ({
+              presetId: Number(p.presetId) || 1,
+              label: String(p.label || 'Preset').slice(0, 40),
+            })),
+            stunServers: (target.stunServers || []).slice(0, 5),
+            turnUrls: (target.turnUrls || []).slice(0, 4),
+            softIoTriggerId: Number(target.softIoTriggerId) || 1,
+            triggerOnPanic: Boolean(target.triggerOnPanic),
+            status: target.status,
+            updatedAt: fsMod.serverTimestamp(),
+          };
+          if (target.serialNumber) fsUpdate.serialNumber = target.serialNumber.slice(0, 64);
+          if (target.host) fsUpdate.host = target.host.slice(0, 128);
+          if (target.whepUrl) fsUpdate.whepUrl = target.whepUrl.slice(0, 512);
+          fsMod.updateDoc(fsMod.doc(lib.db, 'cameras', id), fsUpdate).catch((err) => {
+            try {
+              lib.handleFirestoreError(err, lib.OperationType.UPDATE, `cameras/${id}`);
+            } catch {
+              // Non-blocking fallback for offline editing
+            }
+          });
+        })
+        .catch(() => {});
     }
   },
 
@@ -3677,15 +3719,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       delete creds[id];
       setStoredJSON('sl_hikvision_local_creds', creds);
     }
-    if (auth.currentUser?.emailVerified) {
-      deleteDoc(doc(db, 'cameras', id)).catch((err) => {
-        try {
-          handleFirestoreError(err, OperationType.DELETE, `cameras/${id}`);
-        } catch {
-          // Non-blocking fallback
-        }
-      });
-    }
+    loadFirebase()
+      .then(({ lib, fsMod }) => {
+        if (!lib.auth.currentUser?.emailVerified) return;
+        fsMod.deleteDoc(fsMod.doc(lib.db, 'cameras', id)).catch((err) => {
+          try {
+            lib.handleFirestoreError(err, lib.OperationType.DELETE, `cameras/${id}`);
+          } catch {
+            // Non-blocking fallback
+          }
+        });
+      })
+      .catch(() => {});
     get().addAuditLog('SYSTEM', 'INFO', 'CCTV Camera Removed', `ID: ${id}`);
   },
 

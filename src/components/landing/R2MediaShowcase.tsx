@@ -107,11 +107,11 @@ export function R2MediaShowcase() {
       <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px', marginBottom: '32px' }}>
           <div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '10px', letterSpacing: '.18em', color: '#00e676', marginBottom: '8px' }}>
-              // CLOUDFLARE R2 SECURE MEDIA VAULT
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '11px', letterSpacing: '.14em', color: '#10b981', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Cloudflare R2 Secure Media Vault
             </div>
             <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, letterSpacing: '-.02em', color: '#f8fafc', margin: 0 }}>
-              Official Platform Media & Technical Blueprints
+              Official Platform Media &amp; Technical Blueprints
             </h2>
             <p style={{ color: '#8892a4', fontSize: '14px', marginTop: '8px', maxWidth: '640px' }}>
               Explore official system demonstrations, interactive video walk-throughs, and high-resolution architecture blueprints served directly from high-speed Cloudflare storage.
@@ -132,12 +132,12 @@ export function R2MediaShowcase() {
                   letterSpacing: '.06em',
                   textTransform: 'uppercase',
                   cursor: 'pointer',
-                  background: activeTab === tab ? '#e8321e' : 'transparent',
+                  background: activeTab === tab ? '#059669' : 'transparent',
                   color: activeTab === tab ? '#ffffff' : '#8892a4',
                   transition: 'all .2s',
                 }}
               >
-                {tab === 'all' ? 'All Assets' : tab === 'video' ? '🎬 Explainer Videos' : '📐 System Blueprints'}
+                {tab === 'all' ? 'All Assets' : tab === 'video' ? 'Explainer Videos' : 'System Blueprints'}
               </button>
             ))}
           </div>
@@ -146,12 +146,9 @@ export function R2MediaShowcase() {
         {/* Video Player Showcase */}
         {selectedVideo && (
           <div style={{ background: 'rgba(5,7,12,0.65)', backdropFilter: 'blur(16px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', overflow: 'hidden', marginBottom: '40px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-            <div style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#00e676' }} />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace' }}>STREAMING FROM R2: {selectedVideo.title}</span>
-              </div>
-              <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>{selectedVideo.durationOrSize}</span>
+            <div style={{ padding: '16px 20px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#f1f5f9', fontFamily: 'monospace' }}>R2 STREAM: {selectedVideo.title}</span>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}>{selectedVideo.durationOrSize}</span>
             </div>
 
             <div style={{ position: 'relative', width: '100%', background: 'rgba(0,0,0,0.3)', maxHeight: '520px', display: 'flex', justifyContent: 'center' }}>

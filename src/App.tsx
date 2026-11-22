@@ -1,41 +1,44 @@
-import SituationalAwareness from './components/SituationalAwareness';
-import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PanicButton } from './components/PanicButton';
-import { initFirebaseSync } from './services/FirebaseSyncService';
-import { DispatchChain } from './components/DispatchChain';
 import { StatusIndicator } from './components/StatusIndicator';
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
-import { AuthScreen } from './components/AuthScreen';
 import { GlobalBackground } from "./components/GlobalBackground";
-import { SplashReveal } from "./components/SplashReveal";
 import { LandingPage } from './components/LandingPage';
-import { DnsSetupGuide } from './components/DnsSetupGuide';
-import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
-import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { translate, SA_LANGUAGES } from './utils/translations';
-import { FloatingPanicWidget } from './components/FloatingPanicWidget';
-import { SimulatedDesktop } from './components/SimulatedDesktop';
-import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
-import { PermissionsOnboardingModal } from './components/PermissionsOnboardingModal';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
-import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
-import { startProfileSync } from './services/ProfileSync';
+import { getR2StreamUrl } from './utils/r2Assets';
+import { SLShieldLogo } from './components/SLShieldLogo';
 
+// Lazy-loaded app & portal modules (excluded from public web landing initial bundle)
+const SituationalAwareness = lazy(() => import('./components/SituationalAwareness'));
+const FirstLaunchDisclaimer = lazy(() => import('./components/FirstLaunchDisclaimer').then(m => ({ default: m.FirstLaunchDisclaimer })));
+const PrivacyNoticeModal = lazy(() => import('./components/PrivacyNoticeModal').then(m => ({ default: m.PrivacyNoticeModal })));
+const PanicButton = lazy(() => import('./components/PanicButton').then(m => ({ default: m.PanicButton })));
+const DispatchChain = lazy(() => import('./components/DispatchChain').then(m => ({ default: m.DispatchChain })));
+const AuthScreen = lazy(() => import('./components/AuthScreen').then(m => ({ default: m.AuthScreen })));
+const SplashReveal = lazy(() => import('./components/SplashReveal').then(m => ({ default: m.SplashReveal })));
+const DnsSetupGuide = lazy(() => import('./components/DnsSetupGuide').then(m => ({ default: m.DnsSetupGuide })));
+const ResponderDashboard = lazy(() => import('./components/ResponderDashboard').then(m => ({ default: m.ResponderDashboard })));
+const LizzyPopup = lazy(() => import('./components/LizzyPopup').then(m => ({ default: m.LizzyPopup })));
+const FloatingPanicWidget = lazy(() => import('./components/FloatingPanicWidget').then(m => ({ default: m.FloatingPanicWidget })));
+const SimulatedDesktop = lazy(() => import('./components/SimulatedDesktop').then(m => ({ default: m.SimulatedDesktop })));
+const ForcedCountdownOverlay = lazy(() => import('./components/ForcedCountdownOverlay').then(m => ({ default: m.ForcedCountdownOverlay })));
+const PermissionsOnboardingModal = lazy(() => import('./components/PermissionsOnboardingModal').then(m => ({ default: m.PermissionsOnboardingModal })));
+const DeviceAlertOverlay = lazy(() => import('./components/DeviceAlertOverlay').then(m => ({ default: m.DeviceAlertOverlay })));
+const IncomingEmergencyRingModal = lazy(() => import('./components/IncomingEmergencyRingModal').then(m => ({ default: m.IncomingEmergencyRingModal })));
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
 const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
@@ -59,10 +62,6 @@ const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
 const LiveCameraFeed = lazy(() => import('./components/LiveCameraFeed').then(m => ({ default: m.LiveCameraFeed })));
-import { getR2StreamUrl } from './utils/r2Assets';
-import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
-import { IncomingEmergencyRingModal } from './components/IncomingEmergencyRingModal';
-import { SLShieldLogo } from './components/SLShieldLogo';
 
 const slide1 = getR2StreamUrl('Random platform background.png');
 const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
@@ -325,7 +324,13 @@ const App: React.FC = () => {
     addToast
   } = useAppStore();
 
+  // True when a public web visitor is browsing the marketing website before signing in
+  const isPublicLanding = !currentUser && !currentOrg && !superAdminActive && showLanding;
+
   useEffect(() => {
+    // Do not fire OTA checks, Firebase sync, or profile polling for unauthenticated public website visitors
+    if (isPublicLanding) return;
+
     checkAppUpdates();
     const updateInterval = setInterval(() => {
       checkAppUpdates();
@@ -336,8 +341,12 @@ const App: React.FC = () => {
     };
     window.addEventListener('focus', handleFocus);
 
-    initFirebaseSync();
-    startProfileSync();
+    import('./services/FirebaseSyncService')
+      .then(({ initFirebaseSync }) => initFirebaseSync())
+      .catch(() => {});
+    import('./services/ProfileSync')
+      .then(({ startProfileSync }) => startProfileSync())
+      .catch(() => {});
     if (Capacitor.isNativePlatform()) {
       startNativeScanner().catch(() => {});
     }
@@ -413,7 +422,7 @@ const App: React.FC = () => {
       if (cleanupSync) cleanupSync(); 
       unsub(); 
     };
-  }, [currentUser, currentOrg]);
+  }, [currentUser, currentOrg, isPublicLanding]);
   
   const t = (key: string) => {
     if (key === 'tab.deck') return 'Control Deck';
@@ -424,11 +433,10 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(() => {
-    // On native APK, native SplashActivity already executed; avoid duplicate web splash stall
-    if (Capacitor.isNativePlatform()) {
+    // Never stall public web landing visitors or native APK (native SplashActivity already ran)
+    if (Capacitor.isNativePlatform() || showLanding) {
       return false;
     }
-    // On web, show cinematic splash once per session
     if (typeof window !== 'undefined') {
       const shown = sessionStorage.getItem('sl_splash_shown') || localStorage.getItem('sl_splash_shown');
       if (!shown) {
@@ -533,6 +541,9 @@ const App: React.FC = () => {
   }, [isDrawerOpen, activeTab]);
  
    useEffect(() => {
+    // Defer GPS tracking, push registration, and offline queue watchers until user enters the app portal
+    if (isPublicLanding) return;
+
     const geoService = GeolocationService.getInstance();
     OfflineService.getInstance(); // Initialize offline listeners
     
@@ -641,7 +652,6 @@ const App: React.FC = () => {
     registerPush();
 
     geoService.startTracking();
-    //  (); // Disabled to prevent false auto-alerts as requested
 
     const handleCustomWearableEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -655,7 +665,7 @@ const App: React.FC = () => {
       geoService.stopTracking();
       window.removeEventListener('wearable-panic-trigger', handleCustomWearableEvent);
     };
-  }, []);
+  }, [isPublicLanding]);
 
   // Re-sync cached FCM token whenever the user logs in or updates their phone number
   useEffect(() => {
@@ -701,19 +711,21 @@ const App: React.FC = () => {
     return () => window.removeEventListener('sl-switch-tab', handleSwitchTab);
   }, []);
 
-  // Background monitoring tick loop
+  // Background monitoring tick loop (active only inside app portal / native)
   useEffect(() => {
+    if (isPublicLanding) return;
     const { incrementBackgroundServiceTick } = useAppStore.getState();
     const tickInterval = setInterval(() => {
       if (isBackgroundServiceRunning) {
         incrementBackgroundServiceTick();
       }
-    }, 30000); // OPTIMIZED: Reduced heartbeat frequency to save battery
+    }, 30000);
     return () => clearInterval(tickInterval);
-  }, [isBackgroundServiceRunning]);
+  }, [isBackgroundServiceRunning, isPublicLanding]);
 
   // Synchronize state with actual phone local notification system tray
   useEffect(() => {
+    if (isPublicLanding) return;
     const locStr = userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : 'Acquiring GPS...';
     const connectedBleCount = bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
     
@@ -726,9 +738,7 @@ const App: React.FC = () => {
     ).catch(err => {
       console.error('[App:NotificationSync] Error updating system tray notification:', err);
     });
-  }, [isBackgroundServiceRunning, backgroundServiceTick, activeSOSState, userLocation, bleDevices]);
-
-  // Show 5-second 3D logo splash reveal before rendering AuthScreen or Dashboards
+  }, [isBackgroundServiceRunning, backgroundServiceTick, activeSOSState, userLocation, bleDevices, isPublicLanding]);
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
@@ -749,11 +759,15 @@ const App: React.FC = () => {
           }}
         />;
       }
-      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
+      return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 font-mono text-xs">Loading SafetyLink Portal...</div>}>
+          <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />
+        </Suspense>
+      );
     }
 
     if (isAppMinimized) {
-      return <SimulatedDesktop />;
+      return <Suspense fallback={null}><SimulatedDesktop /></Suspense>;
     }
     if (decoyActive) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
@@ -1032,7 +1046,9 @@ const App: React.FC = () => {
 
               {/* MIDDLE: SOS Button fills remaining space */}
               <div className="flex-1 w-full flex items-center justify-center">
-                <PanicButton />
+                <Suspense fallback={<div className="text-slate-500 text-xs font-mono">Arming SOS...</div>}>
+                  <PanicButton />
+                </Suspense>
               </div>
 
               {/* BOTTOM: iTAG status + reassurance */}
@@ -1223,7 +1239,9 @@ const App: React.FC = () => {
 
           {activeTab === 'contacts' && (
             <div className="animate-fadeIn">
-              <DispatchChain />
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dispatch Chain...</div>}>
+                <DispatchChain />
+              </Suspense>
             </div>
           )}
 
@@ -1671,15 +1689,10 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-y-auto ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       <GlobalBackground />
-      {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
+      {showSplash && !isPublicLanding && <Suspense fallback={null}><SplashReveal onComplete={() => setShowSplash(false)} /></Suspense>}
       {trialExpired && <TrialLockOverlay />}
-      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
+      {!isPublicLanding && <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />}
       <TrialReminderModal />
-
-      {/* High fidelity cyber background lighting elements */}
-      
-      
-      
 
       {mapsQuotaError && (
         <div className="sticky top-0 z-[99998] w-full bg-amber-950/95 border-b border-amber-500/40 px-4 py-2 text-amber-200 text-xs font-mono flex items-center justify-between gap-3">
@@ -1688,17 +1701,19 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
+      {activeTab === 'deck' && !currentOrg && !isPublicLanding && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
 
-      {/* Single Canonical Emergency Countdown Overlay (replaces duplicate double countdowns) */}
-      <TrialBanner />
-      <ForcedCountdownOverlay />
-
-      {/* Critical Wearable Device Alert Sentinel Overlay */}
-      <DeviceAlertOverlay />
-      <PermissionsOnboardingModal />
-      <LizzyPopup />
-      {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
+      {/* Single Canonical Emergency Countdown Overlay (active inside app portal / native) */}
+      {!isPublicLanding && (
+        <Suspense fallback={null}>
+          <TrialBanner />
+          <ForcedCountdownOverlay />
+          <DeviceAlertOverlay />
+          <PermissionsOnboardingModal />
+          <LizzyPopup />
+          {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
+        </Suspense>
+      )}
 
       {/* Minimum Supported Version Enforcement Gate */}
       {updateInfo?.updateRequiredBlocked && (
@@ -1919,8 +1934,8 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Always-accessible Kleva AI & SafetyLink Shield Live Voice / Care Launcher */}
-      {!isLizzyOpen && !decoyActive && !showSplash && (
+      {/* Always-accessible Kleva AI & SafetyLink Shield Live Voice / Care Launcher (inside App Portal) */}
+      {!isPublicLanding && !isLizzyOpen && !decoyActive && !showSplash && (
         <div className="fixed bottom-4 right-4 z-[110] flex items-center gap-2" data-testid="floating-ai-launcher">
           <button
             type="button"
@@ -1960,20 +1975,16 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Lizzy / Kleva AI Safety & Post-Emergency Companion Drawer */}
-      <Suspense fallback={null}><KlevaBot isOpen={isLizzyOpen} onClose={() => setIsLizzyOpen(false)} /></Suspense>
-
-      {/* Incoming FCM Emergency Contact Ring Modal */}
-      <IncomingEmergencyRingModal />
-
-      {/* Sizable Movable Deployed Floating Panic Button Widget */}
-      <FloatingPanicWidget />
-
-      {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
-      <FirstLaunchDisclaimer />
-
-      {/* Sensitive Permissions & Google Play Privacy Notice Modal */}
-      <PrivacyNoticeModal />
+      {/* App-portal & native-only overlays (never block public marketing website visitors) */}
+      {!isPublicLanding && (
+        <Suspense fallback={null}>
+          <KlevaBot isOpen={isLizzyOpen} onClose={() => setIsLizzyOpen(false)} />
+          <IncomingEmergencyRingModal />
+          <FloatingPanicWidget />
+          <FirstLaunchDisclaimer />
+          {Capacitor.isNativePlatform() && <PrivacyNoticeModal />}
+        </Suspense>
+      )}
 
     </div>
   );

@@ -1,19 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../utils/store';
 import { Header } from './landing/Header';
 import { Home } from './landing/Home';
-import { Hardware } from './landing/Hardware';
-import { Pricing } from './landing/Pricing';
-import { Platform } from './landing/Platform';
-import { UseCases } from './landing/UseCases';
-import { Enterprise } from './landing/Enterprise';
-import PrivacyPolicy from '../pages/PrivacyPolicy';
-import SafetyWareStore from './SafetyWareStore';
-import { DownloadPage } from './landing/DownloadPage';
-import { ContinuousTopologyOverview } from './landing/ContinuousTopologyOverview';
 import { UpdateBanner } from './UpdateBanner';
-import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
-import { MediaHub } from './MediaHub';
+import type { UpdateInfo } from '../services/UpdateService';
+
+// Code-split all non-initial landing routes & heavy media hubs so first load stays lean
+const Hardware = lazy(() => import('./landing/Hardware').then((m) => ({ default: m.Hardware })));
+const Pricing = lazy(() => import('./landing/Pricing').then((m) => ({ default: m.Pricing })));
+const Platform = lazy(() => import('./landing/Platform').then((m) => ({ default: m.Platform })));
+const UseCases = lazy(() => import('./landing/UseCases').then((m) => ({ default: m.UseCases })));
+const Enterprise = lazy(() => import('./landing/Enterprise').then((m) => ({ default: m.Enterprise })));
+const PrivacyPolicy = lazy(() => import('../pages/PrivacyPolicy'));
+const SafetyWareStore = lazy(() => import('./SafetyWareStore'));
+const DownloadPage = lazy(() => import('./landing/DownloadPage').then((m) => ({ default: m.DownloadPage })));
+const ContinuousTopologyOverview = lazy(() =>
+  import('./landing/ContinuousTopologyOverview').then((m) => ({ default: m.ContinuousTopologyOverview }))
+);
+const MediaHub = lazy(() => import('./MediaHub').then((m) => ({ default: m.MediaHub })));
 
 type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
 
@@ -23,31 +28,52 @@ interface LandingPageProps {
   onRegisterOrg?: () => void;
 }
 
-const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
-  { id: 'home',       label: 'Home',        emoji: '🛡️' },
-  { id: 'platform',   label: 'Platform',    emoji: '📱' },
-  { id: 'hardware',   label: 'Hardware',    emoji: '📡' },
-  { id: 'store',      label: 'Store',       emoji: '🛒' },
-  { id: 'download',   label: 'Download',    emoji: '⬇️' },
-  { id: 'usecases',   label: 'Use Cases',   emoji: '🎯' },
-  { id: 'pricing',    label: 'Pricing',     emoji: '💎' },
-  { id: 'enterprise', label: 'Enterprise',  emoji: '🏢' },
+const NAV_ITEMS: { id: Page; label: string }[] = [
+  { id: 'home',       label: 'Home' },
+  { id: 'platform',   label: 'Platform' },
+  { id: 'hardware',   label: 'Hardware' },
+  { id: 'store',      label: 'Store' },
+  { id: 'download',   label: 'Download' },
+  { id: 'usecases',   label: 'Use Cases' },
+  { id: 'pricing',    label: 'Pricing' },
+  { id: 'enterprise', label: 'Enterprise' },
 ];
+
+const PageFallback = () => (
+  <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono',monospace", fontSize: '12px', color: '#64748b' }}>
+    Loading section...
+  </div>
+);
 
 export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingPageProps) {
   const { globalTheme } = useAppStore();
   const [page, setPage] = useState<Page>('home');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showMediaVault, setShowMediaVault] = useState(false);
+  const [allowAmbientVideo, setAllowAmbientVideo] = useState(false);
   const isLight = globalTheme !== 'dark';
 
-  // Check for updates on mount (only renders banner inside native APK)
+  // Respect prefers-reduced-motion and Save-Data before streaming background video
   useEffect(() => {
-    checkForUpdate().then((info) => {
-      if (info && info.available) {
-        setUpdateInfo(info);
-      }
-    }).catch(() => {});
+    if (typeof window === 'undefined') return;
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const saveData = (navigator as any)?.connection?.saveData === true;
+    if (!reducedMotion && !saveData) {
+      setAllowAmbientVideo(true);
+    }
+  }, []);
+
+  // Only check native OTA updates inside the Android APK
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    import('../services/UpdateService')
+      .then(({ checkForUpdate }) => checkForUpdate())
+      .then((info) => {
+        if (info && info.available) {
+          setUpdateInfo(info);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Optional Cloudflare Web Analytics beacon (loads only when VITE_CF_ANALYTICS_TOKEN is configured)
@@ -64,10 +90,15 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
 
   // Sync with browser hash for direct links
   useEffect(() => {
-    const hash = window.location.hash.replace('#', '') as Page;
-    if (NAV_ITEMS.find(n => n.id === hash) || hash === 'privacy' || hash === 'payment-success') {
-      setPage(hash as Page);
-    }
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '') as Page;
+      if (NAV_ITEMS.find((n) => n.id === hash) || hash === 'privacy' || hash === 'payment-success') {
+        setPage(hash);
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
   }, []);
 
   const navigate = (p: Page) => {
@@ -90,40 +121,40 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         isLight ? 'bg-white text-slate-900' : 'bg-[#020617] text-white'
       }`}
     >
-      {/* ── Ambient Continuous Logo-Video Backdrop (excluded from slideshow/image cards) ── */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
-        aria-hidden="true"
-        style={{ opacity: isLight ? 0.06 : 0.16 }}
-      >
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'cover',
-          }}
+      {/* Ambient Continuous Logo-Video Backdrop (skipped on prefers-reduced-motion / Save-Data) */}
+      {allowAmbientVideo && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+          aria-hidden="true"
+          style={{ opacity: isLight ? 0.05 : 0.14 }}
         >
-          <source src="/splash-video.mp4" type="video/mp4" />
-          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
-          <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
-        </video>
-      </div>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              minWidth: '100%',
+              minHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'cover',
+            }}
+          >
+            <source src="/splash-video.mp4" type="video/mp4" />
+          </video>
+        </div>
+      )}
 
-      {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
+      {/* Over-the-Air Update Notification (Restricted to APK) */}
       <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
 
-      {/* ── Top Nav ── */}
+      {/* Top Navigation */}
       <Header
         onLogin={onLogin}
         onRegisterOrg={onRegisterOrg}
@@ -131,45 +162,49 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         activePage={page}
       />
 
-      {/* ── Page Content ── */}
-      <div className="relative z-10">
-        {page === 'home'       && <Home       {...sharedProps} />}
-        {page === 'hardware'   && <Hardware   {...sharedProps} />}
-        {page === 'store'      && <SafetyWareStore />}
-        {page === 'download'   && <DownloadPage {...sharedProps} />}
-        {page === 'pricing'    && <Pricing    {...sharedProps} />}
-        {page === 'platform'   && <Platform   {...sharedProps} />}
-        {page === 'usecases'   && <UseCases   {...sharedProps} />}
-        {page === 'enterprise' && <Enterprise {...sharedProps} />}
-        {page === 'privacy'    && <PrivacyPolicy />}
+      {/* Page Content */}
+      <main className="relative z-10">
+        {page === 'home' && <Home {...sharedProps} />}
+        <Suspense fallback={<PageFallback />}>
+          {page === 'hardware'   && <Hardware   {...sharedProps} />}
+          {page === 'store'      && <SafetyWareStore />}
+          {page === 'download'   && <DownloadPage {...sharedProps} />}
+          {page === 'pricing'    && <Pricing    {...sharedProps} />}
+          {page === 'platform'   && <Platform   {...sharedProps} />}
+          {page === 'usecases'   && <UseCases   {...sharedProps} />}
+          {page === 'enterprise' && <Enterprise {...sharedProps} />}
+          {page === 'privacy'    && <PrivacyPolicy />}
+        </Suspense>
         {page === 'payment-success' && (
-          <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '40px' }}>
-            <h1 style={{ fontSize: '32px', color: '#059669', fontWeight: 900, marginBottom: '12px' }}>Payment Successful!</h1>
+          <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '40px' }}>
+            <h1 style={{ fontSize: '32px', color: '#059669', fontWeight: 900, marginBottom: '12px' }}>Payment Successful</h1>
             <p style={{ color: '#475569', marginBottom: '24px' }}>Your SafetyLink subscription has been activated.</p>
             <button onClick={() => navigate('home')} style={{ padding: '12px 24px', background: '#059669', color: 'white', borderRadius: '8px', border: 'none', fontWeight: 700, cursor: 'pointer' }}>
               Return to Home
             </button>
           </div>
         )}
-      </div>
+      </main>
 
-      {/* ── CONTINUOUS TOPOLOGY OVERVIEW (PAGE-ADAPTIVE) ── */}
+      {/* Continuous Topology Overview (Lazy-Loaded) */}
       <section className="relative z-10" style={{ padding: '0 20px', maxWidth: '1240px', margin: '48px auto 0' }}>
-        <ContinuousTopologyOverview activePage={page} />
+        <Suspense fallback={null}>
+          <ContinuousTopologyOverview activePage={page} />
+        </Suspense>
       </section>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer
         className={`relative z-10 border-t px-6 py-10 text-center space-y-4 mt-12 ${
           isLight ? 'bg-emerald-50/40 border-emerald-100 text-slate-700' : 'bg-slate-950/80 border-slate-800 text-slate-400'
         }`}
       >
         <div className="flex flex-wrap justify-center gap-4 text-xs font-mono">
-          {NAV_ITEMS.map(n => (
+          {NAV_ITEMS.map((n) => (
             <button
               key={n.id}
               onClick={() => navigate(n.id)}
-              className="hover:text-emerald-600 transition-colors uppercase tracking-wider font-semibold"
+              className="hover:text-emerald-600 transition-colors uppercase tracking-wider font-semibold cursor-pointer"
             >
               {n.label}
             </button>
@@ -177,18 +212,18 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         </div>
 
         <div className="flex flex-wrap justify-center gap-4 text-xs font-mono">
-          <a href="mailto:info@safetylink.online" className="text-emerald-700 hover:text-emerald-600 font-semibold">✉️ info@safetylink.online</a>
-          <a href="tel:0816738186" className="text-emerald-700 hover:text-emerald-600 font-semibold">📞 081 673 8186</a>
-          <a href="tel:+27680079911" className="text-emerald-700 hover:text-emerald-600 font-semibold">📲 +27 68 007 9911</a>
-          <button onClick={() => navigate('privacy')} className="hover:text-emerald-600 font-semibold underline">
+          <a href="mailto:info@safetylink.online" className="text-emerald-700 hover:text-emerald-600 font-semibold">info@safetylink.online</a>
+          <a href="tel:0816738186" className="text-emerald-700 hover:text-emerald-600 font-semibold">Dispatch: 081 673 8186</a>
+          <a href="tel:+27680079911" className="text-emerald-700 hover:text-emerald-600 font-semibold">Cell: +27 68 007 9911</a>
+          <button onClick={() => navigate('privacy')} className="hover:text-emerald-600 font-semibold underline cursor-pointer">
             Privacy Policy &amp; POPIA
           </button>
           <a href="https://wa.me/message/YIEA73M7H3P5M1" target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:text-emerald-600 font-semibold">
-            💬 WhatsApp Support
+            WhatsApp Support
           </a>
         </div>
 
-        <div className={`max-w-2xl mx-auto p-3 rounded-xl border text-[10px] leading-relaxed ${
+        <div className={`max-w-2xl mx-auto p-3 rounded-xl border text-[11px] leading-relaxed ${
           isLight ? 'bg-white border-emerald-100 text-slate-600' : 'bg-slate-900/60 border-slate-800 text-slate-400'
         }`}>
           <strong>POPIA Compliance Notice (Act 4 of 2013):</strong> SafetyLink processes personal information and emergency GPS coordinates solely for life-safety dispatch and authorized command-center coordination. Operated by <strong>TM Media Solutions (Pty) Ltd</strong> (Reg: 2018/500191/07), Johannesburg, Gauteng, South Africa.
@@ -200,7 +235,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
             <button
               type="button"
               onClick={onLogin}
-              aria-label="P"
+              aria-label="Open SafetyLink Portal"
               className={`w-5 h-5 rounded border text-[9px] font-black transition-colors cursor-pointer ${
                 isLight ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100' : 'border-slate-700 text-slate-400 hover:bg-slate-800'
               }`}
@@ -224,7 +259,9 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       {showMediaVault && (
         <div className="fixed inset-0 z-[99999] bg-slate-950/90 backdrop-blur-md p-3 sm:p-6 overflow-y-auto flex items-start justify-center">
           <div className="w-full max-w-6xl my-4">
-            <MediaHub ownerMode onClose={() => setShowMediaVault(false)} />
+            <Suspense fallback={<PageFallback />}>
+              <MediaHub ownerMode onClose={() => setShowMediaVault(false)} />
+            </Suspense>
           </div>
         </div>
       )}

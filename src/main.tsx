@@ -11,7 +11,6 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { GlobalFooter } from './components/GlobalFooter'
-import OneSignal from 'react-onesignal'
 import { Capacitor } from '@capacitor/core'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { useAppStore } from './utils/store'
@@ -30,20 +29,18 @@ console.error = (...args: unknown[]) => {
   }
 };
 
-// Only register service worker on web — not inside Android WebView
-if (!Capacitor.isNativePlatform()) {
-}
-
-// OneSignal — web push only
-if (!Capacitor.isNativePlatform()) {
-  try {
-    OneSignal.init({
-      appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
-      allowLocalhostAsSecureOrigin: true,
-    }).catch(() => {});
-  } catch (e) {
-    console.warn('OneSignal init error ignored:', e);
-  }
+// OneSignal — lazy-loaded on production web origin only (never blocks first paint or spams localhost)
+if (!Capacitor.isNativePlatform() && typeof window !== 'undefined' && window.location.hostname.endsWith('safetylink.online')) {
+  window.setTimeout(() => {
+    import('react-onesignal')
+      .then(({ default: OneSignal }) =>
+        OneSignal.init({
+          appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
+          allowLocalhostAsSecureOrigin: false,
+        })
+      )
+      .catch(() => {});
+  }, 4000);
 }
 
 // Wake lock — Cordova plugin, native only
@@ -82,17 +79,29 @@ try {
   console.warn('DeepLinks init error:', e);
 }
 
-// Start Device Fleet Telemetry & Hardware Node Key Registration
-import('./services/FleetService').then(({ startFleetTelemetry }) => {
-  startFleetTelemetry();
-}).catch(() => {});
+// Start Fleet Telemetry & OTA update checks only on native APK or authenticated sessions
+const initialState = useAppStore.getState();
+const shouldRunAppServices =
+  Capacitor.isNativePlatform() ||
+  Boolean(initialState.currentUser || initialState.currentOrg || initialState.superAdminActive);
 
-// Check for updates immediately on every app open — runs before login
-import('./services/UpdateService').then(({ checkForUpdate }) => {
-  checkForUpdate().then(info => {
-    if (info.available) {
-      useAppStore.getState().setUpdateInfo(info as any);
-    }
-  }).catch(() => {});
-}).catch(() => {});
+if (shouldRunAppServices) {
+  import('./services/FleetService')
+    .then(({ startFleetTelemetry }) => {
+      startFleetTelemetry();
+    })
+    .catch(() => {});
+
+  import('./services/UpdateService')
+    .then(({ checkForUpdate }) => {
+      checkForUpdate()
+        .then((info) => {
+          if (info.available) {
+            useAppStore.getState().setUpdateInfo(info as any);
+          }
+        })
+        .catch(() => {});
+    })
+    .catch(() => {});
+}
 

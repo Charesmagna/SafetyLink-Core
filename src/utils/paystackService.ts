@@ -2,6 +2,8 @@
 // Public key must be VITE_PAYSTACK_PUBLIC_KEY in environment
 // NEVER put secret key (gqgynogxhcomh) in frontend code
 
+import { loadPaystackPop } from './paystackLoader';
+
 export const PLANS = {
   individual_premium: { name: 'SafetyLink Premium', amount: 4900, description: 'Individual Premium — R49/mo' },
   individual_family:  { name: 'SafetyLink Family',  amount: 9900, description: 'Family Plan — R99/mo' },
@@ -61,8 +63,8 @@ export async function openPaystackCheckout({
     console.warn('Backend Paystack initialize error, attempting inline modal fallback:', err);
   }
 
-  // 2. Fallback to client-side PaystackPop inline modal
-  const PaystackPop = (window as any).PaystackPop;
+  // 2. Fallback to lazy-loaded client-side PaystackPop inline modal
+  const PaystackPop = await loadPaystackPop();
   const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
 
   if (PaystackPop && key) {

@@ -270,8 +270,9 @@ export function Pricing({
     const amountInCents = amountZAR * 100;
     const ref = `SL-${isHardware ? 'HW' : 'SUB'}-${Date.now()}`;
 
-    // Try PaystackPop iframe
-    const PaystackPop = (window as any).PaystackPop;
+    // Try lazy-loaded PaystackPop iframe
+    const { loadPaystackPop } = await import('../../utils/paystackLoader');
+    const PaystackPop = await loadPaystackPop();
     const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
 
     if (PaystackPop && paystackKey) {

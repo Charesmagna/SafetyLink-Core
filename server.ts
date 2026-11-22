@@ -1,8 +1,6 @@
 let panicQueue: any = null;
 function getPanicQueue() {
   if (!panicQueue) {
-    const { Queue } = require("bullmq");
-    
     const connection = { url: process.env.REDIS_URL };
     const hasRedisEnv = !!process.env.REDIS_URL;
     if (!hasRedisEnv) {
@@ -3654,7 +3652,10 @@ Rules:
   if (process.env.NODE_ENV !== "production" && (!process.argv[1] || !process.argv[1].endsWith("server.cjs"))) {
     try { const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: { port: 24678 } },
+      server: {
+        middlewareMode: true,
+        hmr: process.env.DISABLE_HMR === "true" ? false : { port: 24678 },
+      },
       appType: "spa",
     });
     app.use(vite.middlewares); } catch (e) { console.error("Vite not found."); const distPath = path.join(process.cwd(), "dist"); app.use(express.static(distPath)); app.get("*all", (req, res) => res.sendFile(path.join(distPath, "index.html"))); }

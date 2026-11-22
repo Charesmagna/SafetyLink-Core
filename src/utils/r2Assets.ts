@@ -3,20 +3,15 @@
  * to dedicated UI sections across the SafetyLink Core platform.
  */
 
-import { Capacitor } from '@capacitor/core';
-
 const DEFAULT_API_ORIGIN = 'https://api.safetylink.online';
 
 export const resolveR2BaseOrigin = (): string => {
-  if (typeof window !== 'undefined' && !Capacitor.isNativePlatform()) {
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
-      return '';
-    }
-  }
   const envUrl = (import.meta as any).env?.VITE_API_URL;
   if (typeof envUrl === 'string' && envUrl.trim()) {
     return envUrl.trim().replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  }
+  if ((import.meta as any).env?.VITE_USE_LOCAL_R2 === 'true') {
+    return '';
   }
   return DEFAULT_API_ORIGIN;
 };
