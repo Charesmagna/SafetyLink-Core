@@ -11,6 +11,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Fail closed unless deployment is explicitly running from main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            echo "::error::Worker deployment is production-only and may run only from refs/heads/main. Current ref: ${GITHUB_REF}"
+            exit 1
+          fi
+          echo "Production deployment branch check passed."
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
