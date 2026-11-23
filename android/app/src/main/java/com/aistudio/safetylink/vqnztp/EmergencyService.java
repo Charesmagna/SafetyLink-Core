@@ -483,15 +483,15 @@ public final class EmergencyService {
             try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
 
             // STAGE 3: Zero-Data / Zero-Airtime Carrier USSD "Please Call Me" (PCM) to Rain SIM Gateway
-            // Runs STRICTLY BEFORE the native voice call because GSM networks cannot run a USSD session
-            // concurrently with an active voice call. Waits for the carrier USSD callback + modem settle time.
+            // Runs STRICTLY BEFORE the native voice call when the user has enabled USSD fallback,
+            // because GSM networks cannot run a USSD session concurrently with an active voice call.
             boolean ussdEnabled = prefs.getBoolean("ussd_enabled", true);
             String offlineUssdMode = prefs.getString("offline_ussd_mode", "RAIN_PCM");
-            boolean noDataAndNoAirtime = !backendOk && !"SENT".equals(smsStatus);
-            boolean shouldSendPcm = noDataAndNoAirtime || (ussdEnabled && !backendOk);
+            boolean needsOfflineFallback = !backendOk || !"SENT".equals(smsStatus);
+            boolean shouldSendPcm = ussdEnabled && needsOfflineFallback;
             String pcmStatus = shouldSendPcm
                     ? sendPleaseCallMe(context)
-                    : (backendOk ? "SKIPPED_ONLINE_FCM" : "DISABLED_BY_USER");
+                    : (!ussdEnabled ? "DISABLED_BY_USER" : "SKIPPED_ONLINE_AND_SMS_SENT");
             if (!backendOk && !savedPhone.isEmpty() && (finalLat != 0.0 || finalLng != 0.0)) {
                 OfflineSyncWorker.queuePcmLocation(context, savedPhone, finalLat, finalLng);
             }

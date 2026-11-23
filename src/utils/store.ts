@@ -1304,8 +1304,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('SECURITY', 'INFO', 'Confidential Vault Password set/updated', 'PBKDF2 verifier stored; raw password never persisted.');
   },
   setSosCountdownDuration: (val) => {
-    set({ sosCountdownDuration: val });
-    setStoredJSON('sl_sos_countdown_duration', val);
+    const clamped = Math.max(0, Math.min(30, Math.round(Number(val) || 0)));
+    set({ sosCountdownDuration: clamped });
+    setStoredJSON('sl_sos_countdown_duration', clamped);
+    NativeDispatchService.saveNativeProfile({ sosCountdownSeconds: clamped }).catch(() => {});
   },
   setSosSoundSetup: (val) => {
     set({ sosSoundSetup: val });
@@ -2961,7 +2963,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           longitude: coords.lng,
           organizationId: effectiveTargetOrg,
           userId: user?.id || 'USER-LIVE',
-          directDispatch: !!countdownElapsed
+          directDispatch: !!countdownElapsed || (get().sosCountdownDuration === 0),
+          countdownSeconds: typeof get().sosCountdownDuration === 'number' ? get().sosCountdownDuration : 10,
         });
         get().addAuditLog(
           'SECURITY',

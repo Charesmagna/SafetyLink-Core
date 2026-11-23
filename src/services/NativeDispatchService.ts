@@ -24,6 +24,7 @@ export interface EmergencyDispatchPlugin {
     pcmCooldownMinutes?: number;
     userPin?: string;
     duressPin?: string;
+    sosCountdownSeconds?: number;
   }): Promise<{ success: boolean }>;
 }
 
@@ -66,6 +67,7 @@ export interface SafetyLinkEmergencyPlugin {
     organizationId?: string;
     userId?: string;
     directDispatch?: boolean;
+    countdownSeconds?: number;
   }): Promise<{ status: string; countdownSeconds: number }>;
   cancel(): Promise<{ status: string }>;
   getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
@@ -121,10 +123,12 @@ export class NativeDispatchService {
     organizationId?: string;
     userId?: string;
     directDispatch?: boolean;
+    countdownSeconds?: number;
   }): Promise<{ status: string; countdownSeconds: number }> {
     if (!this.isNative) {
+      const cd = typeof payload.countdownSeconds === 'number' ? payload.countdownSeconds : 10;
       console.log('[NativeDispatch:web-sim] Triggering simulated emergency countdown:', payload);
-      return { status: 'COUNTDOWN', countdownSeconds: 10 };
+      return { status: cd === 0 || payload.directDispatch ? 'DISPATCHING' : 'COUNTDOWN', countdownSeconds: payload.directDispatch ? 0 : cd };
     }
     try {
       return await SafetyLinkEmergency.trigger(payload);
@@ -526,6 +530,7 @@ export class NativeDispatchService {
     pcmCooldownMinutes?: number;
     userPin?: string;
     duressPin?: string;
+    sosCountdownSeconds?: number;
   }): Promise<boolean> {
     if (!this.isNative) {
       return true;

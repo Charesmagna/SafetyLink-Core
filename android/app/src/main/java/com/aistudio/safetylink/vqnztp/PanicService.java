@@ -109,15 +109,20 @@ public class PanicService extends Service {
                         ? intent.getStringExtra("triggeredBy").trim()
                         : prefs.getString("sl_user_id", prefs.getString("sl_name", "USER"));
 
-                boolean directDispatch = intent.getBooleanExtra("directDispatch", false);
+                int configuredCountdown = intent.hasExtra("countdownSeconds")
+                        ? intent.getIntExtra("countdownSeconds", prefs.getInt("sos_countdown_seconds", 10))
+                        : prefs.getInt("sos_countdown_seconds", 10);
+                configuredCountdown = Math.max(0, Math.min(30, configuredCountdown));
+
+                boolean directDispatch = intent.getBooleanExtra("directDispatch", false) || configuredCountdown == 0;
                 if (directDispatch) {
-                    Log.i(TAG, "Direct dispatch requested — executing emergency dispatch immediately");
+                    Log.i(TAG, "Direct/0s dispatch requested — executing emergency dispatch immediately");
                     countdownHandler.removeCallbacks(countdownRunnable);
                     triggerFinalSOS();
                 } else if (activeCountdown) {
                     Log.i(TAG, "Countdown already active (" + currentSeconds + "s remaining); ignoring redundant trigger");
                 } else {
-                    startPanicSequence();
+                    startPanicSequence(configuredCountdown);
                 }
             } else if (ACTION_CANCEL_PANIC.equals(action)) {
                 cancelPanicSequence();
@@ -128,14 +133,14 @@ public class PanicService extends Service {
 
     private String pendingPhones = "";
 
-    private void startPanicSequence() {
+    private void startPanicSequence(int countdownSec) {
         if (activeCountdown) {
             Log.w(TAG, "Panic countdown is already active");
             return;
         }
 
         activeCountdown = true;
-        currentSeconds = 10;
+        currentSeconds = Math.max(1, Math.min(30, countdownSec));
         lastStatus = "COUNTDOWN";
 
         acquireWakeLock();
@@ -285,7 +290,7 @@ public class PanicService extends Service {
             TextView countdownView = new TextView(this);
             countdownView.setId(View.generateViewId());
             countdownView.setTag("countdown_text");
-            countdownView.setText("10");
+            countdownView.setText(String.valueOf(currentSeconds));
             countdownView.setTextColor(Color.parseColor("#EF4444"));
             countdownView.setTextSize(72);
             countdownView.setGravity(Gravity.CENTER);

@@ -9,6 +9,12 @@ import {
   pruneDeviceToken,
   phoneLookupVariants,
 } from './device-tokens';
+import {
+  createQrLink,
+  resolveQrLink,
+  claimQrLink,
+  getIncomingMutualLinks,
+} from './qr-link';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -605,9 +611,39 @@ app.post('/api/fcm/test-ring', async (c) => {
   return c.json({
     ok: anyOk,
     phone: targetPhone,
-    deviceCount: tokens.length,
-    deliveries,
+    registeredDevices: tokens.length,
+    results: deliveries,
   }, anyOk ? 200 : 502);
+});
+
+// ── QR CODE MUTUAL / 1-WAY CONTACT & FCM INSTANT-LINK ROUTES ────────────────
+app.post('/api/link/create', async (c) => {
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const body: any = await c.req.json().catch(() => ({}));
+  const out = await createQrLink(c.env.DB, body.phone || '', body.name || '');
+  return c.json(out.json, out.status as any);
+});
+
+app.get('/api/link/resolve', async (c) => {
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const code = String(c.req.query('code') || '');
+  const out = await resolveQrLink(c.env.DB, code);
+  return c.json(out.json, out.status as any);
+});
+
+app.post('/api/link/claim', async (c) => {
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const body: any = await c.req.json().catch(() => ({}));
+  const out = await claimQrLink(c.env.DB, body);
+  return c.json(out.json, out.status as any);
+});
+
+app.get('/api/link/incoming', async (c) => {
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const phone = String(c.req.query('phone') || '');
+  const ack = c.req.query('ack') === '1' || c.req.query('ack') === 'true';
+  const out = await getIncomingMutualLinks(c.env.DB, phone, ack);
+  return c.json(out.json, out.status as any);
 });
 
 // Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)

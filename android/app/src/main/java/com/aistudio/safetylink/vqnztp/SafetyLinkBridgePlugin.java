@@ -45,6 +45,14 @@ public class SafetyLinkBridgePlugin extends Plugin {
         String orgId = call.getString("organizationId", "SL-ORG-DEFAULT");
         String userId = call.getString("userId", "UNKNOWN");
         boolean directDispatch = Boolean.TRUE.equals(call.getBoolean("directDispatch", false));
+        android.content.SharedPreferences prefs = getContext().getSharedPreferences("safetylink_prefs", Context.MODE_PRIVATE);
+        int defaultCountdown = prefs.getInt("sos_countdown_seconds", 10);
+        int countdownSeconds = call.getData().has("countdownSeconds")
+                ? Math.max(0, Math.min(30, call.getInt("countdownSeconds", defaultCountdown)))
+                : Math.max(0, Math.min(30, defaultCountdown));
+        if (countdownSeconds == 0) {
+            directDispatch = true;
+        }
 
         try {
             Intent intent = new Intent(getContext(), PanicService.class);
@@ -57,6 +65,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
             intent.putExtra("orgId", orgId);
             intent.putExtra("triggeredBy", userId);
             intent.putExtra("directDispatch", directDispatch);
+            intent.putExtra("countdownSeconds", countdownSeconds);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 getContext().startForegroundService(intent);
@@ -66,7 +75,7 @@ public class SafetyLinkBridgePlugin extends Plugin {
 
             JSObject ret = new JSObject();
             ret.put("status", directDispatch ? "DISPATCHING" : "TRIGGERED");
-            ret.put("countdownSeconds", directDispatch ? 0 : 10);
+            ret.put("countdownSeconds", directDispatch ? 0 : countdownSeconds);
             call.resolve(ret);
         } catch (Exception e) {
             Log.e(TAG, "Failed to trigger PanicService: " + e.getMessage(), e);

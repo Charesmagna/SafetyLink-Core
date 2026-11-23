@@ -107,6 +107,7 @@ export async function syncProfile(force = false): Promise<boolean> {
     ds.ussdEnabled !== false,
     ds.offlineUssdMode || 'RAIN_PCM',
     ds.pcmCooldownMinutes ?? 5,
+    typeof s.sosCountdownDuration === 'number' ? s.sosCountdownDuration : 10,
     loc ? Math.round(loc.lat * 1000) : 0,
     loc ? Math.round(loc.lng * 1000) : 0,
   ]);
@@ -131,6 +132,7 @@ export async function syncProfile(force = false): Promise<boolean> {
       pcmCooldownMinutes: typeof ds.pcmCooldownMinutes === 'number' ? ds.pcmCooldownMinutes : 5,
       userPin: s.userPin || '',
       duressPin: s.duressPin || '',
+      sosCountdownSeconds: typeof s.sosCountdownDuration === 'number' ? s.sosCountdownDuration : 10,
       contacts: (s.contacts || []).map((c: any) => ({
         name: c.name,
         phone: c.phone,
@@ -194,6 +196,40 @@ export async function syncProfile(force = false): Promise<boolean> {
   } catch { /* native bridge not available on web */ }
 
   await syncDeviceFcmToken(effectivePhone, undefined, savedToken).catch(() => {});
+
+  // Pull any incoming 2-way QR mutual contacts added while this app was closed/locked
+  for (const backend of backends) {
+    try {
+      const incRes = await fetch(`${backend}/api/link/incoming?phone=${encodeURIComponent(effectivePhone)}&ack=1`);
+      const incData: any = await incRes.json().catch(() => ({}));
+      if (incRes.ok && Array.isArray(incData.links) && incData.links.length > 0) {
+        const curContacts = useAppStore.getState().contacts || [];
+        const normDigits = (p: string) => String(p || '').replace(/[^0-9]/g, '').replace(/^0(?=\d{9}$)/, '27');
+        let added = 0;
+        for (const item of incData.links) {
+          if (!item?.phone) continue;
+          const targetKey = normDigits(item.phone);
+          if (curContacts.some((c: any) => normDigits(c.phone) === targetKey)) continue;
+          useAppStore.getState().addContact({
+            label: item.name || 'SafetyLink Contact',
+            name: item.name || 'SafetyLink Contact',
+            phone: item.phone,
+            relation: 'QR Mutual Emergency Contact',
+            channelType: 'CALL',
+            hasWhatsApp: true,
+            priority: curContacts.length + added + 1,
+          });
+          added++;
+        }
+        if (added > 0) {
+          useAppStore.getState().addToast(`${added} new 2-way QR emergency contact(s) synced to your device!`, 'success');
+        }
+      }
+      break;
+    } catch {
+      // try next backend
+    }
+  }
 
   if (syncAccepted) lastSig = sig;
   return syncAccepted;

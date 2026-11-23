@@ -150,6 +150,10 @@ public class EmergencyDispatchPlugin extends Plugin {
             if (userPin != null) profileEditor.putString("sl_user_pin", userPin);
             String duressPin = call.getString("duressPin");
             if (duressPin != null) profileEditor.putString("sl_duress_pin", duressPin);
+            if (call.getData().has("sosCountdownSeconds")) {
+                int cdSec = Math.max(0, Math.min(30, call.getInt("sosCountdownSeconds", 10)));
+                profileEditor.putInt("sos_countdown_seconds", cdSec);
+            }
             profileEditor.apply();
 
             JSArray contactsArr = call.getArray("contacts");

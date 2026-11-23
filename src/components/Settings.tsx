@@ -10,6 +10,7 @@ import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
 import { syncProfile } from '../services/ProfileSync';
 import { HikvisionCameraManager } from './HikvisionCameraManager';
 import { PopiaLegalModal } from './PopiaLegalModal';
+import { QrContactLinker } from './QrContactLinker';
 import type { BleButtonAction } from '../utils/store';
 
 const BLE_ACTION_OPTIONS: { value: BleButtonAction; label: string }[] = [
@@ -810,6 +811,62 @@ export const Settings: React.FC = () => {
               />
             </div>
 
+            {/* Adjustable SOS Countdown Timer (synced to both React UI and native PanicService) */}
+            <div className="bg-slate-950 border border-slate-900 rounded-xl p-3 space-y-2.5" data-testid="sos-countdown-timer-setting">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[8.5px] font-bold text-slate-200 uppercase block">⏱️ Adjustable SOS Countdown Timer</span>
+                  <span className="text-[7.5px] text-slate-500 font-sans">
+                    Grace window to cancel accidental triggers before SMS, USSD, and Call fire. Set to 0s for instant dispatch.
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded bg-red-950/70 border border-red-500/40 text-[9px] font-black text-red-300 shrink-0">
+                  {sosCountdownDuration === 0 ? '0s INSTANT' : `${sosCountdownDuration}s`}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-6 gap-1.5">
+                {[0, 3, 5, 10, 15, 30].map(sec => {
+                  const active = sosCountdownDuration === sec;
+                  return (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => {
+                        setSosCountdownDuration(sec);
+                        useAppStore.getState().addToast(
+                          sec === 0 ? 'SOS Countdown set to Instant (0s)' : `SOS Countdown timer set to ${sec} seconds`,
+                          'info'
+                        );
+                      }}
+                      className={`py-1.5 rounded-lg text-[8.5px] font-bold border transition-all ${
+                        active
+                          ? 'bg-red-600/25 border-red-500 text-red-200 shadow-sm'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {sec === 0 ? '0s' : `${sec}s`}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-[7.5px] text-slate-500">0s</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={30}
+                  step={1}
+                  value={sosCountdownDuration}
+                  onChange={e => setSosCountdownDuration(Number(e.target.value))}
+                  aria-label="SOS Countdown Duration Seconds"
+                  className="flex-1 accent-red-500 cursor-pointer"
+                />
+                <span className="text-[7.5px] text-slate-500">30s</span>
+              </div>
+            </div>
+
             <div className="space-y-1 pt-1">
               <label className="text-[8px] font-bold text-slate-500 uppercase block">Situational Map Engine</label>
               <select
@@ -829,6 +886,9 @@ export const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* QR Code Instant Contact & FCM Linker (Generate & Scan with 2-Way / 1-Way Selection) */}
+        <QrContactLinker />
 
         {/* Carrier USSD & Zero-Data Please-Call-Me (PCM) Emergency Settings */}
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">

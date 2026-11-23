@@ -3234,7 +3234,188 @@ Rules:
         )
       );
       const anyOk = deliveries.some((d) => d.ok);
-      return res.status(anyOk ? 200 : 502).json({ ok: anyOk, phone, deviceCount: tokens.length, deliveries });
+      return res.status(anyOk ? 200 : 502).json({ ok: anyOk, phone, registeredDevices: tokens.length, results: deliveries });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  // ── QR CODE MUTUAL / 1-WAY CONTACT & FCM INSTANT-LINK ROUTES ────────────────
+  let qrLocalTablesReady = false;
+  const ensureQrLocalTables = async () => {
+    if (qrLocalTablesReady) return;
+    await ensureZeroAirtimeLocalTables();
+    await db.execute(`CREATE TABLE IF NOT EXISTS sl_qr_links (
+      code TEXT PRIMARY KEY,
+      owner_phone TEXT NOT NULL,
+      owner_name TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS sl_mutual_links (
+      id TEXT PRIMARY KEY,
+      target_phone TEXT NOT NULL,
+      linked_phone TEXT NOT NULL,
+      linked_name TEXT NOT NULL,
+      mode TEXT NOT NULL DEFAULT 'TWO_WAY',
+      created_at INTEGER NOT NULL,
+      acknowledged INTEGER NOT NULL DEFAULT 0
+    )`);
+    qrLocalTablesReady = true;
+  };
+
+  const getLocalFcmStatus = async (rawPhone: string) => {
+    const phone = normalizeSaE164(rawPhone);
+    if (!phone) return { phone: '', registered: false, deviceCount: 0, lastUpdated: null };
+    const variants = saPhoneVariants(phone);
+    const ph = variants.map(() => '?').join(', ');
+    const r = await db.execute({
+      sql: `SELECT token, updated_at FROM sl_device_tokens WHERE phone IN (${ph}) ORDER BY updated_at DESC LIMIT 8`,
+      args: variants,
+    });
+    const valid = r.rows.filter((x: any) => String(x.token || '').trim().length > 20);
+    return {
+      phone,
+      registered: valid.length > 0,
+      deviceCount: valid.length,
+      lastUpdated: valid.length ? Math.max(...valid.map((x: any) => Number(x.updated_at || 0))) : null,
+    };
+  };
+
+  const upsertLocalProfileContact = async (ownerPhone: string, ownerName: string, contactPhone: string, contactName: string) => {
+    const now = Date.now();
+    const prof = await db.execute({ sql: 'SELECT phone FROM sl_profiles WHERE phone = ?', args: [ownerPhone] });
+    if (!prof.rows.length) {
+      await db.execute({
+        sql: 'INSERT INTO sl_profiles (phone, name, lat, lng, token, updated_at) VALUES (?, ?, NULL, NULL, ?, ?)',
+        args: [ownerPhone, ownerName || 'SafetyLink Member', crypto.randomUUID(), now],
+      });
+    }
+    const existing = await db.execute({ sql: 'SELECT contact_phone FROM sl_contacts WHERE owner_phone = ?', args: [ownerPhone] });
+    const normContact = normalizeSaE164(contactPhone);
+    if (normContact && !existing.rows.some((r: any) => normalizeSaE164(String(r.contact_phone || '')) === normContact)) {
+      await db.execute({
+        sql: 'INSERT INTO sl_contacts (id, owner_phone, name, contact_phone, sort_order) VALUES (?, ?, ?, ?, ?)',
+        args: [crypto.randomUUID(), ownerPhone, (contactName || 'Emergency Contact').slice(0, 60), normContact, existing.rows.length],
+      });
+    }
+  };
+
+  app.post('/api/link/create', async (req, res) => {
+    try {
+      await ensureQrLocalTables();
+      const body = req.body || {};
+      const phone = normalizeSaE164(body.phone || '');
+      if (!phone || phone.length < 10) return res.status(400).json({ ok: false, error: 'Valid phone number is required.' });
+      const name = String(body.name || 'SafetyLink Member').trim().slice(0, 60) || 'SafetyLink Member';
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const bytes = crypto.randomBytes(6);
+      let code = 'SL-';
+      for (let i = 0; i < 6; i++) code += alphabet[bytes[i] % alphabet.length];
+      const now = Date.now();
+      const expiresAt = now + 15 * 60_000;
+      await db.execute({ sql: 'DELETE FROM sl_qr_links WHERE expires_at < ?', args: [now] }).catch(() => {});
+      await db.execute({
+        sql: 'INSERT INTO sl_qr_links (code, owner_phone, owner_name, created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+        args: [code, phone, name, now, expiresAt],
+      });
+      const fcmStatus = await getLocalFcmStatus(phone);
+      return res.json({ ok: true, code, phone, name, expiresAt, fcmStatus });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  app.get('/api/link/resolve', async (req, res) => {
+    try {
+      await ensureQrLocalTables();
+      const code = String(req.query.code || '').trim().toUpperCase();
+      if (!/^SL-[A-Z0-9]{6}$/.test(code)) return res.status(400).json({ ok: false, error: 'Invalid pairing code format.' });
+      const r = await db.execute({ sql: 'SELECT code, owner_phone, owner_name, expires_at FROM sl_qr_links WHERE code = ?', args: [code] });
+      const row: any = r.rows[0];
+      if (!row || Number(row.expires_at) < Date.now()) {
+        return res.status(404).json({ ok: false, error: 'Pairing code expired or not found.' });
+      }
+      const fcmStatus = await getLocalFcmStatus(String(row.owner_phone));
+      return res.json({ ok: true, code: row.code, phone: row.owner_phone, name: row.owner_name, expiresAt: row.expires_at, fcmStatus });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  app.post('/api/link/claim', async (req, res) => {
+    try {
+      await ensureQrLocalTables();
+      const body = req.body || {};
+      const scannerPhone = normalizeSaE164(body.scannerPhone || '');
+      const scannerName = String(body.scannerName || 'SafetyLink Contact').trim().slice(0, 60) || 'SafetyLink Contact';
+      const mode = String(body.mode || 'TWO_WAY').toUpperCase() === 'ONE_WAY' ? 'ONE_WAY' : 'TWO_WAY';
+      if (!scannerPhone || scannerPhone.length < 10) return res.status(400).json({ ok: false, error: 'Valid scanner phone is required.' });
+      let targetPhone = normalizeSaE164(body.targetPhone || '');
+      let targetName = String(body.targetName || '').trim().slice(0, 60);
+      const code = String(body.code || '').trim().toUpperCase();
+      if (/^SL-[A-Z0-9]{6}$/.test(code)) {
+        const r = await db.execute({ sql: 'SELECT owner_phone, owner_name, expires_at FROM sl_qr_links WHERE code = ?', args: [code] });
+        const row: any = r.rows[0];
+        if (row && Number(row.expires_at) >= Date.now()) {
+          targetPhone = normalizeSaE164(String(row.owner_phone));
+          targetName = String(row.owner_name || targetName);
+        }
+      }
+      if (!targetPhone || targetPhone.length < 10) return res.status(400).json({ ok: false, error: 'Valid target phone is required.' });
+      if (targetPhone === scannerPhone) return res.status(400).json({ ok: false, error: 'Cannot link your own phone number.' });
+      if (!targetName) targetName = 'SafetyLink Contact';
+
+      await upsertLocalProfileContact(scannerPhone, scannerName, targetPhone, targetName);
+      if (mode === 'TWO_WAY') {
+        await upsertLocalProfileContact(targetPhone, targetName, scannerPhone, scannerName);
+        await db.execute({
+          sql: `INSERT INTO sl_mutual_links (id, target_phone, linked_phone, linked_name, mode, created_at, acknowledged)
+                VALUES (?, ?, ?, ?, 'TWO_WAY', ?, 0)`,
+          args: [crypto.randomUUID(), targetPhone, scannerPhone, scannerName, Date.now()],
+        });
+      }
+      const [targetFcm, scannerFcm] = await Promise.all([getLocalFcmStatus(targetPhone), getLocalFcmStatus(scannerPhone)]);
+      return res.json({
+        ok: true,
+        mode,
+        mutualQueued: mode === 'TWO_WAY',
+        target: { phone: targetPhone, name: targetName, fcmStatus: targetFcm },
+        scanner: { phone: scannerPhone, name: scannerName, fcmStatus: scannerFcm },
+      });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
+  app.get('/api/link/incoming', async (req, res) => {
+    try {
+      await ensureQrLocalTables();
+      const rawPhone = String(req.query.phone || '').trim();
+      const variants = saPhoneVariants(rawPhone);
+      if (!variants.length) return res.status(400).json({ ok: false, error: 'phone query parameter is required.' });
+      const ph = variants.map(() => '?').join(', ');
+      const r = await db.execute({
+        sql: `SELECT id, linked_phone, linked_name, mode, created_at FROM sl_mutual_links
+              WHERE target_phone IN (${ph}) AND acknowledged = 0 ORDER BY created_at DESC LIMIT 20`,
+        args: variants,
+      });
+      const links = r.rows || [];
+      if ((req.query.ack === '1' || req.query.ack === 'true') && links.length > 0) {
+        for (const row of links as any[]) {
+          await db.execute({ sql: 'UPDATE sl_mutual_links SET acknowledged = 1 WHERE id = ?', args: [row.id] }).catch(() => {});
+        }
+      }
+      return res.json({
+        ok: true,
+        links: (links as any[]).map((l) => ({
+          id: l.id,
+          phone: l.linked_phone,
+          name: l.linked_name,
+          mode: l.mode,
+          createdAt: l.created_at,
+        })),
+      });
     } catch (e: any) {
       return res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
