@@ -43,6 +43,7 @@ function createMockD1() {
   const events = new Map<string, any>();
   const retries = new Map<string, any>();
   const gateways = new Map<string, any>();
+  const deviceTokens = new Map<string, { phone: string; token: string; platform: string; updated_at: number }>();
 
   return {
     profiles,
@@ -50,6 +51,7 @@ function createMockD1() {
     events,
     retries,
     gateways,
+    deviceTokens,
     async batch(stmts: any[]) {
       const out = [];
       for (const s of stmts) out.push(await s.run());
@@ -134,6 +136,10 @@ function createMockD1() {
           } else if (sql.includes('UPDATE sl_gateway_health SET last_alert_at')) {
             const g = gateways.get(args[1]);
             if (g) g.last_alert_at = args[0];
+          } else if (sql.includes('INSERT INTO sl_device_tokens')) {
+            deviceTokens.set(args[1], { phone: args[0], token: args[1], platform: 'android', updated_at: args[2] || Date.now() });
+          } else if (sql.includes('DELETE FROM sl_device_tokens WHERE token =')) {
+            deviceTokens.delete(args[0]);
           }
           return { success: true };
         },
@@ -142,12 +148,12 @@ function createMockD1() {
             const p = profiles.get(args[0]);
             return p ? { token: p.token } : null;
           }
-          if (sql.includes('SELECT name, lat, lng, alert_note FROM sl_profiles')) {
-            return profiles.get(args[0]) || null;
-          }
-          if (sql.includes('SELECT phone FROM sl_profiles')) {
-            const p = profiles.get(args[0]);
-            return p ? { phone: p.phone } : null;
+          if (sql.includes('FROM sl_profiles WHERE phone')) {
+            for (const a of args) {
+              const p = profiles.get(a);
+              if (p) return p;
+            }
+            return null;
           }
           if (sql.includes('FROM sl_pcm_events WHERE owner_phone=?')) {
             const matching = Array.from(events.values()).filter(
@@ -162,7 +168,10 @@ function createMockD1() {
         },
         async all() {
           if (sql.includes('FROM sl_contacts')) {
-            return { results: contacts.filter(c => c.owner_phone === args[0]) };
+            return { results: contacts.filter(c => args.includes(c.owner_phone)) };
+          }
+          if (sql.includes('FROM sl_device_tokens')) {
+            return { results: Array.from(deviceTokens.values()).filter(t => args.includes(t.phone)) };
           }
           if (sql.includes('FROM sl_pcm_retries')) {
             const due = Array.from(retries.values()).filter(
@@ -294,4 +303,77 @@ test('pure-TS MD5 and PayFast signature match RFC 1321 and node:crypto exactly',
 
   assert.equal(buildPayfastSignature(fields, passphrase), expectedHash);
 });
+
+test('Rain PCM extracts spaced/dashed SA numbers and pushes DATA-ONLY HIGH-priority FCM loud alarm to contacts', async () => {
+  const { generateKeyPairSync } = await import('node:crypto');
+  const { extractMsisdn, inboundPcm, syncProfile } = await import('../src/zero-airtime.ts');
+  const { saveDeviceToken } = await import('../src/device-tokens.ts');
+
+  assert.equal(extractMsisdn('Please call me: 072 123 4567'), '+27721234567');
+  assert.equal(extractMsisdn('Pls call +27 82-123-4567'), '+27821234567');
+
+  const { privateKey } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+  });
+
+  const db = createMockD1();
+  const env: any = {
+    DB: db,
+    FCM_SERVICE_ACCOUNT: JSON.stringify({
+      project_id: 'safetylink-99e56',
+      client_email: 'firebase-adminsdk-test@safetylink-99e56.iam.gserviceaccount.com',
+      private_key: privateKey,
+    }),
+  };
+
+  await syncProfile(env, {
+    phone: '082 123 4567',
+    name: 'Lerato Mokoena',
+    lat: -25.7479,
+    lng: 28.2293,
+    contacts: [{ name: 'Mom Contact', phone: '083 555 0199' }],
+  }, '');
+
+  // Register contact device token using local 0-prefix format to verify cross-format normalization
+  await saveDeviceToken(db, '0835550199', 'fcm-contact-live-token-12345');
+
+  const fcmRequests: any[] = [];
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = (async (url: any, init: any) => {
+    const u = String(url);
+    if (u === 'https://oauth2.googleapis.com/token') {
+      return new Response(JSON.stringify({ access_token: 'mock-oauth-token', expires_in: 3600 }), { status: 200 });
+    }
+    if (u.includes('fcm.googleapis.com/v1/projects/safetylink-99e56/messages:send')) {
+      fcmRequests.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ name: 'projects/safetylink-99e56/messages/999' }), { status: 200 });
+    }
+    return new Response('not expected', { status: 500 });
+  }) as any;
+
+  try {
+    const outcome = await inboundPcm(env, 'Please call me: 082 123 4567', '121');
+    assert.equal(outcome.status, 200);
+    assert.equal(outcome.json.providerAccepted, true);
+    assert.equal(outcome.json.status, 'PARTIAL');
+    assert.equal(outcome.json.msisdn, '+27821234567');
+    assert.equal(fcmRequests.length, 1);
+
+    const msg = fcmRequests[0].message;
+    assert.equal(msg.token, 'fcm-contact-live-token-12345');
+    // Critical: DATA-ONLY payload so Android OS always invokes SafetyFcmService.onMessageReceived() even when locked/killed
+    assert.equal(msg.notification, undefined);
+    assert.equal(msg.android.notification, undefined);
+    assert.equal(msg.android.priority, 'HIGH');
+    assert.equal(msg.android.direct_boot_ok, true);
+    assert.equal(msg.data.type, 'EMERGENCY_RING');
+    assert.equal(msg.data.callerName, 'Lerato Mokoena');
+    assert.equal(msg.data.callerNumber, '+27821234567');
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+});
+
 

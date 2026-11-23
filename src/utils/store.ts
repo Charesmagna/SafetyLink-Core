@@ -481,7 +481,7 @@ const DEFAULT_DISPATCH_SETTINGS: DispatchSettings = {
   countdownOverlayEnabled: true,
   dispatchPreset: 'VIP_TWILIO_CLOUD',
   mapProvider: 'GOOGLE_MAPS',
-  ussdEnabled: false,
+  ussdEnabled: true,
   carrierPreset: 'AUTO',
   customUssdPattern: '*140*{NUMBER}#',
   pcmGatewayNumber: '0816738186',
@@ -4169,7 +4169,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ incomingEmergencyRing: entry });
     get().addAuditLog('DISPATCH', 'SEVERE', `Incoming Emergency Ring: ${entry.callerName}`, `${entry.callerNumber} · ${entry.location} (${entry.source})`);
   },
-  dismissIncomingEmergencyRing: () => set({ incomingEmergencyRing: null }),
+  dismissIncomingEmergencyRing: () => {
+    set({ incomingEmergencyRing: null });
+    if (Capacitor.isNativePlatform()) {
+      import('../services/NativeDispatchService')
+        .then(({ SafetyLinkEmergency }) => SafetyLinkEmergency.stopEmergencyAlarm().catch(() => {}))
+        .catch(() => {});
+    }
+  },
 
   bleButtonConfig: {
     ...DEFAULT_BLE_BUTTON_CONFIG,

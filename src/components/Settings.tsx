@@ -5,8 +5,9 @@ import { motion } from 'motion/react';
 import { translate } from '../utils/translations';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { biometricService } from '../services/BiometricService';
-import { NativeDispatchService } from '../services/NativeDispatchService';
+import { NativeDispatchService, SafetyLinkEmergency } from '../services/NativeDispatchService';
 import { resolveUssdCode, firePleaseCallMe } from '../services/pcmTrigger';
+import { syncProfile } from '../services/ProfileSync';
 import { HikvisionCameraManager } from './HikvisionCameraManager';
 import { PopiaLegalModal } from './PopiaLegalModal';
 import type { BleButtonAction } from '../utils/store';
@@ -91,24 +92,119 @@ export const Settings: React.FC = () => {
   const [liveTestPhone, setLiveTestPhone] = useState<string>(() => currentUser?.phone || '065 830 7216');
   const [liveTestSmsOnly, setLiveTestSmsOnly] = useState<boolean>(true);
   const [isSendingLiveTest, setIsSendingLiveTest] = useState<boolean>(false);
+  const [isSendingFcmTest, setIsSendingFcmTest] = useState<boolean>(false);
+  const [isSyncingFcm, setIsSyncingFcm] = useState<boolean>(false);
   const [liveTestResult, setLiveTestResult] = useState<any>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState<boolean>(false);
   const [providerHealth, setProviderHealth] = useState<any>(null);
 
+  const getDiagnosticsBaseUrl = () =>
+    (useAppStore.getState().customBackendUrl || 'https://api.safetylink.online').replace(/\/+$/, '');
+
   const handleCheckGatewayHealth = async () => {
     setIsCheckingHealth(true);
     try {
-      const base = (useAppStore.getState().customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
-      const [provRes, pcmRes] = await Promise.all([
+      const base = getDiagnosticsBaseUrl();
+      const targetPhone = (liveTestPhone || currentUser?.phone || '').trim();
+      const [provRes, pcmRes, tokenStatusRes, nativeFcmRes] = await Promise.all([
         fetch(`${base}/api/health/providers`).then(r => r.json()).catch(() => null),
         fetch(`${base}/api/pcm/gateway`).then(r => r.json()).catch(() => null),
+        targetPhone
+          ? fetch(`${base}/api/device/token/status?phone=${encodeURIComponent(targetPhone)}`).then(r => r.json()).catch(() => null)
+          : Promise.resolve(null),
+        Capacitor.isNativePlatform()
+          ? SafetyLinkEmergency.getFcmStatus().catch(() => null)
+          : Promise.resolve(null),
       ]);
-      setProviderHealth({ providers: provRes, pcmGateway: pcmRes?.number || null, checkedAt: Date.now() });
-      useAppStore.getState().addToast('Live gateway diagnostics refreshed.', 'success');
+      setProviderHealth({
+        providers: provRes,
+        pcmGateway: pcmRes?.number || null,
+        tokenStatus: tokenStatusRes,
+        nativeFcm: nativeFcmRes,
+        checkedAt: Date.now(),
+      });
+      useAppStore.getState().addToast('Live gateway & FCM registration diagnostics refreshed.', 'success');
     } catch (err: any) {
       useAppStore.getState().addToast(`Health check failed: ${err?.message || err}`, 'error');
     } finally {
       setIsCheckingHealth(false);
+    }
+  };
+
+  const handleSyncProfileAndFcm = async () => {
+    setIsSyncingFcm(true);
+    try {
+      await syncProfile(true);
+      await handleCheckGatewayHealth();
+      useAppStore.getState().addToast('Profile, emergency contacts, and FCM device registration synced.', 'success');
+    } catch (err: any) {
+      useAppStore.getState().addToast(`Profile/FCM sync failed: ${err?.message || err}`, 'error');
+    } finally {
+      setIsSyncingFcm(false);
+    }
+  };
+
+  const handleSendRealFcmRingTest = async () => {
+    const cleanTarget = liveTestPhone.trim();
+    if (!cleanTarget) {
+      useAppStore.getState().addToast('Enter a target emergency contact phone number to ring.', 'warn');
+      return;
+    }
+    setIsSendingFcmTest(true);
+    setLiveTestResult(null);
+    try {
+      const store = useAppStore.getState();
+      const base = getDiagnosticsBaseUrl();
+      const loc = store.userLocation;
+      const res = await fetch(`${base}/api/fcm/test-ring`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanTarget,
+          callerName: currentUser?.fullName || 'SafetyLink FCM Ring Test',
+          callerNumber: currentUser?.phone || cleanTarget,
+          lat: loc?.lat,
+          lng: loc?.lng,
+          location: 'Real FCM Data-Only Loud Alarm Verification',
+        }),
+      });
+      const data = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      const mappedResults = Array.isArray(data.results)
+        ? data.results.map((r: any, idx: number) => ({
+            channel: 'FCM_LOUD_ALARM',
+            provider: `FCM Device #${idx + 1}`,
+            to: data.phone || cleanTarget,
+            ok: Boolean(r.ok),
+            status: r.status || (r.error ? String(r.error) : ''),
+          }))
+        : [];
+      setLiveTestResult({
+        httpStatus: res.status,
+        ok: Boolean(data.ok),
+        message: data.ok
+          ? `Real HIGH-priority data-only FCM alarm accepted by Firebase for ${data.registeredDevices || 1} device(s) on ${data.phone || cleanTarget}.`
+          : data.error || 'FCM test ring failed',
+        error: data.ok ? undefined : data.error,
+        results: mappedResults,
+        sentAt: Date.now(),
+      });
+      store.addAuditLog(
+        'DISPATCH',
+        data.ok ? 'INFO' : 'WARN',
+        `Real FCM Ring Test -> ${cleanTarget}`,
+        `HTTP ${res.status} • Devices: ${data.registeredDevices ?? 0}`
+      );
+      store.addToast(
+        data.ok
+          ? `Real FCM loud alarm sent to ${data.phone || cleanTarget}!`
+          : (data.error || `FCM test returned HTTP ${res.status}`),
+        data.ok ? 'success' : 'warn'
+      );
+    } catch (err: any) {
+      setLiveTestResult({ ok: false, error: err?.message || String(err), sentAt: Date.now() });
+      useAppStore.getState().addToast(`Real FCM test failed: ${err?.message || err}`, 'error');
+    } finally {
+      setIsSendingFcmTest(false);
     }
   };
 
@@ -122,7 +218,7 @@ export const Settings: React.FC = () => {
     setLiveTestResult(null);
     try {
       const store = useAppStore.getState();
-      const base = (store.customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
+      const base = getDiagnosticsBaseUrl();
       const loc = store.userLocation;
       const payload = {
         callerName: currentUser?.fullName || 'SafetyLink Diagnostic Test',
@@ -743,19 +839,19 @@ export const Settings: React.FC = () => {
             <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
               Boolean(dispatchSettings.ussdEnabled) ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30' : 'bg-slate-900 text-slate-500'
             }`}>
-              {Boolean(dispatchSettings.ussdEnabled) ? 'ACTIVE ON PANIC' : 'DISABLED (DEFAULT)'}
+              {Boolean(dispatchSettings.ussdEnabled) ? 'ACTIVE ON OFFLINE PANIC' : 'DISABLED'}
             </span>
           </div>
 
           <p className="text-[7.5px] text-slate-400 leading-relaxed font-sans">
-            Optional carrier USSD fallback dialer. Disabled by default so panic dispatches follow Server → SMS → Call first; enable to dial your carrier USSD code over cell towers with <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong>.
+            Zero-airtime carrier USSD fallback to your Rain SIM gateway. Automatically fires when you have <strong className="text-emerald-400">R0.00 airtime and 0MB data</strong> so the Rain SIM forwards your Please Call Me to the server and rings all emergency contacts with the SafetyLink app via FCM.
           </p>
 
           <div className="space-y-3 pt-1">
             <div className="flex justify-between items-center bg-slate-950 p-2.5 rounded-xl border border-slate-900">
               <div>
-                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial USSD in Panic Chain (Optional)</span>
-                <span className="text-[7.5px] text-slate-500">Executes carrier USSD dialer after Call step when enabled.</span>
+                <span className="text-[8.5px] font-bold text-slate-300 uppercase block">Auto-Dial Rain Please Call Me When Offline</span>
+                <span className="text-[7.5px] text-slate-500">Sends carrier USSD Please Call Me to the Rain SIM whenever internet dispatch cannot reach the server.</span>
               </div>
               <input
                 type="checkbox"
@@ -890,14 +986,24 @@ export const Settings: React.FC = () => {
                   Verify real-world SMS, Voice, USSD, and FCM loud alarm delivery directly to any test number (no profile required).
                 </p>
               </div>
-              <button
-                type="button"
-                disabled={isCheckingHealth}
-                onClick={handleCheckGatewayHealth}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[8.5px] font-bold text-cyan-300 uppercase tracking-wider shrink-0"
-              >
-                {isCheckingHealth ? 'Checking...' : '↻ Check Gateways'}
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={isSyncingFcm}
+                  onClick={handleSyncProfileAndFcm}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/70 border border-emerald-500/40 text-[8.5px] font-bold text-emerald-300 uppercase tracking-wider"
+                >
+                  {isSyncingFcm ? 'Syncing...' : '🔄 Sync Profile & FCM'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isCheckingHealth}
+                  onClick={handleCheckGatewayHealth}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[8.5px] font-bold text-cyan-300 uppercase tracking-wider"
+                >
+                  {isCheckingHealth ? 'Checking...' : '↻ Check Gateways'}
+                </button>
+              </div>
             </div>
 
             {providerHealth && (
@@ -921,15 +1027,33 @@ export const Settings: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
-                  <span className="text-slate-400">FCM Contact Ring</span>
+                  <span className="text-slate-400">FCM Server</span>
                   <span className={providerHealth.providers?.fcm ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
                     {providerHealth.providers?.fcm ? 'READY' : 'UNSET'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70 col-span-2">
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
+                  <span className="text-slate-400">Target FCM App</span>
+                  <span className={providerHealth.tokenStatus?.registered ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                    {providerHealth.tokenStatus?.registered
+                      ? `${providerHealth.tokenStatus.deviceCount} DEVICE(S)`
+                      : 'NOT REGISTERED'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70">
                   <span className="text-slate-400">Rain PCM SIM</span>
                   <span className="text-cyan-300 font-bold">{providerHealth.pcmGateway || '0816738186'}</span>
                 </div>
+                {providerHealth.nativeFcm && (
+                  <div className="flex items-center justify-between px-2 py-1 rounded bg-slate-900/70 col-span-2 sm:col-span-3">
+                    <span className="text-slate-400">This Android Device FCM</span>
+                    <span className={providerHealth.nativeFcm.hasToken && providerHealth.nativeFcm.lastHttp === 200 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                      {providerHealth.nativeFcm.hasToken
+                        ? `TOKEN READY • SYNC HTTP ${providerHealth.nativeFcm.lastHttp || 'PENDING'} (${providerHealth.nativeFcm.registeredPhone || providerHealth.nativeFcm.savedPhone || 'NO PHONE'})`
+                        : 'NO FCM TOKEN YET — TAP SYNC'}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -961,14 +1085,22 @@ export const Settings: React.FC = () => {
                 <span>SMS + FCM Alarm Ring only (skip automated AI voice call during test)</span>
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
                   disabled={isSendingLiveTest}
                   onClick={handleSendLiveTestTrigger}
                   className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-[9px] uppercase tracking-wider transition-all shadow-md"
                 >
-                  {isSendingLiveTest ? 'Transmitting Live Test...' : '🚀 Send Live SMS + FCM Test'}
+                  {isSendingLiveTest ? 'Transmitting...' : '🚀 Send SMS + FCM Test'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSendingFcmTest}
+                  onClick={handleSendRealFcmRingTest}
+                  className="py-2.5 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white font-bold text-[9px] uppercase tracking-wider transition-all shadow-md"
+                >
+                  {isSendingFcmTest ? 'Pushing FCM...' : '📲 Send Real FCM Ring'}
                 </button>
                 <button
                   type="button"
@@ -984,7 +1116,7 @@ export const Settings: React.FC = () => {
                   }}
                   className="py-2.5 px-3 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-bold text-[9px] uppercase tracking-wider transition-all"
                 >
-                  🔔 Test Loud Contact Ringtone
+                  🔔 Local Siren Test
                 </button>
               </div>
             </div>

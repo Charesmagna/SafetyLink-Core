@@ -1,10 +1,14 @@
 import { useAppStore } from '../utils/store';
 
 const TOKEN_KEY = 'sl_profile_token';
+const FCM_TOKEN_KEY = 'sl_fcm_token';
 const DEFAULT_BACKEND = 'https://api.safetylink.online';
 const FALLBACK_BACKEND = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
 const DEAD_BACKEND_HOST = 'd089bef8b0b58c5d9506b512ec2f63dc.workers.dev';
+const DEFAULT_RAIN_GATEWAY = '0816738186';
 let lastSig = '';
+let cachedRainGateway = DEFAULT_RAIN_GATEWAY;
+let lastGatewayFetchAt = 0;
 
 function resolveProfileSyncBackends(customUrl?: string): string[] {
   const candidates: string[] = [];
@@ -17,15 +21,69 @@ function resolveProfileSyncBackends(customUrl?: string): string[] {
   return candidates;
 }
 
+async function resolveRainGatewayNumber(backends: string[], fallback?: string): Promise<string> {
+  const configured = String(fallback || '').trim();
+  if (configured) cachedRainGateway = configured;
+  if (Date.now() - lastGatewayFetchAt < 15 * 60_000) return cachedRainGateway;
+  lastGatewayFetchAt = Date.now();
+  for (const backend of backends) {
+    try {
+      const res = await fetch(`${backend}/api/pcm/gateway`);
+      const data: any = await res.json().catch(() => ({}));
+      if (res.ok && typeof data?.number === 'string' && data.number.trim()) {
+        // Convert +27816738186 to local 0816738186 for SA USSD *140*081...#
+        const clean = data.number.trim().replace(/[\s-]/g, '');
+        cachedRainGateway = clean.startsWith('+27') && clean.length === 12
+          ? '0' + clean.slice(3)
+          : clean;
+        return cachedRainGateway;
+      }
+    } catch {
+      // try next backend
+    }
+  }
+  return cachedRainGateway;
+}
+
 /**
- * Saves who the user is, their emergency contacts and last known location on the SafetyLink server.
- * This is what lets the server recognise an offline "Please Call Me" from this phone and alert the right people.
+ * Registers this device's cached FCM token to SafetyLink backend(s) for a given phone number.
+ * Ensures emergency contacts who install SafetyLink receive loud FCM rings immediately after login.
  */
-export async function syncProfile(): Promise<void> {
+export async function syncDeviceFcmToken(phone: string, fcmToken?: string, profileToken?: string): Promise<boolean> {
+  const cleanPhone = String(phone || '').trim();
+  const token = String(fcmToken || localStorage.getItem(FCM_TOKEN_KEY) || '').trim();
+  if (!cleanPhone || token.length < 20) return false;
+
+  const s: any = useAppStore.getState();
+  const pTok = String(profileToken || localStorage.getItem(TOKEN_KEY) || '').trim();
+  for (const backend of resolveProfileSyncBackends(s.customBackendUrl)) {
+    try {
+      const res = await fetch(`${backend}/api/device/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(pTok ? { 'X-Profile-Token': pTok } : {}),
+        },
+        body: JSON.stringify({ phone: cleanPhone, token }),
+      });
+      if (res.ok) return true;
+    } catch {
+      // try next backend
+    }
+  }
+  return false;
+}
+
+/**
+ * Saves who the user is, their emergency contacts, Rain PCM gateway settings, FCM device token,
+ * and last known location on the SafetyLink server and native Android SharedPreferences.
+ * This enables zero-airtime Please Call Me -> Rain SIM -> Server -> FCM loud contact ringing.
+ */
+export async function syncProfile(force = false): Promise<boolean> {
   const s: any = useAppStore.getState();
   const user = s.currentUser;
   const org = s.currentOrg;
-  if ((!user?.phone && !org?.controlRoomNumber) || s.demoMode || user?.isDemo) return;
+  if ((!user?.phone && !org?.controlRoomNumber) || s.demoMode || user?.isDemo) return false;
 
   const effectivePhone = user?.phone || org?.controlRoomNumber || '';
   const effectiveName = user?.fullName || user?.username || org?.contactName || org?.name || 'SafetyLink User';
@@ -34,6 +92,10 @@ export async function syncProfile(): Promise<void> {
   const loc = s.userLocation;
   const alertNote = String(user?.alertNote || '').trim().slice(0, 140);
   const contacts = (s.contacts || []).slice(0, 5).map((c: any) => ({ name: c.name, phone: c.phone }));
+  const ds = s.dispatchSettings || {};
+
+  const backends = resolveProfileSyncBackends(s.customBackendUrl);
+  const rainGateway = await resolveRainGatewayNumber(backends, ds.pcmGatewayNumber || DEFAULT_RAIN_GATEWAY);
 
   const sig = JSON.stringify([
     effectivePhone,
@@ -41,12 +103,16 @@ export async function syncProfile(): Promise<void> {
     effectiveOrgCode,
     contacts,
     alertNote,
+    rainGateway,
+    ds.ussdEnabled !== false,
+    ds.offlineUssdMode || 'RAIN_PCM',
+    ds.pcmCooldownMinutes ?? 5,
     loc ? Math.round(loc.lat * 1000) : 0,
     loc ? Math.round(loc.lng * 1000) : 0,
   ]);
-  if (sig === lastSig) return;
+  if (!force && sig === lastSig) return true;
 
-  // Always update native SharedPreferences first so hardware triggers work even when completely offline
+  // Always update native SharedPreferences first so hardware & zero-airtime PCM triggers work even offline
   try {
     const { NativeDispatchService } = await import('./NativeDispatchService');
     await NativeDispatchService.saveNativeProfile({
@@ -58,7 +124,11 @@ export async function syncProfile(): Promise<void> {
       userId: effectiveUserId,
       lat: loc?.lat,
       lng: loc?.lng,
-      ussdEnabled: Boolean(s.dispatchSettings?.ussdEnabled),
+      ussdEnabled: ds.ussdEnabled !== false,
+      pcmGateway: rainGateway,
+      offlineUssdMode: ds.offlineUssdMode || 'RAIN_PCM',
+      reverseChargePrefix: ds.reverseChargePrefix || '127',
+      pcmCooldownMinutes: typeof ds.pcmCooldownMinutes === 'number' ? ds.pcmCooldownMinutes : 5,
       userPin: s.userPin || '',
       duressPin: s.duressPin || '',
       contacts: (s.contacts || []).map((c: any) => ({
@@ -70,13 +140,19 @@ export async function syncProfile(): Promise<void> {
     });
   } catch { /* native bridge not available on web */ }
 
-  if (!effectivePhone) return;
+  if (!effectivePhone) return false;
 
   const token = localStorage.getItem(TOKEN_KEY) || '';
   let syncAccepted = false;
   let savedToken = token;
 
-  for (const backend of resolveProfileSyncBackends(s.customBackendUrl)) {
+  // Register push identity on native immediately (even before /api/profile/sync responds)
+  try {
+    const { SafetyLinkEmergency } = await import('./NativeDispatchService');
+    await SafetyLinkEmergency.savePushIdentity({ phone: effectivePhone, profileToken: savedToken });
+  } catch { /* native bridge not available on web */ }
+
+  for (const backend of backends) {
     try {
       const res = await fetch(`${backend}/api/profile/sync`, {
         method: 'POST',
@@ -111,13 +187,16 @@ export async function syncProfile(): Promise<void> {
     }
   }
 
-  if (syncAccepted && savedToken) {
-    try {
-      const { SafetyLinkEmergency } = await import('./NativeDispatchService');
-      await SafetyLinkEmergency.savePushIdentity({ phone: effectivePhone, profileToken: savedToken });
-    } catch { /* native bridge not available on web */ }
-  }
+  // Re-sync native PushRegistrar with updated profileToken AND push cached WebView FCM token if available
+  try {
+    const { SafetyLinkEmergency } = await import('./NativeDispatchService');
+    await SafetyLinkEmergency.savePushIdentity({ phone: effectivePhone, profileToken: savedToken });
+  } catch { /* native bridge not available on web */ }
+
+  await syncDeviceFcmToken(effectivePhone, undefined, savedToken).catch(() => {});
+
   if (syncAccepted) lastSig = sig;
+  return syncAccepted;
 }
 
 let started = false;
@@ -127,8 +206,8 @@ export function startProfileSync(): void {
   let timer: any = null;
   useAppStore.subscribe(() => {
     clearTimeout(timer);
-    timer = setTimeout(syncProfile, 4000);
+    timer = setTimeout(() => { void syncProfile(); }, 3500);
   });
-  setInterval(syncProfile, 5 * 60 * 1000);
-  setTimeout(syncProfile, 5000);
+  setInterval(() => { void syncProfile(); }, 5 * 60 * 1000);
+  setTimeout(() => { void syncProfile(); }, 3000);
 }

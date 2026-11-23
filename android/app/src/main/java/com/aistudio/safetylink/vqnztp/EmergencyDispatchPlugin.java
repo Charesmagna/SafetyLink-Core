@@ -128,7 +128,23 @@ public class EmergencyDispatchPlugin extends Plugin {
                 profileEditor.putLong("sl_lng", Double.doubleToRawLongBits(lng));
             }
             if (call.hasOption("ussdEnabled")) {
-                profileEditor.putBoolean("ussd_enabled", Boolean.TRUE.equals(call.getBoolean("ussdEnabled", false)));
+                profileEditor.putBoolean("ussd_enabled", Boolean.TRUE.equals(call.getBoolean("ussdEnabled", true)));
+            }
+            String pcmGateway = call.getString("pcmGateway");
+            if (pcmGateway != null && !pcmGateway.trim().isEmpty()) {
+                profileEditor.putString("pcm_gateway", pcmGateway.trim());
+            }
+            String offlineUssdMode = call.getString("offlineUssdMode");
+            if (offlineUssdMode != null && !offlineUssdMode.trim().isEmpty()) {
+                profileEditor.putString("offline_ussd_mode", offlineUssdMode.trim());
+            }
+            String reverseChargePrefix = call.getString("reverseChargePrefix");
+            if (reverseChargePrefix != null) {
+                profileEditor.putString("reverse_charge_prefix", reverseChargePrefix.trim());
+            }
+            if (call.hasOption("pcmCooldownMinutes")) {
+                Integer cd = call.getInt("pcmCooldownMinutes", 5);
+                profileEditor.putInt("pcm_cooldown_minutes", cd != null ? Math.max(0, Math.min(30, cd)) : 5);
             }
             String userPin = call.getString("userPin");
             if (userPin != null) profileEditor.putString("sl_user_pin", userPin);

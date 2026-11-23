@@ -4,6 +4,7 @@
 // This file does not replace /api/panic.
 
 import { sendLoudAlarm } from './fcm';
+import { tokensForPhone, pruneDeviceToken, phoneLookupVariants } from './device-tokens';
 
 export interface ZeroEnv {
   DB?: D1Database;
@@ -27,7 +28,7 @@ export interface ZeroEnv {
   FCM_SERVICE_ACCOUNT?: string;
 }
 
-const DEDUPE_MS = 90_000; // same caller, 90 seconds
+const DEDUPE_MS = 5 * 60_000; // 5-minute strict cooldown per caller (prevents repeat PCM SMS bursts)
 
 export function toE164(raw: string): string {
   let n = String(raw || '').replace(/[^0-9+]/g, '');
@@ -41,10 +42,23 @@ export function toE164(raw: string): string {
 
 export function extractMsisdn(rawText: string, sender: string): string {
   const text = String(rawText || '');
-  const match =
-    text.match(/(?:call(?:\s|-)?me(?:\s|-)?(?:back)?(?:\s|-)?(?:at|from|on)?)[:\s]*(\+?27[6-8]\d{8}|0[6-8]\d{8})/i) ||
-    text.match(/(\+?27[6-8]\d{8}|0[6-8]\d{8})/);
-  return toE164((match && match[1]) || sender || '');
+  // Match South African mobile numbers even with spaces, hyphens, or parentheses
+  // e.g. "Please call me: 072 123 4567", "+27 82-123-4567", "27831234567", "(084) 123 4567"
+  const saPhonePattern = '(?:\\+?27|0)[\\s\\-()]?[6-8]\\d[\\s\\-]?\\d{3}[\\s\\-]?\\d{4}';
+  const contextualRe = new RegExp(`(?:call(?:\\s|-)?me(?:\\s|-)?(?:back)?(?:\\s|-)?(?:at|from|on)?|pls\\s*call|callback)[:\\s]*(${saPhonePattern})`, 'i');
+  const bareRe = new RegExp(`(${saPhonePattern})`);
+  const match = text.match(contextualRe) || text.match(bareRe);
+  const candidate = (match && match[1]) || '';
+  if (candidate) {
+    const normalized = toE164(candidate);
+    if (normalized.length >= 11) return normalized;
+  }
+  // Fall back to sender only if it looks like a real mobile number (not carrier shortcodes like 140 / Vodacom)
+  const senderNormalized = toE164(sender || '');
+  if (/^\+27[6-8]\d{8}$/.test(senderNormalized) || /^\+\d{10,15}$/.test(senderNormalized)) {
+    return senderNormalized;
+  }
+  return '';
 }
 
 export async function ensureZeroAirtimeSchema(db: D1Database): Promise<void> {
@@ -137,17 +151,50 @@ export async function syncProfile(env: ZeroEnv, body: any, presentedToken: strin
   return { status: 200, json: { ok: true, phone, token, contacts: savedContactCount } };
 }
 
-async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string; contacts: string[]; lat?: number; lng?: number; note?: string }> {
-  const profile = await env.DB!.prepare('SELECT name, lat, lng, alert_note FROM sl_profiles WHERE phone=?').bind(phone).first<{ name: string; lat: number; lng: number; alert_note: string }>();
-  const rows = await env.DB!.prepare(
-    'SELECT contact_phone FROM sl_contacts WHERE owner_phone=? ORDER BY sort_order ASC LIMIT 5'
-  ).bind(phone).all<{ contact_phone: string }>();
+async function loadContacts(env: ZeroEnv, phone: string): Promise<{ name: string; contacts: string[]; lat?: number; lng?: number; note?: string; known: boolean }> {
+  const variants = phoneLookupVariants(phone);
+  const placeholders = variants.map(() => '?').join(', ');
+
+  let profile: { phone?: string; name: string; lat: number; lng: number; alert_note: string } | null = null;
+  if (variants.length > 0) {
+    profile = await env.DB!.prepare(
+      `SELECT phone, name, lat, lng, alert_note FROM sl_profiles WHERE phone IN (${placeholders}) ORDER BY updated_at DESC LIMIT 1`
+    ).bind(...variants).first<{ phone?: string; name: string; lat: number; lng: number; alert_note: string }>().catch(() => null);
+  }
+
+  // Fallback to main users table if user registered an account before sl_profiles synced
+  if (!profile && variants.length > 0) {
+    const userRow = await env.DB!.prepare(
+      `SELECT username, phone, lat, lng FROM users WHERE phone IN (${placeholders}) LIMIT 1`
+    ).bind(...variants).first<{ username?: string; phone?: string; lat?: number; lng?: number }>().catch(() => null);
+    if (userRow) {
+      profile = {
+        phone: userRow.phone,
+        name: userRow.username || phone,
+        lat: Number(userRow.lat || 0),
+        lng: Number(userRow.lng || 0),
+        alert_note: '',
+      };
+    }
+  }
+
+  const rows = variants.length > 0
+    ? await env.DB!.prepare(
+        `SELECT contact_phone FROM sl_contacts WHERE owner_phone IN (${placeholders}) ORDER BY sort_order ASC LIMIT 5`
+      ).bind(...variants).all<{ contact_phone: string }>().catch(() => ({ results: [] }))
+    : { results: [] };
+
+  const uniqueContacts = Array.from(
+    new Set((rows.results || []).map((r) => toE164(r.contact_phone)).filter(Boolean))
+  );
+
   return {
     name: profile?.name || phone,
-    contacts: (rows.results || []).map(r => r.contact_phone).filter(Boolean),
+    contacts: uniqueContacts,
     lat: profile?.lat || undefined,
     lng: profile?.lng || undefined,
     note: profile?.alert_note || undefined,
+    known: Boolean(profile || uniqueContacts.length > 0),
   };
 }
 
@@ -242,12 +289,15 @@ async function sendViaSmsGateWithRetry(env: ZeroEnv, to: string, smsBody: string
 async function enqueueFailedRetries(env: ZeroEnv, eventId: string, ownerPhone: string, results: any[]): Promise<void> {
   if (!env.DB) return;
   const now = Date.now();
-  const nextRetryAt = now + 60_000;
+  const nextRetryAt = now + 5 * 60_000; // Wait 5 minutes before a single automatic retry
   for (const r of results) {
     if (r?.ok === true || !r?.to || !r?.smsBody) continue;
+    // Never enqueue FCM or client-rejected 4xx errors for SMSGate retry
+    if (r.channel !== 'SMS') continue;
+    if (typeof r.status === 'number' && r.status >= 400 && r.status < 500 && r.status !== 429) continue;
     await env.DB.prepare(
       `INSERT INTO sl_pcm_retries (id, event_id, owner_phone, recipient_phone, sms_body, attempts, max_attempts, status, last_error, next_retry_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 1, 5, 'PENDING', ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, 1, 2, 'PENDING', ?, ?, ?, ?)`
     ).bind(
       crypto.randomUUID(),
       eventId,
@@ -287,37 +337,73 @@ async function notifyContacts(env: ZeroEnv, opts: {
 
   const results: any[] = [];
   await Promise.allSettled(targets.map(async (to) => {
-    const res = await sendViaSmsGateWithRetry(env, to, smsBody, 2);
-    results.push(res);
-
-    // Also ring any SafetyLink Android app registered to this contact via FCM Loud Alarm
-    if (env.FCM_SERVICE_ACCOUNT && env.DB) {
+    // Run FCM Loud Alarm (high-priority data-only wake ring) AND SMSGate in parallel
+    // so emergency contacts with the SafetyLink app start ringing immediately regardless of SMSGate latency!
+    const fcmTask = (async () => {
+      if (!env.FCM_SERVICE_ACCOUNT || !env.DB) return;
       try {
-        const localVariant = to.startsWith('+27') && to.length === 12 ? '0' + to.slice(3) : to;
-        const r1: any = await env.DB.prepare('SELECT token FROM device_tokens WHERE phone = ? OR phone = ? LIMIT 5').bind(to, localVariant).all().catch(() => ({ results: [] }));
-        const r2: any = await env.DB.prepare('SELECT token FROM sl_device_tokens WHERE phone = ? OR phone = ? LIMIT 5').bind(to, localVariant).all().catch(() => ({ results: [] }));
-        const tokens = Array.from(new Set([
-          ...((r1?.results || []).map((x: any) => x.token)),
-          ...((r2?.results || []).map((x: any) => x.token)),
-        ].filter(Boolean)));
-        for (const devToken of tokens) {
+        const tokens = await tokensForPhone(env.DB, to);
+        if (tokens.length === 0) {
+          results.push({
+            to,
+            channel: 'FCM_LOUD_ALARM',
+            provider: 'firebase',
+            ok: false,
+            state: 'NO_DEVICE_TOKEN',
+            detail: 'Contact has no registered SafetyLink app FCM token yet',
+          });
+          return;
+        }
+        await Promise.allSettled(tokens.map(async (devToken) => {
           const fcmRes = await sendLoudAlarm(
-            env.FCM_SERVICE_ACCOUNT,
+            env.FCM_SERVICE_ACCOUNT!,
             devToken,
             '🚨 EMERGENCY: SafetyLink Alert',
-            `${opts.ownerName} (${opts.ownerPhone}) triggered a SafetyLink SOS! ${locTxt}`,
+            `${opts.ownerName} (${opts.ownerPhone}) triggered a zero-airtime SOS! ${locTxt}`,
             {
               callerName: opts.ownerName,
               callerNumber: opts.ownerPhone,
               location: place,
+              triggerSource: 'RAIN_PCM_ZERO_AIRTIME',
+              ...(opts.eventId ? { incidentId: opts.eventId, eventId: opts.eventId } : {}),
+              ...(opts.note ? { alertNote: opts.note } : {}),
               ...(opts.lat ? { lat: String(opts.lat) } : {}),
               ...(opts.lng ? { lng: String(opts.lng) } : {}),
-            }
-          ).catch((e: any) => ({ ok: false, error: e?.message }));
-          results.push({ to, channel: 'FCM_LOUD_ALARM', provider: 'firebase', ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm sent' : (fcmRes as any).error });
-        }
-      } catch {}
-    }
+            },
+          ).catch((e: any) => ({ ok: false, status: 500, error: String(e?.message || e), unregistered: false }));
+
+          if (!fcmRes.ok && fcmRes.unregistered) {
+            await pruneDeviceToken(env.DB, devToken);
+          }
+
+          results.push({
+            to,
+            channel: 'FCM_LOUD_ALARM',
+            provider: 'firebase',
+            ok: fcmRes.ok,
+            status: fcmRes.status,
+            state: fcmRes.ok ? 'DELIVERED_TO_FCM' : (fcmRes.unregistered ? 'STALE_TOKEN_PRUNED' : 'FAILED'),
+            detail: fcmRes.ok ? 'High-priority loud alarm sent to SafetyLink app' : fcmRes.error,
+          });
+        }));
+      } catch (e: any) {
+        results.push({
+          to,
+          channel: 'FCM_LOUD_ALARM',
+          provider: 'firebase',
+          ok: false,
+          state: 'ERROR',
+          detail: String(e?.message || e).slice(0, 200),
+        });
+      }
+    })();
+
+    const smsTask = (async () => {
+      const res = await sendViaSmsGateWithRetry(env, to, smsBody, 2);
+      results.push(res);
+    })();
+
+    await Promise.allSettled([fcmTask, smsTask]);
   }));
 
   if (opts.eventId) {
@@ -326,22 +412,71 @@ async function notifyContacts(env: ZeroEnv, opts: {
   return results;
 }
 
+function isLoopOrCarrierNoise(rawText: string, sender: string, extractedPhone: string, env: ZeroEnv): string | null {
+  const txt = String(rawText || '').toLowerCase();
+  const gw = gatewayNumber(env);
+  const centre = toE164(env.RESPONSE_CENTRE_NUMBER || '');
+  if (gw && extractedPhone === gw) return 'SELF_GATEWAY_NUMBER';
+  if (centre && extractedPhone === centre) return 'RESPONSE_CENTRE_ECHO';
+  if (
+    txt.includes('safetylink alert') ||
+    txt.includes('safetylink panic') ||
+    txt.includes('safetylink location') ||
+    txt.includes('safetylink watchdog') ||
+    txt.includes('unknown caller:')
+  ) {
+    return 'SAFETYLINK_OUTBOUND_ECHO';
+  }
+  if (
+    txt.includes('delivery report') ||
+    txt.includes('remaining sms') ||
+    txt.includes('out of bundle') ||
+    txt.includes('insufficient airtime') ||
+    txt.includes('insufficient balance') ||
+    txt.includes('otp') ||
+    txt.includes('verification code') ||
+    txt.includes('bundle balance')
+  ) {
+    return 'CARRIER_SYSTEM_NOTICE';
+  }
+  // If rawText is long and does not look like a Please Call Me / emergency SMS, ignore to prevent SMS loops
+  const looksLikePcm = /call\s*me|please\s*call|pls\s*call|call\s*back|callback|pcm|sos|panic|help|emergency/i.test(txt) || txt.length <= 40;
+  if (txt.length > 0 && !looksLikePcm) {
+    return 'NON_PCM_SMS_IGNORED';
+  }
+  return null;
+}
+
 export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string): Promise<{ status: number; json: any }> {
   const phone = extractMsisdn(rawText, sender);
-  if (!phone) return { status: 400, json: { error: 'No caller number in the SMS' } };
+  if (!phone) return { status: 200, json: { ok: true, status: 'IGNORED_NO_CALLER_NUMBER' } };
+  const noiseReason = isLoopOrCarrierNoise(rawText, sender, phone, env);
+  if (noiseReason) {
+    console.warn('[PCM Loop Guard] Ignored inbound SMS:', { noiseReason, phone });
+    return { status: 200, json: { ok: true, status: 'IGNORED_LOOP_GUARD', reason: noiseReason, msisdn: phone } };
+  }
   if (!env.DB) return { status: 503, json: { error: 'Database not configured' } };
   await ensureZeroAirtimeSchema(env.DB);
   const saved = await loadContacts(env, phone);
-  if (!saved.contacts.length && saved.name === phone) {
-    const known = await env.DB.prepare('SELECT phone FROM sl_profiles WHERE phone=?').bind(phone).first();
-    if (!known) {
-      // Unknown caller: never alert strangers. Send the command centre a single SMS via Rain SMSGate.
+  if (!saved.known) {
+      // Unknown caller: apply 5-minute dedupe here too so unregistered numbers can never spam SMSGate!
+      const since = Date.now() - DEDUPE_MS;
+      const recentUnknown = await env.DB.prepare(
+        "SELECT id FROM sl_pcm_events WHERE owner_phone=? AND created_at>? LIMIT 1"
+      ).bind(phone, since).first<{ id: string }>();
+      if (recentUnknown) {
+        return { status: 200, json: { ok: true, status: 'DEDUPED_UNKNOWN', msisdn: phone, eventId: recentUnknown.id } };
+      }
+      const evId = crypto.randomUUID();
+      const now = Date.now();
+      await env.DB.prepare(
+        "INSERT INTO sl_pcm_events (id, owner_phone, created_at, located, dispatch_status, attempts, last_attempt_at) VALUES (?, ?, ?, 0, 'ACCEPTED', 1, ?)"
+      ).bind(evId, phone, now, now).run().catch(() => {});
       const centre = toE164(env.RESPONSE_CENTRE_NUMBER || '');
       if (centre) {
         await notifyContacts(env, { ownerPhone: phone, ownerName: 'Unregistered caller', contacts: [centre], voice: false, smsPrefix: 'UNKNOWN CALLER' });
       }
-      return { status: 200, json: { ok: true, status: 'UNKNOWN_FORWARDED_TO_COMMAND', msisdn: phone } };
-    }
+      return { status: 200, json: { ok: true, status: 'UNKNOWN_FORWARDED_TO_COMMAND', msisdn: phone, eventId: evId } };
   }
 
   // Suppress accepted/in-flight events, but never let a failed dispatch block a retry.
@@ -395,6 +530,7 @@ export async function inboundPcm(env: ZeroEnv, rawText: string, sender: string):
   // successful backup is counted as success for that channel.
   const channelOutcomes = new Map<string, boolean>();
   for (const result of results) {
+    if (result?.state === 'NO_DEVICE_TOKEN') continue;
     const key = `${String(result.to || '')}:${String(result.channel || 'UNKNOWN')}`;
     channelOutcomes.set(key, (channelOutcomes.get(key) || false) || result.ok === true);
   }
@@ -508,7 +644,7 @@ export async function locatePcm(env: ZeroEnv, body: any): Promise<{ status: numb
 }
 
 export function gatewayNumber(env: ZeroEnv): string {
-  return toE164(env.RAIN_GATEWAY_MSISDN || '');
+  return toE164(env.RAIN_GATEWAY_MSISDN || '0816738186');
 }
 
 const GATEWAY_STALE_MS = 15 * 60_000;

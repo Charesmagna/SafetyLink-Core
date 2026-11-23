@@ -210,30 +210,95 @@ public final class EmergencyService {
         }
     }
 
+    private static String toLocal10Digit(String raw) {
+        if (raw == null) return "";
+        String digits = raw.replaceAll("[^0-9]", "");
+        if (digits.startsWith("27") && digits.length() == 11) return "0" + digits.substring(2);
+        if (digits.length() == 9 && (digits.startsWith("6") || digits.startsWith("7") || digits.startsWith("8"))) return "0" + digits;
+        return digits;
+    }
+
+    private static String getPrimaryContactNumber(Context ctx) {
+        try {
+            String raw = ctx.getSharedPreferences(CONTACTS_PREFS, Context.MODE_PRIVATE).getString("list", "[]");
+            JSONArray arr = new JSONArray(raw);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.optJSONObject(i);
+                if (o != null) {
+                    String p = o.optString("phone", "").trim();
+                    if (!p.isEmpty()) return p;
+                }
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
     @SuppressWarnings("MissingPermission")
     public static String sendPleaseCallMe(Context ctx) {
         try {
             if (ctx.checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return "NO_PERMISSION";
-            String gateway = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("pcm_gateway", DEFAULT_PCM_GATEWAY);
-            if (gateway == null || gateway.trim().isEmpty()) return "UNAVAILABLE";
+            SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+
+            // Enforce configurable cooldown (default: 5 minutes) so repeat presses within 5 minutes do NOT spam PCM/USSD
+            int cooldownMinutes = Math.max(0, prefs.getInt("pcm_cooldown_minutes", 5));
+            long cooldownMs = cooldownMinutes * 60_000L;
+            long lastPcmAt = prefs.getLong("last_pcm_sent_at", 0L);
+            long now = System.currentTimeMillis();
+            if (cooldownMs > 0 && lastPcmAt > 0 && (now - lastPcmAt) < cooldownMs) {
+                long remainingSec = Math.max(1L, (cooldownMs - (now - lastPcmAt)) / 1000L);
+                Log.i(TAG, "Please Call Me suppressed by " + cooldownMinutes + "m dedupe (" + remainingSec + "s remaining)");
+                return "COOLDOWN_" + cooldownMinutes + "M";
+            }
+
+            String mode = prefs.getString("offline_ussd_mode", "RAIN_PCM");
+            String customPrefix = prefs.getString("reverse_charge_prefix", "127");
+            String primaryContact = toLocal10Digit(getPrimaryContactNumber(ctx));
+            String gateway = prefs.getString("pcm_gateway", DEFAULT_PCM_GATEWAY);
+            if (gateway == null || gateway.trim().isEmpty()) gateway = DEFAULT_PCM_GATEWAY;
+
             TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
             if (tm == null) return "NO_TELEPHONY";
             int subId = getPreferredSubId(ctx);
             if (subId >= 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) tm = tm.createForSubscriptionId(subId);
             String op = tm.getSimOperator() == null ? "" : tm.getSimOperator();
+
+            // Mode 1: Reverse-Charge Call directly to #1 Emergency Contact (e.g. MTN Pay4Me 127<number>)
+            if ("REVERSE_CHARGE_CALL".equalsIgnoreCase(mode) && !primaryContact.isEmpty()) {
+                String prefix = (customPrefix != null && !customPrefix.trim().isEmpty()) ? customPrefix.trim() : (op.startsWith("65501") ? "082180" : "127");
+                String dialTarget = prefix.endsWith("#") ? prefix.replace("{NUMBER}", primaryContact) : (prefix + primaryContact);
+                prefs.edit().putLong("last_pcm_sent_at", now).apply();
+                return pcmViaCall(ctx, dialTarget, "REVERSE_CHARGE");
+            }
+
+            // Mode 2 or 3: Carrier-matched Please Call Me (either to #1 Emergency Contact or Rain SIM Gateway)
+            String targetNumber = ("DIRECT_CONTACT_PCM".equalsIgnoreCase(mode) && !primaryContact.isEmpty())
+                    ? primaryContact
+                    : gateway.trim();
+
             String code = "140";                       // Vodacom (65501) and Telkom (65502)
             if (op.startsWith("65510")) code = "121";  // MTN
             else if (op.startsWith("65507")) code = "111"; // Cell C
-            String ussd = "*" + code + "*" + gateway.trim() + "#";
+            String ussd = "*" + code + "*" + targetNumber + "#";
+
+            prefs.edit().putLong("last_pcm_sent_at", now).apply();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 final CountDownLatch latch = new CountDownLatch(1);
                 final String[] res = { "SENT" };
                 tm.sendUssdRequest(ussd, new TelephonyManager.UssdResponseCallback() {
-                    @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) { latch.countDown(); }
-                    @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) { res[0] = "FAILED_" + failureCode; latch.countDown(); }
+                    @Override public void onReceiveUssdResponse(TelephonyManager t, String request, CharSequence response) {
+                        Log.i(TAG, "USSD carrier response received: " + (response != null ? response.toString() : "OK"));
+                        res[0] = "SENT";
+                        latch.countDown();
+                    }
+                    @Override public void onReceiveUssdResponseFailed(TelephonyManager t, String request, int failureCode) {
+                        Log.w(TAG, "Headless USSD failed with code " + failureCode + "; falling back to dialer USSD");
+                        res[0] = "FAILED_" + failureCode;
+                        latch.countDown();
+                    }
                 }, new Handler(Looper.getMainLooper()));
-                boolean completed = latch.await(5, TimeUnit.SECONDS);
+                // SA carriers (MTN/Vodacom/Cell C/Telkom) typically respond to USSD in 2-6s; wait up to 7s before proceeding
+                boolean completed = latch.await(7, TimeUnit.SECONDS);
                 if (!completed) return "QUEUED";
                 if (res[0].startsWith("FAILED")) return pcmViaCall(ctx, ussd, res[0]);
                 return res[0];
@@ -375,8 +440,8 @@ public final class EmergencyService {
                 preferredCallTarget = recipients.iterator().next();
             }
 
-            // STAGE 1: Backend & Cloud Telemetry Sync
-            boolean backendOk = logIncidentToBackend(incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy, savedName, savedPhone);
+            // STAGE 1: Backend & Cloud Telemetry Sync (include saved emergency contacts so server rings their apps via FCM)
+            boolean backendOk = logIncidentToBackend(incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy, savedName, savedPhone, recipients);
             String syncStatus = backendOk ? "SYNCED" : "PENDING";
             if (!backendOk && context != null) {
                 OfflineSyncWorker.queueOfflineIncident(context, incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy);
@@ -415,26 +480,59 @@ public final class EmergencyService {
             }
             Log.i(TAG, "[STAGE 2/4] SMS Broadcast result: " + smsStatus + " (" + recipients.size() + " target(s))");
 
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
 
-            // STAGE 3: Direct Voice Call (explicit INITIATED / FAILED / UNAVAILABLE)
-            String callStatus = placeNativeCall(context, preferredCallTarget);
-            Log.i(TAG, "[STAGE 3/4] Voice Call Status: " + callStatus + " to " + preferredCallTarget);
-
-            try { Thread.sleep(3500); } catch (InterruptedException ignored) {}
-
-            // STAGE 4: Zero-Data USSD Please Call Me (PCM) — strictly opt-in (OFF by default) + Offline PCM Location Queue
-            boolean ussdEnabled = prefs.getBoolean("ussd_enabled", false);
-            String pcmStatus = ussdEnabled ? sendPleaseCallMe(context) : "DISABLED_BY_USER";
+            // STAGE 3: Zero-Data / Zero-Airtime Carrier USSD "Please Call Me" (PCM) to Rain SIM Gateway
+            // Runs STRICTLY BEFORE the native voice call because GSM networks cannot run a USSD session
+            // concurrently with an active voice call. Waits for the carrier USSD callback + modem settle time.
+            boolean ussdEnabled = prefs.getBoolean("ussd_enabled", true);
+            String offlineUssdMode = prefs.getString("offline_ussd_mode", "RAIN_PCM");
+            boolean noDataAndNoAirtime = !backendOk && !"SENT".equals(smsStatus);
+            boolean shouldSendPcm = noDataAndNoAirtime || (ussdEnabled && !backendOk);
+            String pcmStatus = shouldSendPcm
+                    ? sendPleaseCallMe(context)
+                    : (backendOk ? "SKIPPED_ONLINE_FCM" : "DISABLED_BY_USER");
             if (!backendOk && !savedPhone.isEmpty() && (finalLat != 0.0 || finalLng != 0.0)) {
                 OfflineSyncWorker.queuePcmLocation(context, savedPhone, finalLat, finalLng);
             }
-            Log.i(TAG, "[STAGE 4/4] PCM USSD Status: " + pcmStatus + " (enabled=" + ussdEnabled + ")");
+            Log.i(TAG, "[STAGE 3/4] PCM USSD Status: " + pcmStatus + " (enabled=" + ussdEnabled + ", backendOk=" + backendOk + ", sms=" + smsStatus + ")");
+
+            // Wait for modem/carrier USSD session teardown so Stage 4 voice call NEVER collides with USSD
+            boolean pcmUsedVoiceCall = pcmStatus.startsWith("DIALED(REVERSE_CHARGE)");
+            if (shouldSendPcm && !pcmUsedVoiceCall) {
+                long ussdSettleMs;
+                if (pcmStatus.startsWith("DIALED(")) {
+                    // Fallback tel: USSD dialog stays open ~6-7s while carrier processes *121*/*140*
+                    ussdSettleMs = 7000L;
+                } else if ("QUEUED".equals(pcmStatus)) {
+                    // Headless USSD still settling after 7s await
+                    ussdSettleMs = 3000L;
+                } else if ("SENT".equals(pcmStatus)) {
+                    // Headless USSD already received carrier confirmation; brief modem release pause
+                    ussdSettleMs = 2000L;
+                } else {
+                    ussdSettleMs = 1000L;
+                }
+                try { Thread.sleep(ussdSettleMs); } catch (InterruptedException ignored) {}
+            }
+
+            // STAGE 4: Native Direct Voice Call (explicit INITIATED / FAILED / UNAVAILABLE / SKIPPED)
+            // Runs LAST so the live voice call remains open and uninterrupted. Never interrupts an active call.
+            String callStatus;
+            if (pcmUsedVoiceCall && "REVERSE_CHARGE_CALL".equalsIgnoreCase(offlineUssdMode)) {
+                callStatus = "SKIPPED_REVERSE_CHARGE_ACTIVE";
+            } else if (isCallCurrentlyActive(context)) {
+                callStatus = "SKIPPED_CALL_IN_PROGRESS";
+            } else {
+                callStatus = placeNativeCall(context, preferredCallTarget);
+            }
+            Log.i(TAG, "[STAGE 4/4] Voice Call Status: " + callStatus + " to " + preferredCallTarget);
 
             boolean overallSuccess = backendOk
                     || "SENT".equals(smsStatus)
                     || "PARTIAL".equals(smsStatus)
                     || "INITIATED".equals(callStatus)
+                    || "SKIPPED_REVERSE_CHARGE_ACTIVE".equals(callStatus)
                     || pcmStatus.startsWith("SENT")
                     || pcmStatus.startsWith("QUEUED")
                     || pcmStatus.startsWith("DIALED");
@@ -473,6 +571,20 @@ public final class EmergencyService {
             Log.w(TAG, "Last known location lookup failed: " + e.getMessage());
         }
         return new double[]{ 0.0, 0.0 };
+    }
+
+    private boolean isCallCurrentlyActive(Context context) {
+        try {
+            if (context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+            TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+            if (tm == null) return false;
+            int state = tm.getCallState();
+            return state == TelephonyManager.CALL_STATE_OFFHOOK || state == TelephonyManager.CALL_STATE_RINGING;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String normalizePhoneNumber(String raw) {
@@ -600,7 +712,8 @@ public final class EmergencyService {
             String orgId,
             String triggeredBy,
             String savedName,
-            String savedPhone
+            String savedPhone,
+            LinkedHashSet<String> recipients
     ) {
         String[] targets = new String[]{ BACKEND_PRIMARY_URL, BACKEND_WORKERS_URL, BACKEND_LOCAL_DEV_URL };
         String[] paths = new String[]{ "/api/panic", "/api/incidents" };
@@ -634,6 +747,15 @@ public final class EmergencyService {
                     payload.put("description", description);
                     payload.put("status", "DISPATCHED");
                     payload.put("severity", "CRITICAL");
+                    if (recipients != null && !recipients.isEmpty()) {
+                        JSONArray contactsArr = new JSONArray();
+                        for (String rPhone : recipients) {
+                            JSONObject cObj = new JSONObject();
+                            cObj.put("phone", rPhone);
+                            contactsArr.put(cObj);
+                        }
+                        payload.put("contacts", contactsArr);
+                    }
 
                     String jsonStr = payload.toString();
                     try (OutputStream os = conn.getOutputStream()) {

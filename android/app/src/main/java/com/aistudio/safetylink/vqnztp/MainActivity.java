@@ -34,6 +34,8 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ITagPlugin.class);
         super.onCreate(savedInstanceState);
         LoudAlarmChannel.create(this);
+        PushRegistrar.fetchAndRegister(this);
+        handleIncomingAlarmIntent(getIntent());
         // One-time SIM choice: remember the phone's default voice SIM so panic never asks SIM 1 or SIM 2
         try {
             if (android.os.Build.VERSION.SDK_INT >= 22) {
@@ -48,6 +50,30 @@ public class MainActivity extends BridgeActivity {
         startSentinelServices();
 
         setupOAuthPopupSupport();
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingAlarmIntent(intent);
+    }
+
+    private void handleIncomingAlarmIntent(android.content.Intent intent) {
+        if (intent == null) return;
+        String type = intent.getStringExtra("type");
+        if ("EMERGENCY_RING".equalsIgnoreCase(type)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+            } else {
+                getWindow().addFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                    android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                );
+            }
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 
     private void startSentinelServices() {

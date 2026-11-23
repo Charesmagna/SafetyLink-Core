@@ -173,15 +173,58 @@ public class SafetyLinkBridgePlugin extends Plugin {
     public void savePushIdentity(PluginCall call) {
         String phone = call.getString("phone", "");
         String profileToken = call.getString("profileToken", "");
-        if (phone == null || phone.trim().isEmpty() || profileToken == null || profileToken.trim().isEmpty()) {
+        if (phone == null || phone.trim().isEmpty()) {
             JSObject ret = new JSObject();
             ret.put("saved", false);
             call.resolve(ret);
             return;
         }
-        PushRegistrar.saveIdentity(getContext(), phone.trim(), profileToken.trim());
+        PushRegistrar.saveIdentity(getContext(), phone.trim(), profileToken != null ? profileToken.trim() : "");
         JSObject ret = new JSObject();
         ret.put("saved", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getFcmStatus(PluginCall call) {
+        android.content.SharedPreferences p = getContext().getSharedPreferences("safetylink_prefs", android.content.Context.MODE_PRIVATE);
+        String token = p.getString("fcm_token", "");
+        String regPhone = p.getString("fcm_registered_phone", "");
+        long regAt = p.getLong("fcm_registered_at", 0L);
+        int lastHttp = p.getInt("fcm_last_http", 0);
+        if (token == null || token.trim().isEmpty()) {
+            PushRegistrar.fetchAndRegister(getContext());
+        }
+        JSObject ret = new JSObject();
+        boolean hasToken = token != null && token.trim().length() > 20;
+        ret.put("hasToken", hasToken);
+        ret.put("tokenPrefix", hasToken ? token.trim().substring(0, Math.min(12, token.trim().length())) : "");
+        ret.put("registeredPhone", regPhone != null ? regPhone : "");
+        ret.put("registeredAt", regAt);
+        ret.put("lastHttpStatus", lastHttp);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void stopEmergencyAlarm(PluginCall call) {
+        SafetyFcmService.stopActiveAlarmRingtone(getContext());
+        JSObject ret = new JSObject();
+        ret.put("stopped", true);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void consumePendingFcmRing(PluginCall call) {
+        android.content.SharedPreferences p = getContext().getSharedPreferences("safetylink_prefs", android.content.Context.MODE_PRIVATE);
+        String json = p.getString(SafetyFcmService.KEY_PENDING_RING_JSON, null);
+        JSObject ret = new JSObject();
+        if (json != null && !json.trim().isEmpty()) {
+            p.edit().remove(SafetyFcmService.KEY_PENDING_RING_JSON).apply();
+            ret.put("hasPending", true);
+            ret.put("payloadJson", json);
+        } else {
+            ret.put("hasPending", false);
+        }
         call.resolve(ret);
     }
 

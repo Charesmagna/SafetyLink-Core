@@ -18,6 +18,7 @@ export interface EmergencyDispatchPlugin {
     lng?: number;
     contacts?: any[];
     ussdEnabled?: boolean;
+    pcmGateway?: string;
     offlineUssdMode?: 'RAIN_PCM' | 'DIRECT_CONTACT_PCM' | 'REVERSE_CHARGE_CALL';
     reverseChargePrefix?: string;
     pcmCooldownMinutes?: number;
@@ -69,7 +70,10 @@ export interface SafetyLinkEmergencyPlugin {
   cancel(): Promise<{ status: string }>;
   getState(): Promise<{ isCountdownActive: boolean; secondsRemaining: number; lastStatus: string }>;
   getLastResult(): Promise<NativeDispatchResultSnapshot>;
-  savePushIdentity(options: { phone: string; profileToken: string }): Promise<{ saved: boolean }>;
+  savePushIdentity(options: { phone: string; profileToken?: string }): Promise<{ saved: boolean }>;
+  getFcmStatus(): Promise<{ hasToken: boolean; tokenPrefix?: string; registeredPhone?: string; registeredAt?: number; lastHttpStatus?: number }>;
+  stopEmergencyAlarm(): Promise<{ stopped: boolean }>;
+  consumePendingFcmRing(): Promise<{ hasPending: boolean; payloadJson?: string }>;
   setButtonConfig(options: any): Promise<{ success: boolean }>;
   startBleService(): Promise<{ started: boolean }>;
   getDeviceBattery(): Promise<{ level: number; isCharging: boolean; chargingTime?: number; dischargingTime?: number }>;
@@ -516,6 +520,7 @@ export class NativeDispatchService {
     lng?: number;
     contacts?: any[];
     ussdEnabled?: boolean;
+    pcmGateway?: string;
     offlineUssdMode?: 'RAIN_PCM' | 'DIRECT_CONTACT_PCM' | 'REVERSE_CHARGE_CALL';
     reverseChargePrefix?: string;
     pcmCooldownMinutes?: number;

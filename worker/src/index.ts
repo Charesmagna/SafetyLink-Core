@@ -2,6 +2,13 @@ import { verifyForwarderSignature } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
 import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
 import { sendLoudAlarm } from './fcm';
+import {
+  saveDeviceToken,
+  tokensForPhone,
+  tokenStatusForPhone,
+  pruneDeviceToken,
+  phoneLookupVariants,
+} from './device-tokens';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -10,6 +17,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import {
   checkGatewayStaleAlert,
+  extractMsisdn,
   gatewayNumber,
   getGatewayHealth,
   inboundPcm,
@@ -130,7 +138,9 @@ const verifyToken = async (env: Env, token: string): Promise<any> => {
 };
 
 const checkTrialExpired = async (db: D1Database, orgId: string) => {
-  if (orgId === 'SL-ADMIN-0000') return false;
+  const cleanOrg = String(orgId || '').trim().toUpperCase();
+  // Private/individual users are FREE — trial enforcement applies strictly to Organizations only.
+  if (!cleanOrg || cleanOrg === 'INDIVIDUAL' || cleanOrg === 'PRIVATE' || cleanOrg === 'SL-ADMIN-0000') return false;
   const org = await db.prepare('SELECT created_at FROM organisations WHERE id = ?').bind(orgId).first() as { created_at: number } | null;
   if (!org) return false;
   return Date.now() - org.created_at > 29 * 86400_000;
@@ -240,11 +250,33 @@ const normalizePhone = (raw: string): string => {
   return '+' + n;
 };
 
+async function checkSmsCooldownD1(env: Env, callerKey: string, recipient: string, cooldownMs = 5 * 60_000): Promise<boolean> {
+  if (!env.DB) return false;
+  try {
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS sl_sms_dedupe (dedupe_key TEXT PRIMARY KEY, sent_at INTEGER NOT NULL)'
+    ).run();
+    const key = `${callerKey}::${recipient}`.slice(0, 128);
+    const now = Date.now();
+    const row = await env.DB.prepare('SELECT sent_at FROM sl_sms_dedupe WHERE dedupe_key = ?').bind(key).first<{ sent_at: number }>();
+    if (row && now - Number(row.sent_at || 0) < cooldownMs) {
+      return true; // throttled within 5-minute cooldown
+    }
+    await env.DB.prepare(
+      'INSERT INTO sl_sms_dedupe (dedupe_key, sent_at) VALUES (?, ?) ON CONFLICT(dedupe_key) DO UPDATE SET sent_at=excluded.sent_at'
+    ).bind(key, now).run();
+    return false;
+  } catch {
+    return false; // fail open for life-safety
+  }
+}
+
 async function fireAllAlerts(
   env: Env,
-  { callerNumber, callerName, lat, lng, address, extraContacts = [], skipVoiceTo = [], providers = {} }: {
+  { callerNumber, callerName, lat, lng, address, extraContacts = [], skipVoiceTo = [], providers = {}, preferFcmOnline = false, smsCooldownMinutes = 5 }: {
     callerNumber: string; callerName: string; lat?: number; lng?: number; address?: string;
     extraContacts?: string[]; skipVoiceTo?: string[]; providers?: any;
+    preferFcmOnline?: boolean; smsCooldownMinutes?: number;
   }
 ): Promise<AlertResult[]> {
   const location = address || (lat ? await reverseGeocode(lat, lng!) : 'Location unknown');
@@ -264,12 +296,15 @@ async function fireAllAlerts(
   const at = { key: providers?.at?.key || env.AT_API_KEY, username: providers?.at?.username || env.AT_USERNAME };
   const bl = { key: providers?.bland?.key || env.BLAND_API_KEY };
 
+  const rainGateway = normalizePhone(env.RAIN_GATEWAY_MSISDN || '');
   const all = Array.from(new Set([
     ...extraContacts.map(normalizePhone),
     normalizePhone(env.RESPONSE_CENTRE_NUMBER || '+27739441222'),
-  ].filter(Boolean)));
+  ].filter(n => Boolean(n) && (!rainGateway || n !== rainGateway))));
   const skipVoice = new Set(skipVoiceTo.map(normalizePhone));
   const voiceTargets = all.filter(n => !skipVoice.has(n));
+  const cooldownMs = Math.max(0, Math.min(30, Number(smsCooldownMinutes) || 5)) * 60_000;
+  const callerDedupeKey = normalizePhone(callerNumber || '') || callerName || 'anon';
 
   const results: AlertResult[] = [];
   const attempt = async (channel: string, provider: string, to: string, fn: () => Promise<Response>): Promise<boolean> => {
@@ -297,32 +332,75 @@ async function fireAllAlerts(
   const spoken = `SafetyLink emergency alert. ${callerName || 'A user'} has triggered a panic. Location: ${location}. Please respond immediately.`;
 
   await Promise.allSettled(all.map(async (to) => {
-    // SMS: Twilio first, Africa's Talking as backup
-    let smsOk = false;
-    // 0) Free route: Rain SIM via SMSGate (200 SMS/month included). Off until credentials are saved.
-    const sgUser = (env as any).SMSGATE_USERNAME, sgPass = (env as any).SMSGATE_PASSWORD;
-    if (sgUser && sgPass) {
-      smsOk = await attempt('SMS', 'smsgate', to, () => fetch(`${((env as any).SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '')}/3rdparty/v1/messages`, {
-        method: 'POST',
-        headers: { Authorization: 'Basic ' + btoa(`${sgUser}:${sgPass}`), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textMessage: { text: smsBody }, phoneNumbers: [to] }),
-      }));
-    }
-    if (!smsOk && twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
-    if (!smsOk && at.key && at.username) {
-      await attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
-        method: 'POST',
-        headers: { apiKey: at.key, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ username: at.username, to, message: smsBody }).toString(),
-      }));
+    // 1) Push Notification: High-priority DATA-ONLY FCM loud alarm is ALWAYS part of emergency dispatch
+    let fcmDelivered = false;
+    if ((env as any).FCM_SERVICE_ACCOUNT && (env as any).DB) {
+      try {
+        const tokens = await tokensForPhone((env as any).DB, to);
+        await Promise.allSettled(tokens.map(async (devToken) => {
+          const alarmTitle = '🚨 EMERGENCY: SafetyLink Alert';
+          const alarmBody = `${callerName || callerNumber || 'A SafetyLink user'} pressed panic! Location: ${location}`;
+          const fcmRes = await sendLoudAlarm((env as any).FCM_SERVICE_ACCOUNT, devToken, alarmTitle, alarmBody, {
+            callerName: String(callerName || callerNumber || 'SafetyLink User'),
+            callerNumber: String(callerNumber || ''),
+            location: String(location || 'Location unknown'),
+            triggerSource: 'ONLINE_PANIC',
+            ...(typeof lat === 'number' ? { lat: String(lat) } : {}),
+            ...(typeof lng === 'number' ? { lng: String(lng) } : {}),
+          }).catch((e: any) => ({ ok: false, status: 500, error: String(e?.message || e), unregistered: false }));
+          if (fcmRes.ok) fcmDelivered = true;
+          if (!fcmRes.ok && fcmRes.unregistered) {
+            await pruneDeviceToken((env as any).DB, devToken);
+          }
+          results.push({
+            channel: 'FCM_LOUD_ALARM',
+            provider: 'firebase',
+            to,
+            ok: fcmRes.ok,
+            status: fcmRes.status,
+            detail: fcmRes.ok ? 'Loud alarm ring sent to SafetyLink app' : fcmRes.error,
+          });
+        }));
+      } catch (err: any) {
+        console.warn('[FCM dispatch error]', err);
+      }
     }
 
-    // WhatsApp via Twilio (needs a WhatsApp-enabled sender or the sandbox joined by the recipient)
-    if (twAuth && tw.waFrom) {
+    // 2) SMS: Respect configurable online Data-First mode + 5-minute D1 SMS dedupe guard
+    const skipSmsDueToFcm = preferFcmOnline && fcmDelivered;
+    if (skipSmsDueToFcm) {
+      results.push({ channel: 'SMS', provider: 'fcm_data_saver', to, ok: true, detail: 'Skipped SMS (contact alerted via free FCM Loud Alarm on internet data)' });
+    } else {
+      const smsThrottled = cooldownMs > 0 ? await checkSmsCooldownD1(env, callerDedupeKey, to, cooldownMs) : false;
+      if (smsThrottled) {
+        results.push({ channel: 'SMS', provider: 'd1_dedupe_5m', to, ok: true, detail: `SMS suppressed: already sent to ${to} within last ${Math.round(cooldownMs / 60000)} minutes` });
+      } else {
+        let smsOk = false;
+        const sgUser = (env as any).SMSGATE_USERNAME, sgPass = (env as any).SMSGATE_PASSWORD;
+        if (sgUser && sgPass) {
+          smsOk = await attempt('SMS', 'smsgate', to, () => fetch(`${((env as any).SMSGATE_BASE_URL || 'https://api.sms-gate.app').replace(/\/+$/, '')}/3rdparty/v1/messages`, {
+            method: 'POST',
+            headers: { Authorization: 'Basic ' + btoa(`${sgUser}:${sgPass}`), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ textMessage: { text: smsBody }, phoneNumbers: [to] }),
+          }));
+        }
+        if (!smsOk && twAuth && tw.from) smsOk = await attempt('SMS', 'twilio', to, () => twPost('Messages', { From: tw.from, To: to, Body: smsBody }));
+        if (!smsOk && at.key && at.username) {
+          await attempt('SMS', 'africastalking', to, () => fetch('https://api.africastalking.com/version1/messaging', {
+            method: 'POST',
+            headers: { apiKey: at.key, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ username: at.username, to, message: smsBody }).toString(),
+          }));
+        }
+      }
+    }
+
+    // 3) WhatsApp via Twilio (only when TWILIO_WHATSAPP_FROM is explicitly configured)
+    if (twAuth && (env as any).TWILIO_WHATSAPP_FROM) {
       await attempt('WHATSAPP', 'twilio', to, () => twPost('Messages', { From: `whatsapp:${tw.waFrom}`, To: `whatsapp:${to}`, Body: smsBody }));
     }
 
-    // Voice: ONE call per number. Vapi (AI) -> Twilio voice -> Bland, stopping at first success
+    // 4) Voice: ONE call per number. Vapi (AI) -> Twilio voice -> Bland, stopping at first success
     if (voiceTargets.includes(to)) {
       let called = false;
       if (vp.key && vp.phoneId) {
@@ -350,37 +428,6 @@ async function fireAllAlerts(
           method: 'POST', headers: { authorization: bl.key, 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone_number: to, task: `Tell the person: ${spoken} Then ask them to confirm they will respond.`, max_duration: 2, wait_for_greeting: true }),
         }));
-      }
-    }
-
-    // Push Notification: High-priority FCM loud alarm to registered Android devices
-    if ((env as any).FCM_SERVICE_ACCOUNT) {
-      try {
-        const localVariant = to.startsWith('+27') && to.length === 12 ? '0' + to.slice(3) : to;
-        const rows1: any = await (env as any).DB?.prepare(
-          'SELECT token FROM device_tokens WHERE phone = ? OR phone = ? LIMIT 5'
-        ).bind(to, localVariant).all().catch(() => ({ results: [] }));
-        const rows2: any = await (env as any).DB?.prepare(
-          'SELECT token FROM sl_device_tokens WHERE phone = ? OR phone = ? LIMIT 5'
-        ).bind(to, localVariant).all().catch(() => ({ results: [] }));
-        const tokens = Array.from(new Set([
-          ...((rows1?.results || []).map((r: any) => r.token)),
-          ...((rows2?.results || []).map((r: any) => r.token)),
-        ].filter(Boolean)));
-        for (const devToken of tokens) {
-          const alarmTitle = '🚨 EMERGENCY: SafetyLink Alert';
-          const alarmBody = `${callerName || callerNumber || 'A SafetyLink user'} pressed panic! Location: ${location}`;
-          const fcmRes = await sendLoudAlarm((env as any).FCM_SERVICE_ACCOUNT, devToken, alarmTitle, alarmBody, {
-            callerName: String(callerName || callerNumber || 'SafetyLink User'),
-            callerNumber: String(callerNumber || ''),
-            location: String(location || 'Location unknown'),
-            ...(typeof lat === 'number' ? { lat: String(lat) } : {}),
-            ...(typeof lng === 'number' ? { lng: String(lng) } : {}),
-          }).catch((e: any) => ({ ok: false, error: e?.message }));
-          results.push({ channel: 'FCM_LOUD_ALARM', provider: 'firebase', to, ok: fcmRes.ok, detail: fcmRes.ok ? 'Loud alarm ring sent to SafetyLink app' : (fcmRes as any).error });
-        }
-      } catch (err: any) {
-        console.warn('[FCM dispatch error]', err);
       }
     }
   }));
@@ -467,35 +514,100 @@ app.get('/api/app/beta/versions', async (c) => {
   return c.json({ versions: Array.isArray(list) ? list : [] });
 });
 
-// Device FCM Token Registration for Android Push Ringing
+// Device FCM Token Registration for Android Push Ringing (supports multi-device & E.164 normalization)
 app.post('/api/device/token', async (c) => {
   const profileToken = c.req.header('X-Profile-Token') || '';
   const body: any = await c.req.json().catch(() => ({}));
-  const phone = normalizePhone(body.phone || '');
+  const rawPhone = String(body.phone || '').trim();
   const token = String(body.token || '').trim();
-  if (!phone || !token) return c.json({ error: 'Missing phone or token' }, 400);
+  if (!rawPhone || !token || token.length < 20) {
+    return c.json({ error: 'Valid phone and FCM device token are required' }, 400);
+  }
+  if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
 
-  await c.env.DB?.prepare(`
-    CREATE TABLE IF NOT EXISTS device_tokens (
-      phone TEXT PRIMARY KEY,
-      token TEXT NOT NULL,
-      profile_token TEXT,
-      updated_at INTEGER NOT NULL
-    )
-  `).run().catch(() => {});
+  const saved = await saveDeviceToken(c.env.DB, rawPhone, token, profileToken);
+  if (!saved.saved) return c.json({ error: 'Invalid phone number format' }, 400);
 
-  await c.env.DB?.prepare(`
-    INSERT INTO device_tokens (phone, token, profile_token, updated_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(phone) DO UPDATE SET token=excluded.token, profile_token=excluded.profile_token, updated_at=excluded.updated_at
-  `).bind(phone, token, profileToken, Date.now()).run().catch(async () => {
-    await c.env.DB?.prepare(`
-      INSERT OR REPLACE INTO device_tokens (phone, token, profile_token, updated_at)
-      VALUES (?, ?, ?, ?)
-    `).bind(phone, token, profileToken, Date.now()).run().catch(() => {});
+  return c.json({
+    ok: true,
+    registered: true,
+    phone: saved.phone,
+    tokenPrefix: token.slice(0, 12),
+    updatedAt: Date.now(),
   });
+});
 
-  return c.json({ ok: true, registered: true, phone });
+// Check whether a SafetyLink contact phone has an active FCM device token registered (never exposes raw tokens)
+app.get('/api/device/token/status', async (c) => {
+  const rawPhone = String(c.req.query('phone') || '').trim();
+  if (!rawPhone) return c.json({ error: 'phone query parameter is required' }, 400);
+  if (!c.env.DB) return c.json({ error: 'Database not configured' }, 503);
+  const st = await tokenStatusForPhone(c.env.DB, rawPhone);
+  return c.json({
+    ok: true,
+    fcmConfigured: !!(c.env as any).FCM_SERVICE_ACCOUNT,
+    ...st,
+  });
+});
+
+// Send a real high-priority data-only FCM loud ring test to a registered SafetyLink phone
+app.post('/api/fcm/test-ring', async (c) => {
+  if (!(c.env as any).FCM_SERVICE_ACCOUNT) {
+    return c.json({ ok: false, error: 'FCM_SERVICE_ACCOUNT is not configured on this server' }, 503);
+  }
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const body: any = await c.req.json().catch(() => ({}));
+  const targetPhone = normalizePhone(body.phone || '');
+  if (!targetPhone) return c.json({ ok: false, error: 'Valid target phone number is required' }, 400);
+
+  const tokens = await tokensForPhone(c.env.DB, targetPhone);
+  if (tokens.length === 0) {
+    return c.json({
+      ok: false,
+      phone: targetPhone,
+      deviceCount: 0,
+      error: 'No SafetyLink Android app FCM token registered for this number yet. Open SafetyLink on that phone while signed in with this phone number.',
+    }, 404);
+  }
+
+  const callerName = String(body.callerName || 'SafetyLink Diagnostic Test').slice(0, 80);
+  const callerNumber = normalizePhone(body.callerNumber || '') || targetPhone;
+  const location = String(body.location || 'FCM Live Loud Ring Verification').slice(0, 200);
+
+  const deliveries: any[] = [];
+  for (const devToken of tokens) {
+    const fcmRes = await sendLoudAlarm(
+      (c.env as any).FCM_SERVICE_ACCOUNT,
+      devToken,
+      '🚨 SafetyLink FCM Ring Test',
+      `${callerName} triggered a live loud-alarm verification ring.`,
+      {
+        callerName,
+        callerNumber,
+        location,
+        triggerSource: 'FCM_LIVE_TEST',
+        isTest: 'true',
+      },
+    ).catch((e: any) => ({ ok: false, status: 500, error: String(e?.message || e), unregistered: false }));
+
+    if (!fcmRes.ok && fcmRes.unregistered) {
+      await pruneDeviceToken(c.env.DB, devToken);
+    }
+    deliveries.push({
+      ok: fcmRes.ok,
+      status: fcmRes.status,
+      state: fcmRes.ok ? 'DELIVERED_TO_FCM' : (fcmRes.unregistered ? 'STALE_TOKEN_PRUNED' : 'FAILED'),
+      error: fcmRes.error,
+    });
+  }
+
+  const anyOk = deliveries.some((d) => d.ok);
+  return c.json({
+    ok: anyOk,
+    phone: targetPhone,
+    deviceCount: tokens.length,
+    deliveries,
+  }, anyOk ? 200 : 502);
 });
 
 // Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
@@ -1021,11 +1133,29 @@ app.post('/api/panic', async (c) => {
     });
   }
 
+  // If caller did not pass explicit contacts (e.g., native Android background trigger),
+  // hydrate saved emergency contacts from D1 sl_contacts so FCM still rings all contacts.
+  let resolvedContacts = [...contactNumbers];
+  if (resolvedContacts.length === 0 && callerNumber && c.env.DB) {
+    try {
+      const variants = phoneLookupVariants(callerNumber);
+      if (variants.length > 0) {
+        const placeholders = variants.map(() => '?').join(', ');
+        const rows: any = await c.env.DB.prepare(
+          `SELECT contact_phone FROM sl_contacts WHERE owner_phone IN (${placeholders}) ORDER BY sort_order ASC LIMIT 5`
+        ).bind(...variants).all().catch(() => ({ results: [] }));
+        resolvedContacts = (rows?.results || []).map((r: any) => r.contact_phone).filter(Boolean);
+      }
+    } catch {}
+  }
+
   const results = await fireAllAlerts(c.env, {
     callerNumber: callerNumber || '', callerName: callerName || '', lat, lng, address,
-    extraContacts: contactNumbers,
+    extraContacts: resolvedContacts,
     skipVoiceTo: Array.isArray(body.skipVoiceTo) ? body.skipVoiceTo : [],
     providers: body.providers || {},
+    preferFcmOnline: Boolean(body.preferFcmOnline),
+    smsCooldownMinutes: typeof body.smsCooldownMinutes === 'number' ? body.smsCooldownMinutes : 5,
   });
   return c.json({ ok: results.some(r => r.ok), address, results });
 });
@@ -1228,20 +1358,34 @@ async function handlePcmWebhookInner(c: any) {
   try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
 
   const rawText = String(
-    body.rawMessage || body.pcmText || body.message || body.text || body.msg || ''
+    body.rawMessage ||
+    body.pcmText ||
+    body.message ||
+    body.text ||
+    body.msg ||
+    body.body ||
+    body.content ||
+    body.sms_body ||
+    body.sms ||
+    ''
   ).trim();
 
   const gatewaySender = String(
-    body.sender || body.from || body.phone || body.callerMsisdn || ''
+    body.callerMsisdn ||
+    body.sender ||
+    body.from ||
+    body.phone ||
+    body.address ||
+    body.number ||
+    body.sms_from ||
+    body.originatingAddress ||
+    body.from_number ||
+    ''
   ).trim();
 
-  let extractedPhone = body.callerMsisdn || '';
-  if (!extractedPhone && rawText) {
-    const match = rawText.match(/(?:(?:call(?:[ -]?me)?(?:[ -]?back)?[ -]?(?:at|from)?)|(?:^))[:\s]*(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/i) ||
-                  rawText.match(/(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/);
-    if (match) extractedPhone = match[1];
-  }
-  if (!extractedPhone && gatewaySender) extractedPhone = gatewaySender;
+  const extractedPhone = body.callerMsisdn
+    ? normalizePhone(String(body.callerMsisdn))
+    : extractMsisdn(rawText, gatewaySender);
 
   if (!extractedPhone) {
     return c.json({ ok: true, alerted: false, reason: 'No caller number in message (test or non-emergency SMS)' }, 200);
@@ -1278,9 +1422,12 @@ app.post('/api/user/heartbeat', async (c) => {
 // ── APP VERSION POLICY (Minimum Version Gate) ─────────────────────────────────
 app.get('/api/app/version-policy', async (c) => {
   const row: any = await c.env.DB?.prepare("SELECT value FROM app_config WHERE key = 'min_supported_version'").first().catch(() => null);
+  const idxObj: any = await (c.env as any).RELEASES?.get('versions/index.json').catch(() => null);
+  const list = idxObj ? await idxObj.json().catch(() => []) : [];
+  const latestVer = Array.isArray(list) && list[0]?.version ? String(list[0].version) : '1.1.1211';
   return c.json({
     minSupportedVersion: row?.value || '1.0.0',
-    latestVersion: '1.1.1170',
+    latestVersion: latestVer,
     updateUrl: 'https://safetylink.online/#/download',
   });
 });
@@ -1347,6 +1494,41 @@ app.post('/api/org/:orgId/join-requests/:requestId/reject', authMiddleware, asyn
   if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
   await c.env.DB?.prepare("UPDATE org_join_requests SET status='REJECTED' WHERE id=? AND UPPER(org_id)=UPPER(?)").bind(requestId, orgId).run();
   return c.json({ ok: true, status: 'REJECTED' });
+});
+
+app.post('/api/org/:orgId/members/:userId/status', authMiddleware, async (c) => {
+  const { orgId, userId } = c.req.param();
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  const body: any = await c.req.json().catch(() => ({}));
+  const action = String(body.action || 'ACTIVATE').toUpperCase();
+  const nextStatus = action === 'SUSPEND' ? 'suspended' : action === 'DEACTIVATE' ? 'deactivated' : 'active';
+  await c.env.DB?.prepare('UPDATE users SET status=? WHERE id=? AND UPPER(org_id)=UPPER(?)').bind(nextStatus, userId, orgId).run();
+  await c.env.DB?.prepare('INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), orgId.toUpperCase(), `ORG_MEMBER_${action}`, userId, body.reason || '', Date.now()).run().catch(() => {});
+  return c.json({ ok: true, userId, status: nextStatus });
+});
+
+app.delete('/api/org/:orgId/members/:userId', authMiddleware, async (c) => {
+  const { orgId, userId } = c.req.param();
+  if (!isOrgAuthorized(c, orgId)) return c.json({ error: 'Forbidden' }, 403);
+  await c.env.DB?.prepare('UPDATE users SET org_id=NULL WHERE id=? AND UPPER(org_id)=UPPER(?)').bind(userId, orgId).run();
+  await c.env.DB?.prepare("UPDATE org_join_requests SET status='DISCONNECTED' WHERE user_id=? AND UPPER(org_id)=UPPER(?)").bind(userId, orgId).run().catch(() => {});
+  await c.env.DB?.prepare('INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)')
+    .bind(crypto.randomUUID(), orgId.toUpperCase(), 'ORG_MEMBER_DISCONNECTED', userId, 'Member disconnected by Organization Admin', Date.now()).run().catch(() => {});
+  return c.json({ ok: true, userId, disconnected: true });
+});
+
+app.post('/api/user/org/disconnect', authMiddleware, async (c) => {
+  const body: any = await c.req.json().catch(() => ({}));
+  const userId = String(body.userId || '').trim();
+  const email = String(c.get('email') || '').trim();
+  if (!userId && !email) return c.json({ error: 'User identity required' }, 400);
+  if (userId) {
+    await c.env.DB?.prepare('UPDATE users SET org_id=NULL WHERE id=?').bind(userId).run();
+  } else {
+    await c.env.DB?.prepare('UPDATE users SET org_id=NULL WHERE LOWER(email)=LOWER(?)').bind(email).run();
+  }
+  return c.json({ ok: true, disconnected: true });
 });
 
 // ── INCIDENTS ─────────────────────────────────────────────────────────────────

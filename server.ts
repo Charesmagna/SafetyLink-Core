@@ -43,25 +43,30 @@ import { getMessaging } from 'firebase-admin/messaging';
 
 // Initialize Firebase Admin for Firestore & FCM updates
 let firebaseAdminApp: any = null;
+let hasExplicitFcmCredentials = false;
 if (!getApps().length) {
   let credentialConfig: any = null;
   const serviceAccountPath = './safetylink-99e56-service-account.json';
+  const rawSaEnv = process.env.FCM_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+  if (rawSaEnv) {
     try {
-      credentialConfig = cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY));
+      credentialConfig = cert(JSON.parse(rawSaEnv));
+      hasExplicitFcmCredentials = true;
     } catch {
       try {
-        if (fs.existsSync(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)) {
-          credentialConfig = cert(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        if (fs.existsSync(rawSaEnv)) {
+          credentialConfig = cert(rawSaEnv);
+          hasExplicitFcmCredentials = true;
         }
       } catch (e) {
-        console.warn('[FirebaseAdmin] Failed loading FIREBASE_SERVICE_ACCOUNT_KEY path:', e);
+        console.warn('[FirebaseAdmin] Failed loading service account env path:', e);
       }
     }
   } else if (fs.existsSync(serviceAccountPath)) {
     try {
       credentialConfig = cert(serviceAccountPath);
+      hasExplicitFcmCredentials = true;
       console.log('[FirebaseAdmin] Loaded credentials from safetylink-99e56-service-account.json');
     } catch (e) {
       console.warn('[FirebaseAdmin] Failed loading safetylink-99e56-service-account.json:', e);
@@ -3002,8 +3007,241 @@ Rules:
     }
   });
 
+  // ── ZERO-AIRTIME PROFILE, CONTACT & FCM DEVICE TOKEN REGISTRY (SQLite) ───────
+  const normalizeSaE164 = (raw: string): string => {
+    let n = String(raw || '').replace(/[^0-9+]/g, '');
+    if (n.startsWith('+')) n = n.slice(1);
+    if (n.startsWith('00')) n = n.slice(2);
+    if (n.startsWith('0') && n.length === 10) n = '27' + n.slice(1);
+    if (n.length === 9 && /^[6-8]/.test(n)) n = '27' + n;
+    return n ? '+' + n : '';
+  };
+
+  const saPhoneVariants = (raw: string): string[] => {
+    const e164 = normalizeSaE164(raw);
+    if (!e164) return [];
+    const set = new Set<string>([e164, e164.slice(1)]);
+    if (e164.startsWith('+27') && e164.length === 12) {
+      set.add('0' + e164.slice(3));
+    }
+    return Array.from(set);
+  };
+
+  const extractSaMsisdn = (rawText: string, sender: string): string => {
+    const text = String(rawText || '');
+    const saPattern = '(?:\\+?27|0)[\\s\\-()]?[6-8]\\d[\\s\\-]?\\d{3}[\\s\\-]?\\d{4}';
+    const ctxRe = new RegExp(`(?:call(?:\\s|-)?me(?:\\s|-)?(?:back)?(?:\\s|-)?(?:at|from|on)?|pls\\s*call|callback)[:\\s]*(${saPattern})`, 'i');
+    const bareRe = new RegExp(`(${saPattern})`);
+    const match = text.match(ctxRe) || text.match(bareRe);
+    if (match && match[1]) {
+      const norm = normalizeSaE164(match[1]);
+      if (norm.length >= 11) return norm;
+    }
+    const senderNorm = normalizeSaE164(sender || '');
+    if (/^\+27[6-8]\d{8}$/.test(senderNorm) || /^\+\d{10,15}$/.test(senderNorm)) {
+      return senderNorm;
+    }
+    return '';
+  };
+
+  let zeroAirtimeTablesReady = false;
+  const ensureZeroAirtimeLocalTables = async () => {
+    if (zeroAirtimeTablesReady) return;
+    await db.execute(`CREATE TABLE IF NOT EXISTS sl_profiles (phone TEXT PRIMARY KEY, name TEXT, lat REAL, lng REAL, token TEXT, alert_note TEXT, updated_at INTEGER)`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS sl_contacts (id TEXT PRIMARY KEY, owner_phone TEXT NOT NULL, name TEXT, contact_phone TEXT NOT NULL, sort_order INTEGER DEFAULT 0)`);
+    await db.execute(`CREATE TABLE IF NOT EXISTS sl_device_tokens (phone TEXT NOT NULL, token TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (phone, token))`);
+    zeroAirtimeTablesReady = true;
+  };
+
+  const lookupLocalFcmTokens = async (rawPhone: string): Promise<string[]> => {
+    await ensureZeroAirtimeLocalTables();
+    const variants = saPhoneVariants(rawPhone);
+    if (!variants.length) return [];
+    const ph = variants.map(() => '?').join(', ');
+    const r = await db.execute({
+      sql: `SELECT token FROM sl_device_tokens WHERE phone IN (${ph}) ORDER BY updated_at DESC LIMIT 8`,
+      args: variants,
+    });
+    return Array.from(new Set(r.rows.map((x: any) => String(x.token || '').trim()).filter((t) => t.length > 20)));
+  };
+
+  const sendDataOnlyFcmRing = async (
+    deviceToken: string,
+    title: string,
+    body: string,
+    extra: Record<string, string> = {}
+  ): Promise<{ ok: boolean; messageId?: string; error?: string; unregistered?: boolean }> => {
+    if (!hasExplicitFcmCredentials) {
+      return { ok: false, error: 'FCM service account credentials not configured on Express server' };
+    }
+    try {
+      const messaging = getMessaging();
+      const messageId = await messaging.send({
+        token: deviceToken,
+        // DATA-ONLY HIGH-priority payload so Android always invokes SafetyFcmService.onMessageReceived()
+        // even when locked, backgrounded, in Doze mode, or swiped away.
+        data: {
+          type: 'EMERGENCY_RING',
+          priority: 'CRITICAL',
+          ringDurationSec: '45',
+          title,
+          body,
+          timestamp: String(Date.now()),
+          ...extra,
+        },
+        android: {
+          priority: 'high',
+          ttl: 60_000,
+          directBootOk: true,
+        },
+      });
+      return { ok: true, messageId };
+    } catch (err: any) {
+      const code = String(err?.code || '');
+      const msg = String(err?.message || err).slice(0, 260);
+      const unregistered = /registration-token-not-registered|invalid-registration-token|UNREGISTERED|NOT_FOUND/i.test(`${code} ${msg}`);
+      if (unregistered) {
+        await db.execute({ sql: 'DELETE FROM sl_device_tokens WHERE token = ?', args: [deviceToken] }).catch(() => {});
+      }
+      return { ok: false, error: msg, unregistered };
+    }
+  };
+
+  app.get('/api/pcm/gateway', (_req, res) => {
+    return res.json({ number: normalizeSaE164(process.env.RAIN_GATEWAY_MSISDN || '0816738186') });
+  });
+
+  app.post('/api/profile/sync', async (req, res) => {
+    try {
+      await ensureZeroAirtimeLocalTables();
+      const body = req.body || {};
+      const phone = normalizeSaE164(body.phone || '');
+      if (!phone) return res.status(400).json({ error: 'phone is required' });
+      const presentedToken = String(req.headers['x-profile-token'] || '').trim();
+      const existing = await db.execute({ sql: 'SELECT token FROM sl_profiles WHERE phone = ? LIMIT 1', args: [phone] });
+      const existingToken = existing.rows[0]?.token ? String(existing.rows[0].token) : '';
+      if (existingToken && presentedToken && !safeEqualStr(existingToken, presentedToken)) {
+        return res.status(401).json({ error: 'Profile token does not match this number' });
+      }
+      const token = existingToken || crypto.randomUUID();
+      const lat = Number(body.lat);
+      const lng = Number(body.lng);
+      const now = Date.now();
+      const name = String(body.name || '').slice(0, 80);
+      const alertNote = String(body.alertNote || '').replace(/\s+/g, ' ').trim().slice(0, 140);
+
+      await db.execute({
+        sql: `INSERT INTO sl_profiles (phone, name, lat, lng, token, alert_note, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(phone) DO UPDATE SET
+                name=excluded.name,
+                lat=COALESCE(excluded.lat, sl_profiles.lat),
+                lng=COALESCE(excluded.lng, sl_profiles.lng),
+                alert_note=excluded.alert_note,
+                updated_at=excluded.updated_at`,
+        args: [phone, name, Number.isFinite(lat) ? lat : null, Number.isFinite(lng) ? lng : null, token, alertNote || null, now],
+      });
+
+      const contacts = Array.isArray(body.contacts) ? body.contacts.slice(0, 5) : [];
+      await db.execute({ sql: 'DELETE FROM sl_contacts WHERE owner_phone = ?', args: [phone] });
+      const seen = new Set<string>();
+      let savedCount = 0;
+      for (const c of contacts) {
+        const cp = normalizeSaE164(c?.phone || '');
+        if (!cp || cp === phone || seen.has(cp)) continue;
+        seen.add(cp);
+        await db.execute({
+          sql: 'INSERT INTO sl_contacts (id, owner_phone, name, contact_phone, sort_order) VALUES (?, ?, ?, ?, ?)',
+          args: [crypto.randomUUID(), phone, String(c?.name || '').slice(0, 80), cp, savedCount],
+        });
+        savedCount++;
+      }
+      return res.json({ ok: true, phone, token, contacts: savedCount });
+    } catch (e: any) {
+      return res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.post('/api/device/token', async (req, res) => {
+    try {
+      await ensureZeroAirtimeLocalTables();
+      const body = req.body || {};
+      const phone = normalizeSaE164(body.phone || '');
+      const token = String(body.token || '').trim();
+      if (!phone || token.length < 20) {
+        return res.status(400).json({ error: 'Valid phone and FCM token are required' });
+      }
+      const now = Date.now();
+      await db.execute({
+        sql: `INSERT INTO sl_device_tokens (phone, token, updated_at) VALUES (?, ?, ?)
+              ON CONFLICT(phone, token) DO UPDATE SET updated_at=excluded.updated_at`,
+        args: [phone, token, now],
+      });
+      return res.json({ ok: true, registered: true, phone, tokenPrefix: token.slice(0, 12), updatedAt: now });
+    } catch (e: any) {
+      return res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.get('/api/device/token/status', async (req, res) => {
+    try {
+      await ensureZeroAirtimeLocalTables();
+      const rawPhone = String(req.query.phone || '').trim();
+      const phone = normalizeSaE164(rawPhone);
+      if (!phone) return res.status(400).json({ error: 'phone query parameter is required' });
+      const variants = saPhoneVariants(phone);
+      const ph = variants.map(() => '?').join(', ');
+      const r = await db.execute({
+        sql: `SELECT token, updated_at FROM sl_device_tokens WHERE phone IN (${ph}) ORDER BY updated_at DESC LIMIT 8`,
+        args: variants,
+      });
+      const valid = r.rows.filter((x: any) => String(x.token || '').trim().length > 20);
+      const lastUpdated = valid.length ? Math.max(...valid.map((x: any) => Number(x.updated_at || 0))) : null;
+      return res.json({
+        ok: true,
+        fcmConfigured: hasExplicitFcmCredentials,
+        phone,
+        registered: valid.length > 0,
+        deviceCount: valid.length,
+        lastUpdated,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.post('/api/fcm/test-ring', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const phone = normalizeSaE164(body.phone || '');
+      if (!phone) return res.status(400).json({ ok: false, error: 'Valid target phone is required' });
+      const tokens = await lookupLocalFcmTokens(phone);
+      if (!tokens.length) {
+        return res.status(404).json({ ok: false, phone, deviceCount: 0, error: 'No registered FCM device token for this phone number' });
+      }
+      const callerName = String(body.callerName || 'SafetyLink Diagnostic Test').slice(0, 80);
+      const callerNumber = normalizeSaE164(body.callerNumber || '') || phone;
+      const location = String(body.location || 'FCM Live Loud Ring Verification').slice(0, 200);
+      const deliveries = await Promise.all(
+        tokens.map((t) =>
+          sendDataOnlyFcmRing(t, '🚨 SafetyLink FCM Ring Test', `${callerName} triggered a live loud-alarm verification ring.`, {
+            callerName,
+            callerNumber,
+            location,
+            triggerSource: 'FCM_LIVE_TEST',
+            isTest: 'true',
+          })
+        )
+      );
+      const anyOk = deliveries.some((d) => d.ok);
+      return res.status(anyOk ? 200 : 502).json({ ok: anyOk, phone, deviceCount: tokens.length, deliveries });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
+    }
+  });
+
   // ── RAIN SIM HARDWARE GATEWAY: UNIVERSAL PLEASE-CALL-ME / USSD / RL WEBHOOK ───
-  // Accepts payloads from off-the-shelf Android SMS Forwarder apps and dedicated custom APK forwarders
+  // Accepts payloads from off-the-shelf Android SMS Forwarder / Incoming SMS Gateway apps and custom APK forwarders
   const pcmGatewayHandler = async (req: express.Request, res: express.Response) => {
     try {
       const pcmSecret = (process.env.PCM_WEBHOOK_SECRET || '').trim();
@@ -3030,16 +3268,16 @@ Rules:
 
       const body = req.body || {};
 
-      // 1. Universal field resolution across forwarder formats
-      // Format A: SMS Forwarder App: { from, text, timestamp } or { sender, message } or { phone, text }
-      // Format B: Custom Gateway APK: { sender, rawMessage, batteryLevel, simSlot, gatewayId, timestamp, callerMsisdn, pcmText }
+      // 1. Universal field resolution across SMS Forwarder / Incoming SMS to HTTP / Custom Gateway APK formats
       const rawText = String(
         body.rawMessage || body.pcmText || body.message || body.text || body.msg ||
+        body.body || body.content || body.sms_body || body.sms ||
         query.text || query.message || query.rawMessage || ''
       ).trim();
 
       const gatewaySender = String(
-        body.sender || body.from || body.phone || body.callerMsisdn ||
+        body.callerMsisdn || body.sender || body.from || body.phone ||
+        body.address || body.number || body.sms_from || body.originatingAddress || body.from_number ||
         query.from || query.sender || query.phone || ''
       ).trim();
 
@@ -3047,68 +3285,72 @@ Rules:
       const batteryLevel = body.batteryLevel ?? query.batteryLevel;
       const simSlot = body.simSlot ?? query.simSlot;
 
-      console.log(`[Rain SIM Gateway] Webhook received from ${gatewayId} (${gatewaySender}): "${rawText}"`);
+      // 2. Extract South African MSISDN from Please-Call-Me text (including spaced/dashed carrier formats)
+      const intlMsisdn = body.callerMsisdn
+        ? normalizeSaE164(String(body.callerMsisdn))
+        : extractSaMsisdn(rawText, gatewaySender);
 
-      // 2. Extract South African MSISDN from Please-Call-Me text or sender field
-      // Carrier formats:
-      // Vodacom: "Please call me from 0721234567. Thank you!" or "Please Call Me 082..."
-      // MTN: "Please call me back at 0831234567"
-      // Cell C: "Please call 0841234567"
-      // Telkom: "Please call me at 0811234567"
-      let extractedPhone = body.callerMsisdn || '';
-      if (!extractedPhone && rawText) {
-        const match = rawText.match(/(?:(?:call(?:[ -]?me)?(?:[ -]?back)?[ -]?(?:at|from)?)|(?:^))[:\s]*(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/i) ||
-                      rawText.match(/(\+?27[6-8][0-9]{8}|0[6-8][0-9]{8})/);
-        if (match) {
-          extractedPhone = match[1];
-        }
-      }
-      if (!extractedPhone && gatewaySender) {
-        extractedPhone = gatewaySender;
+      if (!intlMsisdn) {
+        return res.status(200).json({ ok: true, alerted: false, reason: 'No caller MSISDN detected in message payload' });
       }
 
-      if (!extractedPhone) {
-        console.warn('[Rain SIM Gateway] No valid MSISDN detected in webhook payload:', req.body);
-        return res.status(400).json({ error: 'No caller MSISDN detected in message payload', received: req.body });
-      }
+      const localMsisdn = intlMsisdn.startsWith('+27') && intlMsisdn.length === 12
+        ? '0' + intlMsisdn.slice(3)
+        : intlMsisdn;
 
-      // Normalize phone numbers
-      const cleanPhone = extractedPhone.replace(/[\s-]/g, '');
-      let localMsisdn = cleanPhone;
-      let intlMsisdn = cleanPhone;
-      if (cleanPhone.startsWith('+27')) {
-        localMsisdn = '0' + cleanPhone.slice(3);
-      } else if (cleanPhone.startsWith('27')) {
-        localMsisdn = '0' + cleanPhone.slice(2);
-        intlMsisdn = '+' + cleanPhone;
-      } else if (cleanPhone.startsWith('0')) {
-        intlMsisdn = '+27' + cleanPhone.slice(1);
-      }
-
-      // 3. User & Organization Identity Resolution
+      // 3. User, Emergency Contact & Organization Identity Resolution
+      await ensureZeroAirtimeLocalTables();
       let matchedUser: any = null;
       let orgCode = 'INDIVIDUAL';
       let orgId = 1;
       let userName = `Mobile User (${localMsisdn})`;
       let latitude = 0.0;
       let longitude = 0.0;
+      let alertNote = '';
       let locationSource: 'LIVE_GPS' | 'CACHED_LAST_KNOWN' | 'SILENT_SMS_FALLBACK' = 'SILENT_SMS_FALLBACK';
       let isDemo = false;
+      const contactPhones = new Set<string>();
 
       try {
-        const userRes = await db.execute({
-          sql: "SELECT u.id, u.name, u.phone, u.latitude, u.longitude, u.org_id, o.org_code FROM users u LEFT JOIN organizations o ON u.org_id = o.id WHERE u.phone = ? OR u.phone = ? LIMIT 1",
-          args: [localMsisdn, intlMsisdn]
-        });
+        const variants = saPhoneVariants(intlMsisdn);
+        const ph = variants.map(() => '?').join(', ');
 
+        const slProf = await db.execute({
+          sql: `SELECT name, lat, lng, alert_note FROM sl_profiles WHERE phone IN (${ph}) ORDER BY updated_at DESC LIMIT 1`,
+          args: variants,
+        });
+        if (slProf.rows.length > 0) {
+          const p: any = slProf.rows[0];
+          if (p.name) userName = String(p.name);
+          if (p.alert_note) alertNote = String(p.alert_note);
+          if (p.lat && p.lng && (Number(p.lat) !== 0 || Number(p.lng) !== 0)) {
+            latitude = Number(p.lat);
+            longitude = Number(p.lng);
+            locationSource = 'CACHED_LAST_KNOWN';
+          }
+        }
+
+        const slContacts = await db.execute({
+          sql: `SELECT contact_phone FROM sl_contacts WHERE owner_phone IN (${ph}) ORDER BY sort_order ASC LIMIT 5`,
+          args: variants,
+        });
+        for (const row of slContacts.rows) {
+          const cp = normalizeSaE164(String((row as any).contact_phone || ''));
+          if (cp) contactPhones.add(cp);
+        }
+
+        const userRes = await db.execute({
+          sql: `SELECT u.id, u.name, u.phone, u.latitude, u.longitude, u.org_id, o.org_code FROM users u LEFT JOIN organizations o ON u.org_id = o.id WHERE u.phone IN (${ph}) LIMIT 1`,
+          args: variants,
+        });
         if (userRes.rows.length > 0) {
           matchedUser = userRes.rows[0];
-          userName = (matchedUser.name as string) || userName;
+          if (userName.startsWith('Mobile User (') && matchedUser.name) {
+            userName = String(matchedUser.name);
+          }
           orgId = (matchedUser.org_id as number) || 1;
-          if (matchedUser.org_code) orgCode = matchedUser.org_code as string;
-          
-          // Dual approach: last known GPS with silent SMS fallback (User Clarification 1)
-          if (matchedUser.latitude && matchedUser.longitude && (matchedUser.latitude !== 0 || matchedUser.longitude !== 0)) {
+          if (matchedUser.org_code) orgCode = String(matchedUser.org_code);
+          if (locationSource === 'SILENT_SMS_FALLBACK' && matchedUser.latitude && matchedUser.longitude && (matchedUser.latitude !== 0 || matchedUser.longitude !== 0)) {
             latitude = Number(matchedUser.latitude);
             longitude = Number(matchedUser.longitude);
             locationSource = 'CACHED_LAST_KNOWN';
@@ -3118,37 +3360,11 @@ Rules:
         console.warn('[Rain SIM Gateway] Identity query note:', dbErr.message);
       }
 
-      // Check if user is a demo profile
       if (
         matchedUser?.id === 1001 || matchedUser?.id === 1002 || matchedUser?.id === 1003 || matchedUser?.id === 1004 ||
         localMsisdn.includes('60123456') || rawText.includes('[DEMO')
       ) {
         isDemo = true;
-      }
-
-      // If location is missing or stale, trigger silent SMS fallback ping if airtime available
-      if (locationSource === 'SILENT_SMS_FALLBACK' && !isDemo) {
-        console.log(`[Silent SMS Fallback] Location missing for ${localMsisdn}. Dispatching silent SMS location ping #LOC_PING#`);
-        try {
-          if (AT_API_KEY && AT_USERNAME) {
-            const atParams = new URLSearchParams({
-              username: AT_USERNAME,
-              to: intlMsisdn,
-              message: '#LOC_PING#',
-            });
-            fetch('https://api.africastalking.com/version1/messaging', {
-              method: 'POST',
-              headers: {
-                'apiKey': AT_API_KEY,
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-              },
-              body: atParams.toString()
-            }).catch(e => console.warn('[Silent SMS ping AT error]:', e.message));
-          }
-        } catch (silentErr: any) {
-          console.warn('[Silent SMS fallback dispatch]:', silentErr.message);
-        }
       }
 
       // 4. Persistence: Log in DB
@@ -3160,14 +3376,13 @@ Rules:
         });
         await db.execute({
           sql: "INSERT INTO events (org_id, type, user_name, description) VALUES (?, 'USSD_PCM', ?, ?)",
-          args: [orgId, userName, `Rain SIM PCM Triggered: ${rawText} (Location: ${locationSource})`]
+          args: [orgId, userName, `Rain SIM PCM Triggered (${localMsisdn}) — Contacts: ${contactPhones.size}`]
         });
       } catch (err: any) {
         console.warn('[Rain SIM Gateway] DB insert note:', err.message);
       }
 
-      // 5. Dual Broadcast: Realtime WebSockets & FCM Push Alerts (User Clarification 2)
-      // Broadcast 1: Realtime WebSockets (Pusher)
+      // 5. Broadcast 1: Realtime WebSockets (Pusher)
       try {
         await getPusher().trigger(`org-${orgCode}`, "panic_alert", {
           user_id: matchedUser?.id || 0,
@@ -3177,54 +3392,56 @@ Rules:
           longitude,
           location_source: locationSource,
           trigger_source: "USSD_PCM",
-          description: `🚨 RAIN SIM USSD / PCM Distress: ${rawText}`,
+          description: `🚨 RAIN SIM Zero-Airtime PCM Distress from ${userName}`,
           timestamp: new Date().toISOString()
         });
       } catch (pusherErr: any) {
         console.warn('[Rain SIM Gateway] Pusher broadcast note:', pusherErr.message);
       }
 
-      // Broadcast 2: High-Priority FCM Push Notification
-      try {
-        const messaging = getMessaging();
-        await messaging.send({
-          topic: `org-${orgCode}-responders`,
-          notification: {
-            title: `🚨 EMERGENCY ALERT: ${userName}`,
-            body: `Zero-credit Please Call Me received from ${localMsisdn}. Location: ${locationSource === 'CACHED_LAST_KNOWN' ? 'Cached GPS Available' : 'Silent SMS Location Ping Enqueued'}`
-          },
-          android: {
-            priority: 'high',
-            notification: {
-              channelId: 'emergency_channel',
-              sound: 'emergency_siren',
-              priority: 'max'
-            }
-          },
-          data: {
-            type: 'EMERGENCY_SOS',
-            phone: localMsisdn,
-            userName,
-            triggerSource: 'USSD_PCM',
-            locationSource,
-            latitude: String(latitude),
-            longitude: String(longitude),
-            rawMessage: rawText,
-            timestamp: String(Date.now())
+      // 6. Broadcast 2: High-Priority DATA-ONLY FCM Loud Alarm directly to every emergency contact's SafetyLink app
+      const fcmResults: any[] = [];
+      if (!isDemo) {
+        const mapsUrl = (latitude !== 0 || longitude !== 0)
+          ? `https://maps.google.com/?q=${latitude},${longitude}`
+          : 'Last known location unavailable';
+        const targetList = contactPhones.size > 0
+          ? Array.from(contactPhones)
+          : [normalizeSaE164(RESPONSE_CENTRE_NUMBER)].filter(Boolean);
+
+        await Promise.allSettled(targetList.map(async (contactPhone) => {
+          const tokens = await lookupLocalFcmTokens(contactPhone);
+          for (const tok of tokens) {
+            const r = await sendDataOnlyFcmRing(
+              tok,
+              '🚨 EMERGENCY: SafetyLink Alert',
+              `${userName} (${localMsisdn}) triggered a zero-airtime SOS! ${mapsUrl}`,
+              {
+                callerName: userName,
+                callerNumber: intlMsisdn,
+                location: mapsUrl,
+                triggerSource: 'RAIN_PCM_ZERO_AIRTIME',
+                ...(alertNote ? { alertNote } : {}),
+                ...(latitude !== 0 ? { lat: String(latitude) } : {}),
+                ...(longitude !== 0 ? { lng: String(longitude) } : {}),
+              }
+            );
+            fcmResults.push({ to: contactPhone, channel: 'FCM_LOUD_ALARM', ...r });
           }
-        });
-        console.log(`[Rain SIM Gateway] FCM Push alert dispatched to org-${orgCode}-responders`);
-      } catch (fcmErr: any) {
-        console.warn('[Rain SIM Gateway] FCM Push note (ignorable if credentials unlinked):', fcmErr.message);
+        }));
       }
 
-      // 6. Response
+      // 7. Response
       return res.json({
         success: true,
         gatewayId,
         msisdn: localMsisdn,
+        e164: intlMsisdn,
         user: userName,
         orgCode,
+        contactsMatched: contactPhones.size,
+        fcmRungCount: fcmResults.filter((r) => r.ok).length,
+        fcmResults,
         location: { latitude, longitude, source: locationSource },
         isDemo,
         batteryLevel,
@@ -3239,6 +3456,7 @@ Rules:
 
   app.post("/pcm/:token", pcmGatewayHandler);
   app.post("/pcm", pcmGatewayHandler);
+  app.post("/webhook/pcm/:token", pcmGatewayHandler);
   app.post("/webhook/pcm", pcmGatewayHandler);
   app.post("/api/webhook/pcm", pcmGatewayHandler);
   app.post("/api/rl/sms", pcmGatewayHandler);

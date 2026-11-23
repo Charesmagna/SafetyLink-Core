@@ -579,35 +579,72 @@ const App: React.FC = () => {
       if (user?.id) {
         state.updateUserProfile(user.id, { fcmToken } as any);
       }
+      // Always cache FCM token so ProfileSync immediately pushes it once the user signs in
+      try {
+        if (fcmToken && fcmToken.length > 20) {
+          localStorage.setItem('sl_fcm_token', fcmToken);
+        }
+      } catch {}
       if (!phone) return;
       const profileToken = (() => {
         try { return localStorage.getItem('sl_profile_token') || state.token || ''; } catch { return state.token || ''; }
       })();
       try {
         const bridge = (Capacitor.Plugins as any).SafetyLinkEmergency;
-        if (bridge?.savePushIdentity && profileToken) {
+        if (bridge?.savePushIdentity) {
           await bridge.savePushIdentity({ phone, profileToken }).catch(() => {});
         }
       } catch {}
-      try {
-        const apiBase = (state.customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
-        await fetch(`${apiBase}/api/device/token`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(profileToken ? { 'X-Profile-Token': profileToken } : {}),
-          },
-          body: JSON.stringify({ phone, token: fcmToken }),
-        });
-      } catch (err) {
-        console.warn('FCM token Worker sync deferred:', err);
+      const targets = Array.from(new Set([
+        (state.customBackendUrl || '').replace(/\/+$/, ''),
+        'https://api.safetylink.online',
+        'https://safetylink-api.tshilidzi-mukwevho54.workers.dev',
+      ].filter(Boolean)));
+      for (const apiBase of targets) {
+        try {
+          const r = await fetch(`${apiBase}/api/device/token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(profileToken ? { 'X-Profile-Token': profileToken } : {}),
+            },
+            body: JSON.stringify({ phone, token: fcmToken }),
+          });
+          if (r.ok) break;
+        } catch {
+          // try next backend
+        }
       }
+    };
+
+    const checkPendingNativeRing = async () => {
+      try {
+        if (!Capacitor.isNativePlatform()) return;
+        const bridge = (Capacitor.Plugins as any).SafetyLinkEmergency;
+        if (!bridge?.consumePendingFcmRing) return;
+        const res = await bridge.consumePendingFcmRing();
+        if (res?.hasPending && res.payloadJson) {
+          const data = JSON.parse(res.payloadJson);
+          const latNum = data.lat !== undefined ? Number(data.lat) : undefined;
+          const lngNum = data.lng !== undefined ? Number(data.lng) : undefined;
+          useAppStore.getState().triggerIncomingEmergencyRing({
+            id: data.incidentId || `FCM-WAKE-${Date.now()}`,
+            callerName: data.callerName || data.title || 'SafetyLink Emergency Alert',
+            callerNumber: data.callerNumber || '',
+            location: data.location || data.body || 'Emergency distress alert received',
+            lat: Number.isFinite(latNum) ? latNum : undefined,
+            lng: Number.isFinite(lngNum) ? lngNum : undefined,
+            source: data.source || 'FCM_LOUD_ALARM',
+          });
+        }
+      } catch {}
     };
 
     // FCM Push Notification Setup (Android Loud Contact Ringing)
     const registerPush = async () => {
       try {
         if (Capacitor.isNativePlatform()) {
+          void checkPendingNativeRing();
           let permStatus = await PushNotifications.checkPermissions();
           if (permStatus.receive === 'prompt') {
             permStatus = await PushNotifications.requestPermissions();
@@ -632,7 +669,7 @@ const App: React.FC = () => {
                 location: data.location || notification.body || 'Emergency distress alert received',
                 lat: Number.isFinite(latNum) ? latNum : undefined,
                 lng: Number.isFinite(lngNum) ? lngNum : undefined,
-                source: 'FCM_LOUD_ALARM',
+                source: data.triggerSource || 'FCM_LOUD_ALARM',
               });
             });
             PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
@@ -647,7 +684,7 @@ const App: React.FC = () => {
                 location: data.location || notification?.body || 'Emergency distress alert received',
                 lat: Number.isFinite(latNum) ? latNum : undefined,
                 lng: Number.isFinite(lngNum) ? lngNum : undefined,
-                source: 'FCM_LOUD_ALARM',
+                source: data.triggerSource || 'FCM_LOUD_ALARM',
               });
             });
           }
@@ -656,6 +693,12 @@ const App: React.FC = () => {
         console.warn('FCM Registration skipped (not native or error):', e);
       }
     };
+    const handleVisibilityResume = () => {
+      if (document.visibilityState === 'visible') {
+        void checkPendingNativeRing();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityResume);
     registerPush();
 
     geoService.startTracking();
@@ -670,6 +713,7 @@ const App: React.FC = () => {
     window.addEventListener('wearable-panic-trigger', handleCustomWearableEvent);
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityResume);
       geoService.stopTracking();
       window.removeEventListener('wearable-panic-trigger', handleCustomWearableEvent);
     };
@@ -683,26 +727,32 @@ const App: React.FC = () => {
     if (!cachedToken) {
       try { cachedToken = localStorage.getItem('sl_fcm_token') || ''; } catch {}
     }
-    if (!cachedToken) return;
     const state = useAppStore.getState();
     const profileToken = (() => {
       try { return localStorage.getItem('sl_profile_token') || state.token || ''; } catch { return state.token || ''; }
     })();
     if (Capacitor.isNativePlatform()) {
       const bridge = (Capacitor.Plugins as any).SafetyLinkEmergency;
-      if (bridge?.savePushIdentity && profileToken) {
-        bridge.savePushIdentity({ phone, profileToken }).catch(() => {});
+      if (bridge?.savePushIdentity) {
+        bridge.savePushIdentity({ phone, ...(profileToken ? { profileToken } : {}) }).catch(() => {});
       }
     }
-    const apiBase = (state.customBackendUrl || 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev').replace(/\/+$/, '');
-    fetch(`${apiBase}/api/device/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(profileToken ? { 'X-Profile-Token': profileToken } : {}),
-      },
-      body: JSON.stringify({ phone, token: cachedToken }),
-    }).catch(() => {});
+    if (!cachedToken) return;
+    const primaryBase = (state.customBackendUrl || 'https://api.safetylink.online').replace(/\/+$/, '');
+    const endpoints = [primaryBase];
+    if (primaryBase !== 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev') {
+      endpoints.push('https://safetylink-api.tshilidzi-mukwevho54.workers.dev');
+    }
+    for (const apiBase of endpoints) {
+      fetch(`${apiBase}/api/device/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(profileToken ? { 'X-Profile-Token': profileToken } : {}),
+        },
+        body: JSON.stringify({ phone, token: cachedToken, platform: Capacitor.getPlatform() || 'android' }),
+      }).catch(() => {});
+    }
   }, [currentUser?.id, currentUser?.phone]);
 
 
