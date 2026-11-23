@@ -42,6 +42,8 @@ export const Settings: React.FC = () => {
     setSilenceAlerts,
     globalTheme,
     setGlobalTheme,
+    displaySettings,
+    setDisplaySettings,
     decoyActive,
     setDecoyActive,
     decoyCode,
@@ -295,21 +297,294 @@ export const Settings: React.FC = () => {
       {/* App Preferences */}
       {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
       <>
-      <div className="space-y-3 text-left mt-4 relative z-10 font-mono">
-        <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
-          🎨 THEME &amp; APP PREFERENCES
-        </h4>
-        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-slate-200">Global Theme</div>
-            <div className="text-[10px] text-slate-500">Switch to Light Mode for high-contrast outdoors</div>
+      <div className="space-y-3 text-left mt-4 relative z-10">
+        <div className="flex items-center justify-between">
+          <h4 className="text-[11px] font-bold text-slate-600 dark:text-slate-400 tracking-wide">
+            Display, Theme &amp; Screen-Fit Accessibility
+          </h4>
+          <span className="text-[10px] font-mono text-slate-500 tabular-nums">
+            {typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}px` : 'Auto'}
+          </span>
+        </div>
+
+        <div className="bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-4 shadow-sm">
+          {/* Theme Mode (Light Collage / Deep Navy Dark / System Auto) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Platform Theme</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Synced across APK, EXE &amp; Web</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-[#071124]">
+              {([
+                { id: 'light', label: 'Light' },
+                { id: 'dark', label: 'Deep Navy' },
+                { id: 'system', label: 'Auto' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDisplaySettings({ themeMode: opt.id })}
+                  className={`py-2 text-xs font-semibold rounded-lg transition-colors ${
+                    displaySettings.themeMode === opt.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <button 
-            onClick={() => setGlobalTheme(globalTheme === 'dark' ? 'light' : 'dark')}
-            className={`px-3 py-1.5 rounded-xl text-[10px] font-bold border transition-colors ${globalTheme === 'light' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+
+          {/* Screen Fit & Auto-Detection */}
+          <div className="space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Screen Fit &amp; Density</span>
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Prevents phone cropping</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-[#071124]">
+              {([
+                { id: 'auto', label: 'Auto-Fit' },
+                { id: 'compact', label: 'Compact' },
+                { id: 'standard', label: 'Standard' },
+                { id: 'spacious', label: 'Spacious' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDisplaySettings({ screenFit: opt.id })}
+                  className={`py-2 text-[11px] font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                    displaySettings.screenFit === opt.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Text Scale */}
+          <div className="space-y-1.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Text Size Scale</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">{Math.round(displaySettings.textScale * 100)}%</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-[#071124]">
+              {([
+                { v: 0.9, label: 'Small (90%)' },
+                { v: 1, label: 'Default' },
+                { v: 1.12, label: 'Large' },
+                { v: 1.25, label: 'XL (125%)' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setDisplaySettings({ textScale: opt.v })}
+                  className={`py-2 text-[11px] font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                    displaySettings.textScale === opt.v
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Accessibility & Safety Feed Proximity Advisory Toggles */}
+          <div className="space-y-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+            {([
+              {
+                key: 'oneHandedReach',
+                title: 'One-Handed Panic Reach',
+                desc: 'Positions the SOS trigger lower in the thumb zone for tall screens',
+                value: displaySettings.oneHandedReach,
+              },
+              {
+                key: 'highContrast',
+                title: 'High-Contrast Outlines',
+                desc: 'Sharper borders and focus rings for outdoor sunlight legibility',
+                value: displaySettings.highContrast,
+              },
+              {
+                key: 'reducedMotion',
+                title: 'Reduced Motion',
+                desc: 'Disables pulsing and sliding transitions across the app',
+                value: displaySettings.reducedMotion,
+              },
+              {
+                key: 'dangerZoneAlerts',
+                title: 'Danger-Zone Proximity Advisories',
+                desc: 'Warn when approaching or entering a reported high-incident area',
+                value: displaySettings.dangerZoneAlerts,
+              },
+            ] as const).map((item) => (
+              <div key={item.key} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.title}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{item.desc}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDisplaySettings({ [item.key]: !item.value } as any)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border shrink-0 transition-colors ${
+                    item.value
+                      ? 'bg-emerald-600 border-emerald-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {item.value ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            ))}
+
+            {displaySettings.dangerZoneAlerts && (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Alert Perimeter Radius</span>
+                <div className="flex items-center gap-1">
+                  {[1, 3, 5, 10].map((km) => (
+                    <button
+                      key={km}
+                      type="button"
+                      onClick={() => setDisplaySettings({ dangerZoneRadiusKm: km })}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border tabular-nums ${
+                        displaySettings.dangerZoneRadiusKm === km
+                          ? 'bg-amber-600 border-amber-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      {km} km
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Post-Trigger AI Welfare Check-In Timer Configuration */}
+      <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-[#0d1b34] overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Post-Trigger AI Welfare Check-In Timer
+            </h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Automatically pop up Kleva AI after an emergency trigger, speak &ldquo;Are you okay?&rdquo;, listen for Yes/No, capture a situational update, or restart the alert.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setDispatchSettings({
+                aiCheckInEnabled: dispatchSettings.aiCheckInEnabled === false ? true : false,
+              })
+            }
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border shrink-0 transition-colors ${
+              dispatchSettings.aiCheckInEnabled !== false
+                ? 'bg-emerald-600 border-emerald-600 text-white'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+            }`}
           >
-            {globalTheme === 'light' ? 'LIGHT (ENABLED)' : 'TACTICAL DARK'}
+            {dispatchSettings.aiCheckInEnabled !== false ? 'ON' : 'OFF'}
           </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                Pop-Up Delay After Trigger
+              </span>
+              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {dispatchSettings.aiCheckInDelayMinutes ?? 5} min
+              </span>
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {[1, 2, 5, 10, 15].map((mins) => {
+                const active = (dispatchSettings.aiCheckInDelayMinutes ?? 5) === mins;
+                return (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setDispatchSettings({ aiCheckInDelayMinutes: mins })}
+                    className={`py-2 text-xs font-bold rounded-lg border tabular-nums transition-colors ${
+                      active
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-500/60'
+                    }`}
+                  >
+                    {mins} min
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <label
+                htmlFor="sl-ai-checkin-custom-mins"
+                className="text-[11px] text-slate-600 dark:text-slate-400"
+              >
+                Custom delay (1 – 60 minutes):
+              </label>
+              <input
+                id="sl-ai-checkin-custom-mins"
+                type="number"
+                min={1}
+                max={60}
+                value={dispatchSettings.aiCheckInDelayMinutes ?? 5}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(60, Number(e.target.value) || 5));
+                  setDispatchSettings({ aiCheckInDelayMinutes: val });
+                }}
+                className="w-20 px-2.5 py-1.5 text-xs font-mono font-bold text-center rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                Auto-Speak &amp; Listen for Yes / No
+              </div>
+              <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                Kleva speaks &ldquo;Are you okay?&rdquo; aloud and waits for your spoken or tapped response.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setDispatchSettings({
+                  aiCheckInAutoSpeak: dispatchSettings.aiCheckInAutoSpeak === false ? true : false,
+                })
+              }
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border shrink-0 transition-colors ${
+                dispatchSettings.aiCheckInAutoSpeak !== false
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+              }`}
+            >
+              {dispatchSettings.aiCheckInAutoSpeak !== false ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Preview the talking &amp; listening welfare check-in right now:
+            </span>
+            <button
+              type="button"
+              onClick={() => useAppStore.getState().setShowLizzyPopup(true)}
+              className="px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors whitespace-nowrap"
+            >
+              Test AI Check-In Now
+            </button>
+          </div>
         </div>
       </div>
 
@@ -742,6 +1017,165 @@ export const Settings: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Configurable Smart Routing, 5-Minute PCM Dedupe & Reverse-Charge USSD */}
+        <div className="bg-slate-950/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3.5 font-mono text-left">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h5 className="text-[10px] font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🛡️</span> Smart Emergency Routing, 5-Min Dedupe & Reverse-Charge USSD
+              </h5>
+              <p className="text-[8.5px] text-slate-400 mt-0.5 font-sans">
+                FCM Loud Alarm ringing is <strong className="text-emerald-400">always active</strong> on every emergency alert. Configure how SMS and offline zero-airtime USSD behave to prevent accidental SMS drain.
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle 1: Online Data-First Mode (FCM Loud Ring primary, save Rain SMS) */}
+          <label className="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-900/70 border border-slate-800 cursor-pointer">
+            <div className="space-y-0.5">
+              <span className="text-[9.5px] font-bold text-slate-100 block">Online Data-First Mode (Save Rain SIM SMSs)</span>
+              <span className="text-[8.5px] text-slate-400 font-sans block">
+                When you have Wi-Fi or mobile data, ring contacts loudly via free FCM first and skip Rain SMS if FCM reaches their phone. Contacts without the app still receive SMS automatically.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={dispatchSettings.preferFcmOnline !== false}
+              onChange={(e) => {
+                setDispatchSettings({ preferFcmOnline: e.target.checked });
+                useAppStore.getState().addToast(
+                  e.target.checked ? 'Online Data-First Mode enabled (FCM primary, Rain SMS conserved)' : 'Always-Include SMS enabled alongside FCM',
+                  'success'
+                );
+              }}
+              className="mt-1 accent-cyan-500 w-4 h-4 shrink-0"
+            />
+          </label>
+
+          {/* Control 2: Configurable Please Call Me / SMS Dedupe Cooldown */}
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <span className="text-[9.5px] font-bold text-slate-100 block">Please Call Me & SMS Repeat Cooldown</span>
+                <span className="text-[8.5px] text-slate-400 font-sans block">
+                  Prevents sending duplicate Please Call Me / SMS alerts if pressed again within this window (recommended: 5 minutes).
+                </span>
+              </div>
+              <span className="text-[10px] font-black text-emerald-400 shrink-0">
+                {(dispatchSettings.pcmCooldownMinutes ?? 5) === 0 ? 'OFF' : `${dispatchSettings.pcmCooldownMinutes ?? 5} MIN`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[0, 2, 5, 10, 15].map((mins) => {
+                const active = (dispatchSettings.pcmCooldownMinutes ?? 5) === mins;
+                return (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => {
+                      setDispatchSettings({ pcmCooldownMinutes: mins });
+                      useAppStore.getState().addToast(
+                        mins === 0 ? 'PCM cooldown disabled' : `Please Call Me & SMS dedupe set to ${mins} minutes`,
+                        'success'
+                      );
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[8.5px] font-bold uppercase border transition-all ${
+                      active
+                        ? 'bg-emerald-600/30 border-emerald-400 text-emerald-200'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {mins === 0 ? 'Off' : mins === 5 ? '5 min (Recommended)' : `${mins} min`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Control 3: Offline Zero-Airtime USSD / Reverse-Charge Call Mode */}
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2.5">
+            <div>
+              <span className="text-[9.5px] font-bold text-slate-100 block">Zero-Airtime Offline USSD / Reverse-Charge Strategy</span>
+              <span className="text-[8.5px] text-slate-400 font-sans block">
+                Choose what SafetyLink dials when you have R0 airtime and R0 data.
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-1.5">
+              {[
+                {
+                  id: 'RAIN_PCM',
+                  title: 'Rain Gateway Please Call Me (Cloud Relay)',
+                  desc: 'Sends free Please Call Me to Rain gateway → server rings all contacts via FCM + sends GPS SMS.',
+                },
+                {
+                  id: 'DIRECT_CONTACT_PCM',
+                  title: 'Direct Please Call Me to #1 Emergency Contact',
+                  desc: 'Dials carrier-matched *121* / *140* / *111* straight to your primary emergency contact (R0 cost).',
+                },
+                {
+                  id: 'REVERSE_CHARGE_CALL',
+                  title: 'Reverse-Charge Call (Emergency Contact Pays — MTN 127 / Vodacom)',
+                  desc: 'Dials reverse-charge prefix + your #1 Emergency Contact so their phone rings and they accept call charges on their balance.',
+                },
+              ].map((opt) => {
+                const selected = (dispatchSettings.offlineUssdMode || 'RAIN_PCM') === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => {
+                      setDispatchSettings({ offlineUssdMode: opt.id as any, ussdEnabled: true });
+                      useAppStore.getState().addToast(`Offline USSD mode set to ${opt.title}`, 'success');
+                    }}
+                    className={`p-2.5 rounded-xl border text-left transition-all ${
+                      selected
+                        ? 'bg-cyan-950/40 border-cyan-400/60 text-cyan-100'
+                        : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[9px] font-black">{opt.title}</span>
+                      {selected && <span className="text-[8px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">ACTIVE</span>}
+                    </div>
+                    <p className="text-[8px] text-slate-400 font-sans mt-0.5">{opt.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {(dispatchSettings.offlineUssdMode || 'RAIN_PCM') === 'REVERSE_CHARGE_CALL' && (
+              <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                <label className="text-[8.5px] font-bold text-amber-300 uppercase block">
+                  Reverse-Charge Network Prefix (MTN Pay4Me: 127 · Vodacom: 082180)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={dispatchSettings.reverseChargePrefix ?? '127'}
+                    onChange={(e) => setDispatchSettings({ reverseChargePrefix: e.target.value })}
+                    placeholder="e.g. 127 or *127*{NUMBER}#"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-[10px] text-slate-100 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDispatchSettings({ reverseChargePrefix: '127' })}
+                    className="px-2 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[8px] text-amber-300 font-bold"
+                  >
+                    MTN 127
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDispatchSettings({ reverseChargePrefix: '082180' })}
+                    className="px-2 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[8px] text-red-300 font-bold"
+                  >
+                    Vodacom
+                  </button>
+                </div>
               </div>
             )}
           </div>

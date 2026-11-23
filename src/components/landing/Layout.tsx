@@ -16,7 +16,7 @@ export function Layout({ children, onLogin, onRegisterUser, onRegisterOrg }) {
   }, [location.pathname]);
 
   return (
-    <div className="bg-white min-h-screen font-sans text-slate-800 antialiased overflow-x-hidden">
+    <div className="bg-white dark:bg-[#071124] min-h-screen font-sans text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden transition-colors">
       <Header onLogin={onLogin} onRegisterOrg={onRegisterOrg} />
       <main className="pt-0">
         {children}

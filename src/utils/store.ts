@@ -1,26 +1,12 @@
 import { create } from 'zustand';
 import { Capacitor } from '@capacitor/core';
-import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord, CameraDevice, CameraLocalCredentials, CameraEvidenceSnapshot } from '../types';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
+import { Contact, PanicEvent, MeshNode, BleDevice, AuditLog, UserProfile, Organization, CustomTool, DispatchLogEntry, NotificationPanelLogEntry, DispatchSettings, PlatformIntegration, ClientDatabaseRecord, CameraDevice, CameraLocalCredentials, CameraEvidenceSnapshot, DisplaySettings, CommunitySafetyReport, DangerZone } from '../types';
 import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnownTrigger, disconnectDevice, DiscoveredDevice } from '../services/BleService';
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
-
-let _firebaseBundlePromise: Promise<{
-  lib: typeof import('../lib/firebase');
-  authMod: typeof import('firebase/auth');
-  fsMod: typeof import('firebase/firestore');
-}> | null = null;
-
-function loadFirebase() {
-  if (!_firebaseBundlePromise) {
-    _firebaseBundlePromise = Promise.all([
-      import('../lib/firebase'),
-      import('firebase/auth'),
-      import('firebase/firestore'),
-    ]).then(([lib, authMod, fsMod]) => ({ lib, authMod, fsMod }));
-  }
-  return _firebaseBundlePromise;
-}
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
@@ -32,6 +18,15 @@ interface AppState {
   setTrialEnabled: (enabled: boolean) => void;
   globalTheme: 'dark' | 'light';
   setGlobalTheme: (theme: 'dark' | 'light') => void;
+  displaySettings: DisplaySettings;
+  setDisplaySettings: (patch: Partial<DisplaySettings>) => void;
+  communityReports: CommunitySafetyReport[];
+  setCommunityReports: (reports: CommunitySafetyReport[]) => void;
+  addCommunityReport: (report: Omit<CommunitySafetyReport, 'id' | 'timestamp' | 'verifications'>) => CommunitySafetyReport;
+  verifyCommunityReport: (id: string) => void;
+  resolveCommunityReport: (id: string) => void;
+  dangerZones: DangerZone[];
+  setDangerZones: (zones: DangerZone[]) => void;
   updateInfo: UpdateInfo | null;
   setUpdateInfo: (info: UpdateInfo | null) => void;
   checkAppUpdates: () => Promise<void>;
@@ -116,6 +111,9 @@ interface AppState {
   isAppMinimized: boolean;
   showLizzyPopup: boolean;
   setShowLizzyPopup: (show: boolean) => void;
+  aiCheckInScheduledAt: number | null;
+  scheduleAiCheckIn: (delayMinutesOverride?: number) => void;
+  cancelAiCheckIn: () => void;
   isLizzyOpen: boolean;
   setIsLizzyOpen: (open: boolean) => void;
   lizzyInitialTab: 'chat' | 'voice';
@@ -298,6 +296,9 @@ interface AppState {
   requestJoinOrganization: (userId: string, orgCode: string, selectedRole: string) => { success: boolean; error?: string };
   approvePendingUser: (userId: string, requestId?: string) => void;
   rejectPendingUser: (userId: string, requestId?: string) => void;
+  disconnectFromOrganization: (userId?: string) => Promise<void>;
+  disconnectOrgMember: (userId: string) => Promise<void>;
+  setOrgMemberStatus: (userId: string, action: 'ACTIVATE' | 'SUSPEND' | 'DEACTIVATE') => Promise<void>;
 
   // Native Dispatch Logs
   dispatchLogs: DispatchLogEntry[];
@@ -483,7 +484,15 @@ const DEFAULT_DISPATCH_SETTINGS: DispatchSettings = {
   ussdEnabled: false,
   carrierPreset: 'AUTO',
   customUssdPattern: '*140*{NUMBER}#',
-  pcmGatewayNumber: '0816738186'
+  pcmGatewayNumber: '0816738186',
+  preferFcmOnline: true,
+  pcmCooldownMinutes: 5,
+  offlineUssdMode: 'RAIN_PCM',
+  reverseChargePrefix: '127',
+  aiCheckInEnabled: true,
+  aiCheckInDelayMinutes: 5,
+  aiCheckInAutoSpeak: true,
+  aiCheckInResponseTimeoutSec: 45,
 };
 
 
@@ -704,52 +713,35 @@ const isDemoModeInitially = getStoredJSON<boolean>('sl_demo_mode', false);
 export const useAppStore = create<AppState>((set, get) => ({
   updateInfo: null,
   initMeshSync: () => {
-    let unsubscribe: (() => void) | null = null;
-    let cancelled = false;
+    let unsubscribe: any = null;
     const state = get();
     if (state.firestoreSync && state.currentUser) {
-      loadFirebase()
-        .then(({ lib, fsMod }) => {
-          if (cancelled) return;
-          const q = fsMod.query(
-            fsMod.collection(lib.db, 'users'),
-            fsMod.where('orgCode', '==', state.currentUser?.orgCode || '')
-          );
-          unsubscribe = fsMod.onSnapshot(
-            q,
-            (snapshot) => {
-              const nodes: any[] = [];
-              snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                if (data.id !== state.currentUser?.id && data.lat && data.lng) {
-                  nodes.push({
-                    id: data.id,
-                    name: data.username || 'Responder',
-                    lat: data.lat,
-                    lng: data.lng,
-                    status: data.activeSOS ? 'ACTIVE' : 'SECURE',
-                    type: 'RESPONDER',
-                    battery: data.battery || 100,
-                  });
-                }
-              });
-              const currentState = get();
-              const localNodes = currentState.meshNodes.filter((n) => n.type !== 'RESPONDER');
-              set({ meshNodes: [...localNodes, ...nodes] });
-            },
-            (error) => {
-              console.warn('Mesh sync listener error:', error);
+      const q = query(collection(db, 'users'), where('orgCode', '==', state.currentUser.orgCode || ''));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+         const nodes: any[] = [];
+         snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.id !== state.currentUser?.id && data.lat && data.lng) {
+               nodes.push({
+                  id: data.id,
+                  name: data.username || 'Responder',
+                  lat: data.lat,
+                  lng: data.lng,
+                  status: data.activeSOS ? 'ACTIVE' : 'SECURE',
+                  type: 'RESPONDER',
+                  battery: data.battery || 100
+               });
             }
-          );
-        })
-        .catch((error) => {
-          console.warn('Lazy Firebase mesh sync init note:', error);
-        });
+         });
+         // Merge with local nodes (drones, cameras, etc.)
+         const currentState = get();
+         const localNodes = currentState.meshNodes.filter(n => n.type !== 'RESPONDER');
+         set({ meshNodes: [...localNodes, ...nodes] });
+      }, (error) => {
+         console.warn('Mesh sync listener error:', error);
+      });
     }
-    return () => {
-      cancelled = true;
-      if (unsubscribe) unsubscribe();
-    };
+    return () => { if (unsubscribe) unsubscribe(); };
   },
   
   setUpdateInfo: (updateInfo: UpdateInfo | null) => set({ updateInfo }),
@@ -766,38 +758,125 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   demoMode: isDemoModeInitially,
   globalTheme: (() => {
-    const t = getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark');
+    const savedDisplay = getStoredJSON<Partial<DisplaySettings>>('sl_display_settings', {});
+    const rawTheme = savedDisplay.themeMode || getStoredJSON<'dark' | 'light' | 'system'>('sl_global_theme', 'dark');
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+    const resolved: 'dark' | 'light' = rawTheme === 'system' ? (prefersDark ? 'dark' : 'light') : (rawTheme === 'light' ? 'light' : 'dark');
     if (typeof document !== 'undefined') {
       try {
-        if (document.documentElement && document.documentElement.classList) {
-          document.documentElement.classList.toggle('theme-light', t === 'light');
-          document.documentElement.classList.toggle('dark', t === 'dark');
-        }
-        if (document.body && document.body.classList) {
-          document.body.classList.toggle('theme-light', t === 'light');
-        }
-      } catch (e) {
-        console.warn('Theme init non-fatal warning:', e);
-      }
+        document.documentElement.classList.toggle('theme-light', resolved === 'light');
+        document.documentElement.classList.toggle('dark', resolved === 'dark');
+        document.documentElement.setAttribute('data-theme', resolved);
+        document.body?.classList.toggle('theme-light', resolved === 'light');
+        document.body?.classList.toggle('dark', resolved === 'dark');
+      } catch {}
     }
-    return t;
+    return resolved;
   })(),
-  setGlobalTheme: (theme: 'dark' | 'light') => {
-    set({ globalTheme: theme });
-    setStoredJSON('sl_global_theme', theme);
+  displaySettings: (() => {
+    const defaults: DisplaySettings = {
+      themeMode: getStoredJSON<'dark' | 'light'>('sl_global_theme', 'dark'),
+      textScale: 1,
+      screenFit: 'auto',
+      highContrast: false,
+      reducedMotion: false,
+      oneHandedReach: false,
+      dangerZoneAlerts: true,
+      dangerZoneRadiusKm: 3,
+    };
+    const merged: DisplaySettings = { ...defaults, ...getStoredJSON<Partial<DisplaySettings>>('sl_display_settings', {}) };
     if (typeof document !== 'undefined') {
       try {
-        if (document.documentElement && document.documentElement.classList) {
-          document.documentElement.classList.toggle('theme-light', theme === 'light');
-          document.documentElement.classList.toggle('dark', theme === 'dark');
-        }
-        if (document.body && document.body.classList) {
-          document.body.classList.toggle('theme-light', theme === 'light');
-        }
-      } catch (e) {
-        console.warn('Theme toggle warning:', e);
-      }
+        const root = document.documentElement;
+        root.style.setProperty('--sl-font-scale', String(merged.textScale || 1));
+        const autoCompact = typeof window !== 'undefined' && (window.innerWidth <= 375 || window.innerHeight <= 680);
+        const density = merged.screenFit === 'auto' ? (autoCompact ? 'compact' : 'standard') : merged.screenFit;
+        root.setAttribute('data-density', density);
+        root.classList.toggle('sl-high-contrast', Boolean(merged.highContrast));
+        root.classList.toggle('sl-reduced-motion', Boolean(merged.reducedMotion));
+      } catch {}
     }
+    return merged;
+  })(),
+  setDisplaySettings: (patch: Partial<DisplaySettings>) => {
+    const next: DisplaySettings = { ...get().displaySettings, ...patch };
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+    const resolvedTheme: 'dark' | 'light' =
+      next.themeMode === 'system' ? (prefersDark ? 'dark' : 'light') : (next.themeMode === 'light' ? 'light' : 'dark');
+
+    set({ displaySettings: next, globalTheme: resolvedTheme });
+    setStoredJSON('sl_display_settings', next);
+    setStoredJSON('sl_global_theme', resolvedTheme);
+    try { localStorage.setItem('sl_theme_mode', next.themeMode); } catch {}
+
+    if (typeof document !== 'undefined') {
+      try {
+        const root = document.documentElement;
+        root.classList.toggle('theme-light', resolvedTheme === 'light');
+        root.classList.toggle('dark', resolvedTheme === 'dark');
+        root.setAttribute('data-theme', resolvedTheme);
+        document.body?.classList.toggle('theme-light', resolvedTheme === 'light');
+        document.body?.classList.toggle('dark', resolvedTheme === 'dark');
+        root.style.setProperty('--sl-font-scale', String(next.textScale || 1));
+        const autoCompact = typeof window !== 'undefined' && (window.innerWidth <= 375 || window.innerHeight <= 680);
+        const density = next.screenFit === 'auto' ? (autoCompact ? 'compact' : 'standard') : next.screenFit;
+        root.setAttribute('data-density', density);
+        root.classList.toggle('sl-high-contrast', Boolean(next.highContrast));
+        root.classList.toggle('sl-reduced-motion', Boolean(next.reducedMotion));
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', resolvedTheme === 'dark' ? '#071124' : '#ffffff');
+      } catch {}
+    }
+  },
+  setGlobalTheme: (theme: 'dark' | 'light') => {
+    get().setDisplaySettings({ themeMode: theme });
+  },
+  communityReports: getStoredJSON<CommunitySafetyReport[]>('sl_community_reports', []).filter(
+    (r) => r && typeof r.id === 'string' && !r.id.startsWith('rep-jhb-')
+  ),
+  setCommunityReports: (reports: CommunitySafetyReport[]) => {
+    const cleaned = (reports || []).filter((r) => r && !r.id.startsWith('rep-jhb-')).slice(0, 100);
+    setStoredJSON('sl_community_reports', cleaned);
+    set({ communityReports: cleaned });
+  },
+  addCommunityReport: (report) => {
+    const created: CommunitySafetyReport = {
+      ...report,
+      id: `rep-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: Date.now(),
+      verifications: 1,
+      verifiedByMe: true,
+    };
+    set((state) => {
+      const next = [created, ...state.communityReports].slice(0, 100);
+      setStoredJSON('sl_community_reports', next);
+      return { communityReports: next };
+    });
+    return created;
+  },
+  verifyCommunityReport: (id: string) => {
+    set((state) => {
+      const next = state.communityReports.map((r) =>
+        r.id === id && !r.verifiedByMe
+          ? { ...r, verifications: (r.verifications || 0) + 1, verifiedByMe: true }
+          : r
+      );
+      setStoredJSON('sl_community_reports', next);
+      return { communityReports: next };
+    });
+  },
+  resolveCommunityReport: (id: string) => {
+    set((state) => {
+      const next = state.communityReports.map((r) =>
+        r.id === id ? { ...r, status: 'RESOLVED' as const } : r
+      );
+      setStoredJSON('sl_community_reports', next);
+      return { communityReports: next };
+    });
+  },
+  dangerZones: [],
+  setDangerZones: (zones: DangerZone[]) => {
+    set({ dangerZones: Array.isArray(zones) ? zones : [] });
   },
   contacts: getStoredJSON<Contact[]>('sl_contacts', DEFAULT_CONTACTS),
   panicEvents: getStoredJSON<PanicEvent[]>('sl_panic_events', []),
@@ -977,6 +1056,47 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAppMinimized: false,
   showLizzyPopup: false,
   setShowLizzyPopup: (show) => set({ showLizzyPopup: show }),
+  aiCheckInScheduledAt: null,
+  cancelAiCheckIn: () => {
+    if (typeof window !== 'undefined' && (window as any).__SL_CHECKIN_TIMER__) {
+      clearTimeout((window as any).__SL_CHECKIN_TIMER__);
+      (window as any).__SL_CHECKIN_TIMER__ = null;
+    }
+    set({ aiCheckInScheduledAt: null });
+  },
+  scheduleAiCheckIn: (delayMinutesOverride?: number) => {
+    const cfg = get().dispatchSettings;
+    if (cfg.aiCheckInEnabled === false && delayMinutesOverride === undefined) {
+      get().cancelAiCheckIn();
+      return;
+    }
+    const mins = Math.max(
+      1,
+      Math.min(60, Number(delayMinutesOverride ?? cfg.aiCheckInDelayMinutes ?? 5) || 5)
+    );
+    const delayMs = mins * 60 * 1000;
+    if (typeof window !== 'undefined') {
+      if ((window as any).__SL_CHECKIN_TIMER__) {
+        clearTimeout((window as any).__SL_CHECKIN_TIMER__);
+      }
+      const scheduledAt = Date.now() + delayMs;
+      set({ aiCheckInScheduledAt: scheduledAt });
+      (window as any).__SL_CHECKIN_TIMER__ = setTimeout(() => {
+        (window as any).__SL_CHECKIN_TIMER__ = null;
+        const cur = get();
+        set({ aiCheckInScheduledAt: null });
+        if (cur.activeSOSState !== 'IDLE' || delayMinutesOverride !== undefined) {
+          cur.setShowLizzyPopup(true);
+          cur.addAuditLog(
+            'SYSTEM',
+            'INFO',
+            `Kleva AI ${mins}-Minute Welfare Check-In Triggered`,
+            'Initiating interactive voice welfare check ("Are you okay?").'
+          );
+        }
+      }, delayMs);
+    }
+  },
   isLizzyOpen: false,
   setIsLizzyOpen: (open) => set({ isLizzyOpen: open }),
   lizzyInitialTab: 'chat',
@@ -1329,6 +1449,71 @@ export const useAppStore = create<AppState>((set, get) => ({
       }, get().customBackendUrl).catch(() => {});
     }
   },
+  disconnectFromOrganization: async (userId) => {
+    const targetId = userId || get().currentUser?.id;
+    if (!targetId) return;
+    const prevOrg = get().currentUser?.orgCode || get().users.find(u => u.id === targetId)?.orgCode || '';
+    const updatedUsers = get().users.map(u =>
+      u.id === targetId ? { ...u, orgCode: '', pendingOrgCode: undefined, pendingRole: undefined } : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === targetId) {
+      const nextUser = { ...currUser, orgCode: '', pendingOrgCode: undefined, pendingRole: undefined };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    const token = get().token;
+    if (token) {
+      await fetchBackendApi('/api/user/org/disconnect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetId }),
+      }, get().customBackendUrl).catch(() => {});
+    }
+    get().addAuditLog('SECURITY', 'INFO', 'Disconnected From Organization', `User disconnected from ${prevOrg || 'organization'}`);
+  },
+  disconnectOrgMember: async (userId) => {
+    const orgId = get().currentOrg?.id;
+    const updatedUsers = get().users.map(u =>
+      u.id === userId ? { ...u, orgCode: '', pendingOrgCode: undefined, pendingRole: undefined } : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    const currUser = get().currentUser;
+    if (currUser && currUser.id === userId) {
+      const nextUser = { ...currUser, orgCode: '', pendingOrgCode: undefined, pendingRole: undefined };
+      set({ currentUser: nextUser });
+      setStoredJSON('sl_current_user', nextUser);
+    }
+    const token = get().token;
+    if (token && orgId) {
+      await fetchBackendApi(`/api/org/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      }, get().customBackendUrl).catch(() => {});
+    }
+    get().addAuditLog('SECURITY', 'WARN', 'Member Disconnected By Org', `Disconnected member ${userId} from ${orgId || 'org'}`);
+  },
+  setOrgMemberStatus: async (userId, action) => {
+    const orgId = get().currentOrg?.id;
+    const nextStatus = action === 'SUSPEND' ? 'suspended' : action === 'DEACTIVATE' ? 'deactivated' : 'active';
+    const updatedUsers = get().users.map(u =>
+      u.id === userId ? ({ ...u, status: nextStatus, subscriptionStatus: action === 'ACTIVATE' ? 'active' : 'locked' } as any) : u
+    );
+    set({ users: updatedUsers });
+    setStoredJSON('sl_users', updatedUsers);
+    const token = get().token;
+    if (token && orgId) {
+      await fetchBackendApi(`/api/org/${encodeURIComponent(orgId)}/members/${encodeURIComponent(userId)}/status`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      }, get().customBackendUrl).catch(() => {});
+    }
+    get().addAuditLog('SECURITY', 'INFO', `Member Status -> ${action}`, `Updated member ${userId} status to ${nextStatus}`);
+  },
 
   // Language & Localization Initializer
   language: getStoredJSON<string>('sl_language', 'en'),
@@ -1355,7 +1540,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newUser = {
         ...user,
         id: `USR-${(users.length + 1).toString().padStart(3, '0')}`,
-        createdAt: Date.now(), subscriptionStatus: "trial"
+        createdAt: Date.now(), subscriptionStatus: "active"
       };
       const updatedUsers = [...users, newUser];
       set({ 
@@ -1408,7 +1593,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           orgCode: data.user?.orgCode || data.user?.org_code || user.orgCode || '',
           avatarUrl: user.avatarUrl,
           createdAt: Date.now(),
-          subscriptionStatus: 'trial',
+          subscriptionStatus: 'active',
           appVersion,
           deviceModel,
           pinCode: user.pinCode,
@@ -1476,7 +1661,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       orgCode: user.orgCode || '',
       avatarUrl: user.avatarUrl,
       createdAt: Date.now(),
-      subscriptionStatus: 'trial',
+      subscriptionStatus: 'active',
       provisionalOffline: true,
       appVersion,
       deviceModel,
@@ -1658,7 +1843,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         controlRoomNumber: rawOrg.controlRoomNumber || org.controlRoomNumber || '+27829110000',
         createdAt: rawOrg.createdAt || Date.now(),
         subscriptionStatus: rawOrg.subscriptionStatus || 'trial',
-        approved: rawOrg.approved !== false,
+        approved: true,
         password: (org as any).password
       } as any;
 
@@ -1672,33 +1857,30 @@ export const useAppStore = create<AppState>((set, get) => ({
       setStoredJSON('sl_real_organizations', updatedRealOrgs);
       setStoredJSON('sl_real_orgs', updatedRealOrgs);
 
-      if (newOrg.approved !== false) {
-        set({
-          organizations: updatedOrgs,
-          rememberedOrgs: remembered,
-          currentUser: null,
-          currentOrg: newOrg,
-          superAdminActive: false,
-          demoMode: false,
-          token: sessionToken,
-          profileCreatedSummary: {
-            kind: 'ORG',
-            title: 'Organization Command Deck Ready',
-            fullName: newOrg.name,
-            email: newOrg.contactEmail,
-            role: 'Organization Administrator',
-            orgCode: newOrg.id,
-          }
-        });
-        setStoredJSON('sl_current_user', null);
-        setStoredJSON('sl_current_org', newOrg);
-        setStoredJSON('sl_super_admin', false);
-        setStoredJSON('sl_demo_mode', false);
-        setStoredJSON('sl_jwt_token', sessionToken);
-        import('../services/ProfileSync').then(({ syncProfile }) => syncProfile()).catch(() => {});
-      } else {
-        set({ organizations: updatedOrgs, rememberedOrgs: remembered });
-      }
+      // Immediately log into the newly provisioned Organization Commander Deck
+      set({
+        organizations: updatedOrgs,
+        rememberedOrgs: remembered,
+        currentUser: null,
+        currentOrg: newOrg,
+        superAdminActive: false,
+        demoMode: false,
+        token: sessionToken,
+        profileCreatedSummary: {
+          kind: 'ORG',
+          title: 'Organization Command Deck Ready',
+          fullName: newOrg.name,
+          email: newOrg.contactEmail,
+          role: 'Organization Administrator',
+          orgCode: newOrg.id,
+        }
+      });
+      setStoredJSON('sl_current_user', null);
+      setStoredJSON('sl_current_org', newOrg);
+      setStoredJSON('sl_super_admin', false);
+      setStoredJSON('sl_demo_mode', false);
+      setStoredJSON('sl_jwt_token', sessionToken);
+      import('../services/ProfileSync').then(({ syncProfile }) => syncProfile()).catch(() => {});
 
       get().addAuditLog('SECURITY', 'INFO', `New Organization Provisioned (Live)`, `Name: ${newOrg.name}, Code: ${newOrg.id}`);
       return newOrg;
@@ -1987,10 +2169,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
-      const { lib, authMod, fsMod } = await loadFirebase();
       const emailToUse = rawUsername.includes('@') ? rawUsername : `${rawUsername}@safetylink.app`;
-      const userCred = await authMod.signInWithEmailAndPassword(lib.auth, emailToUse, rawPassword || '');
-      const userDoc = await fsMod.getDoc(fsMod.doc(lib.db, 'users', userCred.user.uid));
+      const userCred = await signInWithEmailAndPassword(auth, emailToUse, rawPassword || '');
+      const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
       const userData = userDoc.exists() ? userDoc.data() : { username: rawUsername, orgCode: rawOrgCode };
       const token = await userCred.user.getIdToken();
 
@@ -2011,8 +2192,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   signInWithGoogle: async () => {
     try {
-      const { lib, authMod, fsMod } = await loadFirebase();
-      const provider = new authMod.GoogleAuthProvider();
+      const provider = new GoogleAuthProvider();
       provider.addScope('profile');
       provider.addScope('email');
       provider.setCustomParameters({ prompt: 'select_account' });
@@ -2028,7 +2208,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const idTokenRes = await FirebaseAuthentication.getIdToken().catch(() => ({ token: '' }));
         token = idTokenRes?.token || nativeRes?.credential?.idToken || '';
       } else {
-        userCred = await authMod.signInWithPopup(lib.auth, provider);
+        userCred = await signInWithPopup(auth, provider);
         token = typeof userCred.user?.getIdToken === 'function' ? await userCred.user.getIdToken() : '';
       }
 
@@ -2053,7 +2233,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       let existingDoc: any = null;
       try {
-        const userDoc = await fsMod.getDoc(fsMod.doc(lib.db, 'users', gUser.uid));
+        const userDoc = await getDoc(doc(db, 'users', gUser.uid));
         if (userDoc.exists()) {
           existingDoc = userDoc.data();
         }
@@ -2091,13 +2271,13 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Persist clean public profile to Firestore without failing sign-in on strict rules
       try {
         if (!existingDoc) {
-          await fsMod.setDoc(fsMod.doc(lib.db, 'users', gUser.uid), {
+          await setDoc(doc(db, 'users', gUser.uid), {
             uid: gUser.uid,
             username: userData.username.slice(0, 64),
             fullName: userData.fullName.slice(0, 120),
             role: 'Community Member',
             orgCode: userData.orgCode || '',
-            createdAt: fsMod.serverTimestamp(),
+            createdAt: serverTimestamp(),
           });
         }
       } catch (dbErr) {
@@ -2519,19 +2699,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Push geo-location to Firestore if authenticated and sync is on
     const state = get();
     if (state.currentUser && state.currentUser.id && state.firestoreSync) {
-      const uid = state.currentUser.id;
-      loadFirebase()
-        .then(({ lib, fsMod }) =>
-          fsMod.updateDoc(fsMod.doc(lib.db, 'users', uid), {
-            lat: lat,
-            lng: lng,
-            lastLocationUpdate: Date.now(),
-            gpsAccuracy: accuracy
-          })
-        )
-        .catch((err) => {
-          console.log('Non-critical: Firebase location sync skipped/failed offline', err?.message || err);
+      try {
+        updateDoc(doc(db, 'users', state.currentUser.id), {
+          lat: lat,
+          lng: lng,
+          lastLocationUpdate: Date.now(),
+          gpsAccuracy: accuracy
+        }).catch(err => {
+           console.log('Non-critical: Firebase location sync skipped/failed offline', err.message);
         });
+      } catch (err) {}
     }
   },
 
@@ -2596,8 +2773,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(state => {
       const updated = { ...state.dispatchSettings, ...settings };
       setStoredJSON('sl_dispatch_settings', updated);
-      if (settings.ussdEnabled !== undefined) {
-        NativeDispatchService.saveNativeProfile({ ussdEnabled: Boolean(updated.ussdEnabled) }).catch(() => {});
+      if (
+        settings.ussdEnabled !== undefined ||
+        settings.offlineUssdMode !== undefined ||
+        settings.reverseChargePrefix !== undefined ||
+        settings.pcmCooldownMinutes !== undefined
+      ) {
+        NativeDispatchService.saveNativeProfile({
+          ussdEnabled: Boolean(updated.ussdEnabled),
+          offlineUssdMode: updated.offlineUssdMode || 'RAIN_PCM',
+          reverseChargePrefix: updated.reverseChargePrefix || '127',
+          pcmCooldownMinutes: typeof updated.pcmCooldownMinutes === 'number' ? updated.pcmCooldownMinutes : 5,
+        }).catch(() => {});
       }
       return { dispatchSettings: updated };
     });
@@ -2839,6 +3026,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       isDrill: false,
       isDemo,
       canUseAdminTwilio: true,
+      preferFcmOnline: Boolean(get().dispatchSettings.preferFcmOnline),
+      smsCooldownMinutes: typeof get().dispatchSettings.pcmCooldownMinutes === 'number' ? get().dispatchSettings.pcmCooldownMinutes : 5,
       integrationsConfig
     };
 
@@ -2891,18 +3080,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
       setStoredJSON('sl_panic_events', get().panicEvents);
 
-      // Schedule 10-minute post-panic Lizzy AI voice check-in
-      if (typeof window !== 'undefined') {
-        const existingTimer = (window as any).__SL_CHECKIN_TIMER__;
-        if (existingTimer) clearTimeout(existingTimer);
-        (window as any).__SL_CHECKIN_TIMER__ = setTimeout(() => {
-          const cur = get();
-          if (cur.activeSOSState !== 'IDLE') {
-            cur.setShowLizzyPopup(true);
-            cur.addAuditLog('SYSTEM', 'INFO', 'Lizzy AI 10-Minute Check-In Triggered', 'Initiating Gemini voice welfare check.');
-          }
-        }, 10 * 60 * 1000);
-      }
+      // Schedule configurable post-panic Kleva AI voice welfare check-in
+      get().scheduleAiCheckIn();
 
       if (isDemo) {
         get().addAuditLog('SECURITY', 'SEVERE', 'Demo Panic Dispatched [SIMULATED]', `${incidentId}: Simulation completed.`);
@@ -3172,6 +3351,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   resolvePanic: (id) => {
+    get().cancelAiCheckIn();
     const targetEv = get().panicEvents.find(ev => ev.id === id) || get().currentPanicEvent;
     set(state => ({
       panicEvents: state.panicEvents.map(ev => 
@@ -3526,7 +3706,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const org = get().currentOrg;
     const camId = `cam-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const resolvedOrgId = String(cam.orgId || org?.id || user?.orgCode || 'INDIVIDUAL').slice(0, 64);
-    const resolvedOwnerUid = String(user?.id || org?.id || 'local-owner').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
+    const resolvedOwnerUid = String(auth.currentUser?.uid || user?.id || org?.id || 'local-owner').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 128);
     const {
       username,
       password,
@@ -3599,46 +3779,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_hikvision_cameras', updated);
     get().addAuditLog('SYSTEM', 'INFO', 'Hikvision CCTV Camera Onboarded', `${newCam.name} (${newCam.mode}) scoped to ${resolvedOrgId}`);
 
-    loadFirebase()
-      .then(({ lib, fsMod }) => {
-        if (!lib.auth.currentUser?.emailVerified) return;
-        const fsPayload: Record<string, any> = {
-          id: camId,
-          ownerUid: lib.auth.currentUser.uid,
-          orgId: resolvedOrgId,
-          name: newCam.name.slice(0, 100),
-          brand: newCam.brand,
-          mode: newCam.mode,
-          signalingMode: newCam.signalingMode,
-          streamProfile: newCam.streamProfile,
-          channel: Number(newCam.channel) || 101,
-          httpPort: Number(newCam.httpPort) || 80,
-          rtspPort: Number(newCam.rtspPort) || 554,
-          ptzEnabled: Boolean(newCam.ptzEnabled),
-          twoWayAudioEnabled: Boolean(newCam.twoWayAudioEnabled),
-          ptzPresets: (newCam.ptzPresets || []).slice(0, 8).map((p) => ({
-            presetId: Number(p.presetId) || 1,
-            label: String(p.label || 'Preset').slice(0, 40),
-          })),
-          stunServers: (newCam.stunServers || []).slice(0, 5),
-          turnUrls: (newCam.turnUrls || []).slice(0, 4),
-          softIoTriggerId: Number(newCam.softIoTriggerId) || 1,
-          triggerOnPanic: Boolean(newCam.triggerOnPanic),
-          status: newCam.status,
-          createdAt: fsMod.serverTimestamp(),
-        };
-        if (newCam.serialNumber) fsPayload.serialNumber = newCam.serialNumber.slice(0, 64);
-        if (newCam.host) fsPayload.host = newCam.host.slice(0, 128);
-        if (newCam.whepUrl) fsPayload.whepUrl = newCam.whepUrl.slice(0, 512);
-        fsMod.setDoc(fsMod.doc(lib.db, 'cameras', camId), fsPayload).catch((err) => {
-          try {
-            lib.handleFirestoreError(err, lib.OperationType.CREATE, `cameras/${camId}`);
-          } catch {
-            // Local storage preserves offline creation without blocking operator
-          }
-        });
-      })
-      .catch(() => {});
+    if (auth.currentUser?.emailVerified) {
+      const fsPayload: Record<string, any> = {
+        id: camId,
+        ownerUid: auth.currentUser.uid,
+        orgId: resolvedOrgId,
+        name: newCam.name.slice(0, 100),
+        brand: newCam.brand,
+        mode: newCam.mode,
+        signalingMode: newCam.signalingMode,
+        streamProfile: newCam.streamProfile,
+        channel: Number(newCam.channel) || 101,
+        httpPort: Number(newCam.httpPort) || 80,
+        rtspPort: Number(newCam.rtspPort) || 554,
+        ptzEnabled: Boolean(newCam.ptzEnabled),
+        twoWayAudioEnabled: Boolean(newCam.twoWayAudioEnabled),
+        ptzPresets: (newCam.ptzPresets || []).slice(0, 8).map((p) => ({
+          presetId: Number(p.presetId) || 1,
+          label: String(p.label || 'Preset').slice(0, 40),
+        })),
+        stunServers: (newCam.stunServers || []).slice(0, 5),
+        turnUrls: (newCam.turnUrls || []).slice(0, 4),
+        softIoTriggerId: Number(newCam.softIoTriggerId) || 1,
+        triggerOnPanic: Boolean(newCam.triggerOnPanic),
+        status: newCam.status,
+        createdAt: serverTimestamp(),
+      };
+      if (newCam.serialNumber) fsPayload.serialNumber = newCam.serialNumber.slice(0, 64);
+      if (newCam.host) fsPayload.host = newCam.host.slice(0, 128);
+      if (newCam.whepUrl) fsPayload.whepUrl = newCam.whepUrl.slice(0, 512);
+      setDoc(doc(db, 'cameras', camId), fsPayload).catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.CREATE, `cameras/${camId}`);
+        } catch {
+          // Local storage preserves offline creation without blocking operator
+        }
+      });
+    }
     return newCam;
   },
 
@@ -3668,45 +3845,42 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
     set({ cameras: updated });
     setStoredJSON('sl_hikvision_cameras', updated);
-    const target = updated.find((c) => c.id === id);
-    if (target) {
-      loadFirebase()
-        .then(({ lib, fsMod }) => {
-          if (!lib.auth.currentUser?.emailVerified) return;
-          const fsUpdate: Record<string, any> = {
-            name: target.name.slice(0, 100),
-            brand: target.brand,
-            mode: target.mode,
-            signalingMode: target.signalingMode || 'WHEP_DIRECT',
-            streamProfile: target.streamProfile || 'SUB_MOBILE',
-            channel: Number(target.channel) || 101,
-            httpPort: Number(target.httpPort) || 80,
-            rtspPort: Number(target.rtspPort) || 554,
-            ptzEnabled: Boolean(target.ptzEnabled ?? true),
-            twoWayAudioEnabled: Boolean(target.twoWayAudioEnabled ?? true),
-            ptzPresets: (target.ptzPresets || []).slice(0, 8).map((p) => ({
-              presetId: Number(p.presetId) || 1,
-              label: String(p.label || 'Preset').slice(0, 40),
-            })),
-            stunServers: (target.stunServers || []).slice(0, 5),
-            turnUrls: (target.turnUrls || []).slice(0, 4),
-            softIoTriggerId: Number(target.softIoTriggerId) || 1,
-            triggerOnPanic: Boolean(target.triggerOnPanic),
-            status: target.status,
-            updatedAt: fsMod.serverTimestamp(),
-          };
-          if (target.serialNumber) fsUpdate.serialNumber = target.serialNumber.slice(0, 64);
-          if (target.host) fsUpdate.host = target.host.slice(0, 128);
-          if (target.whepUrl) fsUpdate.whepUrl = target.whepUrl.slice(0, 512);
-          fsMod.updateDoc(fsMod.doc(lib.db, 'cameras', id), fsUpdate).catch((err) => {
-            try {
-              lib.handleFirestoreError(err, lib.OperationType.UPDATE, `cameras/${id}`);
-            } catch {
-              // Non-blocking fallback for offline editing
-            }
-          });
-        })
-        .catch(() => {});
+    if (auth.currentUser?.emailVerified) {
+      const target = updated.find((c) => c.id === id);
+      if (target) {
+        const fsUpdate: Record<string, any> = {
+          name: target.name.slice(0, 100),
+          brand: target.brand,
+          mode: target.mode,
+          signalingMode: target.signalingMode || 'WHEP_DIRECT',
+          streamProfile: target.streamProfile || 'SUB_MOBILE',
+          channel: Number(target.channel) || 101,
+          httpPort: Number(target.httpPort) || 80,
+          rtspPort: Number(target.rtspPort) || 554,
+          ptzEnabled: Boolean(target.ptzEnabled ?? true),
+          twoWayAudioEnabled: Boolean(target.twoWayAudioEnabled ?? true),
+          ptzPresets: (target.ptzPresets || []).slice(0, 8).map((p) => ({
+            presetId: Number(p.presetId) || 1,
+            label: String(p.label || 'Preset').slice(0, 40),
+          })),
+          stunServers: (target.stunServers || []).slice(0, 5),
+          turnUrls: (target.turnUrls || []).slice(0, 4),
+          softIoTriggerId: Number(target.softIoTriggerId) || 1,
+          triggerOnPanic: Boolean(target.triggerOnPanic),
+          status: target.status,
+          updatedAt: serverTimestamp(),
+        };
+        if (target.serialNumber) fsUpdate.serialNumber = target.serialNumber.slice(0, 64);
+        if (target.host) fsUpdate.host = target.host.slice(0, 128);
+        if (target.whepUrl) fsUpdate.whepUrl = target.whepUrl.slice(0, 512);
+        updateDoc(doc(db, 'cameras', id), fsUpdate).catch((err) => {
+          try {
+            handleFirestoreError(err, OperationType.UPDATE, `cameras/${id}`);
+          } catch {
+            // Non-blocking fallback for offline editing
+          }
+        });
+      }
     }
   },
 
@@ -3719,18 +3893,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       delete creds[id];
       setStoredJSON('sl_hikvision_local_creds', creds);
     }
-    loadFirebase()
-      .then(({ lib, fsMod }) => {
-        if (!lib.auth.currentUser?.emailVerified) return;
-        fsMod.deleteDoc(fsMod.doc(lib.db, 'cameras', id)).catch((err) => {
-          try {
-            lib.handleFirestoreError(err, lib.OperationType.DELETE, `cameras/${id}`);
-          } catch {
-            // Non-blocking fallback
-          }
-        });
-      })
-      .catch(() => {});
+    if (auth.currentUser?.emailVerified) {
+      deleteDoc(doc(db, 'cameras', id)).catch((err) => {
+        try {
+          handleFirestoreError(err, OperationType.DELETE, `cameras/${id}`);
+        } catch {
+          // Non-blocking fallback
+        }
+      });
+    }
     get().addAuditLog('SYSTEM', 'INFO', 'CCTV Camera Removed', `ID: ${id}`);
   },
 

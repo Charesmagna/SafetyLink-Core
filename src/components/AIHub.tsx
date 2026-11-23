@@ -1,10 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
 import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
-import { Mic, Square, Volume2, Globe, MapPin, Upload } from 'lucide-react';
+import { useGeminiLiveVoice, type LiveVoiceName } from '../hooks/useGeminiLiveVoice';
+import {
+  Mic,
+  MicOff,
+  Square,
+  Volume2,
+  Globe,
+  MapPin,
+  Upload,
+  PhoneCall,
+  PhoneOff,
+  AudioLines,
+} from 'lucide-react';
 
-type SubTab = 'chat' | 'voice' | 'transcribe' | 'safercity' | 'image' | 'surveillance';
+type SubTab = 'chat' | 'voice' | 'transcribe' | 'safetyfeed' | 'image' | 'surveillance';
+
+interface HubChatMessage {
+  sender: 'user' | 'bot';
+  text: string;
+  timestamp: number;
+  links?: Array<{ title: string; uri: string }>;
+  error?: boolean;
+}
+
+const VOICE_OPTIONS: LiveVoiceName[] = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 
 export const AIHub: React.FC = () => {
   const { addAuditLog, triggerPanic, userLocation } = useAppStore();
@@ -49,20 +72,33 @@ export const AIHub: React.FC = () => {
   }, [triggerPanic, addAuditLog]);
 
   // Chat states
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string; timestamp: number }>>([
+  const [chatMessages, setChatMessages] = useState<HubChatMessage[]>([
     {
       sender: 'bot',
-      text: "Greeting Responder. I am Lizzy AI (K'lev.ai), your Gemini-powered safety coordinator. Ask about routes, nearby SAPS/hospitals, or upload an image for hazard analysis.",
+      text: "Hello! I am **Kleva AI** (Lizzy), your Gemini-powered safety companion. Ask about personal safety, nearby police/hospitals, or upload an image for hazard analysis.",
       timestamp: Date.now() - 5000,
     },
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  // Voice Live states
-  const [voiceActive, setVoiceActive] = useState(false);
+  // Live Voice via shared Gemini 3.8 Live hook
+  const liveVoice = useGeminiLiveVoice();
+  const [selectedVoice, setSelectedVoice] = useState<LiveVoiceName>('Zephyr');
   const [voiceWaves, setVoiceWaves] = useState<number[]>([10, 10, 10, 10, 10, 10, 10, 10]);
-  const [voiceLog, setVoiceLog] = useState<string>('Press start to establish Gemini Live bidirectional voice link.');
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (liveVoice.isConnected) {
+      interval = setInterval(() => {
+        const boost = Math.max(6, Math.round(liveVoice.micLevel * 28));
+        setVoiceWaves(Array.from({ length: 8 }, () => Math.floor(Math.random() * boost) + 8));
+      }, 120);
+    } else {
+      setVoiceWaves([10, 10, 10, 10, 10, 10, 10, 10]);
+    }
+    return () => clearInterval(interval);
+  }, [liveVoice.isConnected, liveVoice.micLevel]);
 
   // Accessibility Audio Transcriber + TTS states
   const [isRecordingTranscript, setIsRecordingTranscript] = useState(false);
@@ -72,13 +108,13 @@ export const AIHub: React.FC = () => {
   const transcribeRecorderRef = useRef<MediaRecorder | null>(null);
   const transcribeChunksRef = useRef<Blob[]>([]);
 
-  // Safer City Search + Maps state
-  const [saferQuery, setSaferQuery] = useState('');
-  const [saferLoading, setSaferLoading] = useState(false);
-  const [saferAdvisory, setSaferAdvisory] = useState('');
-  const [saferSafeZones, setSaferSafeZones] = useState('');
-  const [saferSearchLinks, setSaferSearchLinks] = useState<Array<{ title: string; uri: string }>>([]);
-  const [saferMapLinks, setSaferMapLinks] = useState<Array<{ title: string; uri: string }>>([]);
+  // Safety Feed AI Grounding state
+  const [feedQuery, setFeedQuery] = useState('');
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedAdvisory, setFeedAdvisory] = useState('');
+  const [feedSafeZones, setFeedSafeZones] = useState('');
+  const [feedSearchLinks, setFeedSearchLinks] = useState<Array<{ title: string; uri: string }>>([]);
+  const [feedMapLinks, setFeedMapLinks] = useState<Array<{ title: string; uri: string }>>([]);
 
   // Paid-only notice states (Image / Veo)
   const [imagePrompt, setImagePrompt] = useState('');
@@ -88,9 +124,14 @@ export const AIHub: React.FC = () => {
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    const userMsg = chatInput.trim();
+    if (!userMsg || isTyping) return;
 
-    const userMsg = chatInput;
+    const historySnapshot = chatMessages
+      .filter((m) => !m.error)
+      .slice(-14)
+      .map((m) => ({ role: m.sender === 'bot' ? 'model' : 'user', text: m.text }));
+
     setChatMessages((prev) => [...prev, { sender: 'user', text: userMsg, timestamp: Date.now() }]);
     setChatInput('');
     setIsTyping(true);
@@ -98,7 +139,8 @@ export const AIHub: React.FC = () => {
     try {
       let lat = userLocation?.lat;
       let lng = userLocation?.lng;
-      if ((!lat || !lng) && navigator.geolocation) {
+      const wantsMaps = /nearest|police|hospital|clinic|safe zone|safe point|near me/i.test(userMsg);
+      if (wantsMaps && (!lat || !lng) && navigator.geolocation) {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
@@ -108,45 +150,56 @@ export const AIHub: React.FC = () => {
         } catch {}
       }
 
-      const response = await fetch('/api/gemini/generate', {
+      const response = await fetch('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userMsg,
-          useGrounding: lat && lng ? 'maps' : 'search',
+          message: userMsg,
+          history: historySnapshot,
+          role: 'coordinator',
+          useMaps: Boolean(wantsMaps && lat && lng),
           lat,
           lng,
         }),
       });
 
-      if (!response.ok) throw new Error('AI request failed');
-      const data = await response.json();
-      let reply = data.text || 'I could not process your request at this time.';
-
-      if (data.chunks && Array.isArray(data.chunks)) {
-        const links = data.chunks
-          .map((chunk: any) => {
-            const place = chunk.maps?.title || chunk.web?.title || 'Verified Source';
-            const uri = chunk.maps?.uri || chunk.web?.uri;
-            if (uri) return `<a href="${uri}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 underline">${place}</a>`;
-            return null;
-          })
-          .filter(Boolean);
-
-        if (links.length > 0) {
-          reply += `<br/><br/>📍 <b>Verified Sources:</b><br/>` + links.join('<br/>');
-        }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || `AI request failed (HTTP ${response.status})`);
       }
 
-      setChatMessages((prev) => [...prev, { sender: 'bot', text: reply, timestamp: Date.now() }]);
-    } catch {
+      const links: Array<{ title: string; uri: string }> = Array.isArray(data.chunks)
+        ? data.chunks
+            .map((chunk: any) => {
+              const title = chunk.maps?.title || chunk.web?.title || 'Verified Source';
+              const uri = chunk.maps?.uri || chunk.web?.uri;
+              return uri ? { title, uri } : null;
+            })
+            .filter(Boolean)
+        : [];
+
       setChatMessages((prev) => [
         ...prev,
-        { sender: 'bot', text: 'Could not reach Gemini service. Please verify internet connectivity.', timestamp: Date.now() },
+        {
+          sender: 'bot',
+          text: data.text || 'I could not process your request at this time.',
+          timestamp: Date.now(),
+          links,
+        },
+      ]);
+    } catch (err: any) {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: `Could not complete AI response: ${err?.message || 'Service temporarily unavailable. Please try again.'}`,
+          timestamp: Date.now(),
+          error: true,
+        },
       ]);
     } finally {
       setIsTyping(false);
-      addAuditLog('SYSTEM', 'INFO', "Lizzy AI processed chat request", `Query: ${userMsg.substring(0, 30)}`);
+      addAuditLog('SYSTEM', 'INFO', 'Kleva AI processed chat request', `Query: ${userMsg.substring(0, 30)}`);
     }
   };
 
@@ -171,141 +224,52 @@ export const AIHub: React.FC = () => {
           prompt: 'Analyze this image for safety hazards, security parameters, or tactical anomalies.',
         }),
       })
-        .then((r) => r.json())
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(data?.error || 'Image analysis failed');
+          return data;
+        })
         .then((data) => {
           setChatMessages((prev) => [
             ...prev,
             {
               sender: 'bot',
-              text: `EVIDENCE ANALYZED (gemini-4-hydrogen): ${data.text || 'No analysis returned.'}`,
+              text: `**Evidence Analysis:** ${data.text || 'No analysis returned.'}`,
               timestamp: Date.now(),
             },
           ]);
-          setIsTyping(false);
-          addAuditLog('SECURITY', 'INFO', 'Lizzy AI analyzed evidence image', file.name);
+          addAuditLog('SECURITY', 'INFO', 'Kleva AI analyzed evidence image', file.name);
         })
-        .catch(() => setIsTyping(false));
+        .catch((err) => {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              sender: 'bot',
+              text: `Image analysis error: ${err?.message || 'Unable to analyze image.'}`,
+              timestamp: Date.now(),
+              error: true,
+            },
+          ]);
+        })
+        .finally(() => setIsTyping(false));
     };
     reader.readAsDataURL(file);
   };
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (voiceActive) {
-      interval = setInterval(() => {
-        setVoiceWaves(Array.from({ length: 8 }, () => Math.floor(Math.random() * 32) + 5));
-      }, 100);
-    } else {
-      setVoiceWaves([10, 10, 10, 10, 10, 10, 10, 10]);
-    }
-    return () => clearInterval(interval);
-  }, [voiceActive]);
-
-  const wsRef = useRef<WebSocket | null>(null);
-  const voiceAudioCtxRef = useRef<AudioContext | null>(null);
-  const voiceProcessorRef = useRef<ScriptProcessorNode | null>(null);
-  const mediaRecorderRef = useRef<any>(null);
-
-  const toggleVoiceLink = async () => {
-    if (voiceActive) {
-      setVoiceActive(false);
-      setVoiceLog('Voice link terminated.');
-      addAuditLog('SYSTEM', 'INFO', 'Lizzy AI voice chat disconnected');
-      if (wsRef.current) {
-        try { wsRef.current.close(); } catch {}
-        wsRef.current = null;
-      }
-      if (voiceProcessorRef.current) {
-        voiceProcessorRef.current.disconnect();
-        voiceProcessorRef.current = null;
-      }
-      if (voiceAudioCtxRef.current) {
-        voiceAudioCtxRef.current.close();
-        voiceAudioCtxRef.current = null;
-      }
-      if (mediaRecorderRef.current?.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach((t: any) => t.stop());
-        mediaRecorderRef.current = null;
-      }
+  const toggleVoiceLink = () => {
+    if (liveVoice.isConnected || liveVoice.isConnecting) {
+      liveVoice.disconnect();
+      addAuditLog('SYSTEM', 'INFO', 'Kleva AI live voice disconnected');
       return;
     }
-
-    setVoiceActive(true);
-    setVoiceLog('Connecting to gemini-3.8-live...');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: 16000 } });
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/live`);
-      wsRef.current = ws;
-
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const inputAudioCtx = new AudioContextClass({ sampleRate: 16000 });
-      const outputAudioCtx = new AudioContextClass({ sampleRate: 24000 });
-      voiceAudioCtxRef.current = outputAudioCtx;
-
-      const source = inputAudioCtx.createMediaStreamSource(stream);
-      const processor = inputAudioCtx.createScriptProcessor(4096, 1, 1);
-      voiceProcessorRef.current = processor;
-      mediaRecorderRef.current = { stream };
-
-      ws.onopen = () => {
-        setVoiceLog('Live audio link established! Speak to transmit.');
-        addAuditLog('SYSTEM', 'INFO', 'Lizzy AI voice chat connected', 'gemini-3.8-live');
-
-        processor.onaudioprocess = (e) => {
-          const inputData = e.inputBuffer.getChannelData(0);
-          const pcm16 = new Int16Array(inputData.length);
-          for (let i = 0; i < inputData.length; i++) {
-            pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7fff;
-          }
-          const bytes = new Uint8Array(pcm16.buffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'audio', data: btoa(binary) }));
-          }
-        };
-        source.connect(processor);
-        processor.connect(inputAudioCtx.destination);
-      };
-
-      let nextStartTime = 0;
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.type === 'audio' && msg.data) {
-            const binary = atob(msg.data);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const pcm16 = new Int16Array(bytes.buffer);
-            const float32 = new Float32Array(pcm16.length);
-            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 0x7fff;
-
-            const audioBuffer = outputAudioCtx.createBuffer(1, float32.length, 24000);
-            audioBuffer.getChannelData(0).set(float32);
-            const bufSource = outputAudioCtx.createBufferSource();
-            bufSource.buffer = audioBuffer;
-            bufSource.connect(outputAudioCtx.destination);
-            if (nextStartTime < outputAudioCtx.currentTime) nextStartTime = outputAudioCtx.currentTime;
-            bufSource.start(nextStartTime);
-            nextStartTime += audioBuffer.duration;
-            setVoiceLog('Receiving live audio from Lizzy...');
-          } else if (msg.type === 'interrupted') {
-            nextStartTime = outputAudioCtx.currentTime;
-          } else if (msg.type === 'error') {
-            setVoiceLog(`Error: ${msg.message}`);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      };
-
-      ws.onerror = () => setVoiceLog('WebSocket connection failed.');
-      ws.onclose = () => setVoiceActive(false);
-    } catch {
-      setVoiceActive(false);
-      setVoiceLog('Microphone access denied or unavailable.');
-    }
+    liveVoice.connect({
+      mode: 'assistant',
+      voice: selectedVoice,
+      context: userLocation
+        ? `User GPS: ${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`
+        : undefined,
+    });
+    addAuditLog('SYSTEM', 'INFO', 'Kleva AI live voice connecting', `gemini-3.8-live (${selectedVoice})`);
   };
 
   const transcribeBlob = async (blob: Blob) => {
@@ -319,10 +283,11 @@ export const AIHub: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ audioBase64: base64, mimeType: blob.type || 'audio/webm' }),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || 'Transcription failed');
         setTranscriptText(data.text || 'No speech detected.');
-      } catch {
-        setTranscriptText('Transcription request failed.');
+      } catch (err: any) {
+        setTranscriptText(err?.message || 'Transcription request failed.');
       } finally {
         setTranscribing(false);
       }
@@ -375,6 +340,7 @@ export const AIHub: React.FC = () => {
         if (data.audioBase64) {
           const audio = new Audio(`data:${data.mimeType || 'audio/wav'};base64,${data.audioBase64}`);
           audio.onended = () => setTtsSpeaking(false);
+          audio.onerror = () => setTtsSpeaking(false);
           await audio.play();
           return;
         }
@@ -383,22 +349,42 @@ export const AIHub: React.FC = () => {
     setTtsSpeaking(false);
   };
 
-  const handleSaferCityFetch = async (e?: React.FormEvent) => {
+  const handleSafetyFeedFetch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    setSaferLoading(true);
+    setFeedLoading(true);
     try {
-      const res = await fetch('/api/gemini/safer-city', {
+      let lat = userLocation?.lat;
+      let lng = userLocation?.lng;
+      if ((!lat || !lng) && !feedQuery.trim() && navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 });
+          });
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+        } catch {}
+      }
+      if (!feedQuery.trim() && (!lat || !lng)) {
+        setFeedAdvisory('Please enable GPS location or type your suburb/city above to scan live local safety updates.');
+        setFeedLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/gemini/safety-feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          queryText: saferQuery.trim() || undefined,
-          lat: userLocation?.lat,
-          lng: userLocation?.lng,
+          locationName: feedQuery.trim() || undefined,
+          lat,
+          lng,
         }),
       });
-      const data = await res.json();
-      setSaferAdvisory(data.advisoryText || 'No active advisories returned.');
-      setSaferSafeZones(data.safeZonesText || '');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to load Safety Feed advisories');
+      }
+      setFeedAdvisory(data.advisoryText || 'No active advisories returned for this location.');
+      setFeedSafeZones(data.safeZonesText || '');
       const sLinks = Array.isArray(data.searchChunks)
         ? data.searchChunks
             .map((c: any) => (c.web?.uri ? { title: c.web.title || 'Web Source', uri: c.web.uri } : null))
@@ -409,12 +395,12 @@ export const AIHub: React.FC = () => {
             .map((c: any) => (c.maps?.uri ? { title: c.maps.title || 'Google Maps Place', uri: c.maps.uri } : null))
             .filter(Boolean)
         : [];
-      setSaferSearchLinks(sLinks);
-      setSaferMapLinks(mLinks);
-    } catch {
-      setSaferAdvisory('Failed to reach Safer City Grounding service.');
+      setFeedSearchLinks(sLinks);
+      setFeedMapLinks(mLinks);
+    } catch (err: any) {
+      setFeedAdvisory(err?.message || 'Failed to reach Safety Feed grounding service.');
     } finally {
-      setSaferLoading(false);
+      setFeedLoading(false);
     }
   };
 
@@ -444,7 +430,7 @@ export const AIHub: React.FC = () => {
         <div className="flex items-center gap-2">
           <SafetyLinkLogo size={18} glowColor="rgba(16, 185, 129, 0.4)" />
           <h2 className="text-xs font-black tracking-widest font-mono uppercase text-slate-100 flex items-center gap-1">
-            LIZZY AI • K&apos;LEV<span className="text-sm font-black text-emerald-400">A</span>.<span className="text-sm font-black text-emerald-400">I</span>NFO
+            KLEVA AI • SAFETY COMPANION
           </h2>
         </div>
         <span className="text-[8px] font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded uppercase tracking-wider">
@@ -457,7 +443,7 @@ export const AIHub: React.FC = () => {
           { id: 'chat', label: 'Chatbot', icon: '💬' },
           { id: 'voice', label: 'Live Voice', icon: '🎙️' },
           { id: 'transcribe', label: 'Transcribe', icon: '🗣️' },
-          { id: 'safercity', label: 'Safer City', icon: '🌐' },
+          { id: 'safetyfeed', label: 'Safety Feed', icon: '🌐' },
           { id: 'image', label: 'Img (Pro)', icon: '🎨' },
           { id: 'surveillance', label: 'Veo (Pro)', icon: '📹' },
         ].map((sub) => (
@@ -478,20 +464,43 @@ export const AIHub: React.FC = () => {
       <div className="min-h-[220px] flex flex-col justify-between">
         {activeSubTab === 'chat' && (
           <div className="space-y-3 flex-1 flex flex-col justify-between">
-            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 max-h-52 overflow-y-auto space-y-2.5 text-xs font-mono">
+            <div className="bg-slate-950 border border-slate-850 rounded-2xl p-3 max-h-56 overflow-y-auto space-y-2.5 text-xs">
               {chatMessages.map((m, idx) => (
                 <div
                   key={idx}
-                  className={`p-2 rounded-xl max-w-[88%] leading-relaxed ${
+                  className={`p-2.5 rounded-xl max-w-[90%] leading-relaxed ${
                     m.sender === 'user'
                       ? 'bg-emerald-900/30 border border-emerald-500/20 text-emerald-100 ml-auto'
-                      : 'bg-slate-900 border border-slate-800 text-slate-300'
+                      : m.error
+                        ? 'bg-red-950/50 border border-red-500/40 text-red-200'
+                        : 'bg-slate-900 border border-slate-800 text-slate-200'
                   }`}
                 >
-                  <div dangerouslySetInnerHTML={{ __html: m.text.replace(/\n/g, '<br/>') }} />
+                  {m.sender === 'bot' ? (
+                    <div className="prose prose-invert prose-xs max-w-none prose-p:my-1">
+                      <ReactMarkdown>{m.text}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="whitespace-pre-line">{m.text}</span>
+                  )}
+                  {m.links && m.links.length > 0 && (
+                    <div className="mt-2 pt-1.5 border-t border-slate-800 space-y-1">
+                      {m.links.map((lnk, li) => (
+                        <a
+                          key={li}
+                          href={lnk.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-[11px] text-emerald-400 underline"
+                        >
+                          📍 {lnk.title}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
-              {isTyping && <div className="text-slate-500 italic animate-pulse">Lizzy AI is analyzing...</div>}
+              {isTyping && <div className="text-slate-400 italic animate-pulse font-mono">Kleva AI is thinking...</div>}
             </div>
 
             <form onSubmit={handleChatSubmit} className="flex gap-2">
@@ -506,12 +515,13 @@ export const AIHub: React.FC = () => {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask Lizzy AI about safe routes or hazards..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
+                placeholder="Ask Kleva AI about safe routes or hazards..."
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
               />
               <button
                 type="submit"
-                className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl uppercase font-mono shrink-0"
+                disabled={isTyping || !chatInput.trim()}
+                className="px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl uppercase font-mono shrink-0"
               >
                 Send
               </button>
@@ -520,33 +530,105 @@ export const AIHub: React.FC = () => {
         )}
 
         {activeSubTab === 'voice' && (
-          <div className="space-y-4 text-center py-4">
+          <div className="space-y-3 text-center py-2">
+            <div className="flex items-center justify-center gap-1 flex-wrap">
+              {VOICE_OPTIONS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  disabled={liveVoice.isConnected || liveVoice.isConnecting}
+                  onClick={() => setSelectedVoice(v)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+                    selectedVoice === v
+                      ? 'bg-cyan-600 text-white'
+                      : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                  } disabled:opacity-50`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center justify-center gap-1 h-12 w-full max-w-xs mx-auto bg-slate-950 rounded-2xl border border-slate-800 px-4">
               {voiceWaves.map((val, idx) => (
                 <motion.div
                   key={idx}
                   animate={{ height: val }}
-                  className={`w-1 rounded-full ${voiceActive ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                  className={`w-1.5 rounded-full ${
+                    liveVoice.isModelSpeaking
+                      ? 'bg-cyan-400'
+                      : liveVoice.isConnected
+                        ? 'bg-emerald-500'
+                        : 'bg-slate-800'
+                  }`}
                 />
               ))}
             </div>
-            <button
-              type="button"
-              onClick={toggleVoiceLink}
-              className={`px-5 py-2.5 rounded-full font-mono text-xs font-extrabold uppercase tracking-wide border transition-all ${
-                voiceActive
-                  ? 'bg-red-600/30 hover:bg-red-600 border-red-500 text-red-200'
-                  : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white'
+
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={toggleVoiceLink}
+                disabled={liveVoice.isConnecting}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-extrabold uppercase tracking-wide border transition-all ${
+                  liveVoice.isConnected
+                    ? 'bg-red-600/30 hover:bg-red-600 border-red-500 text-red-100'
+                    : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white'
+                } disabled:opacity-60`}
+              >
+                {liveVoice.isConnected ? <PhoneOff size={14} /> : <PhoneCall size={14} />}
+                {liveVoice.isConnected
+                  ? 'End Voice Link'
+                  : liveVoice.isConnecting
+                    ? 'Connecting...'
+                    : 'Start Live Voice'}
+              </button>
+
+              {liveVoice.isConnected && (
+                <button
+                  type="button"
+                  onClick={liveVoice.toggleMute}
+                  className={`p-2.5 rounded-full border ${
+                    liveVoice.isMuted
+                      ? 'bg-amber-600 border-amber-500 text-white'
+                      : 'bg-slate-900 border-slate-700 text-slate-200'
+                  }`}
+                  title={liveVoice.isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                >
+                  {liveVoice.isMuted ? <MicOff size={15} /> : <Mic size={15} />}
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-mono text-slate-400">
+              <AudioLines size={12} className="text-cyan-400" />
+              <span>Powered by gemini-3.8-live</span>
+            </div>
+
+            <div
+              className={`p-3 rounded-xl text-[11px] font-mono text-left border ${
+                liveVoice.error
+                  ? 'bg-red-950/40 border-red-500/40 text-red-200'
+                  : 'bg-slate-950 border-slate-800 text-slate-300'
               }`}
             >
-              {voiceActive ? '⏹️ Terminate Link' : '🎙️ Establish Live Voice Link'}
-            </button>
-            <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">
-              Powered by gemini-3.8-live
-            </p>
-            <div className="p-3 bg-slate-950 border border-slate-850 rounded-xl text-[10px] font-mono text-slate-400 text-left">
-              STATUS: {voiceLog}
+              {liveVoice.error ||
+                liveVoice.statusMessage ||
+                'Press Start Live Voice to speak directly with Kleva AI in real time.'}
             </div>
+
+            {liveVoice.transcript.length > 0 && (
+              <div className="bg-slate-950 border border-slate-800 rounded-xl p-2.5 max-h-36 overflow-y-auto space-y-1.5 text-left text-[11px]">
+                {liveVoice.transcript.slice(-6).map((t) => (
+                  <div key={t.id} className={t.role === 'user' ? 'text-blue-300' : 'text-emerald-300'}>
+                    <span className="font-mono font-bold uppercase text-[9px] mr-1.5">
+                      {t.role === 'user' ? 'You:' : 'Kleva:'}
+                    </span>
+                    {t.text}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -594,34 +676,34 @@ export const AIHub: React.FC = () => {
           </div>
         )}
 
-        {activeSubTab === 'safercity' && (
+        {activeSubTab === 'safetyfeed' && (
           <div className="space-y-3">
-            <form onSubmit={handleSaferCityFetch} className="flex gap-2">
+            <form onSubmit={handleSafetyFeedFetch} className="flex gap-2">
               <input
                 type="text"
-                value={saferQuery}
-                onChange={(e) => setSaferQuery(e.target.value)}
-                placeholder="City / suburb query (optional, defaults to GPS)..."
+                value={feedQuery}
+                onChange={(e) => setFeedQuery(e.target.value)}
+                placeholder="Your suburb or city (leave blank to use live GPS)..."
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono"
               />
               <button
                 type="submit"
-                disabled={saferLoading}
+                disabled={feedLoading}
                 className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl font-mono"
               >
-                {saferLoading ? 'Scanning...' : 'Refresh'}
+                {feedLoading ? 'Scanning...' : 'Refresh'}
               </button>
             </form>
 
-            {saferAdvisory && (
+            {feedAdvisory && (
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2 text-xs font-mono text-slate-200 max-h-56 overflow-y-auto">
                 <div className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase text-[10px]">
-                  <Globe size={12} /> Google Search Safer City Advisories
+                  <Globe size={12} /> Live Safety Feed Advisories
                 </div>
-                <p className="whitespace-pre-line">{saferAdvisory}</p>
-                {saferSearchLinks.length > 0 && (
+                <p className="whitespace-pre-line">{feedAdvisory}</p>
+                {feedSearchLinks.length > 0 && (
                   <div className="pt-1 space-y-1">
-                    {saferSearchLinks.map((l, i) => (
+                    {feedSearchLinks.map((l, i) => (
                       <a key={i} href={l.uri} target="_blank" rel="noopener noreferrer" className="block text-[10px] text-blue-400 underline">
                         🔗 {l.title}
                       </a>
@@ -629,17 +711,17 @@ export const AIHub: React.FC = () => {
                   </div>
                 )}
 
-                {saferSafeZones && (
+                {feedSafeZones && (
                   <>
                     <div className="flex items-center gap-1.5 text-amber-400 font-bold uppercase text-[10px] pt-2 border-t border-slate-800">
-                      <MapPin size={12} /> Google Maps Grounded Safe Zones
+                      <MapPin size={12} /> Verified Nearby Safe Zones
                     </div>
-                    <p className="whitespace-pre-line">{saferSafeZones}</p>
+                    <p className="whitespace-pre-line">{feedSafeZones}</p>
                   </>
                 )}
-                {saferMapLinks.length > 0 && (
+                {feedMapLinks.length > 0 && (
                   <div className="pt-1 space-y-1">
-                    {saferMapLinks.map((l, i) => (
+                    {feedMapLinks.map((l, i) => (
                       <a key={i} href={l.uri} target="_blank" rel="noopener noreferrer" className="block text-[10px] text-emerald-400 underline">
                         📍 {l.title}
                       </a>

@@ -150,7 +150,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
                   alt={activeBlueprint.title} 
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg';
+                    e.currentTarget.src = '/Polish_20260907_043403519.jpg';
                   }}
                   style={{ width: '100%', height: 'auto', display: 'block', background: '#020617', transition: 'all 0.6s ease' }} 
                 />
@@ -164,7 +164,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
                   alt={activeTelemetry.title} 
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg';
+                    e.currentTarget.src = '/Polish_20260907_043403519.jpg';
                   }}
                   style={{ width: '100%', height: 'auto', display: 'block', background: '#020617', transition: 'all 0.6s ease' }} 
                 />
@@ -209,7 +209,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
             alt="SafetyLink Incident Heatmap" 
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = '/Screenshot_20260820_202202_com.aistudio.safetylink.vqnztp.jpg';
+              e.currentTarget.src = '/Polish_20260907_043403519.jpg';
             }}
             style={{ width: '100%', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)' }} 
           />

@@ -273,6 +273,16 @@ export interface DispatchSettings {
   carrierPreset: 'AUTO' | 'MTN' | 'VODACOM' | 'CELL_C' | 'TELKOM' | 'CUSTOM';
   customUssdPattern: string;
   pcmGatewayNumber: string;
+  // Configurable Online Data-Saver, 5m Dedupe & Offline Reverse-Charge USSD
+  preferFcmOnline?: boolean;
+  pcmCooldownMinutes?: number;
+  offlineUssdMode?: 'RAIN_PCM' | 'DIRECT_CONTACT_PCM' | 'REVERSE_CHARGE_CALL';
+  reverseChargePrefix?: string;
+  // Configurable Post-Trigger AI Welfare Check-In Timer
+  aiCheckInEnabled?: boolean;
+  aiCheckInDelayMinutes?: number;
+  aiCheckInAutoSpeak?: boolean;
+  aiCheckInResponseTimeoutSec?: number;
 }
 
 export interface PlatformIntegration {
@@ -369,4 +379,56 @@ export interface CameraDevice {
   createdAt: number;
   updatedAt?: number;
 }
+
+export interface DisplaySettings {
+  themeMode: 'light' | 'dark' | 'system';
+  textScale: 0.9 | 1 | 1.12 | 1.25;
+  screenFit: 'auto' | 'compact' | 'standard' | 'spacious';
+  highContrast: boolean;
+  reducedMotion: boolean;
+  oneHandedReach: boolean;
+  dangerZoneAlerts: boolean;
+  dangerZoneRadiusKm: number;
+}
+
+export type SafetyReportCategory =
+  | 'CRIME'
+  | 'SUSPICIOUS'
+  | 'TRAFFIC'
+  | 'POWER_WATER'
+  | 'FIRE_HAZARD'
+  | 'MEDICAL'
+  | 'PATROL_UPDATE';
+
+export interface CommunitySafetyReport {
+  id: string;
+  title: string;
+  description: string;
+  category: SafetyReportCategory;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'ACTIVE' | 'PUBLISHED' | 'RESOLVED';
+  lat: number;
+  lng: number;
+  areaName: string;
+  reporterName: string;
+  reporterId?: string;
+  orgId?: string;
+  timestamp: number;
+  verifications: number;
+  verifiedByMe?: boolean;
+}
+
+export interface DangerZone {
+  id: string;
+  name: string;
+  area: string;
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+  riskLevel: 'MODERATE' | 'HIGH' | 'CRITICAL';
+  advisory: string;
+  recentIncidents: number;
+  updatedAt: number;
+}
+
 

@@ -263,26 +263,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
     }
 
     const newOrg = res;
-    if (newOrg.approved === false) {
-      setOrgSuccessMsg(`Registered successfully! Unique Code: ${newOrg.id}. Awaiting registry approval from Super Admin...`);
-      const prefillEmail = orgEmail.trim();
-      const prefillOrgId = newOrg.id;
-      setTimeout(() => {
-        setView('LOGIN');
-        setLoginUsername(prefillEmail);
-        setLoginOrgCode(prefillOrgId);
-        setOrgSuccessMsg('');
-        setOrgName('');
-        setOrgContactName('');
-        setOrgEmail('');
-        setOrgPassword('');
-        setGeneratedOrgId('');
-        setShowIdApplication(false);
-      }, 3000);
-      return;
-    }
-
-    // registerOrganization() already persisted the org session into currentOrg + sl_remembered_orgs.
+    // registerOrganization() immediately activates and persists the org session into currentOrg + sl_remembered_orgs.
     setOrgSuccessMsg(`Organization provisioned (${newOrg.id}). Opening Commander Deck...`);
   };
 

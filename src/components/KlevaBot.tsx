@@ -28,8 +28,9 @@ import {
   type LiveVoiceName,
 } from "../hooks/useGeminiLiveVoice";
 
-const klevaLogo =
-  "https://res.cloudinary.com/qcp4fx2v/image/upload/f_auto,q_auto/v1787309978/K_leva.png";
+import { getR2StreamUrl } from "../utils/r2Assets";
+
+const klevaLogo = getR2StreamUrl("Polish_20260809_035827088.png");
 
 const STORAGE_KEY = "sl_gemini_companion_chat_v2";
 
@@ -101,7 +102,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
 
   const [activeTab, setActiveTab] = useState<CompanionTab>(lizzyInitialTab || "chat");
   const [role, setRole] = useState<ChatRole>("post_emergency");
-  const [selectedModel, setSelectedModel] = useState<ChatModel>("gemini-4-hydrogen");
+  const [selectedModel, setSelectedModel] = useState<ChatModel>("gemini-3.1-flash-lite");
   const [selectedVoice, setSelectedVoice] = useState<LiveVoiceName>("Zephyr");
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -284,79 +285,97 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     };
 
     try {
-      const res = await fetch("/api/gemini/chat/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody?.error || `Server returned HTTP ${res.status}`);
-      }
-
-      const contentType = res.headers.get("content-type") || "";
       let accumulatedText = "";
       let links: Array<{ title: string; uri: string }> = [];
+      let usedModel: string = selectedModel;
 
-      if (contentType.includes("text/event-stream") && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+      const parseLinks = (chunks: any[]) =>
+        chunks
+          .map((c: any) => {
+            const uri = c?.maps?.uri || c?.web?.uri;
+            const title = c?.maps?.title || c?.web?.title;
+            return uri ? { title: title || "Verified Location", uri } : null;
+          })
+          .filter(Boolean) as Array<{ title: string; uri: string }>;
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || "";
+      let streamFailed = false;
+      try {
+        const res = await fetch("/api/gemini/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-          for (const block of lines) {
-            const dataLine = block
-              .split("\n")
-              .find((l) => l.startsWith("data: "));
-            if (!dataLine) continue;
-            try {
-              const evt = JSON.parse(dataLine.slice(6));
-              if (evt.error) {
-                throw new Error(evt.error);
-              }
-              if (evt.delta) {
-                accumulatedText += evt.delta;
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === botId ? { ...m, text: accumulatedText } : m
-                  )
-                );
-              }
-              if (evt.done && Array.isArray(evt.chunks)) {
-                links = evt.chunks
-                  .map((c: any) => {
-                    const uri = c?.maps?.uri || c?.web?.uri;
-                    const title = c?.maps?.title || c?.web?.title;
-                    return uri ? { title: title || "Verified Location", uri } : null;
-                  })
-                  .filter(Boolean);
-              }
-            } catch (streamErr: any) {
-              if (streamErr?.message && !streamErr.message.includes("JSON")) {
-                throw streamErr;
+        if (!res.ok) {
+          streamFailed = true;
+        } else {
+          const contentType = res.headers.get("content-type") || "";
+          if (contentType.includes("text/event-stream") && res.body) {
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n\n");
+              buffer = lines.pop() || "";
+
+              for (const block of lines) {
+                const dataLine = block
+                  .split("\n")
+                  .find((l) => l.startsWith("data: "));
+                if (!dataLine) continue;
+                try {
+                  const evt = JSON.parse(dataLine.slice(6));
+                  if (evt.error) {
+                    throw new Error(evt.error);
+                  }
+                  if (evt.delta) {
+                    accumulatedText += evt.delta;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === botId ? { ...m, text: accumulatedText } : m
+                      )
+                    );
+                  }
+                  if (evt.done) {
+                    if (evt.model) usedModel = evt.model;
+                    if (Array.isArray(evt.chunks)) links = parseLinks(evt.chunks);
+                  }
+                } catch (streamErr: any) {
+                  if (streamErr?.message && !streamErr.message.includes("JSON")) {
+                    throw streamErr;
+                  }
+                }
               }
             }
+          } else {
+            const data = await res.json();
+            accumulatedText = data.text || "";
+            if (data.model) usedModel = data.model;
+            if (Array.isArray(data.chunks)) links = parseLinks(data.chunks);
           }
         }
-      } else {
-        const data = await res.json();
-        accumulatedText = data.text || "";
-        if (Array.isArray(data.chunks)) {
-          links = data.chunks
-            .map((c: any) => {
-              const uri = c?.maps?.uri || c?.web?.uri;
-              const title = c?.maps?.title || c?.web?.title;
-              return uri ? { title: title || "Verified Location", uri } : null;
-            })
-            .filter(Boolean);
+      } catch {
+        streamFailed = true;
+      }
+
+      // Automatic fallback to unary /api/gemini/chat if SSE stream failed before producing text
+      if (streamFailed && !accumulatedText.trim()) {
+        const fallbackRes = await fetch("/api/gemini/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const fallbackData = await fallbackRes.json().catch(() => ({}));
+        if (!fallbackRes.ok) {
+          throw new Error(fallbackData?.error || `Server returned HTTP ${fallbackRes.status}`);
         }
+        accumulatedText = fallbackData.text || "";
+        if (fallbackData.model) usedModel = fallbackData.model;
+        if (Array.isArray(fallbackData.chunks)) links = parseLinks(fallbackData.chunks);
       }
 
       if (!accumulatedText.trim()) {
@@ -366,7 +385,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
       setMessages((prev) =>
         prev.map((m) =>
           m.id === botId
-            ? { ...m, text: accumulatedText, links, model: selectedModel }
+            ? { ...m, text: accumulatedText, links, model: usedModel }
             : m
         )
       );
@@ -378,18 +397,18 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
       addAuditLog(
         "SYSTEM",
         "INFO",
-        `Lizzy AI (${selectedModel}) replied`,
+        `Kleva AI (${usedModel}) replied`,
         `Role: ${role} · Query: ${clean.slice(0, 48)}`
       );
     } catch (err: any) {
       const errMsg =
-        err?.message || "Unable to reach Gemini AI right now. Please retry.";
+        err?.message || "Unable to reach Kleva AI right now. Please retry.";
       setMessages((prev) =>
         prev.map((m) =>
           m.id === botId
             ? {
                 ...m,
-                text: `Could not complete AI response: ${errMsg}\n\nIf you are in immediate danger in South Africa, call **10111** (SAPS), **112** (Emergency), or **10177** (Ambulance), or press your SafetyLink SOS button.`,
+                text: `Could not complete AI response: ${errMsg}\n\nIf you are in immediate danger, contact local emergency services (South Africa: **10111** SAPS, **112** Emergency, **10177** Ambulance) or press your SafetyLink SOS button.`,
                 error: true,
               }
             : m
@@ -460,11 +479,30 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     }
   };
 
-  const handleShareLocation = () => {
-    const lat = userLocation?.lat || -26.2041;
-    const lng = userLocation?.lng || 28.0473;
+  const handleShareLocation = async () => {
+    let lat = userLocation?.lat;
+    let lng = userLocation?.lng;
+    if ((!lat || !lng) && typeof navigator !== "undefined" && navigator.geolocation) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 8000,
+          });
+        });
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
+      } catch {
+        setMicNoteError("Enable GPS location permission to find the nearest police stations and hospitals around you.");
+        return;
+      }
+    }
+    if (!lat || !lng) {
+      setMicNoteError("GPS location unavailable. Type your suburb or city to search nearby safe zones.");
+      return;
+    }
     sendToLizzyGemini(
-      `My current GPS coordinates are (${lat.toFixed(5)}, ${lng.toFixed(5)}). Where are the nearest SAPS police stations, hospitals, or verified safe zones?`,
+      `My current GPS coordinates are (${lat.toFixed(5)}, ${lng.toFixed(5)}). Where are the nearest police stations, hospitals, or verified 24-hour safe zones?`,
       { useMaps: true, lat, lng }
     );
   };

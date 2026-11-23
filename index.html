@@ -6,29 +6,54 @@
 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#020408" />
-    <meta name="description" content="SafetyLink Core — South Africa's offline-first emergency dispatch platform with BLE iTAG triggers, zero-airtime Please Call Me relay, and multi-tenant command rooms." />
-    <meta property="og:title" content="SafetyLink Core — Emergency Dispatch Built for South Africa" />
-    <meta property="og:description" content="Offline-first emergency dispatch coordinating BLE iTAG wearables, native GSM SMS, voice calls, and zero-airtime Please Call Me relays." />
+    <meta name="theme-color" content="#071124" />
+    <meta name="description" content="Enterprise Emergency Command &amp; Response Platform with BLE Wearable Integration" />
+    <meta property="og:title" content="SafetyLink Core" />
+    <meta property="og:description" content="Enterprise Emergency Command &amp; Response Platform with BLE Wearable Integration" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>SafetyLink Core</title>
-    <!-- Preconnect & non-blocking stylesheets (Paystack inline.js loads lazily on checkout) -->
+    <!-- Payment & Typography -->
+    <script data-cfasync="false" src="https://js.paystack.co/v1/inline.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'" crossorigin="" />
-    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" /></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script data-cfasync="false">
+      // Pre-paint unified Light / Deep-Navy Dark theme sync across Web, APK & EXE
+      (function () {
+        try {
+          var savedMode = localStorage.getItem('sl_theme_mode') || localStorage.getItem('sl_global_theme') || 'dark';
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var resolved = savedMode === 'system' ? (prefersDark ? 'dark' : 'light') : (savedMode === 'light' ? 'light' : 'dark');
+          var root = document.documentElement;
+          root.classList.toggle('dark', resolved === 'dark');
+          root.classList.toggle('theme-light', resolved === 'light');
+          root.setAttribute('data-theme', resolved);
+        } catch (e) {}
+      })();
+    </script>
     <style>
       html, body, #root {
-        height: 100%;
+        min-height: 100dvh;
+        width: 100%;
         margin: 0;
         padding: 0;
-        overflow: auto;
+        overflow-x: hidden;
       }
       body {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        background-color: #020617; /* Slate 950 */
-        color: #f1f5f9;
+        font-family: 'DM Sans', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        background-color: var(--sl-canvas, #f8fafc);
+        color: var(--sl-text, #0f172a);
+        -webkit-text-size-adjust: 100%;
+      }
+      html.dark body {
+        background-color: #071124;
+        color: #f8fafc;
       }
       @keyframes sl-pulse {
         0%, 100% { opacity: 1; transform: scale(1); }
@@ -48,69 +73,120 @@
       } catch (e) {}
     </script>
     <script data-cfasync="false">
-      // Self-healing: Unregister broken/stale Service Workers if URL has ?fresh or on critical load error
-      if ('serviceWorker' in navigator) {
-        if (window.location.search.includes('fresh=1') || window.location.search.includes('reset=1')) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            for (let reg of regs) { reg.unregister(); }
+      // Self-healing: Unregister broken/stale Service Workers if URL has ?fresh or ?reset (iframe-safe)
+      (function() {
+        try {
+          if (window.location.search.includes('fresh=1') || window.location.search.includes('reset=1')) {
+            var cleanUrl = window.location.pathname + window.location.hash;
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState(null, '', cleanUrl);
+            }
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                return Promise.all(regs.map(function(reg) { return reg.unregister().catch(function() {}); }));
+              }).catch(function() {});
+            }
             if ('caches' in window) {
               caches.keys().then(function(names) {
-                for (let name of names) { caches.delete(name); }
-                window.location.href = window.location.pathname;
-              });
+                return Promise.all(names.map(function(name) { return caches.delete(name).catch(function() {}); }));
+              }).catch(function() {});
             }
-          });
-        }
-      }
-
-      // Safety watchdog: if React has not mounted within 3.5s, provide an instant recovery card
-      window.__sl_mounted = false;
-      setTimeout(function() {
-        if (!window.__sl_mounted) {
-          var root = document.getElementById('root');
-          var loader = document.getElementById('sl-initial-loader');
-          if (loader && root) {
-            loader.innerHTML = '<div style="max-width:380px;margin:auto;text-align:center;padding:24px;background:#0f172a;border:1px solid #334155;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">' +
-              '<div style="width:48px;height:48px;margin:0 auto 16px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(239,68,68,0.4);"><span style="font-size:24px;">🛡️</span></div>' +
-              '<h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f8fafc;">SafetyLink Loading</h3>' +
-              '<p style="margin:0 0 16px;font-size:13px;color:#94a3b8;line-height:1.5;">Clearing cached local assets and synchronizing the emergency mesh network...</p>' +
-              '<button onclick="window.slForceCleanReload()" style="width:100%;padding:12px;background:#2563eb;color:#ffffff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:8px;">Instant Refresh</button>' +
-              '<button onclick="window.slForceResetCache()" style="width:100%;padding:10px;background:transparent;color:#94a3b8;border:1px solid #334155;border-radius:8px;font-weight:500;font-size:12px;cursor:pointer;">Clear Cache & Reset</button>' +
-              '</div>';
           }
+        } catch (e) {}
+      })();
+
+      window.__sl_mounted = false;
+      window.__sl_loader_dismissed = false;
+      window.__sl_boot_error = '';
+
+      window.slDismissLoader = function() {
+        window.__sl_loader_dismissed = true;
+        var loader = document.getElementById('sl-initial-loader');
+        if (loader) {
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 180ms ease';
+          setTimeout(function() {
+            var el = document.getElementById('sl-initial-loader');
+            if (el && el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+          }, 180);
         }
-      }, 3500);
+      };
 
       window.slForceCleanReload = function() {
-        window.location.reload();
+        try {
+          window.location.reload();
+        } catch (e) {
+          window.location.href = window.location.pathname + '?t=' + Date.now();
+        }
       };
 
       window.slForceResetCache = function() {
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            for (let reg of regs) { reg.unregister(); }
-            if ('caches' in window) {
+        var nextUrl = window.location.pathname + '?fresh=1&t=' + Date.now();
+        var tasks = [];
+        try {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+            tasks.push(
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                return Promise.all(regs.map(function(reg) { return reg.unregister().catch(function() {}); }));
+              }).catch(function() {})
+            );
+          }
+          if ('caches' in window && caches.keys) {
+            tasks.push(
               caches.keys().then(function(names) {
-                for (let name of names) { caches.delete(name); }
-                window.location.href = window.location.pathname + '?fresh=1&t=' + Date.now();
-              });
-            } else {
-              window.location.href = window.location.pathname + '?fresh=1&t=' + Date.now();
-            }
-          });
-        } else {
-          window.location.href = window.location.pathname + '?fresh=1&t=' + Date.now();
-        }
+                return Promise.all(names.map(function(name) { return caches.delete(name).catch(function() {}); }));
+              }).catch(function() {})
+            );
+          }
+        } catch (e) {}
+        Promise.all(tasks).finally(function() {
+          window.location.replace(nextUrl);
+        });
       };
 
       window.addEventListener('error', function(e) {
+        var msg = (e && (e.message || (e.error && e.error.message))) || '';
+        if (msg && !window.__sl_boot_error) {
+          window.__sl_boot_error = String(msg).slice(0, 180);
+        }
         console.error('SafetyLink Top-Level Error Caught:', e.error || e.message);
       });
+
+      // Safety watchdog: if React has not mounted within 12s, provide a dismissible recovery card
+      setTimeout(function() {
+        if (!window.__sl_mounted && !window.__sl_loader_dismissed) {
+          var root = document.getElementById('root');
+          var loader = document.getElementById('sl-initial-loader');
+          if (loader && root) {
+            var errHtml = window.__sl_boot_error
+              ? '<div style="margin:0 0 12px;padding:8px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-size:11px;color:#fca5a5;font-family:monospace;word-break:break-word;">' +
+                window.__sl_boot_error.replace(/[<>&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c] || c); }) +
+                '</div>'
+              : '';
+            loader.innerHTML =
+              '<div style="position:relative;max-width:380px;width:calc(100% - 32px);margin:auto;text-align:center;padding:24px;background:rgba(15,23,42,0.92);backdrop-filter:blur(16px);border:1px solid rgba(148,163,184,0.25);border-radius:18px;box-shadow:0 24px 48px rgba(0,0,0,0.55);">' +
+                '<button type="button" onclick="window.slDismissLoader()" aria-label="Close loading notice" title="Close" style="position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:9999px;background:rgba(30,41,59,0.9);color:#cbd5e1;border:1px solid rgba(148,163,184,0.3);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;cursor:pointer;">&times;</button>' +
+                '<div style="width:48px;height:48px;margin:0 auto 16px;background:linear-gradient(135deg,#10b981,#0f766e);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px rgba(16,185,129,0.4);">' +
+                  '<svg style="width:24px;height:24px;color:#ffffff;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>' +
+                '</div>' +
+                '<h3 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#f8fafc;">SafetyLink Loading</h3>' +
+                '<p style="margin:0 0 14px;font-size:13px;color:#94a3b8;line-height:1.5;">Still syncing assets. You can close this notice to keep waiting, or refresh below.</p>' +
+                errHtml +
+                '<button type="button" onclick="window.slForceCleanReload()" style="width:100%;padding:11px;background:#2563eb;color:#ffffff;border:none;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:8px;">Instant Refresh</button>' +
+                '<button type="button" onclick="window.slForceResetCache()" style="width:100%;padding:10px;background:transparent;color:#cbd5e1;border:1px solid #334155;border-radius:10px;font-weight:500;font-size:12px;cursor:pointer;margin-bottom:8px;">Clear Cache &amp; Reset</button>' +
+                '<button type="button" onclick="window.slDismissLoader()" style="width:100%;padding:9px;background:rgba(148,163,184,0.12);color:#e2e8f0;border:1px solid rgba(148,163,184,0.22);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">Hide / Close</button>' +
+              '</div>';
+          }
+        }
+      }, 12000);
     </script>
   </head>
   <body>
     <div id="root">
-      <div id="sl-initial-loader" style="height:100vh;display:flex;align-items:center;justify-content:center;background:#020617;color:#f8fafc;">
+      <div id="sl-initial-loader" style="position:relative;height:100vh;display:flex;align-items:center;justify-content:center;background:#020617;color:#f8fafc;">
+        <button type="button" onclick="window.slDismissLoader()" aria-label="Hide loading screen" title="Hide" style="position:absolute;top:16px;right:16px;padding:6px 12px;border-radius:9999px;background:rgba(15,23,42,0.85);color:#94a3b8;border:1px solid rgba(148,163,184,0.25);font-size:12px;font-weight:600;cursor:pointer;">&times; Hide</button>
         <div style="text-align:center;">
           <div class="sl-init-pulse" style="width:64px;height:64px;margin:0 auto 20px;border-radius:50%;background:linear-gradient(135deg, #1e293b, #0f172a);border:1px solid #334155;display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(59,130,246,0.25);">
             <svg style="width:32px;height:32px;color:#38bdf8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

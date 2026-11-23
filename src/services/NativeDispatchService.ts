@@ -18,6 +18,9 @@ export interface EmergencyDispatchPlugin {
     lng?: number;
     contacts?: any[];
     ussdEnabled?: boolean;
+    offlineUssdMode?: 'RAIN_PCM' | 'DIRECT_CONTACT_PCM' | 'REVERSE_CHARGE_CALL';
+    reverseChargePrefix?: string;
+    pcmCooldownMinutes?: number;
     userPin?: string;
     duressPin?: string;
   }): Promise<{ success: boolean }>;
@@ -513,6 +516,9 @@ export class NativeDispatchService {
     lng?: number;
     contacts?: any[];
     ussdEnabled?: boolean;
+    offlineUssdMode?: 'RAIN_PCM' | 'DIRECT_CONTACT_PCM' | 'REVERSE_CHARGE_CALL';
+    reverseChargePrefix?: string;
+    pcmCooldownMinutes?: number;
     userPin?: string;
     duressPin?: string;
   }): Promise<boolean> {

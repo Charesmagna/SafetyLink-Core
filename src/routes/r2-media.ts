@@ -173,8 +173,9 @@ r2Router.get('/stream/{*key}', async (req: Request, res: Response) => {
       }
     }
   } catch (err: any) {
-    console.error(`[R2 Router] Stream error for ${key}:`, err.message);
-    res.status(404).json({ error: 'File not found or inaccessible', key });
+    console.warn(`[R2 Router] Local S3 unavailable for ${key}, redirecting to live R2 edge:`, err.message);
+    const cleanName = key.replace(/^Safetylink\//i, '');
+    res.redirect(302, `https://api.safetylink.online/api/r2/stream/Safetylink/${encodeURIComponent(cleanName)}`);
   }
 });
 

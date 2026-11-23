@@ -1,6 +1,8 @@
 let panicQueue: any = null;
 function getPanicQueue() {
   if (!panicQueue) {
+    const { Queue } = require("bullmq");
+    
     const connection = { url: process.env.REDIS_URL };
     const hasRedisEnv = !!process.env.REDIS_URL;
     if (!hasRedisEnv) {
@@ -33,7 +35,7 @@ import { db } from "./src/db/index";
 import crypto from "crypto";
 import twilio from "twilio";
 import { Queue } from "bullmq";
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { GoogleGenAI, LiveServerMessage, Modality, ThinkingLevel } from "@google/genai";
 import { WebSocketServer } from "ws";
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -249,6 +251,24 @@ async function initDb() {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at INTEGER
+    );
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS community_safety_reports (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      area_name TEXT NOT NULL,
+      reporter_name TEXT NOT NULL,
+      reporter_id TEXT,
+      org_id TEXT,
+      verifications INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
     );
   `);
 }
@@ -851,23 +871,63 @@ Rules:
   app.use("/api/r2", r2Router);
 
 
-  // Initialize Gemini
+  // Initialize Gemini (v1beta required for gemini-3.8-live, speechConfig TTS, and Search/Maps grounding)
   let ai: GoogleGenAI | null = null;
   const initGemini = () => {
     if (!ai) {
       if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY environment variable is required");
       }
-      ai = new GoogleGenAI({ 
+      ai = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+        apiVersion: "v1beta",
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
       });
     }
     return ai;
   };
 
+  const extractGeminiError = (err: any): { status: number; message: string; retryable: boolean } => {
+    let status = typeof err?.status === "number" ? err.status : 500;
+    let rawMsg = typeof err?.message === "string" ? err.message : String(err || "Gemini request failed");
+    // Unwrap nested JSON error envelopes returned by SDK
+    for (let depth = 0; depth < 3; depth++) {
+      try {
+        const parsed = JSON.parse(rawMsg);
+        if (parsed?.error?.code && typeof parsed.error.code === "number") status = parsed.error.code;
+        if (parsed?.error?.message) {
+          rawMsg = String(parsed.error.message);
+          continue;
+        }
+      } catch {
+        break;
+      }
+    }
+    if (status < 400 || status >= 600) status = 500;
+    const retryable = status === 503 || status === 429 || status === 502 || status === 504 || /UNAVAILABLE|overloaded|high demand|ECONNRESET|ETIMEDOUT/i.test(rawMsg);
+    return { status, message: rawMsg, retryable };
+  };
+
+  const withGeminiRetry = async <T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> => {
+    let lastErr: any;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        lastErr = err;
+        const info = extractGeminiError(err);
+        if (!info.retryable || attempt === maxAttempts) {
+          throw err;
+        }
+        const delayMs = 450 * attempt;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw lastErr;
+  };
+
   // API ROUTES
-  
+
   // 1. Text / Grounding (Search OR Maps — never combined, no forbidden config params)
   app.post("/api/gemini/generate", async (req, res) => {
     try {
@@ -877,42 +937,60 @@ Rules:
       }
       const genAI = initGemini();
 
-      const modelName = useFlashLite && !useGrounding ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
-      const config: any = {};
+      const primaryModel = useFlashLite && !useGrounding ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+      const runGenerate = async (targetModel: string) => {
+        const config: any = {};
+        if (targetModel === "gemini-4-hydrogen") {
+          config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+        }
+        if (systemInstruction && !useGrounding) {
+          config.systemInstruction = String(systemInstruction);
+        }
+        if (useGrounding === "search") {
+          config.tools = [{ googleSearch: {} }];
+        } else if (useGrounding === "maps") {
+          config.tools = [{ googleMaps: {} }];
+          if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
+            config.toolConfig = {
+              retrievalConfig: {
+                latLng: { latitude: lat, longitude: lng },
+              },
+            };
+          }
+        }
+        return genAI.models.generateContent({
+          model: targetModel,
+          contents: prompt,
+          config,
+        });
+      };
 
-      if (systemInstruction && !useGrounding) {
-        config.systemInstruction = String(systemInstruction);
-      }
-
-      if (useGrounding === "search") {
-        config.tools = [{ googleSearch: {} }];
-      } else if (useGrounding === "maps") {
-        config.tools = [{ googleMaps: {} }];
-        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
-          config.toolConfig = {
-            retrievalConfig: {
-              latLng: { latitude: lat, longitude: lng },
-            },
-          };
+      let usedModel = primaryModel;
+      let response;
+      try {
+        response = await withGeminiRetry(() => runGenerate(primaryModel), 3);
+      } catch (primaryErr: any) {
+        const info = extractGeminiError(primaryErr);
+        if (info.retryable && primaryModel === "gemini-4-hydrogen" && !useGrounding) {
+          usedModel = "gemini-3.1-flash-lite";
+          response = await withGeminiRetry(() => runGenerate(usedModel), 2);
+        } else {
+          throw primaryErr;
         }
       }
-
-      const response = await genAI.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config,
-      });
 
       const metadata = response.candidates?.[0]?.groundingMetadata;
       const chunks = metadata?.groundingChunks || [];
       res.json({
         text: response.text || "",
         chunks,
+        model: usedModel,
         searchEntryPointHtml: metadata?.searchEntryPoint?.renderedContent || null,
       });
     } catch (e: any) {
       console.error("[/api/gemini/generate]", e);
-      res.status(500).json({ error: e.message || "Gemini generation failed" });
+      const info = extractGeminiError(e);
+      res.status(info.status).json({ error: info.message });
     }
   });
 
@@ -925,14 +1003,33 @@ Rules:
     }
     const rolePrompts: Record<string, string> = {
       post_emergency:
-        "You are Lizzy, SafetyLink South Africa's compassionate Post-Emergency Care Companion. The user may have just experienced or disarmed an emergency SOS alert. Be calm, reassuring, grounded, and practical. First check if they are physically safe and uninjured. Offer grounding breathing steps if they feel shaken, help them draft a clear 'I am safe' message for family/contacts or a structured incident summary for SAPS / security / insurance, and provide South African emergency numbers (10111 SAPS Police, 112 cellular emergency, 10177 Ambulance/Fire, 082 911 Netcare, 084 124 ER24) when needed. Keep replies well-structured and concise.",
+        "You are Kleva (Lizzy), SafetyLink's compassionate Post-Emergency Care Companion. The user may have just experienced or disarmed an emergency SOS alert. Be calm, reassuring, grounded, and practical. First check if they are physically safe and uninjured. Offer grounding breathing steps if they feel shaken, help them draft a clear 'I am safe' message for family/contacts or a structured incident summary for police / security / insurance, and provide emergency numbers (South Africa: 10111 SAPS Police, 112 cellular emergency, 10177 Ambulance/Fire, 082 911 Netcare, 084 124 ER24; or local emergency services if outside South Africa) when needed. Keep replies well-structured and concise.",
       coordinator:
-        "You are Lizzy, SafetyLink South Africa's Safety Coordinator. Help users plan safe routes, configure emergency contacts, understand SafetyLink's zero-airtime Please Call Me offline relay (Rain SIM + SMS Forwarder) and BLE iTAG panic triggers, and stay prepared across South Africa. Share verified SA emergency numbers (10111, 112, 10177) when relevant.",
+        "You are Kleva (Lizzy), SafetyLink's Safety Coordinator. Help users plan safe routes, configure emergency contacts, understand SafetyLink's offline Please Call Me relay and BLE iTAG panic triggers, and stay prepared wherever they are. Share verified emergency numbers when relevant.",
       scribe:
-        "You are SafetyLink's Incident Scribe. Help the user calmly document what happened after an emergency — capturing time, location, people involved, actions taken, and contacts notified — and format a clean, factual summary suitable for SAPS case reporting, estate security, or insurance.",
+        "You are Kleva (SafetyLink's Incident Scribe). Help the user calmly document what happened after an emergency — capturing time, location, people involved, actions taken, and contacts notified — and format a clean, factual summary suitable for police reporting, estate security, or insurance.",
     };
     const base = rolePrompts[role || "post_emergency"] || rolePrompts.post_emergency;
     return incidentContext ? `${base}\n\nActive/Recent SafetyLink Incident Context:\n${incidentContext}` : base;
+  };
+
+  const buildChatConfig = (
+    targetModel: string,
+    opts: { useMaps?: boolean; lat?: number; lng?: number; role?: string; systemInstruction?: string; incidentContext?: string }
+  ) => {
+    const config: any = {};
+    if (targetModel === "gemini-4-hydrogen") {
+      config.thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+    }
+    if (opts.useMaps) {
+      config.tools = [{ googleMaps: {} }];
+      if (typeof opts.lat === "number" && typeof opts.lng === "number" && (opts.lat !== 0 || opts.lng !== 0)) {
+        config.toolConfig = { retrievalConfig: { latLng: { latitude: opts.lat, longitude: opts.lng } } };
+      }
+    } else {
+      config.systemInstruction = buildChatSystemInstruction(opts.role, opts.systemInstruction, opts.incidentContext);
+    }
+    return config;
   };
 
   app.post("/api/gemini/chat", async (req, res) => {
@@ -943,7 +1040,7 @@ Rules:
       }
       const genAI = initGemini();
       const allowedModels = new Set(["gemini-4-hydrogen", "gemini-3.1-flash-lite"]);
-      const modelName = useMaps
+      const primaryModel = useMaps
         ? "gemini-4-hydrogen"
         : typeof model === "string" && allowedModels.has(model)
           ? model
@@ -961,29 +1058,37 @@ Rules:
             }))
         : [];
 
-      const config: any = {};
-      if (useMaps) {
-        config.tools = [{ googleMaps: {} }];
-        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
-          config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
+      const runChat = async (targetModel: string) => {
+        const config = buildChatConfig(targetModel, { useMaps, lat, lng, role, systemInstruction, incidentContext });
+        const chat = genAI.chats.create({
+          model: targetModel,
+          history: formattedHistory,
+          config,
+        });
+        return chat.sendMessage({ message: message.trim() });
+      };
+
+      let usedModel = primaryModel;
+      let response;
+      try {
+        response = await withGeminiRetry(() => runChat(primaryModel), 3);
+      } catch (primaryErr: any) {
+        const info = extractGeminiError(primaryErr);
+        const fallbackModel = primaryModel === "gemini-4-hydrogen" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+        if (info.retryable && !useMaps) {
+          usedModel = fallbackModel;
+          response = await withGeminiRetry(() => runChat(fallbackModel), 2);
+        } else {
+          throw primaryErr;
         }
-      } else {
-        config.systemInstruction = buildChatSystemInstruction(role, systemInstruction, incidentContext);
       }
 
-      const chat = genAI.chats.create({
-        model: modelName,
-        history: formattedHistory,
-        config,
-      });
-
-      const response = await chat.sendMessage({ message: message.trim() });
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      res.json({ text: response.text || "", chunks, model: modelName });
+      res.json({ text: response.text || "", chunks, model: usedModel });
     } catch (e: any) {
       console.error("[/api/gemini/chat]", e);
-      const status = typeof e?.status === "number" && e.status >= 400 && e.status < 600 ? e.status : 500;
-      res.status(status).json({ error: e?.message || "Gemini chat request failed" });
+      const info = extractGeminiError(e);
+      res.status(info.status).json({ error: info.message });
     }
   });
 
@@ -996,7 +1101,7 @@ Rules:
       }
       const genAI = initGemini();
       const allowedModels = new Set(["gemini-4-hydrogen", "gemini-3.1-flash-lite"]);
-      const modelName = useMaps
+      const primaryModel = useMaps
         ? "gemini-4-hydrogen"
         : typeof model === "string" && allowedModels.has(model)
           ? model
@@ -1014,14 +1119,30 @@ Rules:
             }))
         : [];
 
-      const config: any = {};
-      if (useMaps) {
-        config.tools = [{ googleMaps: {} }];
-        if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
-          config.toolConfig = { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } };
+      const openStream = async (targetModel: string) => {
+        const config = buildChatConfig(targetModel, { useMaps, lat, lng, role, systemInstruction, incidentContext });
+        const chat = genAI.chats.create({
+          model: targetModel,
+          history: formattedHistory,
+          config,
+        });
+        return chat.sendMessageStream({ message: message.trim() });
+      };
+
+      // Open stream BEFORE flushing SSE headers so 503 retries and fallback work seamlessly
+      let usedModel = primaryModel;
+      let streamResponse;
+      try {
+        streamResponse = await withGeminiRetry(() => openStream(primaryModel), 3);
+      } catch (primaryErr: any) {
+        const info = extractGeminiError(primaryErr);
+        const fallbackModel = primaryModel === "gemini-4-hydrogen" ? "gemini-3.1-flash-lite" : "gemini-4-hydrogen";
+        if (info.retryable && !useMaps) {
+          usedModel = fallbackModel;
+          streamResponse = await withGeminiRetry(() => openStream(fallbackModel), 2);
+        } else {
+          throw primaryErr;
         }
-      } else {
-        config.systemInstruction = buildChatSystemInstruction(role, systemInstruction, incidentContext);
       }
 
       res.setHeader("Content-Type", "text/event-stream");
@@ -1029,13 +1150,6 @@ Rules:
       res.setHeader("Connection", "keep-alive");
       res.flushHeaders?.();
 
-      const chat = genAI.chats.create({
-        model: modelName,
-        history: formattedHistory,
-        config,
-      });
-
-      const streamResponse = await chat.sendMessageStream({ message: message.trim() });
       let lastChunks: any[] = [];
       for await (const chunk of streamResponse) {
         const chunkText = chunk.text || "";
@@ -1047,47 +1161,63 @@ Rules:
           res.write(`data: ${JSON.stringify({ delta: chunkText })}\n\n`);
         }
       }
-      res.write(`data: ${JSON.stringify({ done: true, model: modelName, chunks: lastChunks })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true, model: usedModel, chunks: lastChunks })}\n\n`);
       res.end();
     } catch (e: any) {
       console.error("[/api/gemini/chat/stream]", e);
+      const info = extractGeminiError(e);
       if (!res.headersSent) {
-        const status = typeof e?.status === "number" && e.status >= 400 && e.status < 600 ? e.status : 500;
-        res.status(status).json({ error: e?.message || "Streaming chat request failed" });
+        res.status(info.status).json({ error: info.message });
       } else {
-        res.write(`data: ${JSON.stringify({ error: e?.message || "Streaming chat request failed" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: info.message })}\n\n`);
         res.end();
       }
     }
   });
 
-  // 1c. Safer City Grounded Updates (Separate Google Search & Google Maps calls per SDK rules)
-  app.post("/api/gemini/safer-city", async (req, res) => {
+  // 1c. Safety Feed AI Grounded Updates (Separate Google Search & Google Maps calls per SDK rules)
+  app.post("/api/gemini/safety-feed", async (req, res) => {
     try {
       const { queryText, locationName, lat, lng } = req.body || {};
+      const hasCoords = typeof lat === "number" && typeof lng === "number" && Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+      if (!locationName && !queryText && !hasCoords) {
+        return res.status(400).json({ error: "Please provide your current GPS location or enter a city/suburb." });
+      }
       const genAI = initGemini();
-      const placeLabel = locationName || (typeof lat === "number" && typeof lng === "number" ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : "Johannesburg, South Africa");
+      const placeLabel = locationName
+        ? String(locationName).trim()
+        : hasCoords
+          ? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+          : String(queryText).trim();
 
-      const searchPrompt = queryText
-        ? `${queryText} in ${placeLabel}. Focus on public safety advisories, CPF community alerts, traffic disruptions, and severe weather.`
-        : `Latest public safety advisories, community policing forum (CPF) updates, municipal alerts, and weather warnings near ${placeLabel}. Summarize concisely with facts.`;
+      const searchPrompt = queryText && locationName
+        ? `${queryText} in ${placeLabel}. Focus on real current public safety advisories, police/community alerts, traffic disruptions, and severe weather.`
+        : `Latest real-time public safety advisories, police/community alerts, traffic incidents, and weather warnings specifically in ${placeLabel}. Summarize concisely with factual local details only.`;
 
-      const searchRes = await genAI.models.generateContent({
-        model: "gemini-4-hydrogen",
-        contents: searchPrompt,
-        config: { tools: [{ googleSearch: {} }] },
-      });
+      const searchRes = await withGeminiRetry(() =>
+        genAI.models.generateContent({
+          model: "gemini-4-hydrogen",
+          contents: searchPrompt,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            tools: [{ googleSearch: {} }],
+          },
+        }),
+      3);
 
       let mapsRes: any = null;
-      if (typeof lat === "number" && typeof lng === "number" && (lat !== 0 || lng !== 0)) {
-        mapsRes = await genAI.models.generateContent({
-          model: "gemini-4-hydrogen",
-          contents: `List the 4 nearest verified SAPS police stations, emergency trauma hospitals, or 24-hour safe zones near latitude ${lat}, longitude ${lng}.`,
-          config: {
-            tools: [{ googleMaps: {} }],
-            toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } },
-          },
-        });
+      if (hasCoords) {
+        mapsRes = await withGeminiRetry(() =>
+          genAI.models.generateContent({
+            model: "gemini-4-hydrogen",
+            contents: `List the 4 nearest verified police stations, emergency hospitals, or 24-hour safe zones near latitude ${lat}, longitude ${lng}.`,
+            config: {
+              thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+              tools: [{ googleMaps: {} }],
+              toolConfig: { retrievalConfig: { latLng: { latitude: lat, longitude: lng } } },
+            },
+          }),
+        2).catch(() => null);
       }
 
       res.json({
@@ -1097,8 +1227,433 @@ Rules:
         mapsChunks: mapsRes?.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
       });
     } catch (e: any) {
-      console.error("[/api/gemini/safer-city]", e);
-      res.status(500).json({ error: e.message || "Safer City query failed" });
+      console.error("[/api/gemini/safety-feed]", e);
+      const info = extractGeminiError(e);
+      res.status(info.status).json({ error: info.message });
+    }
+  });
+
+  // 1d. REAL LIVE LOCATION-SPECIFIC SAFETY FEED (Nominatim + Google News RSS + Open-Meteo + SQLite DB — ZERO MOCKS)
+  const geoCache = new Map<string, { expiresAt: number; data: any }>();
+
+  const decodeXmlEntities = (s: string) =>
+    s
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const haversineDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  const classifySafetyCategory = (text: string): string => {
+    const t = text.toLowerCase();
+    if (/fire|wildfire|blaze|smoke|explosion|flood|storm|cyclone|tornado|hail/.test(t)) return "FIRE_HAZARD";
+    if (/crash|accident|traffic|highway|road closed|collision|pileup|congestion/.test(t)) return "TRAFFIC";
+    if (/power|outage|load ?shedding|blackout|water|substation|electricity/.test(t)) return "POWER_WATER";
+    if (/hospital|ambulance|medical|paramedic|ems|injured|clinic/.test(t)) return "MEDICAL";
+    if (/patrol|police|saps|arrest|suspect|robbery|hijack|shooting|murder|crime|theft|burglary|assault/.test(t)) return "CRIME";
+    return "SUSPICIOUS";
+  };
+
+  const classifySafetySeverity = (text: string): "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" => {
+    const t = text.toLowerCase();
+    if (/shooting|fatal|murder|explosion|wildfire|tornado|evacuat|armed robbery|hijack/.test(t)) return "CRITICAL";
+    if (/robbery|fire|flood|storm|crash|collision|crime|assault|emergency|warning/.test(t)) return "HIGH";
+    if (/outage|traffic|theft|suspicious|delay|advisory|protest/.test(t)) return "MEDIUM";
+    return "LOW";
+  };
+
+  const weatherCodeLabel = (code: number): { label: string; hazardous: boolean; severity: "LOW" | "MEDIUM" | "HIGH" } => {
+    if (code >= 95) return { label: "Thunderstorm / Lightning Risk", hazardous: true, severity: "HIGH" };
+    if (code >= 80 && code <= 82) return { label: "Heavy Rain Showers", hazardous: true, severity: "MEDIUM" };
+    if (code >= 63 && code <= 67) return { label: "Heavy / Freezing Rain", hazardous: true, severity: "MEDIUM" };
+    if (code >= 71 && code <= 77) return { label: "Snowfall / Low Visibility", hazardous: true, severity: "MEDIUM" };
+    if (code >= 45 && code <= 48) return { label: "Dense Fog / Reduced Visibility", hazardous: true, severity: "MEDIUM" };
+    if (code >= 51 && code <= 61) return { label: "Light Rain / Drizzle", hazardous: false, severity: "LOW" };
+    if (code >= 1 && code <= 3) return { label: "Partly Cloudy / Overcast", hazardous: false, severity: "LOW" };
+    return { label: "Clear Conditions", hazardous: false, severity: "LOW" };
+  };
+
+  app.get("/api/safety-feed/live", async (req, res) => {
+    try {
+      const rawLat = req.query.lat !== undefined ? Number(req.query.lat) : NaN;
+      const rawLng = req.query.lng !== undefined ? Number(req.query.lng) : NaN;
+      const queryText = typeof req.query.query === "string" ? req.query.query.trim() : "";
+      const radiusKm = Math.min(100, Math.max(5, Number(req.query.radiusKm) || 25));
+
+      const hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng) && (rawLat !== 0 || rawLng !== 0);
+      if (!hasCoords && !queryText) {
+        return res.status(400).json({ error: "Provide GPS coordinates (lat, lng) or a city/suburb query." });
+      }
+
+      let resolvedLat = rawLat;
+      let resolvedLng = rawLng;
+      let suburb = "";
+      let city = "";
+      let state = "";
+      let country = "";
+      let countryCode = "ZA";
+      let displayLocation = queryText || `${rawLat.toFixed(4)}, ${rawLng.toFixed(4)}`;
+
+      // 1. Resolve exact location via OpenStreetMap Nominatim (cached 10 minutes)
+      const cacheKey = hasCoords
+        ? `rev:${rawLat.toFixed(3)},${rawLng.toFixed(3)}`
+        : `fwd:${queryText.toLowerCase()}`;
+      const cachedGeo = geoCache.get(cacheKey);
+      let geoData: any = cachedGeo && cachedGeo.expiresAt > Date.now() ? cachedGeo.data : null;
+
+      if (!geoData) {
+        try {
+          const nomUrl = hasCoords
+            ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(rawLat))}&lon=${encodeURIComponent(String(rawLng))}&zoom=14&addressdetails=1`
+            : `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(queryText)}`;
+          const geoResp = await fetch(nomUrl, {
+            headers: {
+              "User-Agent": "SafetyLink-Core/1.0 (https://safetylink.online)",
+              "Accept-Language": "en",
+            },
+            signal: AbortSignal.timeout(6000),
+          });
+          if (geoResp.ok) {
+            const parsed = await geoResp.json();
+            geoData = Array.isArray(parsed) ? parsed[0] || null : parsed;
+            if (geoData) {
+              geoCache.set(cacheKey, { expiresAt: Date.now() + 10 * 60_000, data: geoData });
+            }
+          }
+        } catch (geoErr) {
+          console.warn("[safety-feed] Nominatim lookup skipped:", (geoErr as any)?.message);
+        }
+      }
+
+      if (geoData) {
+        if (!hasCoords && geoData.lat && geoData.lon) {
+          resolvedLat = Number(geoData.lat);
+          resolvedLng = Number(geoData.lon);
+        }
+        const addr = geoData.address || {};
+        suburb = addr.suburb || addr.neighbourhood || addr.quarter || addr.village || addr.hamlet || "";
+        city = addr.city || addr.town || addr.municipality || addr.county || addr.state_district || "";
+        state = addr.state || addr.region || "";
+        country = addr.country || "";
+        countryCode = String(addr.country_code || "za").toUpperCase();
+        const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
+        if (labelParts.length > 0) {
+          displayLocation = labelParts.slice(0, 3).join(", ");
+        }
+      }
+
+      const effectiveCoords = Number.isFinite(resolvedLat) && Number.isFinite(resolvedLng) && (resolvedLat !== 0 || resolvedLng !== 0);
+      const searchArea = [suburb, city || state].filter(Boolean).join(" ") || queryText || displayLocation;
+
+      // 2. Fetch real live local safety/emergency/traffic news via Google News RSS for THIS exact location
+      const newsPromise = (async () => {
+        if (!searchArea) return [];
+        const q = `"${city || suburb || queryText}" (crime OR police OR safety OR traffic OR accident OR fire OR outage OR emergency OR weather)`;
+        const gl = /^[A-Z]{2}$/.test(countryCode) ? countryCode : "US";
+        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en&gl=${gl}&ceid=${gl}:en`;
+        try {
+          const rssResp = await fetch(rssUrl, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; SafetyLinkFeed/1.0)" },
+            signal: AbortSignal.timeout(7000),
+          });
+          if (!rssResp.ok) return [];
+          const xml = await rssResp.text();
+          const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, 18);
+          const parsedItems = itemMatches.map((m, idx) => {
+            const block = m[1];
+            const rawTitle = block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "";
+            const rawLink = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
+            const rawDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "";
+            const rawSource = block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || "";
+            const rawDesc = block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || "";
+
+            const cleanTitle = decodeXmlEntities(rawTitle);
+            const sourceName = decodeXmlEntities(rawSource) || "Local News";
+            // Remove trailing " - Publisher" duplicate if present
+            const titleWithoutSource = sourceName && cleanTitle.endsWith(` - ${sourceName}`)
+              ? cleanTitle.slice(0, -(` - ${sourceName}`).length).trim()
+              : cleanTitle;
+            const cleanDesc = decodeXmlEntities(rawDesc);
+            const parsedTime = Date.parse(rawDate);
+            const timestamp = Number.isFinite(parsedTime) ? parsedTime : Date.now();
+            const combined = `${titleWithoutSource} ${cleanDesc}`;
+
+            return {
+              id: `news-${timestamp}-${idx}`,
+              title: titleWithoutSource,
+              description: cleanDesc && cleanDesc !== cleanTitle ? cleanDesc : `Live local safety update reported by ${sourceName} for ${city || suburb || displayLocation}.`,
+              source: sourceName,
+              url: decodeXmlEntities(rawLink),
+              category: classifySafetyCategory(combined),
+              severity: classifySafetySeverity(combined),
+              areaName: [suburb, city].filter(Boolean).join(", ") || displayLocation,
+              timestamp,
+              feedType: "LIVE_NEWS" as const,
+            };
+          });
+          // Sort newest first
+          return parsedItems
+            .filter((i) => i.title.length > 5 && i.url.startsWith("http"))
+            .sort((a, b) => b.timestamp - a.timestamp);
+        } catch (rssErr) {
+          console.warn("[safety-feed] Live RSS fetch error:", (rssErr as any)?.message);
+          return [];
+        }
+      })();
+
+      // 3. Fetch real live weather conditions & hazard detection from Open-Meteo for exact coordinates
+      const weatherPromise = (async () => {
+        if (!effectiveCoords) return null;
+        try {
+          const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${resolvedLat}&longitude=${resolvedLng}&current=temperature_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m&timezone=auto`;
+          const wResp = await fetch(wUrl, { signal: AbortSignal.timeout(5000) });
+          if (!wResp.ok) return null;
+          const wJson = await wResp.json();
+          const cur = wJson?.current;
+          if (!cur) return null;
+          const code = Number(cur.weather_code ?? 0);
+          const meta = weatherCodeLabel(code);
+          const tempC = Number(cur.temperature_2m);
+          const windKmh = Number(cur.wind_speed_10m);
+          const gustsKmh = Number(cur.wind_gusts_10m);
+          const precipMm = Number(cur.precipitation ?? 0);
+          const extremeHeat = Number.isFinite(tempC) && tempC >= 36;
+          const extremeCold = Number.isFinite(tempC) && tempC <= 2;
+          const highWind = Number.isFinite(gustsKmh) && gustsKmh >= 45;
+          const heavyRain = Number.isFinite(precipMm) && precipMm >= 5;
+          const hazardous = meta.hazardous || extremeHeat || extremeCold || highWind || heavyRain;
+          const advisoryReasons: string[] = [];
+          if (meta.hazardous) advisoryReasons.push(meta.label);
+          if (highWind) advisoryReasons.push(`High wind gusts (${Math.round(gustsKmh)} km/h)`);
+          if (heavyRain) advisoryReasons.push(`Active precipitation (${precipMm.toFixed(1)} mm)`);
+          if (extremeHeat) advisoryReasons.push(`Extreme heat (${Math.round(tempC)}°C)`);
+          if (extremeCold) advisoryReasons.push(`Near-freezing temperature (${Math.round(tempC)}°C)`);
+          return {
+            temperatureC: Number.isFinite(tempC) ? tempC : null,
+            apparentTempC: Number.isFinite(Number(cur.apparent_temperature)) ? Number(cur.apparent_temperature) : null,
+            windSpeedKmh: Number.isFinite(windKmh) ? windKmh : null,
+            windGustsKmh: Number.isFinite(gustsKmh) ? gustsKmh : null,
+            precipitationMm: Number.isFinite(precipMm) ? precipMm : 0,
+            condition: meta.label,
+            hazardous,
+            advisoryText: hazardous ? advisoryReasons.join(" · ") : null,
+            observedAt: cur.time || new Date().toISOString(),
+          };
+        } catch {
+          return null;
+        }
+      })();
+
+      // 4. Query real SafetyLink DB community reports & active panic alerts near user's actual coordinates
+      const dbReportsPromise = (async () => {
+        try {
+          const rows = await db.execute({
+            sql: "SELECT * FROM community_safety_reports ORDER BY created_at DESC LIMIT 100",
+            args: [],
+          });
+          const mapped = (rows.rows || []).map((r: any) => {
+            const rLat = Number(r.lat);
+            const rLng = Number(r.lng);
+            const dist = effectiveCoords && Number.isFinite(rLat) && Number.isFinite(rLng)
+              ? haversineDistanceKm(resolvedLat, resolvedLng, rLat, rLng)
+              : null;
+            return {
+              id: String(r.id),
+              title: String(r.title),
+              description: String(r.description),
+              category: String(r.category),
+              severity: String(r.severity),
+              status: String(r.status || "ACTIVE"),
+              lat: rLat,
+              lng: rLng,
+              areaName: String(r.area_name),
+              reporterName: String(r.reporter_name),
+              reporterId: r.reporter_id ? String(r.reporter_id) : undefined,
+              orgId: r.org_id ? String(r.org_id) : undefined,
+              timestamp: Number(r.created_at),
+              verifications: Number(r.verifications || 1),
+              distanceKm: dist !== null ? Number(dist.toFixed(2)) : null,
+              feedType: "COMMUNITY" as const,
+            };
+          });
+          return effectiveCoords
+            ? mapped.filter((r) => r.distanceKm !== null && r.distanceKm <= radiusKm)
+            : mapped;
+        } catch {
+          return [];
+        }
+      })();
+
+      const [liveNews, weather, communityReports] = await Promise.all([
+        newsPromise,
+        weatherPromise,
+        dbReportsPromise,
+      ]);
+
+      // Build honest live advisories strictly from real nearby reports or active weather hazards
+      const advisories: Array<{
+        id: string;
+        name: string;
+        area: string;
+        lat: number;
+        lng: number;
+        radiusMeters: number;
+        riskLevel: "MODERATE" | "HIGH" | "CRITICAL";
+        advisory: string;
+        recentIncidents: number;
+        updatedAt: number;
+      }> = [];
+
+      if (weather?.hazardous && effectiveCoords) {
+        advisories.push({
+          id: `wx-${Math.round(resolvedLat * 100)}-${Math.round(resolvedLng * 100)}`,
+          name: `Live Weather Advisory — ${city || suburb || displayLocation}`,
+          area: displayLocation,
+          lat: resolvedLat,
+          lng: resolvedLng,
+          radiusMeters: radiusKm * 1000,
+          riskLevel: "MODERATE",
+          advisory: weather.advisoryText || weather.condition,
+          recentIncidents: 1,
+          updatedAt: Date.now(),
+        });
+      }
+
+      const activeHighReports = communityReports.filter(
+        (r) => r.status !== "RESOLVED" && (r.severity === "HIGH" || r.severity === "CRITICAL")
+      );
+      if (activeHighReports.length > 0 && effectiveCoords) {
+        const top = activeHighReports[0];
+        advisories.push({
+          id: `comm-adv-${top.id}`,
+          name: `${top.areaName} — Active Community Alert`,
+          area: top.areaName,
+          lat: top.lat,
+          lng: top.lng,
+          radiusMeters: 1500,
+          riskLevel: top.severity === "CRITICAL" ? "CRITICAL" : "HIGH",
+          advisory: `${top.title}: ${top.description}`,
+          recentIncidents: activeHighReports.length,
+          updatedAt: top.timestamp,
+        });
+      }
+
+      res.json({
+        location: {
+          lat: effectiveCoords ? resolvedLat : null,
+          lng: effectiveCoords ? resolvedLng : null,
+          suburb,
+          city,
+          state,
+          country,
+          countryCode,
+          displayLocation,
+        },
+        radiusKm,
+        weather,
+        advisories,
+        communityReports,
+        liveNews,
+        fetchedAt: Date.now(),
+      });
+    } catch (e: any) {
+      console.error("[/api/safety-feed/live]", e);
+      res.status(500).json({ error: e?.message || "Failed to load live safety feed" });
+    }
+  });
+
+  app.post("/api/safety-feed/report", async (req, res) => {
+    try {
+      const { title, description, category, severity, lat, lng, areaName, reporterName, reporterId, orgId } = req.body || {};
+      if (!title || !description || typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return res.status(400).json({ error: "title, description, and valid GPS coordinates (lat, lng) are required." });
+      }
+      const allowedCats = new Set(["CRIME", "SUSPICIOUS", "TRAFFIC", "POWER_WATER", "FIRE_HAZARD", "MEDICAL", "PATROL_UPDATE"]);
+      const allowedSev = new Set(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+      const safeCat = allowedCats.has(category) ? category : "SUSPICIOUS";
+      const safeSev = allowedSev.has(severity) ? severity : "MEDIUM";
+      const id = `rep-${Date.now()}-${crypto.randomBytes(3).toString("hex")}`;
+      const createdAt = Date.now();
+      const safeArea = String(areaName || `${lat.toFixed(4)}, ${lng.toFixed(4)}`).slice(0, 140);
+      const safeReporter = String(reporterName || "Community Member").slice(0, 80);
+
+      await db.execute({
+        sql: `INSERT INTO community_safety_reports
+          (id, title, description, category, severity, status, lat, lng, area_name, reporter_name, reporter_id, org_id, verifications, created_at)
+          VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?, ?, 1, ?)`,
+        args: [
+          id,
+          String(title).trim().slice(0, 160),
+          String(description).trim().slice(0, 1200),
+          safeCat,
+          safeSev,
+          lat,
+          lng,
+          safeArea,
+          safeReporter,
+          reporterId ? String(reporterId).slice(0, 80) : null,
+          orgId ? String(orgId).slice(0, 80) : null,
+          createdAt,
+        ],
+      });
+
+      res.status(201).json({
+        id,
+        title: String(title).trim().slice(0, 160),
+        description: String(description).trim().slice(0, 1200),
+        category: safeCat,
+        severity: safeSev,
+        status: "ACTIVE",
+        lat,
+        lng,
+        areaName: safeArea,
+        reporterName: safeReporter,
+        reporterId: reporterId ? String(reporterId) : undefined,
+        orgId: orgId ? String(orgId) : undefined,
+        timestamp: createdAt,
+        verifications: 1,
+        verifiedByMe: true,
+      });
+    } catch (e: any) {
+      console.error("[POST /api/safety-feed/report]", e);
+      res.status(500).json({ error: e?.message || "Failed to publish safety report" });
+    }
+  });
+
+  app.post("/api/safety-feed/report/:id/verify", async (req, res) => {
+    try {
+      const id = String(req.params.id || "").trim();
+      if (!id) return res.status(400).json({ error: "Report id is required" });
+      await db.execute({
+        sql: "UPDATE community_safety_reports SET verifications = verifications + 1 WHERE id = ?",
+        args: [id],
+      });
+      const updated = await db.execute({
+        sql: "SELECT verifications FROM community_safety_reports WHERE id = ?",
+        args: [id],
+      });
+      const count = Number((updated.rows?.[0] as any)?.verifications ?? 1);
+      res.json({ id, verifications: count });
+    } catch (e: any) {
+      console.error("[POST /api/safety-feed/report/:id/verify]", e);
+      res.status(500).json({ error: e?.message || "Failed to confirm report" });
     }
   });
 
@@ -1110,26 +1665,29 @@ Rules:
         return res.status(400).json({ error: "audioBase64 is required" });
       }
       const genAI = initGemini();
-      const response = await genAI.models.generateContent({
-        model: "gemini-3.5-transcribe",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: "Transcribe this spoken audio accurately in English or the spoken South African language. Return plain transcript text only." },
-              { inlineData: { data: audioBase64, mimeType: mimeType || "audio/webm" } },
-            ],
-          },
-        ],
-      });
+      const response = await withGeminiRetry(() =>
+        genAI.models.generateContent({
+          model: "gemini-3.5-transcribe",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: "Transcribe this spoken audio accurately in English or the spoken language. Return plain transcript text only." },
+                { inlineData: { data: audioBase64, mimeType: mimeType || "audio/webm" } },
+              ],
+            },
+          ],
+        }),
+      2);
       res.json({ text: response.text || "" });
     } catch (e: any) {
       console.error("[/api/gemini/transcribe]", e);
-      res.status(500).json({ error: e.message || "Transcription failed" });
+      const info = extractGeminiError(e);
+      res.status(info.status).json({ error: info.message });
     }
   });
 
-  // 2b. Accessibility & Lizzy Text-to-Speech (gemini-3.8-flash-lite-tts)
+  // 2b. Accessibility & Kleva/Lizzy Text-to-Speech (gemini-3.8-flash-lite-tts)
   app.post("/api/gemini/tts", async (req, res) => {
     try {
       const { text, voiceName } = req.body || {};
@@ -1137,18 +1695,20 @@ Rules:
         return res.status(400).json({ error: "text is required" });
       }
       const genAI = initGemini();
-      const response = await genAI.models.generateContent({
-        model: "gemini-3.8-flash-lite-tts",
-        contents: [{ role: "user", parts: [{ text: text.slice(0, 1000) }] }],
-        config: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
+      const response = await withGeminiRetry(() =>
+        genAI.models.generateContent({
+          model: "gemini-3.8-flash-lite-tts",
+          contents: [{ role: "user", parts: [{ text: text.slice(0, 1000) }] }],
+          config: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voiceName || "Kore" },
+              },
             },
           },
-        },
-      });
+        }),
+      2);
       const inlineData = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
       if (!inlineData?.data) {
         return res.status(502).json({ error: "No audio returned by TTS model" });
@@ -1156,7 +1716,8 @@ Rules:
       res.json({ audioBase64: inlineData.data, mimeType: inlineData.mimeType || "audio/wav" });
     } catch (e: any) {
       console.error("[/api/gemini/tts]", e);
-      res.status(500).json({ error: e.message || "TTS generation failed" });
+      const info = extractGeminiError(e);
+      res.status(info.status).json({ error: info.message });
     }
   });
 
@@ -3652,10 +4213,7 @@ Rules:
   if (process.env.NODE_ENV !== "production" && (!process.argv[1] || !process.argv[1].endsWith("server.cjs"))) {
     try { const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === "true" ? false : { port: 24678 },
-      },
+      server: { middlewareMode: true, hmr: { port: 24678 } },
       appType: "spa",
     });
     app.use(vite.middlewares); } catch (e) { console.error("Vite not found."); const distPath = path.join(process.cwd(), "dist"); app.use(express.static(distPath)); app.get("*all", (req, res) => res.sendFile(path.join(distPath, "index.html"))); }
@@ -3690,6 +4248,44 @@ Rules:
 
   wss.on("connection", async (clientWs, request) => {
     let session: any = null;
+    let clientClosed = false;
+    const pendingMessages: Array<Buffer | string> = [];
+
+    const forwardClientPayload = (raw: Buffer | string) => {
+      if (!session || clientClosed) return;
+      try {
+        const msg = JSON.parse(String(raw));
+        if (msg.type === "audio" && msg.data) {
+          session.sendRealtimeInput({
+            audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
+          });
+        } else if (msg.type === "text" && msg.text) {
+          session.sendClientContent({
+            turns: [{ role: "user", parts: [{ text: String(msg.text) }] }],
+            turnComplete: true,
+          });
+        }
+      } catch (err) {
+        console.error("[Live WS message error]", err);
+      }
+    };
+
+    clientWs.on("message", (raw: Buffer | string) => {
+      if (!session) {
+        if (pendingMessages.length < 25) pendingMessages.push(raw);
+        return;
+      }
+      forwardClientPayload(raw);
+    });
+
+    clientWs.on("close", () => {
+      clientClosed = true;
+      try {
+        session?.close();
+      } catch {}
+      session = null;
+    });
+
     try {
       const aiClient = initGemini();
       const urlObj = new URL(request.url || "/live", "http://localhost");
@@ -3701,17 +4297,25 @@ Rules:
 
       const modeInstructions: Record<string, string> = {
         checkin:
-          "You are Lizzy from SafetyLink South Africa calling after an emergency SOS alert was triggered. Speak warmly and calmly. First ask 'Are you okay right now? Should I keep emergency dispatch active, or mark you safe?' Listen carefully and keep replies short, reassuring, and clear (1–2 sentences).",
+          "You are Kleva (Lizzy) from SafetyLink calling after an emergency SOS alert was triggered. Speak warmly and calmly. First ask 'Are you okay right now? Should I keep emergency dispatch active, or mark you safe?' Listen carefully and keep replies short, reassuring, and clear (1–2 sentences).",
         post_emergency:
-          "You are Lizzy, SafetyLink South Africa's real-time Post-Emergency Voice Companion. Speak with a warm, calm, steady voice. Check if the user is physically safe and uninjured, guide them through calm breathing if shaken, help them plan immediate next steps or contact loved ones, and share South African emergency numbers (10111 SAPS, 112 emergency, 10177 ambulance) only if needed. Keep spoken responses natural and concise (2–3 sentences).",
+          "You are Kleva (Lizzy), SafetyLink's real-time Post-Emergency Voice Companion. Speak with a warm, calm, steady voice. Check if the user is physically safe and uninjured, guide them through calm breathing if shaken, help them plan immediate next steps or contact loved ones, and share emergency numbers only if needed. Keep spoken responses natural and concise (2–3 sentences).",
         assistant:
-          "You are Lizzy, SafetyLink South Africa's real-time AI voice safety companion. Answer questions about personal safety, route planning, BLE iTAG triggers, and SafetyLink emergency tools in a warm, calm, concise spoken tone.",
+          "You are Kleva (Lizzy), SafetyLink's real-time AI voice safety companion. Answer questions about personal safety, route planning, BLE iTAG triggers, and SafetyLink emergency tools in a warm, calm, concise spoken tone.",
       };
 
       const baseInstruction = modeInstructions[mode] || modeInstructions.post_emergency;
       const systemText = incidentSummary
         ? `${baseInstruction}\n\nRecent SafetyLink Incident Context: ${incidentSummary}`
         : baseInstruction;
+
+      let readySent = false;
+      const notifyReady = () => {
+        if (!readySent && clientWs.readyState === 1) {
+          readySent = true;
+          clientWs.send(JSON.stringify({ type: "ready", model: "gemini-3.8-live", voice: voiceName, mode }));
+        }
+      };
 
       session = await aiClient.live.connect({
         model: "gemini-3.8-live",
@@ -3726,9 +4330,7 @@ Rules:
         },
         callbacks: {
           onopen: () => {
-            if (clientWs.readyState === 1) {
-              clientWs.send(JSON.stringify({ type: "ready", model: "gemini-3.8-live", voice: voiceName, mode }));
-            }
+            notifyReady();
           },
           onmessage: (message: LiveServerMessage) => {
             if (clientWs.readyState !== 1) return;
@@ -3773,6 +4375,17 @@ Rules:
         },
       });
 
+      if (clientClosed) {
+        try { session?.close(); } catch {}
+        return;
+      }
+
+      notifyReady();
+      while (pendingMessages.length > 0) {
+        const queued = pendingMessages.shift();
+        if (queued !== undefined) forwardClientPayload(queued);
+      }
+
       if (mode === "checkin" || mode === "post_emergency") {
         try {
           const introPrompt =
@@ -3780,7 +4393,7 @@ Rules:
               ? "Greet the user warmly and ask if they are safe right now or if they need emergency dispatch restarted."
               : incidentSummary
                 ? `Greet the user warmly after their recent SafetyLink incident (${incidentSummary}). Ask calmly if they are physically safe right now and how you can support them.`
-                : "Greet the user warmly as Lizzy from SafetyLink Post-Emergency Support and ask if they are safe right now and how you can help.";
+                : "Greet the user warmly as Kleva from SafetyLink and ask if they are safe right now and how you can help.";
           session.sendClientContent({
             turns: [{ role: "user", parts: [{ text: introPrompt }] }],
             turnComplete: true,
@@ -3789,39 +4402,14 @@ Rules:
           console.warn("[Live WS initial prompt skipped]", greetErr);
         }
       }
-
-      clientWs.on("message", (raw: Buffer | string) => {
-        if (!session) return;
-        try {
-          const msg = JSON.parse(String(raw));
-          if (msg.type === "audio" && msg.data) {
-            session.sendRealtimeInput({
-              audio: { data: msg.data, mimeType: "audio/pcm;rate=16000" },
-            });
-          } else if (msg.type === "text" && msg.text) {
-            session.sendClientContent({
-              turns: [{ role: "user", parts: [{ text: String(msg.text) }] }],
-              turnComplete: true,
-            });
-          }
-        } catch (err) {
-          console.error("[Live WS message error]", err);
-        }
-      });
-
-      clientWs.on("close", () => {
-        try {
-          session?.close();
-        } catch {}
-        session = null;
-      });
     } catch (err: any) {
       console.error("[Live WS connection setup failed]", err);
+      const info = extractGeminiError(err);
       if (clientWs.readyState === 1) {
         clientWs.send(
           JSON.stringify({
             type: "error",
-            message: err?.message || "Failed to start Gemini Live voice session.",
+            message: info.message || "Failed to start Gemini Live voice session.",
           })
         );
         clientWs.close();

@@ -11,9 +11,11 @@ export const TrialBanner: React.FC = () => {
 
   if (dismissed) return null;
 
-  const subject = currentOrg || currentUser;
-  const isOrg = !!currentOrg;
-  if (!subject || subject.subscriptionStatus !== 'trial') return null;
+  // Trials apply ONLY to Organizations — private individual accounts are free
+  if (!currentOrg || currentOrg.subscriptionStatus !== 'trial') return null;
+
+  const subject = currentOrg;
+  const isOrg = true;
 
   const TRIAL_DAYS = 14;
   const createdAt = (subject as any).createdAt || Date.now();
@@ -22,8 +24,8 @@ export const TrialBanner: React.FC = () => {
   const urgent = daysLeft <= 3;
 
   const handleUpgrade = () => {
-    const email = currentUser?.email || 'customer@safetylink.online';
-    const planId: PlanId = isOrg ? 'org_starter' : 'individual_premium';
+    const email = currentOrg.contactEmail || currentUser?.email || 'customer@safetylink.online';
+    const planId: PlanId = 'org_starter';
     setPaying(true);
     openPaystackCheckout({
       planId,

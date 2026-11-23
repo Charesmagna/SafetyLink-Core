@@ -41,11 +41,11 @@ export default function SituationalAwareness() {
         } catch {}
         if (mounted) setLocationName(locName);
 
-        // Fetch Weather + Local News + Gemini Safer City Search/Maps Grounding in parallel (isolated from panic dispatch)
+        // Fetch Weather + Local News + Gemini Safety Feed Search/Maps Grounding in parallel (isolated from panic dispatch)
         const [weatherRes, newsRes, saferRes] = await Promise.allSettled([
           fetch(`/api/ninjas/weather?lat=${currentLat}&lon=${currentLng}`),
           fetch(`/api/ninjas/news?text=${encodeURIComponent(locName)}`),
-          fetch('/api/gemini/safer-city', {
+          fetch('/api/gemini/safety-feed', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -105,9 +105,9 @@ export default function SituationalAwareness() {
     <div className="w-full h-full flex flex-col gap-4 text-slate-200">
       <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Safer City &amp; Situational Intelligence</h2>
+          <h2 className="text-xl font-bold text-white tracking-tight">Safety Feed &amp; Situational Intelligence</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Non-blocking environmental, weather, Google Search CPF &amp; Google Maps safe-zone feed
+            Non-blocking environmental, weather, live Safety Feed &amp; verified safe-zone intelligence
           </p>
         </div>
         <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
@@ -123,7 +123,7 @@ export default function SituationalAwareness() {
 
       {loading && currentLat && (
         <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-center text-sm text-slate-400 animate-pulse">
-          Loading local intelligence &amp; Safer City alerts...
+          Loading local intelligence &amp; Safety Feed alerts...
         </div>
       )}
 
@@ -166,7 +166,7 @@ export default function SituationalAwareness() {
           {saferAdvisory && (
             <div className="p-4 bg-slate-900 rounded-xl border border-emerald-500/30 space-y-2">
               <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
-                Live Safer City Advisories (Google Search Grounded)
+                Live Safety Feed Advisories
               </div>
               <p className="text-xs text-slate-200 whitespace-pre-line leading-relaxed">{saferAdvisory}</p>
               {searchLinks.length > 0 && (

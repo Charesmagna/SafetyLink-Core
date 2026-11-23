@@ -1,44 +1,41 @@
+import SituationalAwareness from './components/SituationalAwareness';
+import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
 import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PanicButton } from './components/PanicButton';
+import { initFirebaseSync } from './services/FirebaseSyncService';
+import { DispatchChain } from './components/DispatchChain';
 import { StatusIndicator } from './components/StatusIndicator';
 import { GeolocationService, OfflineService } from './services/BaseService';
 import { LocalNotificationService } from './services/LocalNotificationService';
 import { useAppStore } from './utils/store';
+import { AuthScreen } from './components/AuthScreen';
 import { GlobalBackground } from "./components/GlobalBackground";
+import { SplashReveal } from "./components/SplashReveal";
 import { LandingPage } from './components/LandingPage';
+import { DnsSetupGuide } from './components/DnsSetupGuide';
+import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
+import { LizzyPopup } from './components/LizzyPopup';
 import { LogoSetPart } from './components/LogoSetPart';
 import { translate, SA_LANGUAGES } from './utils/translations';
+import { FloatingPanicWidget } from './components/FloatingPanicWidget';
+import { SimulatedDesktop } from './components/SimulatedDesktop';
+import { ForcedCountdownOverlay } from './components/ForcedCountdownOverlay';
+import { PermissionsOnboardingModal } from './components/PermissionsOnboardingModal';
 import { useEmergencyListener } from './hooks/useEmergencyListener';
 import { useTacticalSensors } from './hooks/useTacticalSensors';
+import { DeviceAlertOverlay } from './components/DeviceAlertOverlay';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
-import { getR2StreamUrl } from './utils/r2Assets';
-import { SLShieldLogo } from './components/SLShieldLogo';
+import { startProfileSync } from './services/ProfileSync';
 
-// Lazy-loaded app & portal modules (excluded from public web landing initial bundle)
-const SituationalAwareness = lazy(() => import('./components/SituationalAwareness'));
-const FirstLaunchDisclaimer = lazy(() => import('./components/FirstLaunchDisclaimer').then(m => ({ default: m.FirstLaunchDisclaimer })));
-const PrivacyNoticeModal = lazy(() => import('./components/PrivacyNoticeModal').then(m => ({ default: m.PrivacyNoticeModal })));
-const PanicButton = lazy(() => import('./components/PanicButton').then(m => ({ default: m.PanicButton })));
-const DispatchChain = lazy(() => import('./components/DispatchChain').then(m => ({ default: m.DispatchChain })));
-const AuthScreen = lazy(() => import('./components/AuthScreen').then(m => ({ default: m.AuthScreen })));
-const SplashReveal = lazy(() => import('./components/SplashReveal').then(m => ({ default: m.SplashReveal })));
-const DnsSetupGuide = lazy(() => import('./components/DnsSetupGuide').then(m => ({ default: m.DnsSetupGuide })));
-const ResponderDashboard = lazy(() => import('./components/ResponderDashboard').then(m => ({ default: m.ResponderDashboard })));
-const LizzyPopup = lazy(() => import('./components/LizzyPopup').then(m => ({ default: m.LizzyPopup })));
-const FloatingPanicWidget = lazy(() => import('./components/FloatingPanicWidget').then(m => ({ default: m.FloatingPanicWidget })));
-const SimulatedDesktop = lazy(() => import('./components/SimulatedDesktop').then(m => ({ default: m.SimulatedDesktop })));
-const ForcedCountdownOverlay = lazy(() => import('./components/ForcedCountdownOverlay').then(m => ({ default: m.ForcedCountdownOverlay })));
-const PermissionsOnboardingModal = lazy(() => import('./components/PermissionsOnboardingModal').then(m => ({ default: m.PermissionsOnboardingModal })));
-const DeviceAlertOverlay = lazy(() => import('./components/DeviceAlertOverlay').then(m => ({ default: m.DeviceAlertOverlay })));
-const IncomingEmergencyRingModal = lazy(() => import('./components/IncomingEmergencyRingModal').then(m => ({ default: m.IncomingEmergencyRingModal })));
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
 const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
@@ -62,6 +59,12 @@ const SafetyWareStore = lazy(() => import('./components/SafetyWareStore'));
 const OpenPlatformHub = lazy(() => import('./components/OpenPlatformHub').then(m => ({ default: m.OpenPlatformHub })));
 const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModule').then(m => ({ default: m.ClientDatabaseModule })));
 const LiveCameraFeed = lazy(() => import('./components/LiveCameraFeed').then(m => ({ default: m.LiveCameraFeed })));
+const SafetyFeed = lazy(() => import('./components/SafetyFeed').then(m => ({ default: m.SafetyFeed })));
+import { getR2StreamUrl } from './utils/r2Assets';
+import { findNearestDangerZone } from './utils/safetyProximity';
+import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
+import { IncomingEmergencyRingModal } from './components/IncomingEmergencyRingModal';
+import { SLShieldLogo } from './components/SLShieldLogo';
 
 const slide1 = getR2StreamUrl('Random platform background.png');
 const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
@@ -73,7 +76,7 @@ const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
 const klevaLogo = getR2StreamUrl('Polish_20260809_035827088.png');
 const polishLogo = getR2StreamUrl('limx dynamics.jpg');
 
-type TabId = 'home' | 'deck' | 'cameras' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
+type TabId = 'home' | 'deck' | 'safety' | 'cameras' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
 
 const TrialLockOverlay = () => {
   const { logout } = useAppStore();
@@ -169,6 +172,29 @@ const App: React.FC = () => {
   const postEmergencyPrompt = useAppStore((s) => s.postEmergencyPrompt);
   const openLizzyCompanion = useAppStore((s) => s.openLizzyCompanion);
   const dismissPostEmergencyPrompt = useAppStore((s) => s.dismissPostEmergencyPrompt);
+  const displaySettings = useAppStore((s) => s.displaySettings);
+  const setDisplaySettings = useAppStore((s) => s.setDisplaySettings);
+  const dangerZones = useAppStore((s) => s.dangerZones);
+
+  // Keep Theme (Light / Deep-Navy Dark / System Auto) and Auto Screen-Fit synced on resize & OS changes
+  useEffect(() => {
+    const syncViewportAndTheme = () => {
+      setDisplaySettings({});
+    };
+    syncViewportAndTheme();
+    window.addEventListener('resize', syncViewportAndTheme);
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    const onScheme = () => {
+      if (useAppStore.getState().displaySettings.themeMode === 'system') {
+        useAppStore.getState().setDisplaySettings({});
+      }
+    };
+    mq?.addEventListener?.('change', onScheme);
+    return () => {
+      window.removeEventListener('resize', syncViewportAndTheme);
+      mq?.removeEventListener?.('change', onScheme);
+    };
+  }, [setDisplaySettings]);
 
   useEffect(() => {
     const onQuota = (ev: Event) => {
@@ -213,20 +239,13 @@ const App: React.FC = () => {
     }
 
     if (status === 'DISPATCHED' || status === 'PARTIAL_SUCCESS' || status === 'FAILED') {
-      // Schedule 10-minute post-panic Lizzy AI voice check-in on native dispatch too
-      if (status !== 'FAILED' && typeof window !== 'undefined') {
-        const existingTimer = (window as any).__SL_CHECKIN_TIMER__;
-        if (existingTimer) clearTimeout(existingTimer);
-        (window as any).__SL_CHECKIN_TIMER__ = setTimeout(() => {
-          const cur = useAppStore.getState();
-          if (cur.activeSOSState !== 'IDLE') {
-            cur.setShowLizzyPopup(true);
-          }
-        }, 10 * 60 * 1000);
+      // Schedule configurable post-panic Kleva AI voice welfare check-in on native dispatch too
+      if (status !== 'FAILED') {
+        store.scheduleAiCheckIn();
         useAppStore.setState({
           postEmergencyPrompt: {
             incidentId: info.incidentId || `INC-${Date.now().toString().slice(-5)}`,
-            summary: `Emergency alert (${status}) dispatched. Lizzy AI is available via Live Voice or Chat to stay with you until help arrives.`,
+            summary: `Emergency alert (${status}) dispatched. Kleva AI is available via Live Voice or Chat to stay with you until help arrives.`,
             timestamp: Date.now(),
           },
         });
@@ -324,13 +343,7 @@ const App: React.FC = () => {
     addToast
   } = useAppStore();
 
-  // True when a public web visitor is browsing the marketing website before signing in
-  const isPublicLanding = !currentUser && !currentOrg && !superAdminActive && showLanding;
-
   useEffect(() => {
-    // Do not fire OTA checks, Firebase sync, or profile polling for unauthenticated public website visitors
-    if (isPublicLanding) return;
-
     checkAppUpdates();
     const updateInterval = setInterval(() => {
       checkAppUpdates();
@@ -341,12 +354,8 @@ const App: React.FC = () => {
     };
     window.addEventListener('focus', handleFocus);
 
-    import('./services/FirebaseSyncService')
-      .then(({ initFirebaseSync }) => initFirebaseSync())
-      .catch(() => {});
-    import('./services/ProfileSync')
-      .then(({ startProfileSync }) => startProfileSync())
-      .catch(() => {});
+    initFirebaseSync();
+    startProfileSync();
     if (Capacitor.isNativePlatform()) {
       startNativeScanner().catch(() => {});
     }
@@ -422,7 +431,7 @@ const App: React.FC = () => {
       if (cleanupSync) cleanupSync(); 
       unsub(); 
     };
-  }, [currentUser, currentOrg, isPublicLanding]);
+  }, [currentUser, currentOrg]);
   
   const t = (key: string) => {
     if (key === 'tab.deck') return 'Control Deck';
@@ -433,10 +442,11 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('home');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSplash, setShowSplash] = useState(() => {
-    // Never stall public web landing visitors or native APK (native SplashActivity already ran)
-    if (Capacitor.isNativePlatform() || showLanding) {
+    // On native APK, native SplashActivity already executed; avoid duplicate web splash stall
+    if (Capacitor.isNativePlatform()) {
       return false;
     }
+    // On web, show cinematic splash once per session
     if (typeof window !== 'undefined') {
       const shown = sessionStorage.getItem('sl_splash_shown') || localStorage.getItem('sl_splash_shown');
       if (!shown) {
@@ -541,9 +551,6 @@ const App: React.FC = () => {
   }, [isDrawerOpen, activeTab]);
  
    useEffect(() => {
-    // Defer GPS tracking, push registration, and offline queue watchers until user enters the app portal
-    if (isPublicLanding) return;
-
     const geoService = GeolocationService.getInstance();
     OfflineService.getInstance(); // Initialize offline listeners
     
@@ -652,6 +659,7 @@ const App: React.FC = () => {
     registerPush();
 
     geoService.startTracking();
+    //  (); // Disabled to prevent false auto-alerts as requested
 
     const handleCustomWearableEvent = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -665,7 +673,7 @@ const App: React.FC = () => {
       geoService.stopTracking();
       window.removeEventListener('wearable-panic-trigger', handleCustomWearableEvent);
     };
-  }, [isPublicLanding]);
+  }, []);
 
   // Re-sync cached FCM token whenever the user logs in or updates their phone number
   useEffect(() => {
@@ -711,21 +719,19 @@ const App: React.FC = () => {
     return () => window.removeEventListener('sl-switch-tab', handleSwitchTab);
   }, []);
 
-  // Background monitoring tick loop (active only inside app portal / native)
+  // Background monitoring tick loop
   useEffect(() => {
-    if (isPublicLanding) return;
     const { incrementBackgroundServiceTick } = useAppStore.getState();
     const tickInterval = setInterval(() => {
       if (isBackgroundServiceRunning) {
         incrementBackgroundServiceTick();
       }
-    }, 30000);
+    }, 30000); // OPTIMIZED: Reduced heartbeat frequency to save battery
     return () => clearInterval(tickInterval);
-  }, [isBackgroundServiceRunning, isPublicLanding]);
+  }, [isBackgroundServiceRunning]);
 
   // Synchronize state with actual phone local notification system tray
   useEffect(() => {
-    if (isPublicLanding) return;
     const locStr = userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : 'Acquiring GPS...';
     const connectedBleCount = bleDevices.filter(d => d.connectionState === 'CONNECTED').length;
     
@@ -738,7 +744,9 @@ const App: React.FC = () => {
     ).catch(err => {
       console.error('[App:NotificationSync] Error updating system tray notification:', err);
     });
-  }, [isBackgroundServiceRunning, backgroundServiceTick, activeSOSState, userLocation, bleDevices, isPublicLanding]);
+  }, [isBackgroundServiceRunning, backgroundServiceTick, activeSOSState, userLocation, bleDevices]);
+
+  // Show 5-second 3D logo splash reveal before rendering AuthScreen or Dashboards
 
   // Secure routing conditional renders and persistent layout wraps
   const renderMainBody = () => {
@@ -759,15 +767,11 @@ const App: React.FC = () => {
           }}
         />;
       }
-      return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 font-mono text-xs">Loading SafetyLink Portal...</div>}>
-          <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />
-        </Suspense>
-      );
+      return <AuthScreen initialView={authInitialView as any} onBackToSite={Capacitor.getPlatform() === 'web' ? () => setShowLanding(true) : undefined} />;
     }
 
     if (isAppMinimized) {
-      return <Suspense fallback={null}><SimulatedDesktop /></Suspense>;
+      return <SimulatedDesktop />;
     }
     if (decoyActive) {
       return <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Calculator...</div>}><DecoyCalculator /></Suspense>;
@@ -791,8 +795,12 @@ const App: React.FC = () => {
 
 
 
+    const nearestDanger = displaySettings.dangerZoneAlerts
+      ? findNearestDangerZone(userLocation, dangerZones, displaySettings.dangerZoneRadiusKm || 3)
+      : null;
+
     return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+      <div className="sl-app-shell sl-viewport-fit flex-1 flex flex-col min-h-[100dvh] w-full overflow-x-hidden relative bg-transparent text-slate-900 dark:text-slate-100 transition-colors">
 
       
       {showExitConfirm && (
@@ -832,22 +840,26 @@ const App: React.FC = () => {
 
       {/* Top Banner Alert during SOS Distress Broadcast */}
       {activeSOSState !== 'IDLE' ? (
-        <div className="w-full bg-red-600 text-slate-100 font-mono text-xs font-bold text-center py-2 px-4 tracking-wider uppercase animate-pulse border-b border-red-500/50 flex items-center justify-center gap-2 relative z-50">
+        <div className="w-full sl-safe-top bg-red-600 text-white font-mono text-xs font-bold text-center py-2 px-4 tracking-wider uppercase border-b border-red-500/50 flex items-center justify-center gap-2 relative z-50">
           <span>{t('status.emergency')}</span>
         </div>
       ) : (
-        <div className="w-full bg-slate-900 border-b border-slate-800/60 text-slate-400 font-mono text-[10px] py-1 px-4 text-center tracking-wider uppercase flex items-center justify-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        <div className={`w-full sl-safe-top border-b font-mono text-[10px] py-1 px-4 text-center tracking-wider uppercase flex items-center justify-center gap-2 ${
+          globalTheme === 'light'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-[#0b172e] border-slate-800/60 text-slate-400'
+        }`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{t('status.secure')}</span>
         </div>
       )}
 
-      {/* Header bar */}
+      {/* Header bar — frosted glass */}
       <header className={`${
         globalTheme === 'light'
-          ? 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
-          : 'bg-slate-900/60 border-slate-900 text-slate-100'
-      } backdrop-blur-md border-b py-2.5 sm:py-3 px-3 sm:px-5 flex justify-between items-center shadow-md relative z-30 transition-colors`}>
+          ? 'bg-white/72 border-white/70 text-slate-900 shadow-sm'
+          : 'bg-[#0d1b34]/68 border-white/10 text-slate-100'
+      } backdrop-blur-xl border-b py-2.5 sm:py-3 px-3 sm:px-5 flex justify-between items-center relative z-30 transition-colors`}>
         {/* Left Side: Hamburger trigger and Brand title */}
         <div className="flex items-center gap-3">
           {activeTab === 'home' ? (
@@ -1016,126 +1028,135 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Workspace content */}
-      <main className={`flex-1 min-h-0 pb-12 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
-        <div className={`${activeTab === 'cameras' ? 'max-w-6xl' : 'max-w-md'} mx-auto ${activeTab === 'home' ? 'h-full flex flex-col p-2' : 'p-4 space-y-5'}`}>
+      {/* Main Workspace content — auto-scrolls cleanly on compact/small phones so nothing ever crops */}
+      <main className="flex-1 min-h-0 overflow-y-auto sl-safe-bottom pb-16">
+        <div className={`${activeTab === 'cameras' || activeTab === 'safety' ? 'max-w-5xl' : 'max-w-md'} mx-auto ${activeTab === 'home' ? 'min-h-full flex flex-col px-3 py-2' : 'p-4 space-y-5'}`}>
           {/* Active Tab Screen Routing */}
           {activeTab === 'home' && (
-            <div className="flex flex-col items-center h-full animate-fadeIn text-center py-2 gap-2">
+            <div className="flex flex-col items-center min-h-full animate-fadeIn text-center py-1 gap-2.5">
+
+              {/* SAFETY FEED PROXIMITY ADVISORY BANNER */}
+              {nearestDanger && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('safety')}
+                  className="w-full rounded-2xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/40 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left transition-colors hover:bg-amber-100/80 dark:hover:bg-amber-950/60"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 truncate">
+                      {nearestDanger.insidePerimeter ? 'High-Alert Zone: ' : 'Advisory Nearby: '}
+                      {nearestDanger.zone.name}
+                    </div>
+                    <div className="text-[10px] text-amber-700 dark:text-amber-400/90 truncate tabular-nums">
+                      {nearestDanger.distanceKm.toFixed(1)} km away · Tap for safety feed &amp; advisory
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0 whitespace-nowrap">
+                    View →
+                  </span>
+                </button>
+              )}
 
               {/* OFFLINE QUEUE INDICATOR */}
               {localOfflineQueue && localOfflineQueue.length > 0 && (
-                <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between mb-1 mt-1">
+                <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">📡</span>
                     <div className="text-left">
-                      <p className="text-[10px] font-bold text-amber-400">OFFLINE SYNC PENDING</p>
-                      <p className="text-[8.5px] text-amber-500/70">{localOfflineQueue.length} {localOfflineQueue.length === 1 ? 'event' : 'events'} waiting for network.</p>
+                      <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400">OFFLINE SYNC PENDING</p>
+                      <p className="text-[8.5px] text-amber-700 dark:text-amber-500/80">{localOfflineQueue.length} {localOfflineQueue.length === 1 ? 'event' : 'events'} waiting for network.</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
+                    <button onClick={() => syncOfflineQueue()} className="text-[8px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 px-2 py-1.5 rounded-lg hover:bg-amber-500/30 transition-colors">
                       RETRY
                     </button>
-                    <button onClick={() => useAppStore.setState({ localOfflineQueue: [] })} className="text-[8px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-700 transition-colors">
+                    <button onClick={() => useAppStore.setState({ localOfflineQueue: [] })} className="text-[8px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
                       CLEAR
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* MIDDLE: SOS Button fills remaining space */}
-              <div className="flex-1 w-full flex items-center justify-center">
-                <Suspense fallback={<div className="text-slate-500 text-xs font-mono">Arming SOS...</div>}>
-                  <PanicButton />
-                </Suspense>
+              {/* MIDDLE: SOS Button fills remaining space (shifts lower when One-Handed Reach is enabled) */}
+              <div className={`flex-1 w-full flex flex-col items-center ${displaySettings.oneHandedReach ? 'justify-end pb-3 pt-4' : 'justify-center py-2'}`}>
+                <PanicButton />
               </div>
 
-              {/* BOTTOM: iTAG status + reassurance */}
+              {/* BOTTOM: iTAG status + reassurance + Swipeable Single-Line Quick Menu (Frosted Glass) */}
               <div className="shrink-0 w-full space-y-2 pb-1">
                 {bleDevices.length > 0 && (
-                  <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-3 py-2 flex items-center gap-2 flex-wrap">
+                  <div className="w-full sl-glass-card rounded-2xl px-3 py-2 flex items-center gap-2 flex-wrap">
                     {bleDevices.slice(0, 2).map((d: any) => (
                       <div key={d.macAddress} className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${d.connectionState === 'CONNECTED' ? 'bg-emerald-400 animate-pulse' : d.connectionState === 'CONNECTING' ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
-                        <span className="text-[9px] font-mono text-slate-400 truncate">{d.friendlyName}</span>
-                        <span className="text-[8px] font-mono text-slate-600 shrink-0">{d.rssi}dBm</span>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${d.connectionState === 'CONNECTED' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : d.connectionState === 'CONNECTING' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                        <span className="text-[10px] font-mono text-slate-800 dark:text-slate-200 truncate">{d.friendlyName}</span>
+                        <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 shrink-0 tabular-nums">{d.rssi}dBm</span>
                         {d.connectionState === 'DISCONNECTED' && (
                           <button
                             onClick={() => useAppStore.getState().connectBleDevice(d.macAddress)}
-                            className="text-[7px] font-bold text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-lg hover:bg-blue-500/10 transition-all shrink-0"
+                            className="text-[9px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/25 px-2 py-0.5 rounded-lg hover:bg-blue-500/10 transition-all shrink-0"
                           >
-                            RECONNECT
+                            Reconnect
                           </button>
                         )}
                       </div>
                     ))}
                   </div>
                 )}
-                <div className="w-full bg-slate-900/40 border border-slate-900 rounded-2xl px-3 py-2.5 flex items-center gap-3">
+
+                <div className="w-full sl-glass-card rounded-2xl px-3.5 py-2.5 flex items-center gap-3">
                   <span className="text-lg shrink-0">🛡️</span>
-                  <div className="text-left min-w-0">
-                    <p className="text-[10px] font-bold text-slate-200 leading-none">{t('home.reassurance_title')}, {currentUser.fullName?.split(' ')[0]}!</p>
-                    {currentUser.orgCode && (
-                      <span className="text-[7px] font-mono text-blue-400 uppercase tracking-wider">{currentUser.orgCode}</span>
-                    )}
-                    <p className="text-[8.5px] text-slate-500 leading-snug mt-0.5">{t('home.reassurance_subtitle')}</p>
+                  <div className="text-left min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-snug truncate">
+                      {t('home.reassurance_title')}, {currentUser.fullName?.split(' ')[0]}
+                      {currentUser.orgCode ? ` · ${currentUser.orgCode}` : ''}
+                    </p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug mt-0.5 truncate">{t('home.reassurance_subtitle')}</p>
                   </div>
                 </div>
                 
-                {/* RESOURCEFUL QUICK ACTION SHORTCUTS */}
-                <div className="w-full grid grid-cols-3 gap-1.5 mt-2" data-testid="home-quick-shortcuts">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('profile')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-cyan-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">👤</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Profile</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('ble')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">📡</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Devices</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('cameras')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">📹</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Cameras</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('vault')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-amber-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">🔐</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Passwords</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('contacts')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-blue-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">👥</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Contacts</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('settings')}
-                    className="bg-slate-900/70 border border-slate-800 hover:border-purple-500/40 rounded-xl p-2 flex flex-col items-center justify-center gap-1 hover:bg-slate-800/80 transition-all shadow-sm"
-                  >
-                    <span className="text-base leading-none">⚙️</span>
-                    <span className="text-[7.5px] font-bold text-slate-200 uppercase tracking-widest text-center leading-tight">Settings</span>
-                  </button>
+                {/* SINGLE-LINE SWIPEABLE FROSTED GLASS QUICK ACTION MENU */}
+                <div className="w-full pt-1" data-testid="home-quick-shortcuts">
+                  <div className="flex items-center justify-between px-1 mb-1">
+                    <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">Quick Menu</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">Swipe ⇄</span>
+                  </div>
+                  <div className="flex flex-nowrap items-stretch gap-2 overflow-x-auto snap-x snap-mandatory pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {[
+                      { id: 'safety', icon: '📰', label: 'Safety Feed' },
+                      { id: 'profile', icon: '👤', label: 'Profile' },
+                      { id: 'ble', icon: '📡', label: 'Devices' },
+                      { id: 'cameras', icon: '📹', label: 'Cameras' },
+                      { id: 'vault', icon: '🔐', label: 'Passwords' },
+                      { id: 'contacts', icon: '👥', label: 'Contacts' },
+                      { id: 'map', icon: '🗺️', label: 'Live Map' },
+                      { id: 'settings', icon: '⚙️', label: 'Settings' },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveTab(item.id as any)}
+                        className="snap-start shrink-0 min-w-[82px] min-h-[54px] sl-glass-card rounded-xl px-3 py-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all"
+                      >
+                        <span className="text-base leading-none">{item.icon}</span>
+                        <span className="text-[10px] font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap leading-tight">
+                          {item.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'safety' && (
+            <ErrorBoundary tabName="Safety Feed">
+              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Local Safety Feed...</div>}>
+                <SafetyFeed onOpenMap={() => setActiveTab('map')} />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {activeTab === 'deck' && (
@@ -1239,9 +1260,7 @@ const App: React.FC = () => {
 
           {activeTab === 'contacts' && (
             <div className="animate-fadeIn">
-              <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Dispatch Chain...</div>}>
-                <DispatchChain />
-              </Suspense>
+              <DispatchChain />
             </div>
           )}
 
@@ -1407,6 +1426,21 @@ const App: React.FC = () => {
                     <div className="text-left">
                       <p className="text-xs font-extrabold uppercase font-display leading-none">{t('tab.home')}</p>
                       <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Control cockpit & beacon</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('safety'); setIsDrawerOpen(false); }}
+                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all border ${
+                      activeTab === 'safety'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-500 font-bold'
+                        : 'bg-transparent border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900/40 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">📰</span>
+                    <div className="text-left">
+                      <p className="text-xs font-extrabold uppercase font-display leading-none">Local Safety Feed</p>
+                      <p className="text-[7.5px] font-mono text-slate-500 mt-0.5">Area advisories &amp; hotspot alerts</p>
                     </div>
                   </button>
 
@@ -1687,12 +1721,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-y-auto ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
+    <div className={`min-h-[100dvh] w-full bg-transparent text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none overflow-y-auto ${getThemeClass()} ${demoMode ? 'scanlines' : ''}`}>
       <GlobalBackground />
-      {showSplash && !isPublicLanding && <Suspense fallback={null}><SplashReveal onComplete={() => setShowSplash(false)} /></Suspense>}
+      {showSplash && <SplashReveal onComplete={() => setShowSplash(false)} />}
       {trialExpired && <TrialLockOverlay />}
-      {!isPublicLanding && <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />}
+      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
       <TrialReminderModal />
+
+      {/* High fidelity cyber background lighting elements */}
+      
+      
+      
 
       {mapsQuotaError && (
         <div className="sticky top-0 z-[99998] w-full bg-amber-950/95 border-b border-amber-500/40 px-4 py-2 text-amber-200 text-xs font-mono flex items-center justify-between gap-3">
@@ -1701,19 +1740,17 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'deck' && !currentOrg && !isPublicLanding && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
+      {activeTab === 'deck' && !currentOrg && <Suspense fallback={<div className="text-center text-slate-500 text-xs py-8">Loading Radar...</div>}><GlobalRadarBackground /></Suspense>}
 
-      {/* Single Canonical Emergency Countdown Overlay (active inside app portal / native) */}
-      {!isPublicLanding && (
-        <Suspense fallback={null}>
-          <TrialBanner />
-          <ForcedCountdownOverlay />
-          <DeviceAlertOverlay />
-          <PermissionsOnboardingModal />
-          <LizzyPopup />
-          {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
-        </Suspense>
-      )}
+      {/* Single Canonical Emergency Countdown Overlay (replaces duplicate double countdowns) */}
+      <TrialBanner />
+      <ForcedCountdownOverlay />
+
+      {/* Critical Wearable Device Alert Sentinel Overlay */}
+      <DeviceAlertOverlay />
+      <PermissionsOnboardingModal />
+      <LizzyPopup />
+      {showDnsGuide && <DnsSetupGuide onClose={() => setShowDnsGuide(false)} />}
 
       {/* Minimum Supported Version Enforcement Gate */}
       {updateInfo?.updateRequiredBlocked && (
@@ -1934,8 +1971,8 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Always-accessible Kleva AI & SafetyLink Shield Live Voice / Care Launcher (inside App Portal) */}
-      {!isPublicLanding && !isLizzyOpen && !decoyActive && !showSplash && (
+      {/* Always-accessible Kleva AI & SafetyLink Shield Live Voice / Care Launcher */}
+      {!isLizzyOpen && !decoyActive && !showSplash && (
         <div className="fixed bottom-4 right-4 z-[110] flex items-center gap-2" data-testid="floating-ai-launcher">
           <button
             type="button"
@@ -1975,16 +2012,20 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* App-portal & native-only overlays (never block public marketing website visitors) */}
-      {!isPublicLanding && (
-        <Suspense fallback={null}>
-          <KlevaBot isOpen={isLizzyOpen} onClose={() => setIsLizzyOpen(false)} />
-          <IncomingEmergencyRingModal />
-          <FloatingPanicWidget />
-          <FirstLaunchDisclaimer />
-          {Capacitor.isNativePlatform() && <PrivacyNoticeModal />}
-        </Suspense>
-      )}
+      {/* Lizzy / Kleva AI Safety & Post-Emergency Companion Drawer */}
+      <Suspense fallback={null}><KlevaBot isOpen={isLizzyOpen} onClose={() => setIsLizzyOpen(false)} /></Suspense>
+
+      {/* Incoming FCM Emergency Contact Ring Modal */}
+      <IncomingEmergencyRingModal />
+
+      {/* Sizable Movable Deployed Floating Panic Button Widget */}
+      <FloatingPanicWidget />
+
+      {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
+      <FirstLaunchDisclaimer />
+
+      {/* Sensitive Permissions & Google Play Privacy Notice Modal */}
+      <PrivacyNoticeModal />
 
     </div>
   );

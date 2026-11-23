@@ -19,6 +19,30 @@ import { GeospatialAnalytics } from './GeospatialAnalytics';
 import { EvidenceLedger } from './EvidenceLedger';
 import { HikvisionCameraManager } from './HikvisionCameraManager';
 import { LiveCameraFeed } from './LiveCameraFeed';
+import { OrgLiveIncidentMap } from './OrgLiveIncidentMap';
+import {
+  MapPin,
+  LayoutDashboard,
+  Users,
+  Video,
+  Shield,
+  Radio,
+  FileText,
+  RefreshCw,
+  BarChart3,
+  Palette,
+  Building2,
+  Plug,
+  Ticket,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  LogOut,
+  Copy,
+  Check,
+  Globe,
+} from 'lucide-react';
 
 export const OrgDashboard: React.FC = () => {
   const { 
@@ -40,10 +64,16 @@ export const OrgDashboard: React.FC = () => {
     syncOfflineQueue,
     approvePendingUser,
     rejectPendingUser,
+    disconnectOrgMember,
+    setOrgMemberStatus,
     generateReferralCode,
     isTrialEnabled,
+    globalTheme,
+    setDisplaySettings,
   } = useAppStore();
 
+  const isDark = globalTheme === 'dark';
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cctvViewMode, setCctvViewMode] = useState<'LIVE' | 'ONBOARD'>('LIVE');
 
   const currentOrg = storeOrg || (currentUser?.orgCode ? organizations.find(o => o.id === currentUser.orgCode) : null);
@@ -51,30 +81,46 @@ export const OrgDashboard: React.FC = () => {
   const isResponder = currentUser?.role === 'Responder';
   const [orgReferralCode, setOrgReferralCode] = useState(currentOrg?.referralCode || '');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState('dispatch');
+  const [activeSubTab, setActiveSubTab] = useState('incident-map');
   const [copiedOrgCode, setCopiedOrgCode] = useState(false);
   const [serverJoinRequests, setServerJoinRequests] = useState<any[]>([]);
+  const [serverMembers, setServerMembers] = useState<any[]>([]);
+  const [refreshingMembers, setRefreshingMembers] = useState(false);
 
-  useEffect(() => {
+  const fetchOrgLiveRoster = async () => {
     const orgId = currentOrg?.id;
     const token = useAppStore.getState().token;
     const customUrl = useAppStore.getState().customBackendUrl;
     if (!orgId || !token || isResponder) return;
+    setRefreshingMembers(true);
     const bases = [customUrl, PRIMARY_BACKEND_URL, FALLBACK_BACKEND_URL].filter(Boolean) as string[];
-    (async () => {
-      for (const base of bases) {
-        try {
-          const res = await fetch(`${base.replace(/\/$/, '')}/api/org/${encodeURIComponent(orgId)}/join-requests`, {
+    for (const base of bases) {
+      const cleanBase = base.replace(/\/$/, '');
+      try {
+        const [reqRes, memRes] = await Promise.all([
+          fetch(`${cleanBase}/api/org/${encodeURIComponent(orgId)}/join-requests`, {
             headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setServerJoinRequests(Array.isArray(data?.requests) ? data.requests : []);
-            break;
-          }
-        } catch {}
-      }
-    })();
+          }),
+          fetch(`${cleanBase}/api/org/${encodeURIComponent(orgId)}/members`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        if (reqRes.ok) {
+          const data = await reqRes.json();
+          setServerJoinRequests(Array.isArray(data?.requests) ? data.requests : []);
+        }
+        if (memRes.ok) {
+          const membersData = await memRes.json();
+          setServerMembers(Array.isArray(membersData) ? membersData : []);
+        }
+        if (reqRes.ok || memRes.ok) break;
+      } catch {}
+    }
+    setRefreshingMembers(false);
+  };
+
+  useEffect(() => {
+    fetchOrgLiveRoster();
   }, [currentOrg?.id, activeSubTab, isResponder]);
   
   // Roster detailed editor state
@@ -116,14 +162,49 @@ export const OrgDashboard: React.FC = () => {
   const [ssUdpPort, setSsUdpPort] = useState(currentOrg?.sensorStream?.udpPort ? currentOrg?.sensorStream?.udpPort.toString() : '5005');
   const [ssEnabled, setSsEnabled] = useState(currentOrg?.sensorStream?.enabled || false);
 
-  // Filter students/members belonging to this organization code
-  const registeredStudents = useMemo(() => users.filter(u => u.orgCode === currentOrg?.id), [users, currentOrg?.id]);
+  // Filter students/members belonging to this organization code (merge local + live server members)
+  const registeredStudents = useMemo(() => {
+    const localList = users.filter(u => u.orgCode?.toUpperCase() === currentOrg?.id?.toUpperCase());
+    const merged: any[] = [...localList];
+    for (const sm of serverMembers) {
+      const idx = merged.findIndex(u => u.id === sm.id || (sm.username && u.username?.toLowerCase() === String(sm.username).toLowerCase()));
+      if (idx >= 0) {
+        merged[idx] = {
+          ...merged[idx],
+          status: sm.status || merged[idx].status || 'active',
+          lastSeen: sm.last_seen || merged[idx].lastSeen,
+          lat: sm.lat ?? merged[idx].lat,
+          lng: sm.lng ?? merged[idx].lng,
+          sosActive: Boolean(sm.sos_active),
+          appVersion: sm.app_version || merged[idx].appVersion,
+        };
+      } else {
+        merged.push({
+          id: sm.id,
+          username: sm.username || sm.email || sm.id,
+          fullName: sm.username || sm.email || 'Connected Member',
+          phone: sm.phone || '',
+          email: sm.email || '',
+          role: sm.role || 'Community Member',
+          orgCode: currentOrg?.id || '',
+          status: sm.status || 'active',
+          lastSeen: sm.last_seen,
+          lat: sm.lat,
+          lng: sm.lng,
+          sosActive: Boolean(sm.sos_active),
+          appVersion: sm.app_version,
+          createdAt: Date.now(),
+        });
+      }
+    }
+    return merged;
+  }, [users, serverMembers, currentOrg?.id]);
   
   // Filter by search term
   const filteredStudents = useMemo(() => registeredStudents.filter(u => 
-    u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.phone.includes(searchTerm)
+    (u.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.username || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (u.phone || '').includes(searchTerm)
   ), [registeredStudents, searchTerm]);
 
   const activeReferralCode = currentOrg?.referralCode || orgReferralCode;
@@ -191,67 +272,113 @@ export const OrgDashboard: React.FC = () => {
     });
   };
 
+  const pendingApprovalCount =
+    users.filter(u => u.pendingOrgCode === currentOrg?.id).length +
+    serverJoinRequests.filter(
+      sr => !users.some(u => u.pendingOrgCode === currentOrg?.id && (u.id === sr.user_id || u.username === sr.username))
+    ).length;
+
+  const navGroups = [
+    {
+      label: 'Overview',
+      items: [
+        { id: 'incident-map', label: 'Incident Map', icon: MapPin, show: true },
+        { id: 'dispatch', label: 'Dispatch Control', icon: LayoutDashboard, show: true, badge: activeOrgPanics.length > 0 ? activeOrgPanics.length : undefined },
+      ],
+    },
+    {
+      label: 'Incidents',
+      items: [
+        { id: 'mphakati-overwatch', label: 'Mphakati Overwatch', icon: Shield, show: true },
+        { id: 'incident-reporting', label: 'Incident Templates', icon: FileText, show: !isResponder },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3, show: !isResponder },
+      ],
+    },
+    {
+      label: 'Team',
+      items: [
+        { id: 'roster', label: 'Clients & Approvals', icon: Users, show: !isResponder, badge: pendingApprovalCount > 0 ? pendingApprovalCount : undefined },
+        { id: 'referrals', label: 'Referrals', icon: Ticket, show: !isResponder },
+      ],
+    },
+    {
+      label: 'Operations',
+      items: [
+        { id: 'cctv', label: 'CCTV / Hikvision', icon: Video, show: true },
+        { id: 'live-gis', label: 'Live GIS War Room', icon: Globe, show: true },
+        { id: 'mesh-orchestration', label: 'Mesh Orchestration', icon: Radio, show: !isResponder },
+        { id: 'offline-sync', label: 'Offline Sync', icon: RefreshCw, show: !isResponder, badge: localOfflineQueue.length > 0 ? localOfflineQueue.length : undefined },
+        { id: 'branding', label: 'Branding & SLA', icon: Palette, show: !isResponder },
+        { id: 'workspace', label: 'Google Workspace', icon: Building2, show: !isResponder },
+        { id: 'open-platforms', label: 'Open Platforms', icon: Plug, show: !isResponder },
+      ],
+    },
+  ];
+
+  const handleSelectNav = (id: string) => {
+    setActiveSubTab(id);
+    setSidebarOpen(false);
+  };
+
   return (
-    <div className="h-screen max-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden pb-4 relative">
-      {activeSubTab === 'dispatch' ? (
-        <GlobalRadarBackground />
-      ) : (
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none brightness-50"
-        >
-          <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/f_auto,q_auto/v1787310204/Now_let_s_show_how_kids_would.mp4" type="video/mp4" />
-        </video>
-      )}
-      {/* Background with Glowing Heart and Heartbeat Pulse */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden select-none">
-        <GlowingHeartBackground />
-        {/* Transparent dark overlay to keep foreground text highly readable */}
-        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[1px]" />
-      </div>
+    <div className="sl-app-shell h-[100dvh] bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-slate-100 flex flex-col font-sans overflow-hidden relative">
       {/* Active Org Alerts Banner */}
       {activeOrgPanics.length > 0 && (
-        <div className="w-full bg-red-600 text-white font-mono text-xs font-bold text-center py-2.5 px-4 tracking-wider uppercase animate-pulse flex items-center justify-center gap-2 relative z-50">
-          <span>🚨 ALERT: CRITICAL SOS SIGNAL DETECTED FROM ASSIGNED SUBSCRIBER NODE 🚨</span>
+        <div className="w-full bg-red-600 text-white text-xs font-bold text-center py-2 px-4 tracking-wide uppercase flex items-center justify-center gap-3 relative z-50 shrink-0">
+          <span>Active SOS Alert from Assigned Subscriber ({activeOrgPanics.length})</span>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('incident-map')}
+            className="bg-white/20 hover:bg-white/30 px-2.5 py-0.5 rounded text-[11px] font-bold transition-colors"
+          >
+            Focus Map
+          </button>
         </div>
       )}
 
-      
-      {/* Trial Banner */}
+      {/* Trial Banner (Organizations only) */}
       {isTrialEnabled && (
-        <div className="w-full bg-amber-600/90 text-white font-mono text-[10px] font-bold text-center py-1.5 px-4 tracking-wider uppercase flex items-center justify-center gap-2 relative z-50">
-          <span>⚠️ 14-DAY ORGANIZATION TRIAL ACTIVE — YOU HAVE 14 DAYS LEFT ⚠️</span>
-          <button className="bg-white/20 hover:bg-white/30 px-3 py-0.5 rounded ml-2 transition-colors">UPGRADE TO PRO</button>
+        <div className="w-full bg-amber-500 text-slate-950 text-[11px] font-bold text-center py-1.5 px-4 flex items-center justify-center gap-3 relative z-50 shrink-0">
+          <span>14-Day Organization Trial Active</span>
+          <span className="hidden sm:inline opacity-80">· Full Control-Room Access Enabled</span>
         </div>
       )}
 
-      {/* Header Bar with custom theme colors if configured */}
-      <header className="bg-slate-900 border-b border-slate-900/80 py-4 px-6 flex flex-col sm:flex-row justify-between items-center shadow-lg relative gap-3 z-10">
-        <div 
-          className="absolute top-0 left-0 right-0 h-1" 
+      {/* Top Command Bar */}
+      <header className="h-14 bg-white dark:bg-[#0d1b34] border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 flex items-center justify-between gap-3 shrink-0 z-30 relative">
+        <div
+          className="absolute top-0 left-0 right-0 h-0.5"
           style={{ backgroundImage: `linear-gradient(to right, ${brandPrimaryColor}, ${brandSecondaryColor})` }}
         />
-        
-        <div className="flex items-center gap-4 text-left">
+
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(prev => !prev)}
+            className="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Toggle organization navigation"
+          >
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
           {brandLogoUrl ? (
-            <img 
-              src={brandLogoUrl} 
-              alt="Org Logo" 
-              className="w-16 h-16 rounded-2xl border object-cover border-slate-700 shadow-md"
+            <img
+              src={brandLogoUrl}
+              alt={currentOrg.name}
+              className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 object-cover shrink-0 bg-white"
               onError={() => setBrandLogoUrl('')}
             />
           ) : (
-            <LogoSetPart part="accent" size={68} rounded="2xl" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-display font-black text-sm flex items-center justify-center shrink-0">
+              {(currentOrg.name || 'S')[0].toUpperCase()}
+            </div>
           )}
-          <div>
-            <h1 className="text-sm font-black tracking-wider text-slate-100 uppercase font-mono flex flex-wrap items-center gap-2">
-              {currentOrg.name} 
-              <span className="text-[8.5px] px-2 py-0.5 rounded-full text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 font-bold font-mono">
-                ACTIVE COMMAND NODE
-              </span>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-sm sm:text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+                {currentOrg.name}
+              </h1>
               <button
                 type="button"
                 onClick={() => {
@@ -260,150 +387,146 @@ export const OrgDashboard: React.FC = () => {
                   useAppStore.getState().addToast(`Copied Organization Code: ${currentOrg.id}`, 'success');
                   setTimeout(() => setCopiedOrgCode(false), 2000);
                 }}
-                className="text-[9px] px-2.5 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-mono font-black tracking-wider cursor-pointer transition-colors"
+                className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-mono font-bold transition-colors shrink-0"
                 title="Copy Organization Code to share with members"
               >
-                {currentOrg.id} · {copiedOrgCode ? 'COPIED ✓' : 'COPY CODE'}
+                {copiedOrgCode ? <Check size={11} /> : <Copy size={11} />}
+                <span>{currentOrg.id}</span>
               </button>
-            </h1>
-            <p className="text-[9px] text-slate-400 font-mono uppercase tracking-widest mt-0.5">
-              Secure Safety Link Dispatcher Deck // <span className="text-amber-500/80 font-black">POWERED BY TM MEDIA SOLUTIONS</span>
-            </p>
+            </div>
           </div>
         </div>
 
-        {/* Dashboard Sub-Tabs navigation panel */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-850">
-          <button
-            onClick={() => setActiveSubTab('dispatch')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'dispatch' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🛰️ Dispatch Control
-          </button>
-          {!isResponder && (() => {
-            const pendingCount =
-              users.filter(u => u.pendingOrgCode === currentOrg?.id).length +
-              serverJoinRequests.filter(sr => !users.some(u => u.pendingOrgCode === currentOrg?.id && (u.id === sr.user_id || u.username === sr.username))).length;
-            return (
-              <button
-                onClick={() => setActiveSubTab('roster')}
-                className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeSubTab === 'roster' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <span>👥 Clients / Profiles</span>
-                {pendingCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[8px] font-black">
-                    {pendingCount}
-                  </span>
-                )}
-              </button>
-            );
-          })()}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('branding')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'branding' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🎨 branding & SLA
-          </button>}
-          
-          
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('workspace')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'workspace' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🏢 Google Workspace
-          </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('open-platforms')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'open-platforms' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🔌 Open Platforms
-          </button>}
-          <button
-            onClick={() => setActiveSubTab('cctv')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'cctv' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            📷 CCTV / Hikvision
-          </button>
-          <button
-            onClick={() => setActiveSubTab('live-gis')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'live-gis' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🗺️ Live GIS Map
-          </button>
-          <button
-            onClick={() => setActiveSubTab('mphakati-overwatch')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'mphakati-overwatch' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🛡️ Mphakati Overwatch
-          </button>
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('mesh-orchestration')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'mesh-orchestration' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            📡 Mesh Orchestration
-          </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('incident-reporting')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'incident-reporting' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            📄 Incident Templates
-          </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('offline-sync')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'offline-sync' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            🔄 Offline Sync
-          </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('analytics')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'analytics' ? 'bg-slate-900 text-white border border-slate-800' : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            📈 Operations Analytics
-          </button>}
-          {!isResponder && <button
-            onClick={() => setActiveSubTab('referrals')}
-            className={`px-3 py-1.5 text-[9px] font-mono font-black uppercase rounded-lg transition-all ${
-              activeSubTab === 'referrals' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-500 hover:text-amber-300'
-            }`}
-          >
-            🎟️ Referrals
-          </button>}
-        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {pendingApprovalCount > 0 && !isResponder && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('roster')}
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-500/25 transition-colors tabular-nums"
+            >
+              <span>Pending Approvals</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-black">{pendingApprovalCount}</span>
+            </button>
+          )}
 
-        <button
-          onClick={logout}
-          className="px-3.5 py-1.5 bg-slate-850 hover:bg-slate-850 hover:text-red-400 text-slate-400 transition-colors text-[9px] font-mono font-black rounded-lg border border-slate-800 uppercase"
-        >
-          Exit Session
-        </button>
+          <button
+            type="button"
+            onClick={() => setDisplaySettings({ themeMode: isDark ? 'light' : 'dark' })}
+            className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#162849] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title={isDark ? 'Switch to Light Mode' : 'Switch to Deep Navy Dark Mode'}
+            aria-label="Toggle Control-Room Theme"
+          >
+            {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-600" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#162849] hover:border-red-300 hover:text-red-600 dark:hover:text-red-400 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors"
+          >
+            <LogOut size={14} />
+            <span className="hidden sm:inline">Exit</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 space-y-5 relative z-10">
+      {/* Body Workspace: Collapsible Left Sidebar + Content Viewport */}
+      <div className="flex-1 flex min-h-0 overflow-hidden relative">
+        {/* Mobile Sidebar Backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-[1px] z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Control-Room Grouped Left Sidebar */}
+        <aside
+          className={`${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 bg-white dark:bg-[#0d1b34] border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-200`}
+        >
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between lg:hidden">
+            <span className="font-display font-extrabold text-sm text-slate-900 dark:text-white truncate">{currentOrg.name}</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="p-3 border-b border-slate-100 dark:border-slate-800/80">
+            <button
+              type="button"
+              onClick={() => handleSelectNav('incident-map')}
+              className="w-full py-2 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+            >
+              <span>+ Live Incident Map</span>
+            </button>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto p-3 space-y-5">
+            {navGroups.map(group => {
+              const visibleItems = group.items.filter(item => item.show);
+              if (visibleItems.length === 0) return null;
+              return (
+                <div key={group.label}>
+                  <div className="px-2.5 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {group.label}
+                  </div>
+                  <div className="space-y-0.5">
+                    {visibleItems.map(item => {
+                      const Icon = item.icon;
+                      const isActive = activeSubTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => handleSelectNav(item.id)}
+                          className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-colors ${
+                            isActive
+                              ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/30'
+                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-transparent'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5 truncate">
+                            <Icon size={15} className={isActive ? 'text-emerald-600 dark:text-emerald-400 shrink-0' : 'text-slate-400 shrink-0'} />
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                          {item.badge !== undefined && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-bold tabular-nums shrink-0">
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </nav>
+
+          <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+            <span className="truncate font-mono">{currentOrg.id}</span>
+            <span className="tabular-nums font-semibold">{registeredStudents.length} members</span>
+          </div>
+        </aside>
+
+        {/* Main Viewport */}
+        {activeSubTab === 'incident-map' ? (
+          <div className="flex-1 min-w-0 min-h-0 relative overflow-hidden">
+            <OrgLiveIncidentMap
+              orgName={currentOrg.name}
+              orgId={currentOrg.id}
+              members={registeredStudents}
+            />
+          </div>
+        ) : (
+          <main className="flex-1 overflow-y-auto min-h-0 min-w-0 bg-slate-50 dark:bg-[#071124]">
+            <div className="max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-5 relative z-10">
         
         {/* Offline Queuing Synchronizer Alerts Banner */}
         {localOfflineQueue.length > 0 && (
@@ -597,24 +720,37 @@ export const OrgDashboard: React.FC = () => {
                   });
                 }
               }
-              if (mergedPending.length === 0) return null;
-              
               return (
                 <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-2xl text-left space-y-3.5 shadow-md font-mono">
                   <div className="flex justify-between items-center border-b border-amber-500/10 pb-2">
                     <div className="space-y-0.5">
                       <span className="text-amber-400 font-black uppercase text-[10px] tracking-widest block font-display">
-                        ⏳ MEMBERSHIP APPROVAL REQUESTS ({mergedPending.length})
+                        ⏳ MEMBERSHIP APPROVAL WINDOW ({mergedPending.length})
                       </span>
-                      <p className="text-[9.5px] text-slate-500 font-sans leading-normal">
-                        Subscribers listed below have entered your Organization ID ({currentOrg.id}) and are awaiting clearance.
+                      <p className="text-[9.5px] text-slate-400 font-sans leading-normal">
+                        Approve or decline users requesting to connect to Organization ID <span className="font-mono font-bold text-amber-300">{currentOrg.id}</span>.
                       </p>
                     </div>
-                    <span className="h-5 w-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono text-[10px] font-bold">
-                      {mergedPending.length}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={fetchOrgLiveRoster}
+                        disabled={refreshingMembers}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[9px] font-bold text-cyan-300 hover:bg-slate-800 uppercase"
+                      >
+                        {refreshingMembers ? 'Syncing...' : '↻ Refresh'}
+                      </button>
+                      <span className="h-5 px-2 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono text-[10px] font-bold">
+                        {mergedPending.length}
+                      </span>
+                    </div>
                   </div>
 
+                  {mergedPending.length === 0 ? (
+                    <p className="text-[10px] text-slate-500 font-sans">
+                      No pending join requests right now. Share your code <span className="font-mono text-cyan-400 font-bold">{currentOrg.id}</span> — when a user requests to join from their Profile, their approval card appears here immediately.
+                    </p>
+                  ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {mergedPending.map((user: any) => (
                       <div key={user.requestId || user.id} className="p-3 bg-slate-950/60 rounded-xl border border-slate-900 flex flex-col justify-between gap-3 text-left">
@@ -662,6 +798,7 @@ export const OrgDashboard: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                  )}
                 </div>
               );
             })()}
@@ -850,32 +987,83 @@ export const OrgDashboard: React.FC = () => {
                                 {student.fullName.charAt(0).toUpperCase()}
                               </div>
                               <div className="space-y-0.5 text-left">
-                                <h4 className="text-sm font-black text-slate-100 flex items-center gap-1.5">
+                                <h4 className="text-sm font-black text-slate-100 flex flex-wrap items-center gap-1.5">
                                   {student.fullName}
                                   <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-400 font-normal">
                                     {accNum}
                                   </span>
+                                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-mono uppercase font-bold ${
+                                    (student as any).sosActive
+                                      ? 'bg-red-600 text-white animate-pulse'
+                                      : (student as any).status === 'suspended' || (student as any).status === 'deactivated'
+                                        ? 'bg-amber-950/60 border border-amber-500/40 text-amber-300'
+                                        : 'bg-emerald-950/50 border border-emerald-500/30 text-emerald-400'
+                                  }`}>
+                                    {(student as any).sosActive
+                                      ? '🚨 SOS ACTIVE'
+                                      : ((student as any).status || 'active').toUpperCase()}
+                                  </span>
                                 </h4>
-                                <p className="text-[10px] font-mono text-slate-400">@{student.username} • {address}</p>
+                                <p className="text-[10px] font-mono text-slate-400">
+                                  @{student.username} • {address}
+                                  {(student as any).lastSeen ? ` • Seen ${new Date((student as any).lastSeen).toLocaleTimeString()}` : ''}
+                                </p>
+                                {(student as any).lat && (student as any).lng && (
+                                  <a
+                                    href={`https://maps.google.com/?q=${(student as any).lat},${(student as any).lng}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-block text-[9px] font-mono text-cyan-400 hover:underline"
+                                  >
+                                    📍 Live GPS: {Number((student as any).lat).toFixed(4)}, {Number((student as any).lng).toFixed(4)}
+                                  </a>
+                                )}
                               </div>
                             </div>
 
-                            <div className="flex gap-1.5">
+                            <div className="flex flex-wrap gap-1.5 justify-end">
                               <button
+                                type="button"
                                 onClick={() => handleEditClick(student)}
                                 className="px-2 py-1 bg-slate-950 hover:bg-slate-900 border border-slate-850 rounded-md text-[9px] font-mono font-black text-cyan-400 hover:text-cyan-300 transition-colors uppercase"
                               >
-                                Edit Profile
+                                Edit
                               </button>
+                              {((student as any).status === 'suspended' || (student as any).status === 'deactivated') ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await setOrgMemberStatus(student.id, 'ACTIVATE');
+                                    setServerMembers(prev => prev.map(m => m.id === student.id ? { ...m, status: 'active' } : m));
+                                    useAppStore.getState().addToast(`Activated ${student.fullName}.`, 'success');
+                                  }}
+                                  className="px-2 py-1 bg-emerald-950/30 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white rounded-md text-[9px] font-mono font-black text-emerald-300 transition-colors uppercase"
+                                >
+                                  Activate
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await setOrgMemberStatus(student.id, 'SUSPEND');
+                                    setServerMembers(prev => prev.map(m => m.id === student.id ? { ...m, status: 'suspended' } : m));
+                                    useAppStore.getState().addToast(`Suspended ${student.fullName}.`, 'info');
+                                  }}
+                                  className="px-2 py-1 bg-amber-950/30 border border-amber-500/30 hover:bg-amber-600 hover:text-white rounded-md text-[9px] font-mono font-black text-amber-300 transition-colors uppercase"
+                                >
+                                  Suspend
+                                </button>
+                              )}
                               <button
-                                onClick={() => {
-                                  if (confirm(`Revoke subscriber access for ${student.fullName}?`)) {
-                                    deleteUserProfile(student.id);
-                                  }
+                                type="button"
+                                onClick={async () => {
+                                  await disconnectOrgMember(student.id);
+                                  setServerMembers(prev => prev.filter(m => m.id !== student.id));
+                                  useAppStore.getState().addToast(`Disconnected ${student.fullName} from ${currentOrg.name}.`, 'info');
                                 }}
-                                className="px-2 py-1 bg-red-950/20 border border-red-500/20 hover:bg-red-900 hover:text-white rounded-md text-[9px] font-mono font-black text-red-400 transition-colors uppercase"
+                                className="px-2 py-1 bg-red-950/25 border border-red-500/30 hover:bg-red-800 hover:text-white rounded-md text-[9px] font-mono font-black text-red-400 transition-colors uppercase"
                               >
-                                Delete
+                                Disconnect
                               </button>
                             </div>
                           </div>
@@ -1306,7 +1494,10 @@ export const OrgDashboard: React.FC = () => {
             </div>
           </div>
         )}
-      </main>
+            </div>
+          </main>
+        )}
+      </div>
     </div>
   );
 };

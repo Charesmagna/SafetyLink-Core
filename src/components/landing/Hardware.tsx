@@ -34,7 +34,8 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
       R2_MEDIA.hardware.itagKeyring,
       R2_MEDIA.hardware.itagMacro,
       R2_MEDIA.hardware.itagTeardown,
-      '/multi-buttons-smooth.png',
+      R2_MEDIA.hardware.itagWhite,
+      R2_MEDIA.hardware.itagBlack,
     ],
     1: [
       R2_MEDIA.hardware.fieldBeaconAntenna,
@@ -103,7 +104,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
                 alt={DEVICES[active].name} 
                 onError={(e) => {
                   e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/panic-button-smooth.png';
+                  e.currentTarget.src = '/Polish_20260907_043403519.jpg';
                 }}
                 style={{ width:'100%', maxHeight:'260px', objectFit:'contain', borderRadius:'12px', background:'rgba(255,255,255,.04)', transition: 'all 0.5s ease' }} 
               />
@@ -138,11 +139,13 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
               <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
                 <video
-                  src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is"
-                  poster="https://res.cloudinary.com/qcp4fx2v/image/upload/q_auto,f_auto/Polish_20260818_020279883"
+                  poster={R2_MEDIA.hardware.itagMacro}
                   controls preload="none" playsInline
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                >
+                  <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
+                  <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is" type="video/mp4" />
+                </video>
               </div>
               <div style={{ padding: '20px' }}>
                 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#00e676', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>BLE BEACON FIELD TEST</div>
@@ -159,7 +162,7 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
                   poster={R2_MEDIA.hardware.itagTeardown}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 >
-                  <source src="/api/r2/stream/Safetylink/SafetyLink_s_New_Emergency_Hardware_Lineup.mp4" type="video/mp4" />
+                  <source src="https://api.safetylink.online/api/r2/stream/Safetylink/SafetyLink_s_New_Emergency_Hardware_Lineup.mp4" type="video/mp4" />
                   <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
                 </video>
               </div>
