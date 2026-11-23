@@ -1,13 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../utils/store';
 import { CommunitySafetyReport, DangerZone, SafetyReportCategory } from '../types';
-import { formatRelativeTime, haversineKm } from '../utils/safetyProximity';
+import {
+  formatRelativeTime,
+  getSafetyTipsForZone,
+  haversineKm,
+  playHotspotAlertChime,
+  shouldPlayHotspotChime,
+} from '../utils/safetyProximity';
+import { AreaHotspotStatus } from '../utils/crimeHotspots';
 import {
   AlertTriangle,
+  Bell,
+  BellOff,
   CheckCircle2,
   CloudSun,
   Crosshair,
   ExternalLink,
+  Flame,
   Loader2,
   MapPin,
   Newspaper,
@@ -31,6 +42,10 @@ interface LiveNewsItem {
   title: string;
   description: string;
   source: string;
+  provider?: 'FREENEWSAPI' | 'GOOGLE_RSS';
+  scope?: 'LOCAL' | 'PROVINCE' | 'NATIONAL';
+  scopeLabel?: string;
+  isBreaking?: boolean;
   url: string;
   category: SafetyReportCategory;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -62,6 +77,17 @@ interface LiveLocationInfo {
   displayLocation: string;
 }
 
+interface NewsProvidersInfo {
+  freeNewsApiActive: boolean;
+  freeNewsCount: number;
+  rssCount: number;
+  scopeCounts?: {
+    local: number;
+    province: number;
+    national: number;
+  };
+}
+
 const CATEGORY_LABELS: Record<SafetyReportCategory, string> = {
   CRIME: 'Crime / Police',
   SUSPICIOUS: 'Suspicious Activity',
@@ -72,6 +98,12 @@ const CATEGORY_LABELS: Record<SafetyReportCategory, string> = {
   PATROL_UPDATE: 'Patrol Update',
 };
 
+const SCOPE_LABELS: Record<'LOCAL' | 'PROVINCE' | 'NATIONAL', string> = {
+  LOCAL: 'Local',
+  PROVINCE: 'Province',
+  NATIONAL: 'National',
+};
+
 export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
   const {
     communityReports,
@@ -80,12 +112,18 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
     userLocation,
     updateLocation,
     currentUser,
+    displaySettings,
+    setDisplaySettings,
+    activeSOSState,
     addToast,
   } = useAppStore();
 
   const [locationInfo, setLocationInfo] = useState<LiveLocationInfo | null>(null);
   const [liveNews, setLiveNews] = useState<LiveNewsItem[]>([]);
+  const [breakingHeadlines, setBreakingHeadlines] = useState<LiveNewsItem[]>([]);
   const [liveAdvisories, setLiveAdvisories] = useState<DangerZone[]>([]);
+  const [hotspotStatus, setHotspotStatus] = useState<AreaHotspotStatus | null>(null);
+  const [newsProviders, setNewsProviders] = useState<NewsProvidersInfo | null>(null);
   const [weather, setWeather] = useState<LiveWeatherSummary | null>(null);
   const [radiusKm, setRadiusKm] = useState<number>(25);
   const [areaSearchInput, setAreaSearchInput] = useState('');
@@ -96,11 +134,12 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
   const [verifiedIds, setVerifiedIds] = useState<Record<string, boolean>>({});
 
   // Filters
-  const [sourceTab, setSourceTab] = useState<'ALL' | 'NEWS' | 'COMMUNITY'>('ALL');
+  const [sourceTab, setSourceTab] = useState<'ALL' | 'LOCAL' | 'NEWS' | 'COMMUNITY'>('ALL');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'ALL' | SafetyReportCategory>('ALL');
   const [severityFilter, setSeverityFilter] = useState<'ALL' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('ALL');
-  const [timeFilter, setTimeFilter] = useState<'1h' | '24h' | '7d' | 'ALL'>('ALL');
+  const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d' | 'ALL'>('7d');
+  const [activeApiOrigin, setActiveApiOrigin] = useState<string>('');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [submittingReport, setSubmittingReport] = useState(false);
 
@@ -110,6 +149,8 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
   const [category, setCategory] = useState<SafetyReportCategory>('SUSPICIOUS');
   const [severity, setSeverity] = useState<'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'>('MEDIUM');
   const [areaName, setAreaName] = useState('');
+
+  const hotspotSoundEnabled = displaySettings.hotspotAlertSound !== false;
 
   const fetchLiveFeed = useCallback(
     async (opts: { lat?: number; lng?: number; query?: string; radius?: number }) => {
@@ -134,11 +175,35 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
         }
         params.set('radiusKm', String(opts.radius ?? radiusKm));
 
-        const res = await fetch(`/api/safety-feed/live?${params.toString()}`);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data?.error || `Live Safety Feed error (HTTP ${res.status})`);
+        const customBase = (useAppStore.getState().customBackendUrl || '').trim().replace(/\/+$/, '');
+        const candidates = Capacitor.isNativePlatform()
+          ? [customBase || 'https://api.safetylink.online', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev']
+          : ['', customBase || 'https://api.safetylink.online'];
+
+        let data: any = null;
+        let usedOrigin = '';
+        let lastErr = 'Live Safety Feed unavailable';
+
+        for (const base of candidates) {
+          try {
+            const res = await fetch(`${base}/api/safety-feed/live?${params.toString()}`);
+            const parsed = await res.json().catch(() => ({}));
+            if (res.ok && parsed && (Array.isArray(parsed.liveNews) || parsed.location)) {
+              data = parsed;
+              usedOrigin = base;
+              break;
+            }
+            lastErr = parsed?.error || `HTTP ${res.status}`;
+          } catch (e: any) {
+            lastErr = e?.message || lastErr;
+          }
         }
+
+        if (!data) {
+          throw new Error(lastErr);
+        }
+
+        setActiveApiOrigin(usedOrigin);
 
         if (data.location) {
           setLocationInfo(data.location);
@@ -148,9 +213,25 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
         }
         setWeather(data.weather || null);
         setLiveNews(Array.isArray(data.liveNews) ? data.liveNews : []);
+        setBreakingHeadlines(Array.isArray(data.breakingHeadlines) ? data.breakingHeadlines : []);
+        setNewsProviders(data.newsProviders || null);
+        setHotspotStatus(data.hotspotStatus || null);
+
         const advisories: DangerZone[] = Array.isArray(data.advisories) ? data.advisories : [];
         setLiveAdvisories(advisories);
         setDangerZones(advisories);
+
+        // Optional caution chime when entering a HIGH/CRITICAL hotspot (per-zone cooldown, never during SOS)
+        const primaryHotspot = advisories[0];
+        if (
+          primaryHotspot &&
+          (primaryHotspot.riskLevel === 'CRITICAL' || primaryHotspot.riskLevel === 'HIGH') &&
+          useAppStore.getState().displaySettings.hotspotAlertSound !== false &&
+          useAppStore.getState().activeSOSState === 'IDLE' &&
+          shouldPlayHotspotChime(primaryHotspot.id)
+        ) {
+          playHotspotAlertChime(primaryHotspot.riskLevel === 'CRITICAL');
+        }
 
         const reports: CommunitySafetyReport[] = Array.isArray(data.communityReports)
           ? data.communityReports
@@ -184,9 +265,13 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
       (err) => {
         setLocatingGps(false);
         if (err.code === err.PERMISSION_DENIED) {
-          setFeedError('Location permission was denied. Allow GPS access or enter your suburb/city below to see live local alerts.');
+          setFeedError(
+            'Location permission was denied. Allow GPS access or enter your suburb/city below to see live local alerts.'
+          );
         } else {
-          setFeedError('Could not get a GPS lock right now. Enter your suburb or city below to load your local Safety Feed.');
+          setFeedError(
+            'Could not get a GPS lock right now. Enter your suburb or city below to load your local Safety Feed.'
+          );
         }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -233,11 +318,23 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
     }
   };
 
+  const handleToggleHotspotSound = () => {
+    const next = !hotspotSoundEnabled;
+    setDisplaySettings({ hotspotAlertSound: next });
+    if (next && activeSOSState === 'IDLE') {
+      playHotspotAlertChime(false);
+    }
+    addToast(
+      next ? 'Hotspot entry alert chime enabled.' : 'Hotspot entry alert chime muted.',
+      'info'
+    );
+  };
+
   const handleVerifyReport = async (id: string) => {
     if (verifiedIds[id]) return;
     setVerifiedIds((prev) => ({ ...prev, [id]: true }));
     try {
-      const res = await fetch(`/api/safety-feed/report/${encodeURIComponent(id)}/verify`, {
+      const res = await fetch(`${activeApiOrigin}/api/safety-feed/report/${encodeURIComponent(id)}/verify`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -266,7 +363,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
 
     setSubmittingReport(true);
     try {
-      const res = await fetch('/api/safety-feed/report', {
+      const res = await fetch(`${activeApiOrigin}/api/safety-feed/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -300,16 +397,29 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSourceTab('ALL');
+    setSearch('');
+    setCategoryFilter('ALL');
+    setSeverityFilter('ALL');
+    setTimeFilter('ALL');
+  };
+
+  const localNewsCount = useMemo(
+    () => liveNews.filter((n) => !n.scope || n.scope === 'LOCAL').length,
+    [liveNews]
+  );
+
   // Merge and filter live news + live community reports
   const combinedItems = useMemo(() => {
     const now = Date.now();
     const cutoff =
-      timeFilter === '1h'
-        ? now - 3600_000
-        : timeFilter === '24h'
+      timeFilter === '24h'
         ? now - 86_400_000
         : timeFilter === '7d'
         ? now - 7 * 86_400_000
+        : timeFilter === '30d'
+        ? now - 30 * 86_400_000
         : 0;
 
     type UnifiedItem =
@@ -317,16 +427,24 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
       | (CommunitySafetyReport & { kind: 'COMMUNITY' });
 
     const list: UnifiedItem[] = [];
-    if (sourceTab === 'ALL' || sourceTab === 'COMMUNITY') {
+    if (sourceTab === 'ALL' || sourceTab === 'LOCAL' || sourceTab === 'COMMUNITY') {
       for (const r of communityReports) {
         list.push({ ...r, kind: 'COMMUNITY' });
       }
     }
-    if (sourceTab === 'ALL' || sourceTab === 'NEWS') {
+    if (sourceTab === 'ALL' || sourceTab === 'NEWS' || sourceTab === 'LOCAL') {
       for (const n of liveNews) {
+        if (sourceTab === 'LOCAL' && n.scope && n.scope !== 'LOCAL') continue;
         list.push({ ...n, kind: 'NEWS' });
       }
     }
+
+    const scopeWeight = (item: UnifiedItem) => {
+      if (item.kind === 'COMMUNITY') return 0;
+      if (!item.scope || item.scope === 'LOCAL') return 0;
+      if (item.scope === 'PROVINCE') return 1;
+      return 2;
+    };
 
     return list
       .filter((item) => {
@@ -341,7 +459,11 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
         }
         return true;
       })
-      .sort((a, b) => b.timestamp - a.timestamp);
+      .sort((a, b) => {
+        const sw = scopeWeight(a) - scopeWeight(b);
+        if (sw !== 0) return sw;
+        return b.timestamp - a.timestamp;
+      });
   }, [communityReports, liveNews, sourceTab, categoryFilter, severityFilter, timeFilter, search]);
 
   const severityTone = (sev: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => {
@@ -350,6 +472,46 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
     if (sev === 'MEDIUM') return 'text-amber-600 dark:text-amber-400 font-semibold';
     return 'text-blue-600 dark:text-blue-400 font-medium';
   };
+
+  const resolveArticleHref = (url: string) => (url.startsWith('/') ? `${activeApiOrigin}${url}` : url);
+
+  // Determine the active hotspot summary (either structured hotspotStatus from backend or derived from top advisory)
+  const effectiveHotspot = useMemo(() => {
+    if (hotspotStatus) return hotspotStatus;
+    if (liveAdvisories.length > 0) {
+      const top = liveAdvisories[0];
+      return {
+        level: top.riskLevel,
+        insideHotspot: true,
+        headline: top.name,
+        summary: top.advisory,
+        zoneName: top.name,
+        distanceKm: null,
+        safetyTips: getSafetyTipsForZone(top),
+        sources: [top.sourceType === 'SAPS_PRECINCT' ? 'SAPS Area Risk' : 'Live Area Advisory'],
+      } as AreaHotspotStatus;
+    }
+    return null;
+  }, [hotspotStatus, liveAdvisories]);
+
+  const isElevatedHotspot =
+    effectiveHotspot && (effectiveHotspot.level === 'CRITICAL' || effectiveHotspot.level === 'HIGH' || effectiveHotspot.level === 'MODERATE');
+
+  const hotspotBannerStyle =
+    effectiveHotspot?.level === 'CRITICAL'
+      ? 'border-red-300 dark:border-red-500/45 bg-red-50 dark:bg-red-950/35'
+      : effectiveHotspot?.level === 'HIGH'
+      ? 'border-amber-300 dark:border-amber-500/45 bg-amber-50 dark:bg-amber-950/35'
+      : effectiveHotspot?.level === 'MODERATE'
+      ? 'border-amber-200 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/20'
+      : 'border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/70 dark:bg-emerald-950/20';
+
+  const hotspotIconStyle =
+    effectiveHotspot?.level === 'CRITICAL'
+      ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+      : effectiveHotspot?.level === 'HIGH' || effectiveHotspot?.level === 'MODERATE'
+      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+      : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-5 pb-24 space-y-5 text-left">
@@ -360,7 +522,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
             Live Safety Feed
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-            Real-time local safety news, live weather hazards, and verified community reports for your exact area.
+            Crime hotspot warnings, real-time breaking safety news, weather hazards, and community reports for your area.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -368,7 +530,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
             type="button"
             onClick={handleRefresh}
             disabled={loading || locatingGps}
-            className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d1b34] text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
+            className="min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d1b34] text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -377,7 +539,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
             <button
               type="button"
               onClick={onOpenMap}
-              className="px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d1b34] text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              className="min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d1b34] text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
               <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               Live Map
@@ -391,7 +553,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               }
               setIsReportModalOpen(true);
             }}
-            className="px-4 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 whitespace-nowrap shadow-sm"
+            className="min-h-[44px] px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Report Incident
@@ -402,12 +564,12 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
       {/* Location Lock & Area Switcher Bar */}
       <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               <Crosshair className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
                 Active Safety Feed Area
               </div>
               <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
@@ -415,12 +577,38 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   ? 'Detecting your live GPS location...'
                   : locationInfo?.displayLocation || 'Location not set yet'}
               </div>
-              {locationInfo?.lat !== null && locationInfo?.lat !== undefined && locationInfo?.lng !== null && (
-                <div className="text-[11px] font-mono text-slate-500 dark:text-slate-400 tabular-nums">
-                  GPS {locationInfo.lat.toFixed(4)}, {locationInfo.lng.toFixed(4)}
-                  {lastFetchedAt ? ` · Updated ${formatRelativeTime(lastFetchedAt)}` : ''}
-                </div>
-              )}
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
+                {locationInfo?.lat !== null && locationInfo?.lat !== undefined && locationInfo?.lng !== null && (
+                  <span className="font-mono">
+                    {locationInfo.lat.toFixed(4)}, {locationInfo.lng.toFixed(4)}
+                  </span>
+                )}
+                {newsProviders && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {newsProviders.freeNewsApiActive
+                        ? 'Live via FreeNewsAPI & Regional News'
+                        : 'Live via Regional Safety News'}
+                    </span>
+                    {newsProviders.scopeCounts && (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span>
+                          {newsProviders.scopeCounts.local} Local · {newsProviders.scopeCounts.province} Province ·{' '}
+                          {newsProviders.scopeCounts.national} National
+                        </span>
+                      </>
+                    )}
+                  </>
+                )}
+                {lastFetchedAt && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>Updated {formatRelativeTime(lastFetchedAt)}</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -429,7 +617,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               type="button"
               onClick={requestDeviceGps}
               disabled={locatingGps}
-              className="px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 disabled:opacity-60"
+              className="min-h-[44px] px-3.5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-60"
             >
               {locatingGps ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Crosshair className="w-3.5 h-3.5" />}
               Use My Live GPS
@@ -438,7 +626,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               value={radiusKm}
               onChange={(e) => handleRadiusChange(Number(e.target.value))}
               aria-label="Search radius"
-              className="px-2.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-800 dark:text-slate-100"
+              className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-800 dark:text-slate-100"
             >
               <option value={10}>10 km radius</option>
               <option value={25}>25 km radius</option>
@@ -448,19 +636,19 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
           </div>
         </div>
 
-        {/* Manual Suburb / City Override for Devices Without GPS */}
+        {/* Manual Suburb / City Override */}
         <form onSubmit={handleManualAreaSearch} className="flex gap-2">
           <input
             type="text"
             value={areaSearchInput}
             onChange={(e) => setAreaSearchInput(e.target.value)}
-            placeholder="Or enter your exact suburb, town, or city (e.g. Durban, Polokwane, Soweto)..."
-            className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
+            placeholder="Search any suburb, town, or city (e.g. Thohoyandou, Polokwane, Johannesburg, Durban)..."
+            className="flex-1 min-h-[44px] px-3.5 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
           />
           <button
             type="submit"
             disabled={loading || !areaSearchInput.trim()}
-            className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 whitespace-nowrap"
+            className="min-h-[44px] px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 whitespace-nowrap shrink-0"
           >
             Set Area
           </button>
@@ -474,25 +662,134 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
         )}
       </div>
 
-      {/* Live Local Weather & Real Advisories Strip */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Live Weather Telemetry */}
-        {weather && (
-          <div
-            className={`p-4 rounded-2xl border flex items-start gap-3 ${
-              weather.hazardous
-                ? 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/30'
-                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34]'
-            }`}
-          >
+      {/* Crime Hotspot & Area Risk Warning Banner (Primary Situational Focal Anchor) */}
+      {effectiveHotspot && (
+        <section
+          aria-label="Area Crime Hotspot Status"
+          className={`p-4 sm:p-5 rounded-2xl border ${hotspotBannerStyle} space-y-3`}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${hotspotIconStyle}`}>
+                {isElevatedHotspot ? <ShieldAlert className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
+                  <span
+                    className={
+                      effectiveHotspot.level === 'CRITICAL'
+                        ? 'text-red-600 dark:text-red-400 font-bold'
+                        : effectiveHotspot.level === 'HIGH'
+                        ? 'text-orange-600 dark:text-orange-400 font-bold'
+                        : effectiveHotspot.level === 'MODERATE'
+                        ? 'text-amber-700 dark:text-amber-300 font-semibold'
+                        : 'text-emerald-700 dark:text-emerald-400 font-semibold'
+                    }
+                  >
+                    {effectiveHotspot.level === 'CRITICAL'
+                      ? 'Critical Crime Hotspot'
+                      : effectiveHotspot.level === 'HIGH'
+                      ? 'High-Risk Crime Hotspot'
+                      : effectiveHotspot.level === 'MODERATE'
+                      ? 'Elevated Area Caution'
+                      : 'Standard Vigilance'}
+                  </span>
+                  {effectiveHotspot.distanceKm !== null && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span>
+                        {effectiveHotspot.insideHotspot
+                          ? 'Inside hotspot perimeter'
+                          : `${effectiveHotspot.distanceKm.toFixed(1)} km from your location`}
+                      </span>
+                    </>
+                  )}
+                  {effectiveHotspot.sources.length > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span>{effectiveHotspot.sources.join(' · ')}</span>
+                    </>
+                  )}
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5 leading-snug">
+                  {effectiveHotspot.headline}
+                </h2>
+                <p className="text-sm text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
+                  {effectiveHotspot.summary}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={handleToggleHotspotSound}
+                className="min-h-[44px] px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-[#0d1b34] text-slate-800 dark:text-slate-100 hover:bg-white dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                title={hotspotSoundEnabled ? 'Mute hotspot alert chime' : 'Enable hotspot alert chime'}
+              >
+                {hotspotSoundEnabled ? (
+                  <>
+                    <Bell className="w-3.5 h-3.5 text-amber-500" />
+                    Chime On
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="w-3.5 h-3.5 text-slate-400" />
+                    Chime Muted
+                  </>
+                )}
+              </button>
+              {onOpenMap && (
+                <button
+                  type="button"
+                  onClick={onOpenMap}
+                  className="min-h-[44px] px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition-opacity flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  View Hotspot Map
+                </button>
+              )}
+            </div>
+          </div>
+
+          {effectiveHotspot.safetyTips.length > 0 && (
+            <div className="pt-3 border-t border-slate-200/70 dark:border-slate-800/80">
+              <div className="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1.5">
+                Recommended safety actions right now
+              </div>
+              <ul className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                {effectiveHotspot.safetyTips.slice(0, 3).map((tip, idx) => (
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="font-semibold text-slate-900 dark:text-white tabular-nums shrink-0">
+                      0{idx + 1}.
+                    </span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Live Local Weather Strip (compact, single level) */}
+      {weather && (
+        <div
+          className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${
+            weather.hazardous
+              ? 'border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/30'
+              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34]'
+          }`}
+        >
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
               <CloudSun className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-900 dark:text-white">
-                Live Local Weather · {weather.temperatureC !== null ? `${Math.round(weather.temperatureC)}°C` : '--'} ({weather.condition})
+              <div className="text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                Live Weather · {weather.temperatureC !== null ? `${Math.round(weather.temperatureC)}°C` : '--'} ({weather.condition})
               </div>
-              <div className="text-xs text-slate-600 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+              <div className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 tabular-nums">
                 {weather.apparentTempC !== null && <span>Feels like {Math.round(weather.apparentTempC)}°C</span>}
                 {weather.windSpeedKmh !== null && (
                   <span className="inline-flex items-center gap-1">
@@ -501,66 +798,86 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                 )}
                 <span>Rain: {weather.precipitationMm.toFixed(1)} mm</span>
               </div>
-              {weather.advisoryText && (
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mt-1.5">
-                  Advisory: {weather.advisoryText}
-                </p>
-              )}
             </div>
           </div>
-        )}
+          {weather.advisoryText && (
+            <div className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Weather Advisory: {weather.advisoryText}
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* Active Area Advisory Status */}
-        {liveAdvisories.length > 0 ? (
-          <div className="p-4 rounded-2xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-bold text-slate-900 dark:text-white">
-                {liveAdvisories[0].name}
-              </div>
-              <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
-                {liveAdvisories[0].advisory}
-              </p>
-              <div className="text-xs text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
-                Risk: {liveAdvisories[0].riskLevel} · Updated {formatRelativeTime(liveAdvisories[0].updatedAt)}
-              </div>
-            </div>
+      {/* Breaking Safety Headlines Spotlight (Last 72h) */}
+      {breakingHeadlines.length > 0 && (
+        <section aria-label="Breaking Safety Headlines" className="space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Flame className="w-4 h-4 text-orange-500 shrink-0" />
+              Breaking Safety Headlines
+            </h2>
+            <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+              Latest 72 hours · {breakingHeadlines.length} updates
+            </span>
           </div>
-        ) : (
-          <div className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50/70 dark:bg-emerald-950/20 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-slate-900 dark:text-white">
-                No Active High-Risk Advisories Detected
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                {locationInfo
-                  ? `Monitoring live feeds within ${radiusKm} km of ${locationInfo.displayLocation}.`
-                  : 'Allow GPS or set your area above to activate live local safety monitoring.'}
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {breakingHeadlines.map((item) => (
+              <article
+                key={`brk-${item.id}`}
+                className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34] flex flex-col justify-between gap-2.5"
+              >
+                <div className="space-y-1.5">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
+                    <span className={severityTone(item.severity)}>
+                      {item.scope ? SCOPE_LABELS[item.scope] : 'Local'}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{item.source}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {new Date(item.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·{' '}
+                      {formatRelativeTime(item.timestamp)}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-snug">
+                    {item.title}
+                  </h3>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    {item.areaName}
+                  </span>
+                  <a
+                    href={resolveArticleHref(item.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 whitespace-nowrap shrink-0"
+                  >
+                    Read Source
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </article>
+            ))}
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
       {/* Filter Bar */}
       <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34] space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-[#071124]">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-[#071124] overflow-x-auto max-w-full">
             {([
               { id: 'ALL', label: `All Live (${liveNews.length + communityReports.length})` },
-              { id: 'NEWS', label: `Local News (${liveNews.length})` },
+              { id: 'LOCAL', label: `Local Only (${localNewsCount + communityReports.length})` },
+              { id: 'NEWS', label: `News (${liveNews.length})` },
               { id: 'COMMUNITY', label: `Community (${communityReports.length})` },
             ] as const).map((tab) => (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setSourceTab(tab.id)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
+                className={`min-h-[38px] px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   sourceTab === tab.id
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -571,19 +888,19 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-[#071124]">
-            {(['1h', '24h', '7d', 'ALL'] as const).map((tf) => (
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-[#071124]">
+            {(['24h', '7d', '30d', 'ALL'] as const).map((tf) => (
               <button
                 key={tf}
                 type="button"
                 onClick={() => setTimeFilter(tf)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
+                className={`min-h-[38px] px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   timeFilter === tf
                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {tf === 'ALL' ? 'All Time' : tf}
+                {tf === 'ALL' ? 'All Recent' : tf}
               </button>
             ))}
           </div>
@@ -596,15 +913,15 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter local alerts by keyword, street, or source..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
+              placeholder="Filter alerts by keyword, street, suburb, or source..."
+              className="w-full min-h-[44px] pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
             />
           </div>
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as any)}
             aria-label="Filter by category"
-            className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
+            className="min-h-[44px] px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
           >
             <option value="ALL">All Categories</option>
             {(Object.keys(CATEGORY_LABELS) as SafetyReportCategory[]).map((cat) => (
@@ -617,7 +934,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value as any)}
             aria-label="Filter by severity"
-            className="px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
+            className="min-h-[44px] px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white"
           >
             <option value="ALL">All Severities</option>
             <option value="CRITICAL">Critical</option>
@@ -637,26 +954,38 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               Loading live local safety updates...
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Checking local news feeds, weather conditions, and verified community reports for your location.
+              Checking local, provincial, and breaking safety feeds plus SAPS area risk for your location.
             </p>
           </div>
         ) : combinedItems.length === 0 ? (
-          <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34] text-center">
-            <AlertTriangle className="w-7 h-7 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              {locationInfo
-                ? `No matching live alerts in ${locationInfo.displayLocation}`
-                : 'Set your location to load live local safety updates'}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {locationInfo
-                ? 'Try clearing your filters, expanding the radius, or submit a live community report if you spot a hazard nearby.'
-                : 'Tap "Use My Live GPS" or type your suburb/city above — Safety Feed never displays placeholder or fake alerts.'}
-            </p>
+          <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1b34] text-center space-y-3">
+            <AlertTriangle className="w-7 h-7 text-slate-400 mx-auto" />
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                {locationInfo
+                  ? `No matching alerts under your current filters for ${locationInfo.displayLocation}`
+                  : 'Set your location to load live local safety updates'}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {locationInfo
+                  ? 'Reset your timeframe or category filter to view all local, provincial, and national breaking updates.'
+                  : 'Tap "Use My Live GPS" or enter your suburb/city above — Safety Feed never displays fake placeholder alerts.'}
+              </p>
+            </div>
+            {locationInfo && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="min-h-[44px] px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           combinedItems.map((item) => {
             if (item.kind === 'NEWS') {
+              const scopeTag = item.scope ? SCOPE_LABELS[item.scope] : 'Local';
               return (
                 <article
                   key={item.id}
@@ -664,8 +993,8 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">
-                        <Newspaper className="w-3.5 h-3.5" /> Live Local News
+                      <span className="inline-flex items-center gap-1 font-semibold text-cyan-600 dark:text-cyan-400">
+                        <Newspaper className="w-3.5 h-3.5" /> {scopeTag} News
                       </span>
                       <span aria-hidden="true">·</span>
                       <span className={severityTone(item.severity)}>{item.severity}</span>
@@ -674,7 +1003,10 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                       <span aria-hidden="true">·</span>
                       <span>{item.areaName}</span>
                     </div>
-                    <span className="tabular-nums">{formatRelativeTime(item.timestamp)}</span>
+                    <span className="tabular-nums">
+                      {new Date(item.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ·{' '}
+                      {formatRelativeTime(item.timestamp)}
+                    </span>
                   </div>
 
                   <h3 className="text-base font-bold text-slate-900 dark:text-white leading-snug">
@@ -687,12 +1019,18 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
                     <div className="text-xs text-slate-500 dark:text-slate-400">
                       Source: <span className="font-medium text-slate-700 dark:text-slate-200">{item.source}</span>
+                      {item.provider === 'FREENEWSAPI' && (
+                        <>
+                          <span className="mx-1.5" aria-hidden="true">·</span>
+                          <span>FreeNewsAPI</span>
+                        </>
+                      )}
                     </div>
                     <a
-                      href={item.url}
+                      href={resolveArticleHref(item.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 transition-colors inline-flex items-center gap-1.5 no-underline"
+                      className="min-h-[40px] px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 transition-colors inline-flex items-center gap-1.5 no-underline whitespace-nowrap shrink-0"
                     >
                       Read Source
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -717,7 +1055,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
                       <Users className="w-3.5 h-3.5" /> Community Report
                     </span>
                     <span aria-hidden="true">·</span>
@@ -746,7 +1084,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                 <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
                   <div className="text-xs text-slate-500 dark:text-slate-400">
                     Reporter: <span className="font-medium text-slate-700 dark:text-slate-200">{item.reporterName}</span>
-                    <span className="mx-2">·</span>
+                    <span className="mx-2" aria-hidden="true">·</span>
                     <span>Status: {item.status}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -754,20 +1092,22 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                       type="button"
                       onClick={() => handleVerifyReport(item.id)}
                       disabled={isVerified}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 ${
+                      className={`min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                         isVerified
                           ? 'border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
                           : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
                       }`}
                     >
                       {isVerified ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ThumbsUp className="w-3.5 h-3.5" />}
-                      <span className="tabular-nums">{isVerified ? 'Confirmed' : 'Confirm'} ({item.verifications})</span>
+                      <span className="tabular-nums">
+                        {isVerified ? 'Confirmed' : 'Confirm'} ({item.verifications})
+                      </span>
                     </button>
                     {onOpenMap && (
                       <button
                         type="button"
                         onClick={onOpenMap}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 transition-colors"
+                        className="min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 transition-colors whitespace-nowrap shrink-0"
                       >
                         View Map
                       </button>
@@ -795,7 +1135,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                 type="button"
                 onClick={() => setIsReportModalOpen(false)}
                 aria-label="Close modal"
-                className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -812,7 +1152,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Broken traffic light or suspicious vehicle"
-                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
+                  className="w-full min-h-[44px] px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -824,7 +1164,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as SafetyReportCategory)}
-                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
+                    className="w-full min-h-[44px] px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
                   >
                     {(Object.keys(CATEGORY_LABELS) as SafetyReportCategory[]).map((cat) => (
                       <option key={cat} value={cat}>
@@ -841,7 +1181,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   <select
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value as any)}
-                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
+                    className="w-full min-h-[44px] px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -860,7 +1200,7 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                   value={areaName}
                   onChange={(e) => setAreaName(e.target.value)}
                   placeholder={locationInfo?.displayLocation || 'Your current street or suburb'}
-                  className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
+                  className="w-full min-h-[44px] px-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#071124] text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -882,14 +1222,14 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(false)}
-                  className="px-4 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                  className="min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReport}
-                  className="px-5 py-2.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
+                  className="min-h-[44px] px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
                 >
                   {submittingReport ? 'Publishing...' : 'Publish Safety Alert'}
                 </button>

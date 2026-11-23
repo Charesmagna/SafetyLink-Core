@@ -783,6 +783,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       oneHandedReach: false,
       dangerZoneAlerts: true,
       dangerZoneRadiusKm: 3,
+      hotspotAlertSound: true,
     };
     const merged: DisplaySettings = { ...defaults, ...getStoredJSON<Partial<DisplaySettings>>('sl_display_settings', {}) };
     if (typeof document !== 'undefined') {

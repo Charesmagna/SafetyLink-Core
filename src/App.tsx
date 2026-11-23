@@ -3,7 +3,7 @@ import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
 import { App as CapacitorApp } from '@capacitor/app';
-import React, { useEffect, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PanicButton } from './components/PanicButton';
 import { initFirebaseSync } from './services/FirebaseSyncService';
@@ -61,7 +61,14 @@ const ClientDatabaseModule = lazy(() => import('./components/ClientDatabaseModul
 const LiveCameraFeed = lazy(() => import('./components/LiveCameraFeed').then(m => ({ default: m.LiveCameraFeed })));
 const SafetyFeed = lazy(() => import('./components/SafetyFeed').then(m => ({ default: m.SafetyFeed })));
 import { getR2StreamUrl } from './utils/r2Assets';
-import { findNearestDangerZone } from './utils/safetyProximity';
+import {
+  findNearestDangerZone,
+  getSafetyTipsForZone,
+  haversineKm,
+  playHotspotAlertChime,
+  shouldPlayHotspotChime,
+} from './utils/safetyProximity';
+import { getLocalSapsHotspotsNear } from './utils/crimeHotspots';
 import { PrivacyNoticeModal } from './components/PrivacyNoticeModal';
 import { IncomingEmergencyRingModal } from './components/IncomingEmergencyRingModal';
 import { SLShieldLogo } from './components/SLShieldLogo';
@@ -175,6 +182,77 @@ const App: React.FC = () => {
   const displaySettings = useAppStore((s) => s.displaySettings);
   const setDisplaySettings = useAppStore((s) => s.setDisplaySettings);
   const dangerZones = useAppStore((s) => s.dangerZones);
+  const setDangerZones = useAppStore((s) => s.setDangerZones);
+  const hotspotUserLocation = useAppStore((s) => s.userLocation);
+  const hotspotSosState = useAppStore((s) => s.activeSOSState);
+  const lastHotspotSyncRef = useRef<{ lat: number; lng: number; at: number } | null>(null);
+
+  // Auto-hydrate Crime Hotspot advisories (instant SAPS precinct baseline + background live Safety Feed sync)
+  useEffect(() => {
+    if (!displaySettings.dangerZoneAlerts) return;
+    if (!hotspotUserLocation || !Number.isFinite(hotspotUserLocation.lat) || !Number.isFinite(hotspotUserLocation.lng)) return;
+    if (hotspotUserLocation.lat === 0 && hotspotUserLocation.lng === 0) return;
+
+    const now = Date.now();
+    const prev = lastHotspotSyncRef.current;
+    const movedKm = prev ? haversineKm(prev.lat, prev.lng, hotspotUserLocation.lat, hotspotUserLocation.lng) : Infinity;
+    if (prev && now - prev.at < 10 * 60_000 && movedKm < 2) return;
+    lastHotspotSyncRef.current = { lat: hotspotUserLocation.lat, lng: hotspotUserLocation.lng, at: now };
+
+    // 1. Instant offline-capable SAPS precinct baseline
+    const localSaps = getLocalSapsHotspotsNear(hotspotUserLocation.lat, hotspotUserLocation.lng, 25);
+    if (localSaps.length > 0 && useAppStore.getState().dangerZones.length === 0) {
+      setDangerZones(localSaps.map(({ distanceKm: _d, insidePerimeter: _in, ...zone }) => zone));
+    }
+
+    // 2. Background live enrichment (live crime news spikes + community reports + weather hazards)
+    const customBase = (useAppStore.getState().customBackendUrl || '').trim().replace(/\/+$/, '');
+    const candidates = Capacitor.isNativePlatform()
+      ? [customBase || 'https://api.safetylink.online', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev']
+      : ['', customBase || 'https://api.safetylink.online'];
+
+    let cancelled = false;
+    (async () => {
+      const qs = `lat=${encodeURIComponent(String(hotspotUserLocation.lat))}&lng=${encodeURIComponent(String(hotspotUserLocation.lng))}&radiusKm=25`;
+      for (const base of candidates) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(`${base}/api/safety-feed/live?${qs}`);
+          const data = await res.json().catch(() => null);
+          if (res.ok && data && Array.isArray(data.advisories)) {
+            if (!cancelled) {
+              setDangerZones(data.advisories);
+            }
+            return;
+          }
+        } catch {}
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hotspotUserLocation?.lat, hotspotUserLocation?.lng, displaySettings.dangerZoneAlerts, setDangerZones]);
+
+  // Optional gentle caution chime when entering a HIGH / CRITICAL crime hotspot (never during active SOS)
+  useEffect(() => {
+    if (!displaySettings.dangerZoneAlerts || displaySettings.hotspotAlertSound === false) return;
+    if (hotspotSosState !== 'IDLE') return;
+    const match = findNearestDangerZone(hotspotUserLocation, dangerZones, displaySettings.dangerZoneRadiusKm || 3);
+    if (!match) return;
+    if (match.zone.riskLevel !== 'CRITICAL' && match.zone.riskLevel !== 'HIGH') return;
+    if (shouldPlayHotspotChime(match.zone.id)) {
+      playHotspotAlertChime(match.zone.riskLevel === 'CRITICAL');
+    }
+  }, [
+    hotspotUserLocation?.lat,
+    hotspotUserLocation?.lng,
+    dangerZones,
+    displaySettings.dangerZoneAlerts,
+    displaySettings.dangerZoneRadiusKm,
+    displaySettings.hotspotAlertSound,
+    hotspotSosState,
+  ]);
 
   // Keep Theme (Light / Deep-Navy Dark / System Auto) and Auto Screen-Fit synced on resize & OS changes
   useEffect(() => {
@@ -1085,27 +1163,57 @@ const App: React.FC = () => {
           {activeTab === 'home' && (
             <div className="flex flex-col items-center min-h-full animate-fadeIn text-center py-1 gap-2.5">
 
-              {/* SAFETY FEED PROXIMITY ADVISORY BANNER */}
-              {nearestDanger && (
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('safety')}
-                  className="w-full rounded-2xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-950/40 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left transition-colors hover:bg-amber-100/80 dark:hover:bg-amber-950/60"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 truncate">
-                      {nearestDanger.insidePerimeter ? 'High-Alert Zone: ' : 'Advisory Nearby: '}
-                      {nearestDanger.zone.name}
+              {/* CRIME HOTSPOT & PROXIMITY ADVISORY BANNER */}
+              {nearestDanger && (() => {
+                const isCrit = nearestDanger.zone.riskLevel === 'CRITICAL';
+                const topTip = getSafetyTipsForZone(nearestDanger.zone)[0];
+                return (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('safety')}
+                    className={`w-full min-h-[56px] rounded-2xl border px-3.5 py-3 flex items-center justify-between gap-3 text-left transition-colors ${
+                      isCrit
+                        ? 'border-red-300 dark:border-red-500/45 bg-red-50 dark:bg-red-950/40 hover:bg-red-100/80 dark:hover:bg-red-950/60'
+                        : 'border-amber-300 dark:border-amber-500/45 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-950/60'
+                    }`}
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <div
+                        className={`text-xs font-bold truncate ${
+                          isCrit ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'
+                        }`}
+                      >
+                        {nearestDanger.insidePerimeter
+                          ? isCrit
+                            ? 'Crime Hotspot Alert: '
+                            : 'High-Risk Area: '
+                          : 'Crime Hotspot Nearby: '}
+                        {nearestDanger.zone.name}
+                      </div>
+                      <div className="text-[11px] text-slate-700 dark:text-slate-200 truncate">
+                        {topTip}
+                      </div>
+                      <div
+                        className={`text-[10px] truncate tabular-nums ${
+                          isCrit ? 'text-red-600/90 dark:text-red-400/90' : 'text-amber-700 dark:text-amber-400/90'
+                        }`}
+                      >
+                        {nearestDanger.insidePerimeter
+                          ? 'Inside hotspot perimeter'
+                          : `${nearestDanger.distanceKm.toFixed(1)} km away`}{' '}
+                        · Tap for Safety Feed &amp; live alerts
+                      </div>
                     </div>
-                    <div className="text-[10px] text-amber-700 dark:text-amber-400/90 truncate tabular-nums">
-                      {nearestDanger.distanceKm.toFixed(1)} km away · Tap for safety feed &amp; advisory
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0 whitespace-nowrap">
-                    View →
-                  </span>
-                </button>
-              )}
+                    <span
+                      className={`text-xs font-bold shrink-0 whitespace-nowrap ${
+                        isCrit ? 'text-red-700 dark:text-red-300' : 'text-amber-800 dark:text-amber-300'
+                      }`}
+                    >
+                      View →
+                    </span>
+                  </button>
+                );
+              })()}
 
               {/* OFFLINE QUEUE INDICATOR */}
               {localOfflineQueue && localOfflineQueue.length > 0 && (

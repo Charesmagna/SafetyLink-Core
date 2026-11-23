@@ -15,6 +15,10 @@ import {
   claimQrLink,
   getIncomingMutualLinks,
 } from './qr-link';
+import {
+  handleWorkerLiveSafetyFeed,
+  resolveFreeNewsArticleUrl,
+} from './safety-feed';
 // SafetyLink Cloudflare Worker — Full Backend
 // Hono framework, D1 database, all emergency dispatch routes
 
@@ -38,6 +42,7 @@ export interface Env {
   RELEASES?: any;
   MEDIA?: any;
   FCM_SERVICE_ACCOUNT?: string;
+  FREENEWSAPI_KEY?: string;
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
@@ -644,6 +649,35 @@ app.get('/api/link/incoming', async (c) => {
   const ack = c.req.query('ack') === '1' || c.req.query('ack') === 'true';
   const out = await getIncomingMutualLinks(c.env.DB, phone, ack);
   return c.json(out.json, out.status as any);
+});
+
+// ── LIVE LOCAL SAFETY FEED (FreeNewsAPI.io + Fresh RSS + Open-Meteo) ────────
+app.get('/api/safety-feed/live', async (c) => {
+  const latRaw = c.req.query('lat');
+  const lngRaw = c.req.query('lng');
+  const query = c.req.query('query') || '';
+  const radiusKm = Number(c.req.query('radiusKm') || 25);
+  const origin = new URL(c.req.url).origin;
+  const out = await handleWorkerLiveSafetyFeed(c.env, origin, {
+    lat: latRaw !== undefined ? Number(latRaw) : undefined,
+    lng: lngRaw !== undefined ? Number(lngRaw) : undefined,
+    query,
+    radiusKm,
+  });
+  return c.json(out.json, out.status as any);
+});
+
+app.get('/api/safety-feed/article/:uuid', async (c) => {
+  const uuid = c.req.param('uuid') || '';
+  const apiKey = String((c.env as any).FREENEWSAPI_KEY || '').trim();
+  const resolved = await resolveFreeNewsArticleUrl(apiKey, uuid);
+  if (!resolved.ok || !resolved.url) {
+    return c.json({ ok: false, error: resolved.error || 'Article not found' }, 404);
+  }
+  if (c.req.query('format') === 'json') {
+    return c.json({ ok: true, url: resolved.url, article: resolved.article });
+  }
+  return c.redirect(resolved.url, 302);
 });
 
 // Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)

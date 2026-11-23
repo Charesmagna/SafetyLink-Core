@@ -514,9 +514,15 @@ export const Settings: React.FC = () => {
               },
               {
                 key: 'dangerZoneAlerts',
-                title: 'Danger-Zone Proximity Advisories',
-                desc: 'Warn when approaching or entering a reported high-incident area',
+                title: 'Crime Hotspot & Danger-Zone Warnings',
+                desc: 'Warn when approaching or entering a high-risk crime precinct or active hazard area',
                 value: displaySettings.dangerZoneAlerts,
+              },
+              {
+                key: 'hotspotAlertSound',
+                title: 'Hotspot Entry Alert Chime',
+                desc: 'Play a brief caution chime once when entering a high-risk crime hotspot',
+                value: displaySettings.hotspotAlertSound !== false,
               },
             ] as const).map((item) => (
               <div key={item.key} className="flex items-center justify-between gap-3">

@@ -1,3 +1,4 @@
+import "dotenv/config";
 let panicQueue: any = null;
 function getPanicQueue() {
   if (!panicQueue) {
@@ -19,6 +20,7 @@ function getPanicQueue() {
 }
 console.log("STARTING SERVER SCRIPT PID:", process.pid);
 import { createIncident, processPanicAlert } from "./src/services/panic-alert";
+import { evaluateAreaHotspots } from "./src/utils/crimeHotspots";
 import { ussdRouter } from "./src/routes/ussd";
 import { r2Router } from "./src/routes/r2-media";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -1367,11 +1369,86 @@ Rules:
       const effectiveCoords = Number.isFinite(resolvedLat) && Number.isFinite(resolvedLng) && (resolvedLat !== 0 || resolvedLng !== 0);
       const searchArea = [suburb, city || state].filter(Boolean).join(" ") || queryText || displayLocation;
 
-      // 2. Fetch real live local safety/emergency/traffic news via Google News RSS for THIS exact location
-      const newsPromise = (async () => {
-        if (!searchArea) return [];
-        const q = `"${city || suburb || queryText}" (crime OR police OR safety OR traffic OR accident OR fire OR outage OR emergency OR weather)`;
-        const gl = /^[A-Z]{2}$/.test(countryCode) ? countryCode : "US";
+      // 2. Fetch genuinely recent local news via 3-tier waterfall (Local -> Province -> National Breaking)
+      // powered by FreeNewsAPI.io (cached 5 min) + fresh Google News RSS (when:14d / when:7d)
+      const areaLabel = [suburb, city].filter(Boolean).join(", ") || displayLocation;
+      const nowMs = Date.now();
+      const cutoff14d = nowMs - 14 * 86_400_000;
+      const cutoff30d = nowMs - 30 * 86_400_000;
+      const safetyKeywordRe = /\b(crime|police|saps|jmpd|metro\s*police|arrest|robbery|hijack|shooting|murder|assault|theft|burglary|gang|protest|riot|strike|traffic|accident|crash|collision|road\s*clos|closure|fire|wildfire|blaze|flood|flooding|storm|thundershower|rain|rainfall|hail|heatwave|warning|weather|saws|outage|load\s*shed|blackout|water\s*cut|burst\s*pipe|emergency|ems|ambulance|rescue|evacuat|hazard|alert|safety|security)\b/i;
+
+      const freeNewsCache: Map<string, { expiresAt: number; items: any[] }> =
+        ((globalThis as any).__SL_FREENEWS_CACHE__ ||= new Map());
+
+      const sanitizeFreeNewsTerm = (raw: string) =>
+        String(raw || "")
+          .replace(/[^a-zA-Z0-9\s-]/g, " ")
+          .split(/\s+/)
+          .map((t) => t.trim())
+          .filter((t) => t.length >= 2)
+          .slice(0, 4)
+          .join(" ");
+
+      const fetchFreeNewsTerm = async (apiKey: string, term: string): Promise<any[]> => {
+        const cleanTerm = sanitizeFreeNewsTerm(term);
+        if (!cleanTerm || !apiKey) return [];
+        const cKey = cleanTerm.toLowerCase();
+        const hit = freeNewsCache.get(cKey);
+        if (hit && hit.expiresAt > Date.now()) return hit.items;
+        try {
+          // FreeNewsAPI.io /v1/news requires in_title without language=en to avoid upstream 500
+          const fnUrl = `https://api.freenewsapi.io/v1/news?in_title=${encodeURIComponent(cleanTerm)}&page_size=25`;
+          const resp = await fetch(fnUrl, {
+            headers: { "x-api-key": apiKey, Accept: "application/json" },
+            signal: AbortSignal.timeout(7000),
+          });
+          if (!resp.ok) return [];
+          const json: any = await resp.json().catch(() => ({}));
+          const rows = Array.isArray(json?.data) ? json.data : [];
+          freeNewsCache.set(cKey, { expiresAt: Date.now() + 5 * 60_000, items: rows });
+          return rows;
+        } catch (fnErr) {
+          console.warn("[safety-feed] FreeNewsAPI fetch error:", (fnErr as any)?.message);
+          return [];
+        }
+      };
+
+      type FeedScope = "LOCAL" | "PROVINCE" | "NATIONAL";
+      const mapFreeNewsRows = (rows: any[], scope: FeedScope, scopeLabel: string) =>
+        rows
+          .map((item: any) => {
+            const title = String(item?.title || "").trim();
+            const uuid = String(item?.uuid || "").trim();
+            const parsedTime = Date.parse(String(item?.published_at || ""));
+            const timestamp = Number.isFinite(parsedTime) ? parsedTime : nowMs;
+            const publisher = String(item?.publisher || "Local News").trim();
+            if (!title || !uuid) return null;
+            const safetyRelevant = safetyKeywordRe.test(title);
+            return {
+              id: `freenews-${uuid}`,
+              title,
+              description: `Recent ${scope.toLowerCase()} report by ${publisher} for ${scopeLabel}. Tap Read Source to open the full article.`,
+              source: publisher,
+              provider: "FREENEWSAPI" as const,
+              scope,
+              scopeLabel,
+              isBreaking: timestamp >= nowMs - 48 * 3600_000 && safetyRelevant,
+              url: `/api/safety-feed/article/${encodeURIComponent(uuid)}`,
+              category: classifySafetyCategory(title),
+              severity: classifySafetySeverity(title),
+              safetyRelevant,
+              areaName: scopeLabel,
+              timestamp,
+              feedType: "LIVE_NEWS" as const,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+      const fetchRssScope = async (term: string, scope: FeedScope, scopeLabel: string, whenWindow: string) => {
+        const clean = String(term || "").trim();
+        if (!clean) return [];
+        const q = `"${clean}" (crime OR police OR saps OR hijacking OR safety OR traffic OR accident OR fire OR outage OR emergency OR weather) when:${whenWindow}`;
+        const gl = /^[A-Z]{2}$/.test(countryCode) ? countryCode : "ZA";
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en&gl=${gl}&ceid=${gl}:en`;
         try {
           const rssResp = await fetch(rssUrl, {
@@ -1380,47 +1457,107 @@ Rules:
           });
           if (!rssResp.ok) return [];
           const xml = await rssResp.text();
-          const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, 18);
-          const parsedItems = itemMatches.map((m, idx) => {
-            const block = m[1];
-            const rawTitle = block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "";
-            const rawLink = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
-            const rawDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "";
-            const rawSource = block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || "";
-            const rawDesc = block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || "";
+          const itemMatches = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)].slice(0, 15);
+          return itemMatches
+            .map((m, idx) => {
+              const block = m[1];
+              const rawTitle = block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "";
+              const rawLink = block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "";
+              const rawDate = block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "";
+              const rawSource = block.match(/<source[^>]*>([\s\S]*?)<\/source>/i)?.[1] || "";
+              const rawDesc = block.match(/<description>([\s\S]*?)<\/description>/i)?.[1] || "";
 
-            const cleanTitle = decodeXmlEntities(rawTitle);
-            const sourceName = decodeXmlEntities(rawSource) || "Local News";
-            // Remove trailing " - Publisher" duplicate if present
-            const titleWithoutSource = sourceName && cleanTitle.endsWith(` - ${sourceName}`)
-              ? cleanTitle.slice(0, -(` - ${sourceName}`).length).trim()
-              : cleanTitle;
-            const cleanDesc = decodeXmlEntities(rawDesc);
-            const parsedTime = Date.parse(rawDate);
-            const timestamp = Number.isFinite(parsedTime) ? parsedTime : Date.now();
-            const combined = `${titleWithoutSource} ${cleanDesc}`;
-
-            return {
-              id: `news-${timestamp}-${idx}`,
-              title: titleWithoutSource,
-              description: cleanDesc && cleanDesc !== cleanTitle ? cleanDesc : `Live local safety update reported by ${sourceName} for ${city || suburb || displayLocation}.`,
-              source: sourceName,
-              url: decodeXmlEntities(rawLink),
-              category: classifySafetyCategory(combined),
-              severity: classifySafetySeverity(combined),
-              areaName: [suburb, city].filter(Boolean).join(", ") || displayLocation,
-              timestamp,
-              feedType: "LIVE_NEWS" as const,
-            };
-          });
-          // Sort newest first
-          return parsedItems
-            .filter((i) => i.title.length > 5 && i.url.startsWith("http"))
-            .sort((a, b) => b.timestamp - a.timestamp);
+              const cleanTitle = decodeXmlEntities(rawTitle);
+              const sourceName = decodeXmlEntities(rawSource) || "Local News";
+              const titleWithoutSource =
+                sourceName && cleanTitle.endsWith(` - ${sourceName}`)
+                  ? cleanTitle.slice(0, -(` - ${sourceName}`).length).trim()
+                  : cleanTitle;
+              const cleanDesc = decodeXmlEntities(rawDesc);
+              const parsedTime = Date.parse(rawDate);
+              const timestamp = Number.isFinite(parsedTime) ? parsedTime : 0;
+              const combined = `${titleWithoutSource} ${cleanDesc}`;
+              const url = decodeXmlEntities(rawLink);
+              if (!titleWithoutSource || titleWithoutSource.length <= 5 || !/^https?:\/\//i.test(url) || !timestamp) {
+                return null;
+              }
+              const safetyRelevant = safetyKeywordRe.test(combined);
+              return {
+                id: `news-${scope.toLowerCase()}-${timestamp}-${idx}`,
+                title: titleWithoutSource,
+                description:
+                  cleanDesc && cleanDesc !== cleanTitle
+                    ? cleanDesc
+                    : `Live ${scope.toLowerCase()} safety update reported by ${sourceName} for ${scopeLabel}.`,
+                source: sourceName,
+                provider: "GOOGLE_RSS" as const,
+                scope,
+                scopeLabel,
+                isBreaking: timestamp >= nowMs - 48 * 3600_000 && safetyRelevant,
+                url,
+                category: classifySafetyCategory(combined),
+                severity: classifySafetySeverity(combined),
+                safetyRelevant,
+                areaName: scopeLabel,
+                timestamp,
+                feedType: "LIVE_NEWS" as const,
+              };
+            })
+            .filter((x): x is NonNullable<typeof x> => Boolean(x));
         } catch (rssErr) {
           console.warn("[safety-feed] Live RSS fetch error:", (rssErr as any)?.message);
           return [];
         }
+      };
+
+      const freeNewsKey = (process.env.FREENEWSAPI_KEY || "").trim();
+      const primaryLocalTerm = city || suburb || queryText || state;
+      const provinceTerm = state && state.toLowerCase() !== primaryLocalTerm.toLowerCase() ? state : "";
+      const nationalTerm = country || "South Africa";
+
+      const newsWaterfallPromise = (async () => {
+        // Tier 1: Local area
+        const [localFnRows, localRss] = await Promise.all([
+          freeNewsKey && primaryLocalTerm ? fetchFreeNewsTerm(freeNewsKey, primaryLocalTerm) : Promise.resolve([]),
+          primaryLocalTerm ? fetchRssScope(primaryLocalTerm, "LOCAL", areaLabel, "14d") : Promise.resolve([]),
+        ]);
+        const localFn = mapFreeNewsRows(localFnRows, "LOCAL", areaLabel);
+        const localFreshCount = [...localFn, ...localRss].filter((i) => i.timestamp >= cutoff14d).length;
+
+        // Tier 2: Province fallback if immediate area is quiet (< 5 fresh items)
+        let provinceItems: any[] = [];
+        if (localFreshCount < 5 && provinceTerm) {
+          const provRssPromise = fetchRssScope(provinceTerm, "PROVINCE", provinceTerm, "14d");
+          const provFnPromise = freeNewsKey
+            ? (async () => {
+                await new Promise((r) => setTimeout(r, 1050));
+                return mapFreeNewsRows(await fetchFreeNewsTerm(freeNewsKey, provinceTerm), "PROVINCE", provinceTerm);
+              })()
+            : Promise.resolve([]);
+          const [pFn, pRss] = await Promise.all([provFnPromise, provRssPromise]);
+          provinceItems = [...pFn, ...pRss];
+        }
+
+        // Tier 3: National breaking safety fallback if Local + Province < 6 fresh items
+        const localAndProvCount = localFreshCount + provinceItems.filter((i) => i.timestamp >= cutoff14d).length;
+        let nationalItems: any[] = [];
+        if (localAndProvCount < 6 && nationalTerm) {
+          const natRssPromise = fetchRssScope(nationalTerm, "NATIONAL", `${nationalTerm} Breaking`, "7d");
+          const natFnPromise = freeNewsKey
+            ? (async () => {
+                await new Promise((r) => setTimeout(r, 1050));
+                return mapFreeNewsRows(
+                  await fetchFreeNewsTerm(freeNewsKey, nationalTerm),
+                  "NATIONAL",
+                  `${nationalTerm} Breaking`
+                );
+              })()
+            : Promise.resolve([]);
+          const [nFn, nRss] = await Promise.all([natFnPromise, natRssPromise]);
+          nationalItems = [...nFn, ...nRss];
+        }
+
+        return [...localFn, ...localRss, ...provinceItems, ...nationalItems];
       })();
 
       // 3. Fetch real live weather conditions & hazard detection from Open-Meteo for exact coordinates
@@ -1430,7 +1567,7 @@ Rules:
           const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${resolvedLat}&longitude=${resolvedLng}&current=temperature_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m&timezone=auto`;
           const wResp = await fetch(wUrl, { signal: AbortSignal.timeout(5000) });
           if (!wResp.ok) return null;
-          const wJson = await wResp.json();
+          const wJson: any = await wResp.json();
           const cur = wJson?.current;
           if (!cur) return null;
           const code = Number(cur.weather_code ?? 0);
@@ -1466,7 +1603,7 @@ Rules:
         }
       })();
 
-      // 4. Query real SafetyLink DB community reports & active panic alerts near user's actual coordinates
+      // 4. Query real SafetyLink DB community reports near user's actual coordinates
       const dbReportsPromise = (async () => {
         try {
           const rows = await db.execute({
@@ -1476,9 +1613,10 @@ Rules:
           const mapped = (rows.rows || []).map((r: any) => {
             const rLat = Number(r.lat);
             const rLng = Number(r.lng);
-            const dist = effectiveCoords && Number.isFinite(rLat) && Number.isFinite(rLng)
-              ? haversineDistanceKm(resolvedLat, resolvedLng, rLat, rLng)
-              : null;
+            const dist =
+              effectiveCoords && Number.isFinite(rLat) && Number.isFinite(rLng)
+                ? haversineDistanceKm(resolvedLat, resolvedLng, rLat, rLng)
+                : null;
             return {
               id: String(r.id),
               title: String(r.title),
@@ -1506,59 +1644,67 @@ Rules:
         }
       })();
 
-      const [liveNews, weather, communityReports] = await Promise.all([
-        newsPromise,
+      const [rawWaterfallNews, weather, communityReports] = await Promise.all([
+        newsWaterfallPromise,
         weatherPromise,
         dbReportsPromise,
       ]);
 
-      // Build honest live advisories strictly from real nearby reports or active weather hazards
-      const advisories: Array<{
-        id: string;
-        name: string;
-        area: string;
-        lat: number;
-        lng: number;
-        radiusMeters: number;
-        riskLevel: "MODERATE" | "HIGH" | "CRITICAL";
-        advisory: string;
-        recentIncidents: number;
-        updatedAt: number;
-      }> = [];
-
-      if (weather?.hazardous && effectiveCoords) {
-        advisories.push({
-          id: `wx-${Math.round(resolvedLat * 100)}-${Math.round(resolvedLng * 100)}`,
-          name: `Live Weather Advisory — ${city || suburb || displayLocation}`,
-          area: displayLocation,
-          lat: resolvedLat,
-          lng: resolvedLng,
-          radiusMeters: radiusKm * 1000,
-          riskLevel: "MODERATE",
-          advisory: weather.advisoryText || weather.condition,
-          recentIncidents: 1,
-          updatedAt: Date.now(),
-        });
+      // Deduplicate, filter sports/finance noise, enforce strict freshness (<=14d preferred, <=30d max)
+      const nonSafetyNoiseRe = /\b(cricket|icc|test\s*match|premier\s*league|champions\s*league|rugby|springboks|proteas|bafana|kaizer\s*chiefs|orlando\s*pirates|sundowns|tournament|box\s*office|album|concert|bourse|stock\s*exchange|share\s*price|dividend|earnings|tennis|golf|formula\s*1|grand\s*prix)\b/i;
+      const seenTitles = new Set<string>();
+      const combinedNews: any[] = [];
+      for (const item of rawWaterfallNews) {
+        if (!item.safetyRelevant && nonSafetyNoiseRe.test(String(item.title || ""))) continue;
+        const key = String(item.title || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 64);
+        if (!key || seenTitles.has(key)) continue;
+        seenTitles.add(key);
+        combinedNews.push(item);
       }
 
-      const activeHighReports = communityReports.filter(
-        (r) => r.status !== "RESOLVED" && (r.severity === "HIGH" || r.severity === "CRITICAL")
-      );
-      if (activeHighReports.length > 0 && effectiveCoords) {
-        const top = activeHighReports[0];
-        advisories.push({
-          id: `comm-adv-${top.id}`,
-          name: `${top.areaName} — Active Community Alert`,
-          area: top.areaName,
-          lat: top.lat,
-          lng: top.lng,
-          radiusMeters: 1500,
-          riskLevel: top.severity === "CRITICAL" ? "CRITICAL" : "HIGH",
-          advisory: `${top.title}: ${top.description}`,
-          recentIncidents: activeHighReports.length,
-          updatedAt: top.timestamp,
-        });
+      let freshNews = combinedNews.filter((i) => i.timestamp >= cutoff14d);
+      if (freshNews.length < 4) {
+        freshNews = combinedNews.filter((i) => i.timestamp >= cutoff30d);
       }
+      const safetyOnlyFresh = freshNews.filter((i) => i.safetyRelevant);
+      if (safetyOnlyFresh.length >= 5) {
+        freshNews = safetyOnlyFresh;
+      }
+
+      const scopeRank: Record<FeedScope, number> = { LOCAL: 0, PROVINCE: 1, NATIONAL: 2 };
+      freshNews.sort((a, b) => {
+        const sDiff = (scopeRank[a.scope as FeedScope] ?? 2) - (scopeRank[b.scope as FeedScope] ?? 2);
+        if (sDiff !== 0) return sDiff;
+        const dayBucketDiff = Math.floor(b.timestamp / 86_400_000) - Math.floor(a.timestamp / 86_400_000);
+        if (dayBucketDiff !== 0) return dayBucketDiff;
+        if (a.safetyRelevant !== b.safetyRelevant) return a.safetyRelevant ? -1 : 1;
+        return b.timestamp - a.timestamp;
+      });
+
+      const liveNews = freshNews.slice(0, 24).map(({ safetyRelevant: _sr, ...rest }) => rest);
+
+      const cutoff72h = nowMs - 72 * 3600_000;
+      const breakingHeadlines = [...liveNews]
+        .filter((i) => i.timestamp >= cutoff72h)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 4);
+
+      const scopeCounts = {
+        local: liveNews.filter((i) => i.scope === "LOCAL").length,
+        province: liveNews.filter((i) => i.scope === "PROVINCE").length,
+        national: liveNews.filter((i) => i.scope === "NATIONAL").length,
+      };
+
+      // Unified Crime Hotspot Engine: SAPS Precincts + Live Local Crime Spikes + Community Reports + Severe Weather
+      const { advisories, hotspotStatus } = evaluateAreaHotspots({
+        lat: effectiveCoords ? resolvedLat : null,
+        lng: effectiveCoords ? resolvedLng : null,
+        radiusKm,
+        areaLabel,
+        recentLocalNews: liveNews,
+        communityReports,
+        weather,
+      });
 
       res.json({
         location: {
@@ -1573,14 +1719,62 @@ Rules:
         },
         radiusKm,
         weather,
+        hotspotStatus,
         advisories,
+        breakingHeadlines,
         communityReports,
         liveNews,
+        newsProviders: {
+          freeNewsApiActive: Boolean(freeNewsKey),
+          freeNewsCount: liveNews.filter((i) => i.provider === "FREENEWSAPI").length,
+          rssCount: liveNews.filter((i) => i.provider === "GOOGLE_RSS").length,
+          scopeCounts,
+        },
         fetchedAt: Date.now(),
       });
     } catch (e: any) {
       console.error("[/api/safety-feed/live]", e);
       res.status(500).json({ error: e?.message || "Failed to load live safety feed" });
+    }
+  });
+
+  // Resolve FreeNewsAPI article UUID to original publisher URL on demand (cached 1h, keeps API key strictly server-side)
+  app.get("/api/safety-feed/article/:uuid", async (req, res) => {
+    try {
+      const uuid = String(req.params.uuid || "").trim();
+      if (!/^[a-f0-9-]{20,64}$/i.test(uuid)) {
+        return res.status(400).json({ ok: false, error: "Invalid article identifier" });
+      }
+      const apiKey = (process.env.FREENEWSAPI_KEY || "").trim();
+      if (!apiKey) {
+        return res.status(503).json({ ok: false, error: "FREENEWSAPI_KEY is not configured" });
+      }
+      const articleCache: Map<string, { expiresAt: number; url: string; article: any }> =
+        ((globalThis as any).__SL_FREENEWS_ARTICLE_CACHE__ ||= new Map());
+      const cached = articleCache.get(uuid);
+      if (cached && cached.expiresAt > Date.now()) {
+        if (req.query.format === "json") return res.json({ ok: true, url: cached.url, article: cached.article });
+        return res.redirect(302, cached.url);
+      }
+
+      const resp = await fetch(`https://api.freenewsapi.io/v1/details?uuid=${encodeURIComponent(uuid)}`, {
+        headers: { "x-api-key": apiKey, Accept: "application/json" },
+        signal: AbortSignal.timeout(7000),
+      });
+      if (!resp.ok) {
+        return res.status(resp.status).json({ ok: false, error: `Article lookup failed (HTTP ${resp.status})` });
+      }
+      const json: any = await resp.json().catch(() => ({}));
+      const article = json?.data;
+      const targetUrl = typeof article?.original_url === "string" ? article.original_url.trim() : "";
+      if (!targetUrl || !/^https?:\/\//i.test(targetUrl)) {
+        return res.status(404).json({ ok: false, error: "Original article URL unavailable" });
+      }
+      articleCache.set(uuid, { expiresAt: Date.now() + 60 * 60_000, url: targetUrl, article });
+      if (req.query.format === "json") return res.json({ ok: true, url: targetUrl, article });
+      return res.redirect(302, targetUrl);
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
   });
 

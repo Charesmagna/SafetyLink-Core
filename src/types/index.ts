@@ -389,6 +389,7 @@ export interface DisplaySettings {
   oneHandedReach: boolean;
   dangerZoneAlerts: boolean;
   dangerZoneRadiusKm: number;
+  hotspotAlertSound?: boolean;
 }
 
 export type SafetyReportCategory =
@@ -426,7 +427,9 @@ export interface DangerZone {
   lng: number;
   radiusMeters: number;
   riskLevel: 'MODERATE' | 'HIGH' | 'CRITICAL';
+  sourceType?: 'SAPS_PRECINCT' | 'LIVE_CRIME_SPIKE' | 'WEATHER_HAZARD' | 'COMMUNITY_ALERT';
   advisory: string;
+  safetyTips?: string[];
   recentIncidents: number;
   updatedAt: number;
 }
