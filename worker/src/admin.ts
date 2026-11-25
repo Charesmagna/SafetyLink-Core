@@ -81,3 +81,191 @@ export async function adminDelete(db: any, phone: string) {
   await db.prepare('DELETE FROM sl_profiles WHERE phone = ?').bind(phone).run();
   return { ok: true };
 }
+
+function normalizePhoneKey(raw: string): string {
+  const digits = String(raw || '').replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('27') && digits.length === 11) return '0' + digits.slice(2);
+  if (digits.length === 9 && /^[678]/.test(digits)) return '0' + digits;
+  return digits;
+}
+
+/**
+ * Collects every customer registered anywhere across SafetyLink D1 tables
+ * (users, sl_profiles, sl_device_tokens, organisations), deduplicates by phone/email/id,
+ * and returns one complete unified Super Admin customer roster.
+ */
+export async function adminRestoreCustomers(db: any) {
+  if (!db) {
+    return { ok: false, totalCount: 0, sources: {}, users: [] };
+  }
+
+  const [appUsersRes, profilesRes, devicesRes, orgsRes, contactsRes] = await Promise.all([
+    db.prepare(
+      `SELECT id, username, email, phone, org_id, role, status, app_version, device_model, last_seen, created_at
+         FROM users ORDER BY COALESCE(last_seen, created_at) DESC LIMIT 2000`
+    ).all().catch(() => ({ results: [] })),
+    db.prepare(
+      `SELECT phone, name, updated_at FROM sl_profiles ORDER BY updated_at DESC LIMIT 2000`
+    ).all().catch(() => ({ results: [] })),
+    db.prepare(
+      `SELECT phone, COUNT(*) AS token_count, MAX(updated_at) AS last_token_at
+         FROM sl_device_tokens GROUP BY phone LIMIT 2000`
+    ).all().catch(() => ({ results: [] })),
+    db.prepare(
+      `SELECT id, name, contact_email, created_at FROM organisations ORDER BY created_at DESC LIMIT 500`
+    ).all().catch(() => ({ results: [] })),
+    db.prepare(
+      `SELECT owner_phone, COUNT(*) AS cnt FROM sl_contacts GROUP BY owner_phone LIMIT 2000`
+    ).all().catch(() => ({ results: [] })),
+  ]);
+
+  const contactCountByPhone = new Map<string, number>();
+  for (const row of (contactsRes?.results ?? []) as any[]) {
+    const k = normalizePhoneKey(row.owner_phone);
+    if (k) contactCountByPhone.set(k, (contactCountByPhone.get(k) || 0) + Number(row.cnt || 0));
+  }
+
+  const deviceByPhone = new Map<string, { count: number; lastAt: number }>();
+  for (const row of (devicesRes?.results ?? []) as any[]) {
+    const k = normalizePhoneKey(row.phone);
+    if (k) {
+      deviceByPhone.set(k, {
+        count: Number(row.token_count || 0),
+        lastAt: Number(row.last_token_at || 0),
+      });
+    }
+  }
+
+  const unified = new Map<string, any>();
+
+  const upsert = (key: string, patch: any) => {
+    const existing = unified.get(key);
+    if (!existing) {
+      unified.set(key, {
+        ...patch,
+        sources: Array.from(new Set(patch.sources || [])),
+      });
+      return;
+    }
+    unified.set(key, {
+      ...existing,
+      fullName: existing.fullName && existing.fullName !== 'SafetyLink User' ? existing.fullName : (patch.fullName || existing.fullName),
+      username: existing.username || patch.username,
+      email: existing.email || patch.email,
+      phone: existing.phone || patch.phone,
+      orgCode: existing.orgCode || patch.orgCode,
+      role: existing.role && existing.role !== 'Community Member' ? existing.role : (patch.role || existing.role),
+      accountStatus: existing.accountStatus || patch.accountStatus || 'active',
+      contactsCount: Math.max(Number(existing.contactsCount || 0), Number(patch.contactsCount || 0)),
+      appRegistered: Boolean(existing.appRegistered || patch.appRegistered),
+      lastSeen: Math.max(Number(existing.lastSeen || 0), Number(patch.lastSeen || 0)),
+      createdAt: Math.min(Number(existing.createdAt || Date.now()), Number(patch.createdAt || Date.now())),
+      sources: Array.from(new Set([...(existing.sources || []), ...(patch.sources || [])])),
+    });
+  };
+
+  for (const u of (appUsersRes?.results ?? []) as any[]) {
+    const pKey = normalizePhoneKey(u.phone);
+    const eKey = String(u.email || '').trim().toLowerCase();
+    const dedupeKey = pKey ? `phone:${pKey}` : (eKey ? `email:${eKey}` : `id:${u.id}`);
+    const dev = pKey ? deviceByPhone.get(pKey) : undefined;
+    upsert(dedupeKey, {
+      id: String(u.id),
+      username: u.username || (u.phone ? `user_${pKey.slice(-4)}` : String(u.id)),
+      fullName: u.username || u.email || 'SafetyLink User',
+      email: u.email || '',
+      phone: u.phone || '',
+      orgCode: u.org_id || '',
+      role: u.role || 'Community Member',
+      accountStatus: u.status || 'active',
+      subscriptionStatus: u.status || 'active',
+      appVersion: u.app_version || '2.0',
+      deviceModel: u.device_model || 'Mobile Node',
+      contactsCount: pKey ? (contactCountByPhone.get(pKey) || 0) : 0,
+      appRegistered: Boolean(dev && dev.count > 0),
+      lastSeen: Number(u.last_seen || u.created_at || Date.now()),
+      createdAt: Number(u.created_at || Date.now()),
+      sources: ['d1_users'],
+    });
+  }
+
+  for (const p of (profilesRes?.results ?? []) as any[]) {
+    const pKey = normalizePhoneKey(p.phone);
+    const dedupeKey = pKey ? `phone:${pKey}` : `profile:${p.phone}`;
+    const dev = pKey ? deviceByPhone.get(pKey) : undefined;
+    upsert(dedupeKey, {
+      id: `PROF-${pKey || p.phone}`,
+      username: (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_') || `sl_${pKey.slice(-4)}`,
+      fullName: p.name || 'Zero-Airtime Profile',
+      email: '',
+      phone: p.phone || '',
+      orgCode: '',
+      role: 'Community Member',
+      accountStatus: 'active',
+      subscriptionStatus: 'active',
+      contactsCount: pKey ? (contactCountByPhone.get(pKey) || 0) : 0,
+      appRegistered: Boolean(dev && dev.count > 0),
+      lastSeen: Number(p.updated_at || Date.now()),
+      createdAt: Number(p.updated_at || Date.now()),
+      sources: ['d1_sl_profiles'],
+    });
+  }
+
+  for (const d of (devicesRes?.results ?? []) as any[]) {
+    const pKey = normalizePhoneKey(d.phone);
+    if (!pKey) continue;
+    upsert(`phone:${pKey}`, {
+      id: `DEV-${pKey}`,
+      username: `device_${pKey.slice(-4)}`,
+      fullName: `Registered Device (${d.phone})`,
+      email: '',
+      phone: d.phone || '',
+      orgCode: '',
+      role: 'Community Member',
+      accountStatus: 'active',
+      subscriptionStatus: 'active',
+      contactsCount: contactCountByPhone.get(pKey) || 0,
+      appRegistered: true,
+      lastSeen: Number(d.last_token_at || Date.now()),
+      createdAt: Number(d.last_token_at || Date.now()),
+      sources: ['d1_fcm_devices'],
+    });
+  }
+
+  for (const o of (orgsRes?.results ?? []) as any[]) {
+    const eKey = String(o.contact_email || '').trim().toLowerCase();
+    const dedupeKey = eKey ? `email:${eKey}` : `org:${o.id}`;
+    upsert(dedupeKey, {
+      id: `ORG-${o.id}`,
+      username: String(o.id || '').toLowerCase(),
+      fullName: `${o.name || o.id} (Org Admin)`,
+      email: o.contact_email || '',
+      phone: '',
+      orgCode: o.id || '',
+      role: 'Organization Administrator',
+      accountStatus: 'active',
+      subscriptionStatus: 'active',
+      contactsCount: 0,
+      appRegistered: false,
+      lastSeen: Number(o.created_at || Date.now()),
+      createdAt: Number(o.created_at || Date.now()),
+      sources: ['d1_organisations'],
+    });
+  }
+
+  const users = Array.from(unified.values()).sort((a, b) => Number(b.lastSeen || 0) - Number(a.lastSeen || 0));
+
+  return {
+    ok: true,
+    totalCount: users.length,
+    sources: {
+      d1Users: (appUsersRes?.results ?? []).length,
+      d1Profiles: (profilesRes?.results ?? []).length,
+      d1Devices: (devicesRes?.results ?? []).length,
+      d1Organisations: (orgsRes?.results ?? []).length,
+    },
+    users,
+  };
+}
+

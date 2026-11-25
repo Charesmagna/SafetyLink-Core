@@ -10,6 +10,7 @@ import {
   shouldPlayHotspotChime,
 } from '../utils/safetyProximity';
 import { AreaHotspotStatus } from '../utils/crimeHotspots';
+import { WebAdSlot } from './WebAdSlot';
 import {
   AlertTriangle,
   Bell,
@@ -1238,6 +1239,9 @@ export const SafetyFeed: React.FC<SafetyFeedProps> = ({ onOpenMap }) => {
           </div>
         </div>
       )}
+
+      {/* Web-only non-emergency partner slot (auto-hidden on native APK, SOS, and org/paid accounts) */}
+      <WebAdSlot label="Community Safety Sponsors" className="mt-4" />
     </div>
   );
 };

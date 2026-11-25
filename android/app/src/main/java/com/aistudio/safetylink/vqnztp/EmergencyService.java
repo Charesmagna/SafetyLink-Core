@@ -11,6 +11,9 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -319,10 +322,79 @@ public final class EmergencyService {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             applyPreferredSim(ctx, i);
             ctx.startActivity(i);
+            // Keep SafetyLink on screen after dialing so active call/USSD stays in status bar
+            bringSafetyLinkToFront(ctx, 1100L);
             return "DIALED(" + why + ")";
         } catch (Exception e) {
             return "FAILED";
         }
+    }
+
+    /**
+     * Returns SafetyLink's MainActivity to the foreground shortly after placing a native voice call,
+     * leveraging Display Over Other Apps / Foreground Service so Android keeps the live call active
+     * in the top notification chip while SafetyLink never exits or drops its emergency state.
+     */
+    public static void bringSafetyLinkToFront(Context ctx, long delayMs) {
+        if (ctx == null) return;
+        final Context appCtx = ctx.getApplicationContext();
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                Intent reopen = new Intent(appCtx, MainActivity.class);
+                reopen.addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                                | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                );
+                reopen.putExtra("safetylink_stay_foreground_call", true);
+                appCtx.startActivity(reopen);
+                Log.i(TAG, "Returned SafetyLink MainActivity to foreground while call remains active in notification bar.");
+            } catch (Exception e) {
+                Log.w(TAG, "Return-to-front during call skipped: " + e.getMessage());
+            }
+        }, Math.max(350L, delayMs));
+    }
+
+    /**
+     * Verifies REAL internet & SafetyLink backend reachability (not just Wi-Fi/cellular icon)
+     * so offline or zero-data SIMs immediately route into Zero-Airtime USSD -> Rain SIM -> FCM + SMS.
+     */
+    public static boolean isBackendReachable(Context ctx) {
+        try {
+            if (ctx != null) {
+                ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
+                if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    Network active = cm.getActiveNetwork();
+                    if (active == null) return false;
+                    NetworkCapabilities caps = cm.getNetworkCapabilities(active);
+                    if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                        return false;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        String[] probes = new String[]{
+                BACKEND_PRIMARY_URL + "/api/health",
+                BACKEND_WORKERS_URL + "/api/health"
+        };
+        for (String probe : probes) {
+            HttpURLConnection conn = null;
+            try {
+                conn = (HttpURLConnection) new URL(probe).openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(2200);
+                conn.setReadTimeout(2200);
+                int code = conn.getResponseCode();
+                if (code >= 200 && code < 500) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }
+        return false;
     }
 
     public interface DispatchCallback {
@@ -440,15 +512,17 @@ public final class EmergencyService {
                 preferredCallTarget = recipients.iterator().next();
             }
 
-            // STAGE 1: Backend & Cloud Telemetry Sync (include saved emergency contacts so server rings their apps via FCM)
-            boolean backendOk = logIncidentToBackend(incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy, savedName, savedPhone, recipients);
-            String syncStatus = backendOk ? "SYNCED" : "PENDING";
+            // STAGE 1: Real Online/Offline Verification + Backend & Cloud FCM Loud Alarm Sync
+            boolean onlineReachable = isBackendReachable(context);
+            boolean backendOk = onlineReachable
+                    && logIncidentToBackend(incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy, savedName, savedPhone, recipients);
+            String syncStatus = backendOk ? "SYNCED" : (onlineReachable ? "PENDING" : "OFFLINE_QUEUED");
             if (!backendOk && context != null) {
                 OfflineSyncWorker.queueOfflineIncident(context, incidentId, finalLat, finalLng, body, resolvedOrgId, resolvedTriggeredBy);
             }
-            Log.i(TAG, "[STAGE 1/4] Backend Cloud Sync: " + syncStatus);
+            Log.i(TAG, "[STAGE 1/4] Real Reachability=" + onlineReachable + " Backend Cloud Sync=" + syncStatus);
 
-            try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+            try { Thread.sleep(400); } catch (InterruptedException ignored) {}
 
             // STAGE 2: Real GSM SMS Broadcast over Android SmsManager with delivery-intent verification
             String senderLabel = !savedName.isEmpty() ? savedName : resolvedTriggeredBy;
@@ -613,7 +687,10 @@ public final class EmergencyService {
             callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             applyPreferredSim(context, callIntent);
             context.startActivity(callIntent);
-            Log.i(TAG, "Native ACTION_CALL placed to: " + cleanNumber);
+            // Bring SafetyLink back to the foreground so the live call stays in the notification bar
+            // and the user never loses the active SOS cockpit or tracking logic.
+            bringSafetyLinkToFront(context, 900L);
+            Log.i(TAG, "Native ACTION_CALL placed to: " + cleanNumber + " (returning SafetyLink to front)");
             return "INITIATED";
         } catch (SecurityException se) {
             Log.e(TAG, "CALL_PHONE security error: " + se.getMessage());

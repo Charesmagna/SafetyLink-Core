@@ -471,61 +471,154 @@ html.dark .toast-card {
   background: rgba(16, 185, 129, 0.55);
 }
 
-/* Frosted Glass Light-Mode Bridge for Unconverted Dark-Utility Children inside APK/Dashboards
-   Translucent glass keeps the living 3D background glowing through while preserving contrast */
-html.theme-light .sl-app-shell .bg-slate-950,
-html.theme-light .sl-app-shell .bg-slate-950\/95,
-html.theme-light .sl-app-shell .bg-slate-950\/90,
-html.theme-light .sl-app-shell .bg-slate-950\/85,
-html.theme-light .sl-app-shell .bg-slate-950\/80,
-html.theme-light .sl-app-shell .bg-slate-950\/70,
-html.theme-light .sl-app-shell .bg-slate-950\/60,
-html.theme-light .sl-app-shell .bg-\[\#020617\],
-html.theme-light .sl-app-shell .bg-\[\#071124\] {
-  background-color: rgba(248, 250, 252, 0.78);
+/* Unified Frosted Glass Light-Mode Parity across the entire application
+   (App Shell, AdminPanel, SuperDashboard, OrgDashboard, SafetyWareStore, Modals & Drawers) */
+html.theme-light .bg-slate-950,
+html.theme-light .bg-slate-950\/95,
+html.theme-light .bg-slate-950\/90,
+html.theme-light .bg-slate-950\/85,
+html.theme-light .bg-slate-950\/80,
+html.theme-light .bg-slate-950\/70,
+html.theme-light .bg-slate-950\/60,
+html.theme-light .bg-slate-950\/50,
+html.theme-light .bg-slate-950\/40,
+html.theme-light .bg-slate-950\/30,
+html.theme-light .bg-\[\#020617\],
+html.theme-light .bg-\[\#071124\],
+html.theme-light .bg-\[\#0b101a\],
+html.theme-light .bg-\[\#0b172e\],
+html.theme-light .bg-\[\#0d1b34\],
+html.theme-light .bg-\[\#091529\] {
+  background-color: #f8fafc !important;
 }
-html.theme-light .sl-app-shell .bg-slate-900,
-html.theme-light .sl-app-shell .bg-slate-900\/95,
-html.theme-light .sl-app-shell .bg-slate-900\/90,
-html.theme-light .sl-app-shell .bg-slate-900\/85,
-html.theme-light .sl-app-shell .bg-slate-900\/80,
-html.theme-light .sl-app-shell .bg-slate-900\/70,
-html.theme-light .sl-app-shell .bg-slate-900\/60,
-html.theme-light .sl-app-shell .bg-slate-900\/50,
-html.theme-light .sl-app-shell .bg-slate-900\/40,
-html.theme-light .sl-app-shell .bg-slate-800,
-html.theme-light .sl-app-shell .bg-slate-800\/80,
-html.theme-light .sl-app-shell .bg-slate-800\/60 {
-  background-color: rgba(255, 255, 255, 0.82);
+
+html.theme-light .bg-slate-900,
+html.theme-light .bg-slate-900\/95,
+html.theme-light .bg-slate-900\/90,
+html.theme-light .bg-slate-900\/85,
+html.theme-light .bg-slate-900\/80,
+html.theme-light .bg-slate-900\/70,
+html.theme-light .bg-slate-900\/60,
+html.theme-light .bg-slate-900\/50,
+html.theme-light .bg-slate-900\/40,
+html.theme-light .bg-slate-900\/30,
+html.theme-light .bg-slate-800,
+html.theme-light .bg-slate-800\/90,
+html.theme-light .bg-slate-800\/80,
+html.theme-light .bg-slate-800\/70,
+html.theme-light .bg-slate-800\/60,
+html.theme-light .bg-slate-800\/50,
+html.theme-light .bg-slate-800\/40,
+html.theme-light .bg-black\/40,
+html.theme-light .bg-black\/50 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
-html.theme-light .sl-app-shell .border-slate-900,
-html.theme-light .sl-app-shell .border-slate-800,
-html.theme-light .sl-app-shell .border-slate-800\/80,
-html.theme-light .sl-app-shell .border-slate-800\/70,
-html.theme-light .sl-app-shell .border-slate-700 {
-  border-color: rgba(15, 23, 42, 0.12);
+
+html.theme-light .hover\:bg-slate-800:hover,
+html.theme-light .hover\:bg-slate-700:hover,
+html.theme-light .hover\:bg-slate-900:hover,
+html.theme-light .hover\:bg-slate-900\/80:hover {
+  background-color: #e2e8f0 !important;
 }
-html.theme-light .sl-app-shell .text-slate-100,
-html.theme-light .sl-app-shell .text-slate-200 {
-  color: #0f172a;
+
+html.theme-light .border-slate-900,
+html.theme-light .border-slate-900\/80,
+html.theme-light .border-slate-800,
+html.theme-light .border-slate-800\/80,
+html.theme-light .border-slate-800\/70,
+html.theme-light .border-slate-800\/60,
+html.theme-light .border-slate-800\/50,
+html.theme-light .border-slate-800\/40,
+html.theme-light .border-slate-700,
+html.theme-light .border-slate-700\/50 {
+  border-color: rgba(15, 23, 42, 0.14) !important;
 }
-html.theme-light .sl-app-shell .text-slate-300 {
-  color: #334155;
+
+/* Colored dark-tinted alert cards adapt to clean daylight tints */
+html.theme-light .bg-emerald-950\/40,
+html.theme-light .bg-emerald-950\/50,
+html.theme-light .bg-emerald-950\/30 {
+  background-color: rgba(236, 253, 245, 0.92) !important;
 }
-html.theme-light .sl-app-shell .text-slate-400 {
-  color: #475569;
+html.theme-light .bg-red-950\/40,
+html.theme-light .bg-red-950\/30,
+html.theme-light .bg-red-950\/20,
+html.theme-light .bg-red-900\/40 {
+  background-color: rgba(254, 242, 242, 0.94) !important;
 }
-html.theme-light .sl-app-shell .text-white:not(.bg-red-600):not(.bg-red-500):not(.bg-emerald-600):not(.bg-emerald-500):not(.bg-blue-600):not(.bg-amber-600):not(.bg-cyan-600):not(.bg-purple-600):not(.bg-slate-900):not(.glossy-sos-btn):not(.tactical-btn) {
-  color: #0f172a;
+html.theme-light .bg-amber-950\/40,
+html.theme-light .bg-amber-950\/30 {
+  background-color: rgba(255, 251, 235, 0.94) !important;
 }
-html.theme-light .sl-app-shell .bg-red-600 .text-white,
-html.theme-light .sl-app-shell .bg-emerald-600 .text-white,
-html.theme-light .sl-app-shell .bg-blue-600 .text-white,
-html.theme-light .sl-app-shell .glossy-sos-btn,
-html.theme-light .sl-app-shell .glossy-sos-btn * {
-  color: #ffffff;
+html.theme-light .bg-blue-950\/40,
+html.theme-light .bg-blue-950\/30,
+html.theme-light .bg-indigo-950\/40,
+html.theme-light .bg-cyan-950\/40 {
+  background-color: rgba(239, 246, 255, 0.94) !important;
+}
+html.theme-light .bg-purple-950\/40,
+html.theme-light .bg-purple-950\/20,
+html.theme-light .bg-purple-900\/40 {
+  background-color: rgba(250, 245, 255, 0.94) !important;
+}
+
+html.theme-light .text-slate-100,
+html.theme-light .text-slate-200 {
+  color: #0f172a !important;
+}
+html.theme-light .text-slate-300 {
+  color: #1e293b !important;
+}
+html.theme-light .text-slate-400 {
+  color: #475569 !important;
+}
+html.theme-light .text-emerald-300,
+html.theme-light .text-emerald-400 {
+  color: #047857 !important;
+}
+html.theme-light .text-cyan-300,
+html.theme-light .text-cyan-400 {
+  color: #0e7490 !important;
+}
+html.theme-light .text-amber-300,
+html.theme-light .text-amber-400 {
+  color: #b45309 !important;
+}
+html.theme-light .text-blue-300,
+html.theme-light .text-blue-400 {
+  color: #1d4ed8 !important;
+}
+html.theme-light .text-purple-300,
+html.theme-light .text-purple-400 {
+  color: #7e22ce !important;
+}
+html.theme-light .text-red-300,
+html.theme-light .text-red-400 {
+  color: #b91c1c !important;
+}
+
+html.theme-light .text-white:not(.bg-red-600):not(.bg-red-500):not(.bg-emerald-600):not(.bg-emerald-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-amber-600):not(.bg-cyan-600):not(.bg-cyan-700):not(.bg-purple-600):not(.bg-teal-600):not(.bg-gradient-to-r):not(.glossy-sos-btn):not(.tactical-btn) {
+  color: #0f172a !important;
+}
+html.theme-light .bg-red-600,
+html.theme-light .bg-red-600 *,
+html.theme-light .bg-emerald-600,
+html.theme-light .bg-emerald-600 *,
+html.theme-light .bg-blue-600,
+html.theme-light .bg-blue-600 *,
+html.theme-light .bg-cyan-700,
+html.theme-light .bg-cyan-700 *,
+html.theme-light .bg-indigo-600,
+html.theme-light .bg-indigo-600 *,
+html.theme-light .bg-purple-600,
+html.theme-light .bg-purple-600 *,
+html.theme-light .glossy-sos-btn,
+html.theme-light .glossy-sos-btn *,
+html.theme-light .tactical-btn,
+html.theme-light .tactical-btn * {
+  color: #ffffff !important;
 }
 
 /* Force smooth touch scrolling on mobile */

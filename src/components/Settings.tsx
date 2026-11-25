@@ -75,7 +75,74 @@ export const Settings: React.FC = () => {
   } = useAppStore();
   const [showPopiaModal, setShowPopiaModal] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'ALL' | 'DISPATCH' | 'SECURITY' | 'HARDWARE' | 'PRIVACY'>('ALL');
+  type SettingsCategory = 'DISPATCH' | 'CONTACTS' | 'HARDWARE' | 'APPEARANCE' | 'SECURITY' | 'ADVANCED';
+  const [activeSection, setActiveSection] = useState<SettingsCategory>('DISPATCH');
+  const [settingsSearch, setSettingsSearch] = useState('');
+  const [showCategoryGuide, setShowCategoryGuide] = useState(false);
+
+  const showBlock = (category: SettingsCategory, keywords: string): boolean => {
+    const q = settingsSearch.trim().toLowerCase();
+    if (!q) return activeSection === category;
+    return `${category} ${keywords}`.toLowerCase().includes(q);
+  };
+
+  const CATEGORY_META: {
+    id: SettingsCategory;
+    label: string;
+    short: string;
+    icon: string;
+    guide: string;
+  }[] = [
+    {
+      id: 'DISPATCH',
+      label: 'Emergency & Dispatch',
+      short: 'Dispatch',
+      icon: '🚨',
+      guide:
+        'Native SMS and Native Voice Call are mandatory whenever contacts are configured. Enable Zero-Airtime USSD Relay here (or on Mission Control) so offline triggers dial Please Call Me before the voice call and fire FCM + SMS from the gateway.',
+    },
+    {
+      id: 'CONTACTS',
+      label: 'Contacts & Org',
+      short: 'Contacts',
+      icon: '🔗',
+      guide:
+        'Link emergency contacts instantly via 1-Way or 2-Way QR scan, or connect your account to a Campus, Estate, or Armed Response Organization ID.',
+    },
+    {
+      id: 'HARDWARE',
+      label: 'Hardware & IoT',
+      short: 'Hardware',
+      icon: '🔘',
+      guide:
+        'Map single, double, triple, and long presses on Bluetooth iTAG panic buttons, link Hikvision/ONVIF site cameras, and configure fleet or aerial drone integrations.',
+    },
+    {
+      id: 'APPEARANCE',
+      label: 'Appearance & Alerts',
+      short: 'Display',
+      icon: '🎨',
+      guide:
+        'Switch between unified Light Mode, Deep Navy Dark Mode, or System Auto, adjust screen-fit text scaling, and tune Crime Hotspot proximity warnings and entry chimes.',
+    },
+    {
+      id: 'SECURITY',
+      label: 'Security & Survival',
+      short: 'Security',
+      icon: '🛡️',
+      guide:
+        'Manage Safe & Duress PINs, Decoy Calculator disguise, lock-screen wake permissions, battery killer exemption, Cloudflare Private DNS, and POPIA privacy rights.',
+    },
+    {
+      id: 'ADVANCED',
+      label: 'Diagnostics & System',
+      short: 'System',
+      icon: '🧪',
+      guide:
+        'Run live SMS/USSD/FCM gateway tests, inspect native dispatch and audit logs, configure personal Twilio credentials, and check for OTA SafetyLink APK updates.',
+    },
+  ];
+  const activeCategoryMeta = CATEGORY_META.find((c) => c.id === activeSection) || CATEGORY_META[0];
   const [screenWakeLockEnabled, setScreenWakeLockEnabled] = useState<boolean>(() => {
     try { return localStorage.getItem('sl_screen_wake_lock') !== 'false'; } catch { return true; }
   });
@@ -367,33 +434,96 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Section Filter Navigation */}
-      <div className="flex flex-wrap gap-1.5 mt-3 relative z-10 font-mono">
-        {([
-          { id: 'ALL', label: 'All' },
-          { id: 'DISPATCH', label: 'Dispatch' },
-          { id: 'SECURITY', label: 'Security' },
-          { id: 'HARDWARE', label: 'BLE & Fleet' },
-          { id: 'PRIVACY', label: 'Privacy & OS' }
-        ] as const).map(sec => (
-          <button
-            key={sec.id}
-            type="button"
-            onClick={() => setActiveSection(sec.id)}
-            className={`px-2.5 py-1 rounded-lg text-[8.5px] font-bold uppercase tracking-wider border transition-all ${
-              activeSection === sec.id
-                ? 'bg-emerald-600 border-emerald-500 text-white'
-                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {sec.label}
-          </button>
-        ))}
+      {/* Universal 6-Category Searchable Settings Navigation */}
+      <div className="mt-3 space-y-3 relative z-10">
+        {/* Instant Search Input */}
+        <div className="relative">
+          <input
+            type="text"
+            value={settingsSearch}
+            onChange={(e) => setSettingsSearch(e.target.value)}
+            placeholder="Search any setting (e.g. countdown, USSD, QR, PIN, theme, BLE, SIM, Twilio)..."
+            data-testid="settings-search-input"
+            className="w-full px-3.5 py-2.5 pr-9 rounded-xl text-xs bg-white dark:bg-[#071124] border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
+          />
+          {settingsSearch && (
+            <button
+              type="button"
+              onClick={() => setSettingsSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* 6 Clean Category Tabs */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5" role="tablist" aria-label="Settings Categories">
+          {CATEGORY_META.map((sec) => {
+            const isSelected = !settingsSearch.trim() && activeSection === sec.id;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                data-testid={`settings-tab-${sec.id.toLowerCase()}`}
+                onClick={() => {
+                  setSettingsSearch('');
+                  setActiveSection(sec.id);
+                  setShowCategoryGuide(false);
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold border text-left transition-all ${
+                  isSelected
+                    ? 'bg-emerald-600 border-emerald-500 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-950/70 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50'
+                }`}
+              >
+                <span className="text-sm leading-none">{sec.icon}</span>
+                <span className="truncate">{sec.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Collapsible Category Guide (reduces clutter while keeping complete guidance 1 tap away) */}
+        {!settingsSearch.trim() ? (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#071124]/80 px-3 py-2 text-left">
+            <button
+              type="button"
+              onClick={() => setShowCategoryGuide((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+            >
+              <span className="flex items-center gap-1.5">
+                <span>{activeCategoryMeta.icon}</span>
+                <span>{activeCategoryMeta.label} Guide</span>
+              </span>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                {showCategoryGuide ? 'Hide ▲' : 'How it works ▼'}
+              </span>
+            </button>
+            {showCategoryGuide && (
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-2">
+                {activeCategoryMeta.guide}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-[11px] text-emerald-800 dark:text-emerald-300">
+            <span>Showing all settings matching &ldquo;<strong>{settingsSearch}</strong>&rdquo;</span>
+            <button
+              type="button"
+              onClick={() => setSettingsSearch('')}
+              className="font-bold underline ml-2"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* App Preferences */}
-      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
-      <>
+      {/* App Preferences: Display, Theme & Crime Hotspot Proximity Alerts */}
+      {showBlock('APPEARANCE', 'display theme light dark navy auto screen fit density text scale high contrast reduced motion crime hotspot proximity alerts chime sound') && (
       <div className="space-y-3 text-left mt-4 relative z-10">
         <div className="flex items-center justify-between">
           <h4 className="text-[11px] font-bold text-slate-600 dark:text-slate-400 tracking-wide">
@@ -568,9 +698,11 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Post-Trigger AI Welfare Check-In Timer Configuration */}
-      <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-[#0d1b34] overflow-hidden shadow-sm">
+      {showBlock('DISPATCH', 'post trigger ai welfare check-in timer kleva lizzy delay minutes speak listen') && (
+      <div className="rounded-2xl border border-emerald-500/30 bg-white dark:bg-[#0d1b34] overflow-hidden shadow-sm mt-4">
         <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
@@ -690,8 +822,10 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Diagnostics Quick Panel */}
+      {showBlock('ADVANCED', 'diagnostics quick panel self-test gatt gps cache purge audit logs') && (
       <div className="space-y-3 text-left mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
           {t('settings.diagnostics_title')}
@@ -714,20 +848,17 @@ export const Settings: React.FC = () => {
           </button>
         </div>
       </div>
-      </>
       )}
 
-
       {/* Alert & Countdown Settings */}
-      {(activeSection === 'ALL' || activeSection === 'DISPATCH') && (
-      <>
+      {showBlock('DISPATCH', 'emergency dispatch order countdown timer floating sos bubble chat heads preset map tile provider native sms call') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
           🚨 EMERGENCY &amp; DISPATCH ORDER
         </h4>
         <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-3 text-[8px] font-mono text-emerald-300 space-y-1">
-          <div className="font-bold uppercase tracking-wider text-emerald-400">Canonical Dispatch Sequence</div>
-          <div>1. Server API → 2. Native SMS → 3. Direct Call → 4. Optional USSD → 5. WhatsApp (only contacts with WhatsApp)</div>
+          <div className="font-bold uppercase tracking-wider text-emerald-400">Canonical Dispatch Sequence (Native SMS &amp; Call Mandatory)</div>
+          <div>1. Server API / Cloud FCM (when reachable) → 2. Mandatory Native SMS → 3. Zero-Airtime USSD Relay (FCM + SMS, before call if enabled) → 4. Mandatory Native Call (stays on screen) → 5. WhatsApp</div>
         </div>
         <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-4">
           {/* Floating SOS Overlay Settings (User Golden Spec) */}
@@ -892,12 +1023,19 @@ export const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+      )}
 
-        {/* QR Code Instant Contact & FCM Linker (Generate & Scan with 2-Way / 1-Way Selection) */}
-        <QrContactLinker />
+      {/* QR Code Instant Contact & FCM Linker (Generate & Scan with 2-Way / 1-Way Selection) */}
+      {showBlock('CONTACTS', 'qr code instant contact linker generate scan two-way one-way fcm') && (
+        <div className="mt-4 relative z-10">
+          <QrContactLinker />
+        </div>
+      )}
 
-        {/* Carrier USSD & Zero-Data Please-Call-Me (PCM) Emergency Settings */}
-        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+      {/* Carrier USSD & Zero-Data Please-Call-Me (PCM) Emergency Settings */}
+      {showBlock('DISPATCH', 'ussd zero airtime zero data please call me pcm rain sim gateway carrier mtn vodacom cell c telkom') && (
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono text-left mt-4 relative z-10">
           <div className="flex justify-between items-center">
             <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
               <span>📶</span> Zero-Data USSD "Please Call Me" System
@@ -1040,9 +1178,12 @@ export const Settings: React.FC = () => {
               );
             })()}
           </div>
+        </div>
+      )}
 
-          {/* Live SMS / USSD / FCM Gateway Diagnostics & Trigger Test Console */}
-          <div className="border-t border-slate-800/70 pt-4 space-y-3" data-testid="live-trigger-test-console">
+      {/* Live SMS / USSD / FCM Gateway Diagnostics & Trigger Test Console */}
+      {showBlock('ADVANCED', 'live sms ussd fcm gateway diagnostics trigger test console provider health') && (
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono text-left mt-4 relative z-10" data-testid="live-trigger-test-console">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h5 className="text-[9.5px] font-bold text-emerald-400 uppercase flex items-center gap-1.5">
@@ -1218,10 +1359,11 @@ export const Settings: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+      )}
 
-        {/* Configurable Smart Routing, 5-Minute PCM Dedupe & Reverse-Charge USSD */}
-        <div className="bg-slate-950/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3.5 font-mono text-left">
+      {/* Configurable Smart Routing, 5-Minute PCM Dedupe & Reverse-Charge USSD */}
+      {showBlock('DISPATCH', 'smart emergency routing dedupe reverse charge ussd data first online fcm rain sms') && (
+        <div className="bg-slate-950/60 border border-cyan-500/30 rounded-2xl p-4 space-y-3.5 font-mono text-left mt-4 relative z-10">
           <div className="flex items-start justify-between gap-2">
             <div>
               <h5 className="text-[10px] font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -1378,9 +1520,11 @@ export const Settings: React.FC = () => {
             )}
           </div>
         </div>
+      )}
 
-        {/* Dispatch & Mini-App Logs Terminal (User Golden Spec) */}
-        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono">
+      {/* Dispatch & Mini-App Logs Terminal (User Golden Spec) */}
+      {showBlock('ADVANCED', 'native dispatch notification mini-app logs history') && (
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono text-left mt-4 relative z-10">
           <div className="flex justify-between items-center">
             <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
               <span>📜</span> Native Dispatch & Notification Logs
@@ -1430,8 +1574,13 @@ export const Settings: React.FC = () => {
               </>
             )}
           </div>
-          
-          <div className="flex justify-between items-center border-t border-slate-800/50 pt-3">
+        </div>
+      )}
+
+      {/* Silent Mode & Decoy Calculator Disguise */}
+      {showBlock('SECURITY', 'silent mode mute sirens decoy calculator disguise duress passcode') && (
+        <div className="bg-slate-950/40 border border-slate-900 rounded-2xl p-4 space-y-3 font-mono text-left mt-4 relative z-10">
+          <div className="flex justify-between items-center">
             <h5 className="text-[9px] font-bold text-slate-500 uppercase">Silent Mode</h5>
             <label className="flex items-center space-x-2 cursor-pointer">
               <span className="text-[8px] text-slate-600">Enabled</span>
@@ -1486,10 +1635,11 @@ export const Settings: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      )}
 
-        {/* Primary Cellular SIM Card Selection & Sequential Pipeline Card */}
-        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden">
+      {/* Primary Cellular SIM Card Selection & Sequential Pipeline Card */}
+      {showBlock('DISPATCH', 'primary cellular sim card selection dual sim auto lock radio modem sequential dispatch pipeline') && (
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden mt-4 text-left z-10">
           <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
@@ -1631,24 +1781,24 @@ export const Settings: React.FC = () => {
               </div>
 
               <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
-                <div className="flex items-center justify-between text-emerald-400 font-bold">
+                <div className="flex items-center justify-between text-amber-400 font-bold">
                   <span>STAGE 3</span>
-                  <span>T+4.5s</span>
+                  <span>BEFORE CALL</span>
                 </div>
-                <div className="text-slate-300 font-bold">Direct Voice Call</div>
+                <div className="text-slate-300 font-bold">Zero-Airtime USSD Relay</div>
                 <p className="text-slate-500 text-[7px]">
-                  Binds phone circuit via CALL_PHONE using locked PhoneAccountHandle.
+                  When enabled &amp; offline, fires Please Call Me to gateway for FCM + SMS before voice locks the line.
                 </p>
               </div>
 
               <div className="p-2 bg-slate-950 border border-slate-800 rounded-lg text-[7.5px] space-y-1">
-                <div className="flex items-center justify-between text-amber-400 font-bold">
-                  <span>STAGE 4 (LAST)</span>
-                  <span>T+9.5s</span>
+                <div className="flex items-center justify-between text-emerald-400 font-bold">
+                  <span>STAGE 4</span>
+                  <span>MANDATORY</span>
                 </div>
-                <div className="text-slate-300 font-bold">Free USSD PCM</div>
+                <div className="text-slate-300 font-bold">Direct Voice Call</div>
                 <p className="text-slate-500 text-[7px]">
-                  Zero-airtime carrier Please-Call-Me code dials last without intercepting voice.
+                  Binds phone circuit via CALL_PHONE and returns SafetyLink to foreground (call stays in notification bar).
                 </p>
               </div>
             </div>
@@ -1661,12 +1811,11 @@ export const Settings: React.FC = () => {
             </div>
           </div>
         </div>
-      </>
       )}
 
-        {/* BLE & iTAG Hardware Button Configuration Card */}
-        {(activeSection === 'ALL' || activeSection === 'HARDWARE') && (
-        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden mt-4" data-testid="itag-flexible-config">
+      {/* BLE & iTAG Hardware Button Configuration Card */}
+      {showBlock('HARDWARE', 'ble itag bluetooth hardware button keyfob trigger single double triple long press') && (
+        <div className="bg-slate-950/60 border border-slate-900 rounded-2xl p-4 sm:p-5 space-y-4 font-mono shadow-xl relative overflow-hidden mt-4 text-left z-10" data-testid="itag-flexible-config">
           <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/80 pb-3">
@@ -1963,8 +2112,8 @@ export const Settings: React.FC = () => {
         )}
 
         {/* Security PINs & Unlock Choice Section */}
-        {currentUser && (activeSection === 'ALL' || activeSection === 'SECURITY') && (
-          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+        {currentUser && showBlock('SECURITY', 'security pin safe pin duress pin account password biometric face id unlock') && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4 mt-4 text-left relative z-10">
             <div className="flex items-center justify-between">
               <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
                 🔒 SECURITY &amp; UNLOCK CHOICE
@@ -2099,8 +2248,8 @@ export const Settings: React.FC = () => {
         )}
 
         {/* Join Organization Workflow Section */}
-        {currentUser && (
-          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+        {currentUser && showBlock('CONTACTS', 'campus security organization hub org id join membership role control room') && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4 mt-4 text-left relative z-10">
             <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
               🏢 CAMPUS / SECURITY ORGANIZATION HUB
             </h4>
@@ -2226,8 +2375,8 @@ export const Settings: React.FC = () => {
         )}
 
         {/* User Dedicated Gateway & Personal Twilio Telephony Configuration */}
-        {currentUser && (
-          <div className="space-y-3 border-t border-slate-900/60 pt-4">
+        {currentUser && showBlock('ADVANCED', 'cellular twilio gateway credentials account sid auth token sender phone number') && (
+          <div className="space-y-3 border-t border-slate-900/60 pt-4 mt-4 text-left relative z-10">
             <div className="flex items-center justify-between">
               <h4 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-display">
                 📡 CELLULAR & TWILIO GATEWAY CREDENTIALS
@@ -2339,6 +2488,7 @@ export const Settings: React.FC = () => {
         )}
 
       {/* Fleet, Camera, & Drone Integrations */}
+      {showBlock('HARDWARE', 'fleet tracking patrol vehicles hikvision onvif camera linking drone deployment 24hrsdroneforce') && (
       <div className="space-y-4 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
           🚁 FLEET, CAMERA & DRONE MODULES
@@ -2424,8 +2574,10 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* System Updates Section */}
+      {showBlock('ADVANCED', 'system updates ota over the air apk upgrade build version') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
@@ -2462,9 +2614,10 @@ export const Settings: React.FC = () => {
           </button>
         </div>
       </div>
+      )}
 
       {/* Android Screen Wake, Lock-Screen Overlay & Battery Survival */}
-      {(activeSection === 'ALL' || activeSection === 'PRIVACY') && (
+      {showBlock('SECURITY', 'lock screen overlay device survival screen wake battery optimization killer exemption app permissions setup wizard') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
@@ -2535,6 +2688,7 @@ export const Settings: React.FC = () => {
       )}
 
       {/* Cloudflare Private DNS Configuration */}
+      {showBlock('SECURITY', 'cloudflare private dns shield tls port 853 hostname') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10 font-mono">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
@@ -2566,8 +2720,10 @@ export const Settings: React.FC = () => {
           </p>
         </div>
       </div>
+      )}
 
       {/* Interactive Audit Logs Ledger */}
+      {showBlock('ADVANCED', 'interactive audit logs ledger events system ble gps dispatch security') && (
       <div className="space-y-3 text-left border-t border-slate-900 pt-4 mt-4 relative z-10">
         <div className="flex justify-between items-center">
           <h4 className="text-[9px] font-bold text-slate-500 font-display uppercase tracking-widest">
@@ -2631,8 +2787,10 @@ export const Settings: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* POPIA Privacy, Data Deletion & Emergency Disclaimer */}
+      {showBlock('SECURITY', 'popia privacy legal terms data deletion emergency disclaimer 10111 112') && (
       <div className="border-t border-slate-900 pt-4 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left relative z-10">
         <div>
           <h4 className="text-[9px] font-bold text-slate-300 font-mono uppercase tracking-widest">
@@ -2650,6 +2808,7 @@ export const Settings: React.FC = () => {
           View Privacy &amp; Terms
         </button>
       </div>
+      )}
       <PopiaLegalModal open={showPopiaModal} onClose={() => setShowPopiaModal(false)} />
     </motion.div>
   );

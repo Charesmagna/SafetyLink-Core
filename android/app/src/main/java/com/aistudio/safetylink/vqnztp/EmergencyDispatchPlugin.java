@@ -342,9 +342,12 @@ public class EmergencyDispatchPlugin extends Plugin {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             EmergencyService.applyPreferredSim(getContext(), intent);
             getContext().startActivity(intent);
+            // Bring SafetyLink back on screen so active call stays in top notification chip
+            EmergencyService.bringSafetyLinkToFront(getContext(), 900L);
 
             JSObject ret = new JSObject();
             ret.put("dialed", true);
+            ret.put("stayedInForeground", true);
             call.resolve(ret);
         } catch (SecurityException se) {
             try {

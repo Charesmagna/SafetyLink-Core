@@ -68,6 +68,25 @@ export const SuperAdminUsers: React.FC = () => {
     }
   };
 
+  const restoreCustomers = async () => {
+    setMsg('Restoring all registered SafetyLink customers...');
+    try {
+      const res = await call('/api/admin/restore-customers', { method: 'POST' });
+      const mapped: User[] = (res.users || []).map((u: any) => ({
+        id: String(u.id || u.phone || ''),
+        phone: u.phone || u.email || '—',
+        name: u.fullName || u.name || u.username || 'SafetyLink Customer',
+        lastSync: u.lastSeen ? new Date(u.lastSeen).toISOString().slice(0, 16).replace('T', ' ') : '',
+        contacts: Number(u.contactsCount || u.contacts || 0),
+        appRegistered: Boolean(u.appRegistered),
+      }));
+      setUsers(mapped);
+      setMsg(`Restored & unified ${mapped.length} registered SafetyLink customers across all tables.`);
+    } catch (e: any) {
+      setMsg(e.message);
+    }
+  };
+
   return (
     <div className="mt-8 border-t border-slate-800 pt-6 text-slate-200 font-mono">
       <h2 className="text-lg font-bold text-cyan-400 tracking-widest uppercase mb-3">Users</h2>
@@ -81,8 +100,11 @@ export const SuperAdminUsers: React.FC = () => {
             className="bg-cyan-700 px-4 py-2 rounded text-sm disabled:opacity-40">Sign in</button>
         </div>
       ) : (
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           <button onClick={load} className="bg-cyan-700 px-4 py-2 rounded text-sm">Refresh</button>
+          <button onClick={restoreCustomers} className="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded text-sm font-bold">
+            Restore Customer Database
+          </button>
           <button onClick={() => { setToken(''); setSummary(null); setUsers([]); }}
             className="bg-slate-800 px-4 py-2 rounded text-sm">Sign out</button>
         </div>

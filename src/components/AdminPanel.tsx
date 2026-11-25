@@ -47,6 +47,7 @@ export const AdminPanel: React.FC = () => {
     adminUpdateSubscription,
     exportToGoogleDrive,
     refreshClientDatabase,
+    restoreCustomerDatabase,
     addToast,
     adminSummaryStats,
     adminAuditLogs,
@@ -55,6 +56,24 @@ export const AdminPanel: React.FC = () => {
     updateMinSupportedVersion
   } = useAppStore();
   const [minVerInput, setMinVerInput] = useState(minSupportedVersion || '1.0.0');
+  const [isRestoringDb, setIsRestoringDb] = useState(false);
+  const [restoreSummary, setRestoreSummary] = useState<{ totalCount: number; addedCount: number; restoredAt: string } | null>(null);
+
+  const handleRestoreCustomerDatabase = async () => {
+    setIsRestoringDb(true);
+    try {
+      const res = await restoreCustomerDatabase();
+      setRestoreSummary({
+        totalCount: res.totalCount,
+        addedCount: res.addedCount,
+        restoredAt: new Date().toLocaleTimeString(),
+      });
+    } catch (e: any) {
+      addToast(`Restore failed: ${e?.message || 'Unable to reach server'}`, 'error');
+    } finally {
+      setIsRestoringDb(false);
+    }
+  };
 
   useEffect(() => {
     if (minSupportedVersion) setMinVerInput(minSupportedVersion);
@@ -981,6 +1000,17 @@ export const AdminPanel: React.FC = () => {
 
                 <button
                   type="button"
+                  onClick={handleRestoreCustomerDatabase}
+                  disabled={isRestoringDb}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-mono font-bold text-xs rounded-xl shadow-lg shadow-amber-950/40 transition-all cursor-pointer disabled:opacity-50"
+                  title="Collect and unify every customer registered across all SafetyLink databases into this master list"
+                  data-testid="super-admin-restore-db-btn"
+                >
+                  <span>🗄️ {isRestoringDb ? 'Restoring DB...' : 'Restore Customer Database'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleDriveSync}
                   disabled={isSyncingDrive}
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono font-bold text-xs rounded-xl shadow-lg shadow-blue-950/40 transition-all cursor-pointer disabled:opacity-50"
@@ -1003,6 +1033,22 @@ export const AdminPanel: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {restoreSummary && (
+              <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                <span className="text-amber-300 font-bold">
+                  ✓ Customer Database Restored ({restoreSummary.restoredAt}): {restoreSummary.totalCount} total registered SafetyLink customers unified
+                  {restoreSummary.addedCount > 0 ? ` (+${restoreSummary.addedCount} recovered)` : ''}.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRestoreSummary(null)}
+                  className="text-slate-400 hover:text-white text-[11px] underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
             {/* Google Drive Sync Receipt Banner */}
             {driveSyncSuccessInfo && (

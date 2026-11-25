@@ -1,6 +1,6 @@
 import { verifyForwarderSignature } from './pcm-auth';
 import { checkCredentials, makeSession, tooManyFailures, recordAttempt } from './admin-auth';
-import { adminAuthorised, adminSummary, adminUsers, adminDelete } from './admin';
+import { adminAuthorised, adminSummary, adminUsers, adminDelete, adminRestoreCustomers } from './admin';
 import { sendLoudAlarm } from './fcm';
 import {
   saveDeviceToken,
@@ -43,6 +43,8 @@ export interface Env {
   MEDIA?: any;
   FCM_SERVICE_ACCOUNT?: string;
   FREENEWSAPI_KEY?: string;
+  BIGDATACLOUD_API_KEY?: string;
+  IOT_WEBHOOK_SECRET?: string;
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
@@ -102,7 +104,7 @@ const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 app.use('*', cors({
   origin: (origin) => origin || '*',
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Range', 'X-Profile-Token', 'X-PCM-Token', 'X-Signature', 'X-Hmac-Sha256'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Range', 'X-Profile-Token', 'X-PCM-Token', 'X-Signature', 'X-Hmac-Sha256', 'X-IoT-Token', 'X-Webhook-Secret'],
   exposeHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
   credentials: true,
 }));
@@ -663,6 +665,7 @@ app.get('/api/safety-feed/live', async (c) => {
     lng: lngRaw !== undefined ? Number(lngRaw) : undefined,
     query,
     radiusKm,
+    clientIp: c.req.header('CF-Connecting-IP') || '',
   });
   return c.json(out.json, out.status as any);
 });
@@ -1335,6 +1338,113 @@ app.get('/api/admin/summary', async (c) => {
 app.get('/api/admin/users', async (c) => {
   if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ error: 'Unauthorised' }, 401 as any);
   return c.json({ users: await adminUsers(c.env.DB) });
+});
+
+// Super Admin: Restore & unify every registered customer across all D1 tables
+app.post('/api/admin/restore-customers', async (c) => {
+  const sessionOk = await adminAuthorised(c.env, c.req.raw);
+  let jwtSuperOk = false;
+  if (!sessionOk) {
+    const auth = c.req.header('Authorization') || '';
+    if (auth.startsWith('Bearer ')) {
+      const payload = await verifyToken(c.env, auth.slice(7));
+      if (payload && String(payload.orgId || '').toUpperCase() === 'SL-ADMIN-0000') {
+        jwtSuperOk = true;
+      }
+    }
+  }
+  if (!sessionOk && !jwtSuperOk) return c.json({ error: 'Unauthorised' }, 401 as any);
+  const restored = await adminRestoreCustomers(c.env.DB);
+  return c.json(restored);
+});
+
+// IoT Hardware Panic Webhook (NB-IoT Buttons, Hikvision AX PRO Hubs, 4G GPS Smartwatches)
+app.post('/api/webhook/iot-panic', async (c) => {
+  const configuredSecret = String(c.env.IOT_WEBHOOK_SECRET || c.env.PCM_WEBHOOK_TOKEN || '').trim();
+  if (configuredSecret) {
+    const provided = String(
+      c.req.header('X-IoT-Token')
+      || c.req.header('X-Webhook-Secret')
+      || c.req.query('token')
+      || ''
+    ).trim();
+    if (!provided || !safeEq(provided, configuredSecret)) {
+      return c.json({ error: 'Unauthorized IoT webhook token' }, 401 as any);
+    }
+  }
+
+  const body: any = await c.req.json().catch(() => ({}));
+  const deviceId = String(body.deviceId || body.imei || body.hubId || body.serial || '').trim();
+  const deviceType = String(body.deviceType || body.hardware || (body.zone ? 'HIKVISION_AX_PRO' : body.imei ? '4G_GPS_WATCH' : 'NB_IOT_BUTTON')).toUpperCase();
+  const ownerPhone = String(body.phone || body.ownerPhone || body.msisdn || '').trim();
+  const orgId = String(body.orgId || body.orgCode || 'INDIVIDUAL').trim();
+  const lat = Number.isFinite(Number(body.lat ?? body.latitude)) ? Number(body.lat ?? body.latitude) : null;
+  const lng = Number.isFinite(Number(body.lng ?? body.longitude)) ? Number(body.lng ?? body.longitude) : null;
+  const battery = body.battery !== undefined ? Number(body.battery) : null;
+  const zone = String(body.zone || body.eventType || 'SOS_TRIGGER').trim();
+
+  if (!deviceId && !ownerPhone) {
+    return c.json({ error: 'deviceId/imei or ownerPhone is required' }, 400 as any);
+  }
+
+  const incidentId = `IOT-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const now = Date.now();
+  let fcmTriggered = 0;
+
+  if (c.env.DB) {
+    await c.env.DB.prepare(
+      'INSERT OR IGNORE INTO incidents (id, org_id, user_id, type, lat, lng, created_at) VALUES (?,?,?,?,?,?,?)'
+    ).bind(
+      incidentId,
+      orgId,
+      deviceId || ownerPhone,
+      `${deviceType}:${zone}`,
+      lat,
+      lng,
+      now
+    ).run().catch(() => {});
+
+    // Look up emergency contacts for ownerPhone and trigger loud FCM alarm
+    if (ownerPhone && c.env.FCM_SERVICE_ACCOUNT) {
+      const variants = phoneLookupVariants(ownerPhone);
+      const contactPhones = new Set<string>();
+      for (const v of variants) {
+        const res: any = await c.env.DB.prepare(
+          'SELECT contact_phone FROM sl_contacts WHERE owner_phone = ?'
+        ).bind(v).all().catch(() => ({ results: [] }));
+        for (const r of (res?.results ?? []) as any[]) {
+          if (r.contact_phone) contactPhones.add(String(r.contact_phone));
+        }
+      }
+      for (const target of contactPhones) {
+        const toks = await tokensForPhone(c.env.DB, target).catch(() => []);
+        for (const tok of toks) {
+          const sent = await sendLoudAlarm(c.env, tok, {
+            incidentId,
+            callerName: `${deviceType} (${deviceId || ownerPhone})`,
+            callerPhone: ownerPhone,
+            message: `Hardware SOS Triggered (${deviceType} · ${zone})${battery !== null ? ` · Battery ${battery}%` : ''}`,
+            lat: lat ?? 0,
+            lng: lng ?? 0,
+            source: 'IOT_HARDWARE',
+          }).catch(() => ({ ok: false, unregistered: false } as any));
+          if (sent?.ok) fcmTriggered++;
+          if (sent?.unregistered) await pruneDeviceToken(c.env.DB, tok).catch(() => {});
+        }
+      }
+    }
+  }
+
+  return c.json({
+    ok: true,
+    incidentId,
+    deviceId: deviceId || ownerPhone,
+    deviceType,
+    zone,
+    coordinates: lat !== null && lng !== null ? { lat, lng } : null,
+    fcmTriggered,
+    receivedAt: new Date(now).toISOString(),
+  }, 201 as any);
 });
 
 app.post('/api/profile/sync', async (c) => {

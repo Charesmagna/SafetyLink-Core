@@ -1303,12 +1303,9 @@ Rules:
       const rawLng = req.query.lng !== undefined ? Number(req.query.lng) : NaN;
       const queryText = typeof req.query.query === "string" ? req.query.query.trim() : "";
       const radiusKm = Math.min(100, Math.max(5, Number(req.query.radiusKm) || 25));
+      const bdcKey = String(process.env.BIGDATACLOUD_API_KEY || "").trim();
 
-      const hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng) && (rawLat !== 0 || rawLng !== 0);
-      if (!hasCoords && !queryText) {
-        return res.status(400).json({ error: "Provide GPS coordinates (lat, lng) or a city/suburb query." });
-      }
-
+      let hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng) && (rawLat !== 0 || rawLng !== 0);
       let resolvedLat = rawLat;
       let resolvedLng = rawLng;
       let suburb = "";
@@ -1316,19 +1313,85 @@ Rules:
       let state = "";
       let country = "";
       let countryCode = "ZA";
-      let displayLocation = queryText || `${rawLat.toFixed(4)}, ${rawLng.toFixed(4)}`;
+      let geocoderProvider: "BIGDATACLOUD" | "BIGDATACLOUD_IP" | "NOMINATIM" | "FALLBACK" = "FALLBACK";
+      let displayLocation = queryText || (hasCoords ? `${rawLat.toFixed(4)}, ${rawLng.toFixed(4)}` : "South Africa");
 
-      // 1. Resolve exact location via OpenStreetMap Nominatim (cached 10 minutes)
+      // 0. BigDataCloud IP Geolocation fallback when neither GPS coords nor query are supplied
+      if (!hasCoords && !queryText) {
+        if (bdcKey) {
+          try {
+            const clientIp = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+            const ipParam = clientIp && !/^(::1|127\.|10\.|192\.168\.)/.test(clientIp) ? `ip=${encodeURIComponent(clientIp)}&` : "";
+            const ipResp = await fetch(
+              `https://api-bdc.net/data/ip-geolocation?${ipParam}localityLanguage=en&key=${encodeURIComponent(bdcKey)}`,
+              { signal: AbortSignal.timeout(4500) }
+            );
+            if (ipResp.ok) {
+              const ipData: any = await ipResp.json();
+              const loc = ipData?.location || {};
+              if (Number.isFinite(Number(loc.latitude)) && Number.isFinite(Number(loc.longitude))) {
+                resolvedLat = Number(loc.latitude);
+                resolvedLng = Number(loc.longitude);
+                hasCoords = true;
+                suburb = loc.localityName || "";
+                city = loc.city || loc.principalSubdivision || "";
+                state = loc.principalSubdivision || "";
+                country = ipData?.country?.name || "";
+                countryCode = String(ipData?.country?.isoAlpha2 || "ZA").toUpperCase();
+                const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
+                if (labelParts.length > 0) displayLocation = labelParts.slice(0, 3).join(", ");
+                geocoderProvider = "BIGDATACLOUD_IP";
+              }
+            }
+          } catch (ipErr) {
+            console.warn("[safety-feed] BigDataCloud IP geolocation skipped:", (ipErr as any)?.message);
+          }
+        }
+        if (!hasCoords && !queryText) {
+          return res.status(400).json({ error: "Provide GPS coordinates (lat, lng) or a city/suburb query." });
+        }
+      }
+
+      // 1A. Primary Fast Reverse Geocode via BigDataCloud (cached 10 minutes)
       const cacheKey = hasCoords
-        ? `rev:${rawLat.toFixed(3)},${rawLng.toFixed(3)}`
+        ? `rev:${resolvedLat.toFixed(3)},${resolvedLng.toFixed(3)}`
         : `fwd:${queryText.toLowerCase()}`;
       const cachedGeo = geoCache.get(cacheKey);
       let geoData: any = cachedGeo && cachedGeo.expiresAt > Date.now() ? cachedGeo.data : null;
 
-      if (!geoData) {
+      if (!geoData && hasCoords && bdcKey && geocoderProvider !== "BIGDATACLOUD_IP") {
+        try {
+          const bdcUrl = `https://api-bdc.net/data/reverse-geocode?latitude=${encodeURIComponent(String(resolvedLat))}&longitude=${encodeURIComponent(String(resolvedLng))}&localityLanguage=en&key=${encodeURIComponent(bdcKey)}`;
+          const bdcResp = await fetch(bdcUrl, { signal: AbortSignal.timeout(4500) });
+          if (bdcResp.ok) {
+            const bdc: any = await bdcResp.json();
+            if (bdc && (bdc.locality || bdc.city || bdc.principalSubdivision)) {
+              geoData = {
+                provider: "BIGDATACLOUD",
+                lat: resolvedLat,
+                lon: resolvedLng,
+                address: {
+                  suburb: bdc.locality && bdc.locality !== bdc.city ? bdc.locality : "",
+                  city: bdc.city || bdc.locality || "",
+                  state: bdc.principalSubdivision || "",
+                  country: bdc.countryName || "",
+                  country_code: String(bdc.countryCode || "za").toLowerCase(),
+                },
+              };
+              geoCache.set(cacheKey, { expiresAt: Date.now() + 10 * 60_000, data: geoData });
+              geocoderProvider = "BIGDATACLOUD";
+            }
+          }
+        } catch (bdcErr) {
+          console.warn("[safety-feed] BigDataCloud reverse geocode skipped:", (bdcErr as any)?.message);
+        }
+      }
+
+      // 1B. Fallback / Text-Query Geocode via OpenStreetMap Nominatim (cached 10 minutes)
+      if (!geoData && geocoderProvider !== "BIGDATACLOUD_IP") {
         try {
           const nomUrl = hasCoords
-            ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(rawLat))}&lon=${encodeURIComponent(String(rawLng))}&zoom=14&addressdetails=1`
+            ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(resolvedLat))}&lon=${encodeURIComponent(String(resolvedLng))}&zoom=14&addressdetails=1`
             : `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(queryText)}`;
           const geoResp = await fetch(nomUrl, {
             headers: {
@@ -1342,6 +1405,7 @@ Rules:
             geoData = Array.isArray(parsed) ? parsed[0] || null : parsed;
             if (geoData) {
               geoCache.set(cacheKey, { expiresAt: Date.now() + 10 * 60_000, data: geoData });
+              geocoderProvider = "NOMINATIM";
             }
           }
         } catch (geoErr) {
@@ -2881,6 +2945,190 @@ Rules:
 
       res.json({ orgs });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Super Admin: Restore & unify every registered SafetyLink customer across SQLite, JSON backup, organizations, and Firestore
+  app.post("/api/admin/restore-customers", superAdminMiddleware, async (_req: any, res: any) => {
+    try {
+      const normalizePhone = (raw: string) => {
+        const d = String(raw || "").replace(/[^0-9]/g, "");
+        if (!d) return "";
+        if (d.startsWith("27") && d.length === 11) return "0" + d.slice(2);
+        if (d.length === 9 && /^[678]/.test(d)) return "0" + d;
+        return d;
+      };
+
+      const unified = new Map<string, any>();
+      const sources = { sqlUsers: 0, backupUsers: 0, sqlOrgs: 0, firestoreUsers: 0 };
+
+      const upsert = (record: any, sourceLabel: string) => {
+        const pKey = normalizePhone(record.phone || "");
+        const eKey = String(record.email || "").trim().toLowerCase();
+        const dedupeKey = pKey ? `phone:${pKey}` : (eKey ? `email:${eKey}` : `id:${record.id || Math.random()}`);
+        const prev = unified.get(dedupeKey);
+        if (!prev) {
+          unified.set(dedupeKey, {
+            id: String(record.id || `CUST-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`),
+            username: record.username || record.name || (pKey ? `user_${pKey.slice(-4)}` : "safetylink_user"),
+            fullName: record.fullName || record.name || record.username || "SafetyLink Customer",
+            phone: record.phone || "",
+            whatsapp: record.whatsapp || record.phone || "",
+            email: record.email || "",
+            orgCode: record.orgCode || record.org_code || "",
+            role: record.role || "Community Member",
+            subscriptionStatus: record.subscriptionStatus || record.status || "active",
+            homeAddress: record.homeAddress || "",
+            workAddress: record.workAddress || "",
+            preferredHospital: record.preferredHospital || "",
+            medicalInfo: record.medicalInfo || "",
+            emergencyContactsList: record.emergencyContactsList || "",
+            createdAt: Number(record.createdAt || (record.created_at ? new Date(record.created_at).getTime() : Date.now())),
+            sources: [sourceLabel],
+          });
+          return;
+        }
+        unified.set(dedupeKey, {
+          ...prev,
+          fullName: prev.fullName && prev.fullName !== "SafetyLink Customer" ? prev.fullName : (record.fullName || record.name || prev.fullName),
+          phone: prev.phone || record.phone || "",
+          email: prev.email || record.email || "",
+          orgCode: prev.orgCode || record.orgCode || record.org_code || "",
+          role: prev.role && prev.role !== "Community Member" ? prev.role : (record.role || prev.role),
+          sources: Array.from(new Set([...(prev.sources || []), sourceLabel])),
+        });
+      };
+
+      // 1. SQLite users table
+      try {
+        const sqlRes = await db.execute({
+          sql: `SELECT u.id, u.name, u.phone, u.org_id, o.org_name, o.org_code, u.created_at
+                FROM users u LEFT JOIN organizations o ON u.org_id = o.id
+                ORDER BY u.created_at DESC`,
+          args: [],
+        });
+        sources.sqlUsers = (sqlRes.rows || []).length;
+        for (const r of (sqlRes.rows as any[]) || []) upsert(r, "sql_users");
+      } catch {}
+
+      // 2. Persistent backup JSON
+      const backupUsers = readPersistentJSON(USERS_BACKUP_FILE, []);
+      if (Array.isArray(backupUsers)) {
+        sources.backupUsers = backupUsers.length;
+        for (const b of backupUsers) upsert(b, "backup_json");
+      }
+
+      // 3. Organizations table
+      try {
+        const orgRes = await db.execute({ sql: `SELECT id, org_name, org_code, contact_email, created_at FROM organizations`, args: [] });
+        sources.sqlOrgs = (orgRes.rows || []).length;
+        for (const o of (orgRes.rows as any[]) || []) {
+          upsert({
+            id: `ORG-${o.org_code || o.id}`,
+            username: String(o.org_code || o.id).toLowerCase(),
+            fullName: `${o.org_name || o.org_code} (Organization)`,
+            email: o.contact_email || "",
+            orgCode: o.org_code || "",
+            role: "Organization Administrator",
+            created_at: o.created_at,
+          }, "sql_orgs");
+        }
+      } catch {}
+
+      // 4. Optional Firestore users collection (when Firebase Admin is active)
+      try {
+        const fdb = getFirestoreDb();
+        if (fdb) {
+          const snap = await fdb.collection("users").limit(1000).get();
+          sources.firestoreUsers = snap.size;
+          snap.forEach((docSnap: any) => upsert({ id: docSnap.id, ...docSnap.data() }, "firestore_users"));
+        }
+      } catch {}
+
+      const users = Array.from(unified.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+      try {
+        writePersistentJSON(USERS_BACKUP_FILE, users);
+      } catch {}
+
+      res.json({ ok: true, totalCount: users.length, sources, users });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Failed to restore customer database" });
+    }
+  });
+
+  // IoT Hardware Panic Webhook (NB-IoT Buttons, Hikvision AX PRO Hubs, 4G GPS Smartwatches)
+  app.post("/api/webhook/iot-panic", async (req: any, res: any) => {
+    try {
+      const configuredSecret = String(process.env.IOT_WEBHOOK_SECRET || process.env.PCM_WEBHOOK_TOKEN || "").trim();
+      if (configuredSecret) {
+        const provided = String(req.headers["x-iot-token"] || req.headers["x-webhook-secret"] || req.query.token || "").trim();
+        if (!provided || provided !== configuredSecret) {
+          return res.status(401).json({ error: "Unauthorized IoT webhook token" });
+        }
+      }
+      const b = req.body || {};
+      const deviceId = String(b.deviceId || b.imei || b.hubId || b.serial || "").trim();
+      const deviceType = String(b.deviceType || b.hardware || (b.zone ? "HIKVISION_AX_PRO" : b.imei ? "4G_GPS_WATCH" : "NB_IOT_BUTTON")).toUpperCase();
+      const ownerPhone = String(b.phone || b.ownerPhone || b.msisdn || "").trim();
+      const orgId = String(b.orgId || b.orgCode || "INDIVIDUAL").trim();
+      const lat = Number.isFinite(Number(b.lat ?? b.latitude)) ? Number(b.lat ?? b.latitude) : null;
+      const lng = Number.isFinite(Number(b.lng ?? b.longitude)) ? Number(b.lng ?? b.longitude) : null;
+      const zone = String(b.zone || b.eventType || "SOS_TRIGGER").trim();
+
+      if (!deviceId && !ownerPhone) {
+        return res.status(400).json({ error: "deviceId/imei or ownerPhone is required" });
+      }
+
+      const incidentId = `IOT-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      try {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO incidents (id, org_id, triggered_by, description, latitude, longitude, status, severity, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 'DISPATCHED', 'CRITICAL', ?)`,
+          args: [incidentId, orgId, deviceId || ownerPhone, `${deviceType} Hardware SOS (${zone})`, lat ?? 0, lng ?? 0, new Date().toISOString()],
+        });
+      } catch {}
+
+      res.status(201).json({
+        ok: true,
+        incidentId,
+        deviceId: deviceId || ownerPhone,
+        deviceType,
+        zone,
+        coordinates: lat !== null && lng !== null ? { lat, lng } : null,
+        receivedAt: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "IoT webhook error" });
+    }
+  });
+
+  // Optional DeepAI server-side visual enhancement / generation utility (strictly off emergency path)
+  app.post("/api/media/enhance", async (req: any, res: any) => {
+    const deepAiKey = String(process.env.DEEPAI_API_KEY || "").trim();
+    if (!deepAiKey) {
+      return res.status(503).json({ error: "DEEPAI_API_KEY is not configured on this server." });
+    }
+    const { endpoint = "text2img", text = "", imageUrl = "" } = req.body || {};
+    const allowedEndpoints = new Set(["text2img", "torch-srgan", "colorizer"]);
+    const safeEndpoint = allowedEndpoints.has(String(endpoint)) ? String(endpoint) : "text2img";
+    if (safeEndpoint === "text2img" && !String(text).trim()) {
+      return res.status(400).json({ error: "Prompt text is required for text2img." });
+    }
+    try {
+      const form = new URLSearchParams();
+      if (text) form.set("text", String(text).slice(0, 600));
+      if (imageUrl) form.set("image", String(imageUrl));
+      const resp = await fetch(`https://api.deepai.org/api/${safeEndpoint}`, {
+        method: "POST",
+        headers: { "api-key": deepAiKey, "Content-Type": "application/x-www-form-urlencoded" },
+        body: form.toString(),
+        signal: AbortSignal.timeout(25000),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) return res.status(resp.status).json({ error: data?.err || "DeepAI request failed" });
+      res.json({ ok: true, id: data?.id, outputUrl: data?.output_url });
+    } catch (e: any) {
+      res.status(502).json({ error: e.message || "DeepAI service unreachable" });
+    }
   });
 
   // Super admin: list all users across all organizations with complete registration fields

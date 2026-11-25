@@ -228,18 +228,15 @@ export async function resolveFreeNewsArticleUrl(
 export async function handleWorkerLiveSafetyFeed(
   env: any,
   originUrl: string,
-  params: { lat?: number; lng?: number; query?: string; radiusKm?: number },
+  params: { lat?: number; lng?: number; query?: string; radiusKm?: number; clientIp?: string },
 ) {
   const rawLat = typeof params.lat === 'number' ? params.lat : NaN;
   const rawLng = typeof params.lng === 'number' ? params.lng : NaN;
   const queryText = String(params.query || '').trim();
   const radiusKm = Math.min(100, Math.max(5, Number(params.radiusKm) || 25));
+  const bdcKey = String(env?.BIGDATACLOUD_API_KEY || '').trim();
 
-  const hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng) && (rawLat !== 0 || rawLng !== 0);
-  if (!hasCoords && !queryText) {
-    return { status: 400, json: { error: 'Provide GPS coordinates (lat, lng) or a city/suburb query.' } };
-  }
-
+  let hasCoords = Number.isFinite(rawLat) && Number.isFinite(rawLng) && (rawLat !== 0 || rawLng !== 0);
   let resolvedLat = rawLat;
   let resolvedLng = rawLng;
   let suburb = '';
@@ -247,39 +244,100 @@ export async function handleWorkerLiveSafetyFeed(
   let state = '';
   let country = '';
   let countryCode = 'ZA';
-  let displayLocation = queryText || `${rawLat.toFixed(4)}, ${rawLng.toFixed(4)}`;
+  let geocoderProvider: 'BIGDATACLOUD' | 'BIGDATACLOUD_IP' | 'NOMINATIM' | 'FALLBACK' = 'FALLBACK';
+  let displayLocation = queryText || (hasCoords ? `${rawLat.toFixed(4)}, ${rawLng.toFixed(4)}` : 'South Africa');
 
-  // 1. Resolve exact location via OpenStreetMap Nominatim
-  try {
-    const nomUrl = hasCoords
-      ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(rawLat))}&lon=${encodeURIComponent(String(rawLng))}&zoom=14&addressdetails=1`
-      : `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(queryText)}`;
-    const geoResp = await fetch(nomUrl, {
-      headers: {
-        'User-Agent': 'SafetyLink-Core/1.0 (https://safetylink.online)',
-        'Accept-Language': 'en',
-      },
-    });
-    if (geoResp.ok) {
-      const parsed: any = await geoResp.json().catch(() => null);
-      const geoData = Array.isArray(parsed) ? parsed[0] || null : parsed;
-      if (geoData) {
-        if (!hasCoords && geoData.lat && geoData.lon) {
-          resolvedLat = Number(geoData.lat);
-          resolvedLng = Number(geoData.lon);
+  // 0. If neither GPS coordinates nor a query was provided, attempt BigDataCloud IP Geolocation
+  if (!hasCoords && !queryText) {
+    if (bdcKey) {
+      try {
+        const ipParam = params.clientIp ? `ip=${encodeURIComponent(params.clientIp)}&` : '';
+        const ipResp = await fetch(
+          `https://api-bdc.net/data/ip-geolocation?${ipParam}localityLanguage=en&key=${encodeURIComponent(bdcKey)}`
+        );
+        if (ipResp.ok) {
+          const ipData: any = await ipResp.json().catch(() => null);
+          const loc = ipData?.location || {};
+          if (Number.isFinite(Number(loc.latitude)) && Number.isFinite(Number(loc.longitude))) {
+            resolvedLat = Number(loc.latitude);
+            resolvedLng = Number(loc.longitude);
+            hasCoords = true;
+            suburb = loc.localityName || '';
+            city = loc.city || loc.principalSubdivision || '';
+            state = loc.principalSubdivision || '';
+            country = ipData?.country?.name || '';
+            countryCode = String(ipData?.country?.isoAlpha2 || 'ZA').toUpperCase();
+            const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
+            if (labelParts.length > 0) displayLocation = labelParts.slice(0, 3).join(', ');
+            geocoderProvider = 'BIGDATACLOUD_IP';
+          }
         }
-        const addr = geoData.address || {};
-        suburb = addr.suburb || addr.neighbourhood || addr.quarter || addr.village || addr.hamlet || '';
-        city = addr.city || addr.town || addr.municipality || addr.county || addr.state_district || '';
-        state = addr.state || addr.region || '';
-        country = addr.country || '';
-        countryCode = String(addr.country_code || 'za').toUpperCase();
-        const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
-        if (labelParts.length > 0) displayLocation = labelParts.slice(0, 3).join(', ');
+      } catch {
+        // ignore IP geolocation failures
       }
     }
-  } catch {
-    // fallback to provided query/coords
+    if (!hasCoords && !queryText) {
+      return { status: 400, json: { error: 'Provide GPS coordinates (lat, lng) or a city/suburb query.' } };
+    }
+  }
+
+  // 1A. Primary Fast Reverse Geocode via BigDataCloud (when GPS coordinates + key are available)
+  if (hasCoords && bdcKey && geocoderProvider !== 'BIGDATACLOUD_IP') {
+    try {
+      const bdcUrl = `https://api-bdc.net/data/reverse-geocode?latitude=${encodeURIComponent(String(resolvedLat))}&longitude=${encodeURIComponent(String(resolvedLng))}&localityLanguage=en&key=${encodeURIComponent(bdcKey)}`;
+      const bdcResp = await fetch(bdcUrl);
+      if (bdcResp.ok) {
+        const bdc: any = await bdcResp.json().catch(() => null);
+        if (bdc && (bdc.locality || bdc.city || bdc.principalSubdivision)) {
+          suburb = bdc.locality && bdc.locality !== bdc.city ? bdc.locality : '';
+          city = bdc.city || bdc.locality || '';
+          state = bdc.principalSubdivision || '';
+          country = bdc.countryName || '';
+          countryCode = String(bdc.countryCode || 'ZA').toUpperCase();
+          const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
+          if (labelParts.length > 0) displayLocation = labelParts.slice(0, 3).join(', ');
+          geocoderProvider = 'BIGDATACLOUD';
+        }
+      }
+    } catch {
+      // fall through to Nominatim
+    }
+  }
+
+  // 1B. Fallback / Text-Query Geocode via OpenStreetMap Nominatim
+  if (geocoderProvider === 'FALLBACK') {
+    try {
+      const nomUrl = hasCoords
+        ? `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(resolvedLat))}&lon=${encodeURIComponent(String(resolvedLng))}&zoom=14&addressdetails=1`
+        : `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&q=${encodeURIComponent(queryText)}`;
+      const geoResp = await fetch(nomUrl, {
+        headers: {
+          'User-Agent': 'SafetyLink-Core/1.0 (https://safetylink.online)',
+          'Accept-Language': 'en',
+        },
+      });
+      if (geoResp.ok) {
+        const parsed: any = await geoResp.json().catch(() => null);
+        const geoData = Array.isArray(parsed) ? parsed[0] || null : parsed;
+        if (geoData) {
+          if (!hasCoords && geoData.lat && geoData.lon) {
+            resolvedLat = Number(geoData.lat);
+            resolvedLng = Number(geoData.lon);
+          }
+          const addr = geoData.address || {};
+          suburb = addr.suburb || addr.neighbourhood || addr.quarter || addr.village || addr.hamlet || '';
+          city = addr.city || addr.town || addr.municipality || addr.county || addr.state_district || '';
+          state = addr.state || addr.region || '';
+          country = addr.country || '';
+          countryCode = String(addr.country_code || 'za').toUpperCase();
+          const labelParts = [suburb, city, state, country].filter((v, idx, arr) => Boolean(v) && arr.indexOf(v) === idx);
+          if (labelParts.length > 0) displayLocation = labelParts.slice(0, 3).join(', ');
+          geocoderProvider = 'NOMINATIM';
+        }
+      }
+    } catch {
+      // fallback to provided query/coords
+    }
   }
 
   const effectiveCoords = Number.isFinite(resolvedLat) && Number.isFinite(resolvedLng) && (resolvedLat !== 0 || resolvedLng !== 0);

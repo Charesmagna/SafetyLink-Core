@@ -19,8 +19,48 @@ export const PanicButton: React.FC = () => {
     activeSOSState, attemptCancelSOS, drillMode, 
     panicCountdown, startMultiStagePanic, auditLogs,
     watchMeTimerSeconds, startWatchMeTimer, cancelWatchMeTimer,
-    silenceAlerts, setSilenceAlerts
+    silenceAlerts, setSilenceAlerts,
+    dispatchSettings, setDispatchSettings, contacts, customBackendUrl
   } = useAppStore();
+
+  const [realOnline, setRealOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const probe = async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (alive) setRealOnline(false);
+        return;
+      }
+      const base = (customBackendUrl || '').trim().replace(/\/+$/, '');
+      const urls = base ? [`${base}/api/health`, '/api/health'] : ['/api/health', 'https://api.safetylink.online/api/health'];
+      for (const u of urls) {
+        const ctrl = new AbortController();
+        const t = window.setTimeout(() => ctrl.abort(), 2500);
+        try {
+          const r = await fetch(u, { method: 'GET', cache: 'no-store', signal: ctrl.signal });
+          window.clearTimeout(t);
+          if (r.ok) {
+            if (alive) setRealOnline(true);
+            return;
+          }
+        } catch {
+          window.clearTimeout(t);
+        }
+      }
+      if (alive) setRealOnline(false);
+    };
+    probe();
+    const id = window.setInterval(probe, 30000);
+    window.addEventListener('online', probe);
+    window.addEventListener('offline', probe);
+    return () => {
+      alive = false;
+      window.clearInterval(id);
+      window.removeEventListener('online', probe);
+      window.removeEventListener('offline', probe);
+    };
+  }, [customBackendUrl]);
   
   const [showWatchMe, setShowWatchMe] = useState(false);
   const [watchMeMinutes, setWatchMeMinutes] = useState(30);
@@ -463,8 +503,66 @@ export const PanicButton: React.FC = () => {
         </div>
       </div>
 
+      {/* Mission Control Dispatch Strip: ONLY 1 Tick (Zero-Airtime USSD -> FCM + SMS) + Mandatory Native SMS & Call */}
+      <div className="mt-4 pt-3.5 border-t border-slate-800/40 relative z-10 space-y-2.5 text-left">
+        <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-emerald-500/40 transition-colors">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <input
+              type="checkbox"
+              checked={dispatchSettings?.ussdEnabled !== false}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setDispatchSettings({ ussdEnabled: enabled, preferFcmOnline: true });
+                useAppStore.getState().addToast(
+                  enabled
+                    ? 'Zero-Airtime USSD Relay armed (Please Call Me → FCM + SMS before call)'
+                    : 'Zero-Airtime USSD Relay disabled',
+                  'info'
+                );
+              }}
+              className="mt-0.5 w-4 h-4 accent-emerald-500 rounded shrink-0"
+              data-testid="mission-control-ussd-toggle"
+            />
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-100 leading-tight">
+                Zero-Airtime USSD Relay (Please Call Me → FCM + SMS)
+              </div>
+              <div className="text-[10px] text-slate-400 leading-snug mt-0.5">
+                Auto-triggers when offline/no data: dials Please Call Me to trigger Loud FCM Alarm &amp; Zero-Airtime SMS before calling.
+              </div>
+            </div>
+          </div>
+          <span className={`shrink-0 text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${
+            dispatchSettings?.ussdEnabled !== false
+              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+              : 'bg-slate-800 text-slate-400 border-slate-700'
+          }`}>
+            {dispatchSettings?.ussdEnabled !== false ? 'ARMED' : 'OFF'}
+          </span>
+        </label>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px] font-mono">
+          <div className="flex items-center gap-1.5 text-slate-300">
+            <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
+            <span className="font-bold">Native SMS + Call:</span>
+            <span className={contacts.length > 0 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+              {contacts.length > 0 ? `Mandatory (${contacts.length} contact${contacts.length === 1 ? '' : 's'})` : 'Add contacts to arm'}
+            </span>
+          </div>
+          <div className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
+            realOnline === true
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+              : realOnline === false
+              ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+              : 'bg-slate-800/60 text-slate-400 border-slate-700'
+          }`}>
+            {realOnline === true ? 'ONLINE · CLOUD FCM READY' : realOnline === false ? 'OFFLINE · USSD RELAY MODE' : 'VERIFYING LINK…'}
+          </div>
+        </div>
+      </div>
+
       {/* Drill toggle block */}
-      <div className="flex items-center justify-between w-full mt-5 pt-4 border-t border-slate-800/40 relative z-10">
+      <div className="flex items-center justify-between w-full mt-4 pt-3.5 border-t border-slate-800/40 relative z-10">
         <div className="flex flex-col text-left">
           <span className="text-xs font-bold text-slate-300 font-display">
             {drillMode ? "SANDBOX SIMULATOR" : "LIVE SECURITY ARMED"}

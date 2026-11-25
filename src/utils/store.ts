@@ -329,6 +329,7 @@ interface AppState {
   setAutoRefreshUsersEnabled: (enabled: boolean) => void;
   setAutoRefreshIntervalSeconds: (seconds: number) => void;
   refreshClientDatabase: () => Promise<void>;
+  restoreCustomerDatabase: () => Promise<{ ok: boolean; totalCount: number; addedCount: number; sources?: Record<string, number> }>;
   exportToGoogleDrive: () => Promise<{ success: boolean; fileId?: string; fileUrl?: string; error?: string }>;
 
   // Configurable BLE / iTAG Button Triggers
@@ -2876,6 +2877,127 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON('sl_client_database_records', records);
     set({ clientDatabaseRecords: records, lastClientDatabaseSync: Date.now() });
     get().addAuditLog('SYSTEM', 'INFO', 'Client Database Refreshed', `Synchronized ${records.length} user records with telemetry.`);
+  },
+
+  restoreCustomerDatabase: async () => {
+    const beforeCount = get().users.length;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const authToken = get().token;
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const collected: any[] = [...get().users];
+    let sources: Record<string, number> = {};
+
+    // 1. Primary unified backend restore endpoint (Cloudflare D1 / Node SQLite + Firestore)
+    try {
+      const { response } = await fetchBackendApi('/api/admin/restore-customers', {
+        method: 'POST',
+        headers,
+      }, get().customBackendUrl);
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        if (data && Array.isArray(data.users)) {
+          collected.push(...data.users);
+          if (data.sources) sources = { ...sources, ...data.sources };
+        }
+      }
+    } catch (err) {
+      console.warn('[restoreCustomerDatabase] /api/admin/restore-customers notice:', err);
+    }
+
+    // 2. Also refresh standard super-admin directory so organizations & recent users are included
+    try {
+      await get().fetchSuperAdminData();
+      collected.push(...get().users);
+    } catch {}
+
+    // 3. Include organization contact entries if not already present
+    for (const org of get().organizations || []) {
+      if (org.contactEmail || org.name) {
+        collected.push({
+          id: `ORG-${org.id}`,
+          username: String(org.id || '').toLowerCase(),
+          fullName: org.contactName ? `${org.contactName} (${org.name})` : `${org.name} Admin`,
+          phone: (org as any).contactPhone || '',
+          email: org.contactEmail || '',
+          orgCode: org.id,
+          role: 'Organization Administrator',
+          subscriptionStatus: org.subscriptionStatus || 'active',
+          createdAt: org.createdAt || Date.now(),
+        });
+      }
+    }
+
+    // 4. Deduplicate cleanly by normalized phone -> lowercase email -> id
+    const normPhone = (raw: string) => {
+      const d = String(raw || '').replace(/[^0-9]/g, '');
+      if (!d) return '';
+      if (d.startsWith('27') && d.length === 11) return '0' + d.slice(2);
+      if (d.length === 9 && /^[678]/.test(d)) return '0' + d;
+      return d;
+    };
+
+    const byKey = new Map<string, UserProfile>();
+    for (const raw of collected) {
+      if (!raw) continue;
+      const pKey = normPhone(raw.phone || '');
+      const eKey = String(raw.email || '').trim().toLowerCase();
+      const idKey = String(raw.id || '').trim();
+      const key = pKey ? `p:${pKey}` : (eKey ? `e:${eKey}` : (idKey ? `id:${idKey}` : ''));
+      if (!key) continue;
+
+      const prev = byKey.get(key);
+      if (!prev) {
+        byKey.set(key, {
+          id: idKey || `SL-CUST-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+          username: raw.username || (pKey ? `user_${pKey.slice(-4)}` : 'customer'),
+          fullName: raw.fullName || raw.name || raw.username || 'SafetyLink Customer',
+          phone: raw.phone || '',
+          whatsapp: raw.whatsapp || raw.phone || '',
+          email: raw.email || '',
+          orgCode: raw.orgCode || raw.org_code || '',
+          role: raw.role || 'Community Member',
+          subscriptionStatus: raw.subscriptionStatus || raw.accountStatus || 'active',
+          homeAddress: raw.homeAddress || '',
+          workAddress: raw.workAddress || '',
+          preferredHospital: raw.preferredHospital || '',
+          medicalInfo: raw.medicalInfo || '',
+          emergencyContactsList: raw.emergencyContactsList || '',
+          liveSmsEnabled: Boolean(raw.liveSmsEnabled ?? true),
+          createdAt: Number(raw.createdAt || Date.now()),
+        } as UserProfile);
+      } else {
+        byKey.set(key, {
+          ...prev,
+          fullName: prev.fullName && prev.fullName !== 'SafetyLink Customer' ? prev.fullName : (raw.fullName || raw.name || prev.fullName),
+          phone: prev.phone || raw.phone || '',
+          whatsapp: prev.whatsapp || raw.whatsapp || prev.phone || '',
+          email: prev.email || raw.email || '',
+          orgCode: prev.orgCode || raw.orgCode || raw.org_code || '',
+          role: prev.role && prev.role !== 'Community Member' ? prev.role : (raw.role || prev.role),
+          homeAddress: prev.homeAddress || raw.homeAddress || '',
+          medicalInfo: prev.medicalInfo || raw.medicalInfo || '',
+        });
+      }
+    }
+
+    const unifiedUsers = Array.from(byKey.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    set({ users: unifiedUsers });
+    setStoredJSON('sl_users', unifiedUsers);
+    await get().refreshClientDatabase();
+
+    const addedCount = Math.max(0, unifiedUsers.length - beforeCount);
+    get().addAuditLog(
+      'SYSTEM',
+      'INFO',
+      'Customer Database Restored',
+      `Unified ${unifiedUsers.length} registered SafetyLink customers (${addedCount} newly recovered).`
+    );
+    get().addToast(
+      `Customer database restored: ${unifiedUsers.length} total customer${unifiedUsers.length === 1 ? '' : 's'} unified${addedCount > 0 ? ` (+${addedCount} recovered)` : ''}.`,
+      'success'
+    );
+    return { ok: true, totalCount: unifiedUsers.length, addedCount, sources };
   },
 
   exportToGoogleDrive: async () => {
