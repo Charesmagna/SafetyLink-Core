@@ -250,13 +250,15 @@ interface AppState {
   demoMode: boolean;
   toggleDemoMode: () => void;
 
-  // Floating Panic Widget states
+  // Floating Panic Widget & Kleva Floating Icon states
   isFloatingWidgetDeployed: boolean;
   isSurvivalMode: boolean;
   setSurvivalMode: (state: boolean) => void;
   floatingWidgetSize: number;
   setFloatingWidgetDeployed: (value: boolean) => void;
   setFloatingWidgetSize: (value: number) => void;
+  showKlevaFloatingIcon: boolean;
+  setShowKlevaFloatingIcon: (value: boolean) => void;
 
   // Commerce & Quotes state
   commerceModalOpen: boolean;
@@ -1242,8 +1244,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   cameras: getStoredJSON<CameraDevice[]>('sl_hikvision_cameras', []),
   cameraEvidenceSnapshots: getStoredJSON<CameraEvidenceSnapshot[]>('sl_hikvision_snapshots', []),
 
-  // Floating widget states
-  isFloatingWidgetDeployed: getStoredJSON<boolean>('sl_floating_widget_deployed', true),
+  // Floating widget & Kleva floating icon states (SOS off by default until user opts in)
+  isFloatingWidgetDeployed: getStoredJSON<boolean>('sl_floating_widget_deployed', false),
   isSurvivalMode: false,
   setSurvivalMode: (state) => set({ isSurvivalMode: state }),
   floatingWidgetSize: getStoredJSON<number>('sl_floating_widget_size', 64),
@@ -1254,6 +1256,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFloatingWidgetSize: (value) => {
     set({ floatingWidgetSize: value });
     setStoredJSON('sl_floating_widget_size', value);
+  },
+  showKlevaFloatingIcon: getStoredJSON<boolean>('sl_show_kleva_floating_icon', true),
+  setShowKlevaFloatingIcon: (value) => {
+    set({ showKlevaFloatingIcon: value });
+    setStoredJSON('sl_show_kleva_floating_icon', value);
   },
 
   // Commerce & Quotes state
@@ -3206,8 +3213,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
       setStoredJSON('sl_panic_events', get().panicEvents);
 
-      // Schedule configurable post-panic Kleva AI voice welfare check-in
+      // Schedule follow-up check-in AND immediately launch Kleva hands-free "Are you okay?" check-in
       get().scheduleAiCheckIn();
+      if (get().dispatchSettings.aiCheckInEnabled !== false) {
+        setTimeout(() => {
+          const latest = get();
+          if (latest.activeSOSState !== 'IDLE' && !latest.showLizzyPopup) {
+            latest.setShowLizzyPopup(true);
+          }
+        }, 2500);
+      }
 
       if (isDemo) {
         get().addAuditLog('SECURITY', 'SEVERE', 'Demo Panic Dispatched [SIMULATED]', `${incidentId}: Simulation completed.`);
@@ -3226,6 +3241,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         localOfflineQueue: nextQueue
       });
       setStoredJSON('sl_offline_queue', nextQueue);
+      get().scheduleAiCheckIn();
+      if (get().dispatchSettings.aiCheckInEnabled !== false) {
+        setTimeout(() => {
+          const latest = get();
+          if (latest.activeSOSState !== 'IDLE' && !latest.showLizzyPopup) {
+            latest.setShowLizzyPopup(true);
+          }
+        }, 2500);
+      }
       get().addAuditLog('SECURITY', 'SEVERE', 'Offline Dispatch Queued', `${incidentId}: Queued locally for sync on reconnect.`);
       get().addToast('Server unreachable. Incident queued offline and will sync automatically when online.', 'warn');
     }

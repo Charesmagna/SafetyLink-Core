@@ -49,10 +49,9 @@ export const ApkDownloadPopup: React.FC = () => {
           setDownloadState('complete');
           setStatusText('APK package download complete! safetylink-release.apk');
           
-          // Trigger actual file download download of a dummy file to satisfy the download requirement
           const link = document.createElement('a');
-          link.href = 'https://safetylink.online/SafetyLink.apk';
-          link.setAttribute('download', 'SafetyLink-Signed.apk');
+          link.href = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
+          link.setAttribute('download', 'SafetyLink-v1.apk');
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -115,7 +114,7 @@ export const ApkDownloadPopup: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs text-emerald-400 font-mono">Build v2.8.4 Compiled</span>
+                    <span className="text-xs text-emerald-400 font-mono">Version 1.1 · Official Stable</span>
                   </div>
                 </div>
                 <h2 className="text-2xl font-mono font-bold text-white tracking-tight mt-1">

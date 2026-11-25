@@ -190,8 +190,8 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 relative z-10">
         <div>
           <div className="flex items-center gap-2 mb-2 font-mono text-xs text-emerald-400 uppercase tracking-widest">
-            <Radio className="w-3.5 h-3.5 text-emerald-400" />
-            <span>CONTINUOUS TOPOLOGY OVERVIEW · {activePage.toUpperCase()} SECTION</span>
+            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>// CONTINUOUS TOPOLOGY OVERVIEW • {activePage.toUpperCase()} SECTION</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             {current.title}
@@ -249,7 +249,7 @@ export const ContinuousTopologyOverview: React.FC<ContinuousTopologyOverviewProp
             alt={current.title}
             onError={(e) => {
               e.currentTarget.onerror = null;
-              e.currentTarget.src = '/Screenshot_20260820_201927_com.aistudio.safetylink.vqnztp.jpg';
+              e.currentTarget.src = '/Polish_20260907_043403519.jpg';
             }}
             className="w-full h-auto max-h-[580px] object-contain transition-transform duration-700 group-hover:scale-[1.01]"
           />

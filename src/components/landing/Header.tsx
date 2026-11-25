@@ -98,7 +98,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
 
           {/* Right: Theme Toggle, Download Menu, Log In & Primary CTA */}
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Download Quick Dropdown (Separate Legacy v1 & v2 APKs + EXE) */}
+            {/* Download Quick Dropdown (Official Version 1 APK + Windows EXE) */}
             <div className="relative hidden sm:block">
               <button
                 type="button"
@@ -117,21 +117,12 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
                 >
                   <a
                     href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                    download="SafetyLink-Legacy-v1-Full.apk"
+                    download="SafetyLink-v1.apk"
                     onClick={() => setDownloadMenuOpen(false)}
                     className="block px-3 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 transition-colors no-underline"
                   >
-                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">SafetyLink Legacy v1 APK</div>
-                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">All latest features included</div>
-                  </a>
-                  <a
-                    href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk"
-                    download="SafetyLink-v2.apk"
-                    onClick={() => setDownloadMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors no-underline"
-                  >
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">SafetyLink v2 Signed APK</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Latest production build</div>
+                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">SafetyLink Version 1 APK</div>
+                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Official Stable · All latest features</div>
                   </a>
                   <a
                     href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
@@ -218,17 +209,18 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 gap-2">
               <a
                 href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                download="SafetyLink-Legacy-v1-Full.apk"
-                className="w-full py-2.5 px-3 rounded-lg bg-slate-900 dark:bg-emerald-600 text-white text-xs font-bold text-center no-underline"
+                download="SafetyLink-v1.apk"
+                className="w-full py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold text-center no-underline"
               >
-                Download Legacy v1 APK (All Features)
+                Download SafetyLink Version 1 APK (Official Stable)
               </a>
               <a
-                href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk"
-                download="SafetyLink-v2.apk"
+                href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
+                target="_blank"
+                rel="noreferrer"
                 className="w-full py-2.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold text-center no-underline"
               >
-                Download v2 Signed APK
+                Windows Control Desk EXE
               </a>
             </div>
 

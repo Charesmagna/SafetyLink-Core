@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { R2MediaShowcase } from './R2MediaShowcase';
 import { getR2StreamUrl, R2_MEDIA } from '../../utils/r2Assets';
+import { ACTION_VIDEOS, ASSETS, vid, vidPoster } from '../../utils/cloudinary';
 import {
   ArrowRight,
   BellRing,
@@ -62,21 +63,51 @@ const TRANSLATIONS: Record<string, { h1a: string; h1b: string; sub: string }> = 
   },
 };
 
-// ── 1. DEDICATED HERO FULL-BLEED BACKGROUND SLIDES (Wide atmospheric/network backdrops — ZERO overlap with foreground card) ──
-const HERO_BG_SLIDES = [
-  { src: R2_MEDIA.platform.heroBackground, alt: 'SafetyLink Global Emergency Platform Backdrop' },
-  { src: R2_MEDIA.platform.ambientHero, alt: 'SafetyLink Spatial Mesh Ambient Backdrop' },
-  { src: R2_MEDIA.backgrounds.cyberMesh, alt: 'Emergency Cyber Mesh Network' },
-  { src: R2_MEDIA.backgrounds.darkTopology, alt: 'Dark Tactical Topology Network' },
-  { src: R2_MEDIA.backgrounds.telemetryRadar, alt: 'Live Responder Telemetry Radar' },
-  { src: R2_MEDIA.backgrounds.neonGrid, alt: 'Connected Estate Security Grid' },
-  { src: R2_MEDIA.backgrounds.satelliteConstellation, alt: 'Satellite GPS & Failover Constellation' },
-  { src: R2_MEDIA.backgrounds.ambientSphere, alt: 'SafetyLink Resilient Node Sphere' },
+// ── 1. DEDICATED HERO FULL-BLEED BACKGROUND SLIDES (14 rotating active use-case videos + R2 visuals — never loops quickly, never blank) ──
+type HeroBgSlide =
+  | { kind: 'video'; src: string; poster: string; alt: string }
+  | { kind: 'image'; src: string; alt: string };
+
+const HERO_BG_SLIDES: HeroBgSlide[] = [
+  { kind: 'video', src: vid(ACTION_VIDEOS.neighbourhoodWatch), poster: vidPoster(ACTION_VIDEOS.neighbourhoodWatch), alt: 'SafetyLink Neighbourhood Watch Patrol in Action' },
+  { kind: 'image', src: R2_MEDIA.usecases.estateCommunity, alt: 'Protected South African Residential Estate' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.droneDispatch), poster: vidPoster(ACTION_VIDEOS.droneDispatch), alt: 'Autonomous Aerial Drone Dispatch Tracking' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.cyberMesh, alt: 'Emergency Cyber Mesh Network' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.familyProtection), poster: vidPoster(ACTION_VIDEOS.familyProtection), alt: 'Household Family Emergency Response' },
+  { kind: 'image', src: R2_MEDIA.usecases.tacticalSecurity, alt: 'Armed Response & Tactical Patrol Teams' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.bleItagAction), poster: vidPoster(ACTION_VIDEOS.bleItagAction), alt: 'Pocket BLE iTAG Panic Trigger in Action' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.telemetryRadar, alt: 'Live Responder Telemetry Radar' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.liveActionShowcase), poster: vidPoster(ACTION_VIDEOS.liveActionShowcase), alt: 'End-to-End SafetyLink Emergency Response' },
+  { kind: 'image', src: R2_MEDIA.usecases.corporateCampus, alt: 'Corporate Campus Security Protection' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.darkTopology, alt: 'Dark Tactical Topology Network' },
+  { kind: 'image', src: R2_MEDIA.usecases.schoolUniversity, alt: 'School & University Campus Safety' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.satelliteConstellation, alt: 'Satellite GPS & Failover Constellation' },
+  { kind: 'image', src: R2_MEDIA.platform.ambientHero, alt: 'SafetyLink Spatial Mesh Ambient Backdrop' },
 ];
 
-// ── 2. DEDICATED HERO FOREGROUND PLATFORM SHOWCASE (Actual Control Room, Mobile App & GIS Screens — ZERO overlap with Hero BG) ──
-const HERO_PLATFORM_SLIDES = [
+// ── 2. DEDICATED HERO FOREGROUND PLATFORM & ACTION VIDEO SHOWCASE (12 rich rotating slides: 6 active use-case videos + 6 platform screens) ──
+type HeroShowcaseSlide = {
+  kind: 'video' | 'image';
+  src: string;
+  thumb: string;
+  poster?: string;
+  tag: string;
+  title: string;
+  caption: string;
+};
+
+const HERO_PLATFORM_SLIDES: HeroShowcaseSlide[] = [
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.familyProtection),
+    poster: vidPoster(ACTION_VIDEOS.familyProtection),
+    thumb: vidPoster(ACTION_VIDEOS.familyProtection),
+    tag: 'LIVE ACTION · FAMILY',
+    title: 'Household & Family Emergency Protection',
+    caption: 'Instant BLE keyfob or phone panic trigger alerting loved ones and armed response in seconds.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.commandDeckDark,
     thumb: R2_MEDIA.platform.commandDeckDark,
     tag: 'CONTROL ROOM',
@@ -84,6 +115,16 @@ const HERO_PLATFORM_SLIDES = [
     caption: 'Real-time incident map, severity triage, patrol telemetry, and instant responder dispatch.',
   },
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.droneDispatch),
+    poster: vidPoster(ACTION_VIDEOS.droneDispatch),
+    thumb: vidPoster(ACTION_VIDEOS.droneDispatch),
+    tag: 'LIVE ACTION · DRONE',
+    title: 'Autonomous Aerial Drone Dispatch',
+    caption: 'Live aerial response tracking active incidents and guiding ground patrol units directly to coordinates.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.mobileTelemetry,
     thumb: R2_MEDIA.platform.mobileTelemetry,
     tag: 'MOBILE APP',
@@ -91,6 +132,16 @@ const HERO_PLATFORM_SLIDES = [
     caption: 'Native PanicService with 10-second PIN lock, silent duress code, and live GPS triangulation.',
   },
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.neighbourhoodWatch),
+    poster: vidPoster(ACTION_VIDEOS.neighbourhoodWatch),
+    thumb: vidPoster(ACTION_VIDEOS.neighbourhoodWatch),
+    tag: 'LIVE ACTION · PATROL',
+    title: 'Neighbourhood Watch & Estate Patrols',
+    caption: 'Coordinate street captains, community responders, and instant GPS panic pins across suburbs.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.signalMap,
     thumb: R2_MEDIA.platform.signalMap,
     tag: 'GIS & RADAR',
@@ -98,13 +149,33 @@ const HERO_PLATFORM_SLIDES = [
     caption: 'Track active alerts, nearby danger zones, and patrol proximity across estates and campuses.',
   },
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.bleItagAction),
+    poster: vidPoster(ACTION_VIDEOS.bleItagAction),
+    thumb: vidPoster(ACTION_VIDEOS.bleItagAction),
+    tag: 'LIVE ACTION · BLE FOB',
+    title: 'Pocket BLE iTAG Hardware in Action',
+    caption: 'Trigger covert SOS from your pocket or keyring even while your smartphone screen is locked.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.dispatchControl,
     thumb: R2_MEDIA.platform.dispatchControl,
     tag: 'DISPATCH OPS',
-    title: 'Central Dispatch & Escalation Queue',
-    caption: 'Automated FCM loud alarm, SMS, voice dispatch, and zero-airtime Please Call Me failover.',
+    title: 'ZeroLink Offline USSD + FCM Dispatch',
+    caption: 'Automated loud FCM alarm, native SMS, stay-on-screen voice call, and zero-airtime Please Call Me failover.',
   },
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.schoolsAndWorkplaces),
+    poster: vidPoster(ACTION_VIDEOS.schoolsAndWorkplaces),
+    thumb: vidPoster(ACTION_VIDEOS.schoolsAndWorkplaces),
+    tag: 'LIVE ACTION · CAMPUS',
+    title: 'Schools & Workplace Safety Mesh',
+    caption: 'Protect learners, teachers, and corporate staff with instant security routing and parent alerts.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.telemetryDesk,
     thumb: R2_MEDIA.platform.telemetryDesk,
     tag: 'OPERATIONS DESK',
@@ -112,6 +183,16 @@ const HERO_PLATFORM_SLIDES = [
     caption: 'Manage linked households, approve or suspend members, and monitor CCTV streams.',
   },
   {
+    kind: 'video',
+    src: vid(ACTION_VIDEOS.elderlyAtHome),
+    poster: vidPoster(ACTION_VIDEOS.elderlyAtHome),
+    thumb: vidPoster(ACTION_VIDEOS.elderlyAtHome),
+    tag: 'LIVE ACTION · CARE',
+    title: 'Elderly & Lone-Worker Home Care',
+    caption: 'Proactive Watch-Me safety timers and hands-free Kleva AI welfare check-ins after every alert.',
+  },
+  {
+    kind: 'image',
     src: R2_MEDIA.platform.networkGrid,
     thumb: R2_MEDIA.platform.networkGrid,
     tag: 'INDOOR MESH',
@@ -211,10 +292,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [hwIdx, setHwIdx] = useState(0);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
   const [lightboxItem, setLightboxItem] = useState<(typeof SHOWCASE_GALLERY)[number] | null>(null);
-  const v2ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk';
+  const betaApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk';
   const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [releaseVersion, setReleaseVersion] = useState('v2.0 Signed');
+  const [releaseVersion, setReleaseVersion] = useState('v1.1 · Official Stable');
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const hardwareSectionRef = useRef<HTMLDivElement>(null);
@@ -226,26 +307,26 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const hardwareRotate = useTransform(hwScroll, [0, 0.5, 1], [-4, 0, 4]);
   const hardwareScale = useTransform(hwScroll, [0, 0.5, 1], [0.94, 1.04, 0.98]);
 
-  // Preload initial Hero background & foreground platform slides smoothly
+  // Preload initial Hero thumbnails & backdrops smoothly
   useEffect(() => {
-    HERO_BG_SLIDES.slice(0, 3).forEach((s) => {
+    HERO_BG_SLIDES.slice(0, 4).forEach((s) => {
       const img = new Image();
-      img.src = s.src;
+      img.src = s.kind === 'video' ? s.poster : s.src;
     });
-    HERO_PLATFORM_SLIDES.slice(0, 3).forEach((s) => {
+    HERO_PLATFORM_SLIDES.slice(0, 6).forEach((s) => {
       const img = new Image();
-      img.src = s.src;
+      img.src = s.thumb;
     });
   }, []);
 
-  // Independent timers so Hero background & Hero platform frame never mirror or duplicate each other
+  // Independent timers so Hero background & Hero showcase rotate continuously with rich variety
   useEffect(() => {
     const bgTimer = window.setInterval(() => {
       setBgIdx((prev) => (prev + 1) % HERO_BG_SLIDES.length);
-    }, 6200);
+    }, 5800);
     const slideTimer = window.setInterval(() => {
       setSlideIdx((prev) => (prev + 1) % HERO_PLATFORM_SLIDES.length);
-    }, 4500);
+    }, 6000);
     const hwTimer = window.setInterval(() => {
       setHwIdx((prev) => (prev + 1) % HARDWARE_PHOTO_POOL.length);
     }, 4000);
@@ -260,7 +341,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     fetch('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest')
       .then((r) => (r.ok ? r.json() : null))
       .then((info) => {
-        if (info?.version) setReleaseVersion(`v2 (${info.version})`);
+        if (info?.version) setReleaseVersion(`Version 1 (${info.version})`);
       })
       .catch(() => {});
 
@@ -297,30 +378,55 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     <div className="bg-transparent text-slate-900 dark:text-slate-100">
       {/* ── PROMINENT FULL-BLEED CHANGING HERO SECTION (Video background stays active across rest of page) ── */}
       <section className="relative min-h-[560px] lg:min-h-[620px] py-14 sm:py-18 lg:py-22 px-4 sm:px-6 overflow-hidden flex items-center border-b border-emerald-500/20">
-        {/* Prominent Full-Bleed Changing R2 Backdrop (Dedicated atmospheric scenes — distinct from foreground showcase) */}
+        {/* Prominent Full-Bleed Changing Hero Backdrop (Instant local base + rotating Use-Case Action Videos & R2 Scenes) */}
         <div className="absolute inset-0 z-0 overflow-hidden bg-slate-950">
+          {/* Guaranteed instant local backdrop so the hero is NEVER blank even on slow mobile networks */}
+          <img
+            src="/Polish_20260907_043403519.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-45 select-none pointer-events-none"
+          />
           <AnimatePresence mode="sync">
-            <motion.img
-              key={`hero-bg-${currentBg.src}`}
-              src={currentBg.src}
-              alt={currentBg.alt}
-              initial={{ opacity: 0, scale: 1.08 }}
-              animate={{ opacity: 0.72, scale: 1.01 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.0, ease: 'easeOut' }}
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-              }}
-              className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
-            />
+            {currentBg.kind === 'video' ? (
+              <motion.video
+                key={`hero-bg-vid-${currentBg.src}`}
+                src={currentBg.src}
+                poster={currentBg.poster}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 0.72, scale: 1.0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
+              />
+            ) : (
+              <motion.img
+                key={`hero-bg-img-${currentBg.src}`}
+                src={currentBg.src}
+                alt={currentBg.alt}
+                initial={{ opacity: 0, scale: 1.06 }}
+                animate={{ opacity: 0.75, scale: 1.01 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.9, ease: 'easeOut' }}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = '/Polish_20260907_043403519.jpg';
+                }}
+                className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
+              />
+            )}
           </AnimatePresence>
-          {/* Directional Cinematic Readability Scrim — crisp text on left, vivid platform backdrop on right */}
+          {/* Directional Cinematic Readability Scrim — crisp text on left, vivid active visuals on right */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'linear-gradient(100deg, rgba(4, 12, 28, 0.90) 0%, rgba(4, 12, 28, 0.68) 48%, rgba(4, 12, 28, 0.30) 100%)',
+                'linear-gradient(100deg, rgba(4, 12, 28, 0.88) 0%, rgba(4, 12, 28, 0.62) 48%, rgba(4, 12, 28, 0.25) 100%)',
             }}
           />
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/75 via-slate-950/25 to-transparent pointer-events-none" />
@@ -338,6 +444,11 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             className="lg:col-span-6 space-y-6"
           >
             <div className="flex flex-wrap items-center gap-3">
+              <img
+                src={ASSETS.logo}
+                alt="SafetyLink Universal Logo"
+                className="h-9 w-auto object-contain drop-shadow-[0_4px_14px_rgba(16,185,129,0.4)]"
+              />
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 drop-shadow">
                 South African Emergency Network · POPIA Compliant
               </span>
@@ -405,32 +516,58 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               style={{ transformStyle: 'preserve-3d' }}
               className="rounded-3xl overflow-hidden bg-slate-950/55 backdrop-blur-2xl border border-white/20 shadow-[0_32px_70px_rgba(0,0,0,0.55)] p-2.5 sm:p-3"
             >
-              {/* Active Slide Viewport */}
+              {/* Active Slide Viewport — Plays Live Use-Case Action Videos + High-Impact Platform Screens */}
               <div className="relative h-72 sm:h-[360px] rounded-2xl overflow-hidden bg-slate-900">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentSlide.src}
-                    initial={{ opacity: 0, scale: 1.06 }}
+                    initial={{ opacity: 0, scale: 1.04 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.97 }}
-                    transition={{ duration: 0.55, ease: 'easeOut' }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
                     className="absolute inset-0 w-full h-full"
                   >
-                    <img
-                      src={currentSlide.src}
-                      alt={currentSlide.title}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-                      }}
-                      className="w-full h-full object-cover block"
-                    />
+                    {currentSlide.kind === 'video' ? (
+                      <video
+                        key={currentSlide.src}
+                        src={currentSlide.src}
+                        poster={currentSlide.poster || currentSlide.thumb}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        className="w-full h-full object-cover block"
+                      />
+                    ) : (
+                      <img
+                        src={currentSlide.src}
+                        alt={currentSlide.title}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = '/Polish_20260907_043403519.jpg';
+                        }}
+                        className="w-full h-full object-cover block"
+                      />
+                    )}
                   </motion.div>
                 </AnimatePresence>
 
-                <span className="absolute top-3 left-3 z-10 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300">
+                <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300">
+                  {currentSlide.kind === 'video' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  )}
                   {currentSlide.tag}
                 </span>
+
+                {/* Universal SafetyLink Logo Watermark */}
+                <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/15">
+                  <img
+                    src={ASSETS.logo}
+                    alt="SafetyLink"
+                    className="h-4 w-auto object-contain"
+                  />
+                </div>
 
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent text-white z-10">
                   <div className="flex items-center justify-between gap-2">
@@ -439,7 +576,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                       <div className="text-xs text-slate-200 mt-0.5">{currentSlide.caption}</div>
                     </div>
                     <span className="font-mono text-[11px] font-bold text-emerald-300 shrink-0 tabular-nums">
-                      0{slideIdx + 1} / 0{HERO_PLATFORM_SLIDES.length}
+                      {String(slideIdx + 1).padStart(2, '0')} / {String(HERO_PLATFORM_SLIDES.length).padStart(2, '0')}
                     </span>
                   </div>
                   {/* Animated Slide Timer Bar */}
@@ -448,7 +585,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                       key={slideIdx}
                       initial={{ width: '0%' }}
                       animate={{ width: '100%' }}
-                      transition={{ duration: 4.5, ease: 'linear' }}
+                      transition={{ duration: 6.0, ease: 'linear' }}
                       className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
                     />
                   </div>
@@ -472,17 +609,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 </button>
               </div>
 
-              {/* Interactive 6-Slide Platform Interface Strip (Distinct from Hero Background) */}
-              <div className="mt-2.5 grid grid-cols-6 gap-1.5 sm:gap-2">
+              {/* Interactive 12-Slide Video & Platform Thumbnail Strip */}
+              <div className="mt-2.5 grid grid-cols-6 gap-1.5">
                 {HERO_PLATFORM_SLIDES.map((slide, idx) => (
                   <button
                     key={slide.src}
                     type="button"
                     onClick={() => setSlideIdx(idx)}
-                    className={`relative h-12 sm:h-14 rounded-xl overflow-hidden border-2 transition-all ${
+                    className={`relative h-10 sm:h-11 rounded-lg overflow-hidden border-2 transition-all ${
                       idx === slideIdx
                         ? 'border-emerald-400 ring-2 ring-emerald-400/35 scale-[1.03]'
-                        : 'border-white/10 opacity-65 hover:opacity-100'
+                        : 'border-white/10 opacity-70 hover:opacity-100'
                     }`}
                     title={slide.title}
                   >
@@ -495,6 +632,11 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                       }}
                       className="w-full h-full object-cover block"
                     />
+                    {slide.kind === 'video' && (
+                      <span className="absolute bottom-0.5 right-0.5 px-1 py-[1px] rounded bg-slate-950/80 text-[7px] font-mono font-bold text-emerald-300 leading-none">
+                        ▶
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1059,50 +1201,34 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <div className="p-6 rounded-2xl sl-glass-card border-2 border-emerald-500/60 flex flex-col justify-between gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            <div className="lg:col-span-6 p-6 rounded-2xl sl-glass-card border-2 border-emerald-500/75 flex flex-col justify-between gap-4 shadow-lg shadow-emerald-950/10">
               <div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center mb-3">
-                  <Smartphone size={20} />
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+                    <Smartphone size={20} />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    OFFICIAL STABLE · {releaseVersion}
+                  </span>
                 </div>
-                <h3 className="font-display text-base font-extrabold text-slate-900 dark:text-white">
-                  SafetyLink Legacy v1 APK
+                <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
+                  SafetyLink Version 1 APK (Android)
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-                  Full-featured Android build containing every latest SafetyLink feature, BLE iTag, camera, vault, and USSD relay.
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                  Our single official consumer &amp; responder Android build containing every tested feature: Zero-Airtime Please Call Me USSD + FCM alarm, mandatory native SMS &amp; voice dispatch, BLE iTag keyfobs, live Safety Feed, and POPIA vault.
                 </p>
               </div>
               <a
                 href={v1ApkUrl}
-                download="SafetyLink-Legacy-v1-Full.apk"
-                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold text-center no-underline transition-all"
+                download="SafetyLink-v1.apk"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-extrabold text-center no-underline transition-all shadow-md shadow-emerald-600/20"
               >
-                Download Legacy v1 APK
+                Download SafetyLink Version 1 APK
               </a>
             </div>
 
-            <div className="p-6 rounded-2xl sl-glass-card flex flex-col justify-between gap-4">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center mb-3">
-                  <Shield size={20} />
-                </div>
-                <h3 className="font-display text-base font-extrabold text-slate-900 dark:text-white">
-                  SafetyLink v2 ({releaseVersion})
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-                  Signed Android APK channel with native foreground keepalive, SMS/voice dispatch, and POPIA telemetry.
-                </p>
-              </div>
-              <a
-                href={v2ApkUrl}
-                download="SafetyLink-v2.apk"
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 text-xs font-bold text-center no-underline transition-opacity"
-              >
-                Download v2 APK
-              </a>
-            </div>
-
-            <div className="p-6 rounded-2xl sl-glass-card flex flex-col justify-between gap-4">
+            <div className="lg:col-span-3 p-6 rounded-2xl sl-glass-card flex flex-col justify-between gap-4">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-3">
                   <Monitor size={20} />
@@ -1124,7 +1250,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               </a>
             </div>
 
-            <div className="p-6 rounded-2xl sl-glass-card flex flex-col justify-between gap-4">
+            <div className="lg:col-span-3 p-6 rounded-2xl sl-glass-card flex flex-col justify-between gap-4">
               <div>
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
                   <Globe size={20} />
@@ -1145,6 +1271,25 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               </button>
             </div>
           </div>
+
+          <details className="mt-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-100/60 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+            <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 hover:text-slate-700 dark:hover:text-slate-300">
+              <span>Internal Testing Sandbox · SafetyLink Beta (from v1.1.1218+ · Not recommended for daily protection)</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">Testers Only</span>
+            </summary>
+            <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
+                SafetyLink Beta progresses from v1.1.1218 for testing upcoming features before they graduate to SafetyLink Version 1. Everyday users should install SafetyLink Version 1 above.
+              </p>
+              <a
+                href={betaApkUrl}
+                download="SafetyLink-Beta-v1.1.1218.apk"
+                className="shrink-0 font-mono text-[11px] underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                SafetyLink Beta v1.1.1218+ (Testers Only)
+              </a>
+            </div>
+          </details>
         </div>
       </section>
 

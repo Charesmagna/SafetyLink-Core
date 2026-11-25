@@ -56,6 +56,8 @@ export const Settings: React.FC = () => {
     setFloatingWidgetDeployed,
     floatingWidgetSize,
     setFloatingWidgetSize,
+    showKlevaFloatingIcon,
+    setShowKlevaFloatingIcon,
     dispatchSettings,
     setDispatchSettings,
     dispatchLogs,
@@ -909,6 +911,37 @@ export const Settings: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Kleva AI Floating Icon Toggle (Removable on APK & Web) */}
+          <div className="border-t border-slate-800/50 pt-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <h5 className="text-[9px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                  <span>✨</span> Kleva AI Floating Icon
+                </h5>
+                <p className="text-[8px] text-slate-500 mt-0.5">
+                  Show or hide the compact floating Kleva AI shortcut button on screen (removable on APK).
+                </p>
+              </div>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <span className={`text-[8px] font-bold ${showKlevaFloatingIcon ? "text-emerald-400" : "text-slate-600"}`}>
+                  {showKlevaFloatingIcon ? "VISIBLE" : "HIDDEN"}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={showKlevaFloatingIcon}
+                  onChange={e => {
+                    setShowKlevaFloatingIcon(e.target.checked);
+                    useAppStore.getState().addToast(
+                      e.target.checked ? 'Kleva AI floating icon shown.' : 'Kleva AI floating icon hidden.',
+                      'info'
+                    );
+                  }}
+                  className="accent-emerald-500 w-4 h-4 cursor-pointer"
+                />
+              </label>
+            </div>
           </div>
 
           {/* Configurable Dispatch Logic (User Golden Spec) */}

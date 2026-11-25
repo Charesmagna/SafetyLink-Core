@@ -13,6 +13,7 @@ export const PanicButton: React.FC = () => {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [showDistressVideo, setShowDistressVideo] = useState(false);
+  const [showZeroLinkHint, setShowZeroLinkHint] = useState(false);
 
   
   const { 
@@ -20,7 +21,7 @@ export const PanicButton: React.FC = () => {
     panicCountdown, startMultiStagePanic, auditLogs,
     watchMeTimerSeconds, startWatchMeTimer, cancelWatchMeTimer,
     silenceAlerts, setSilenceAlerts,
-    dispatchSettings, setDispatchSettings, contacts, customBackendUrl
+    dispatchSettings, setDispatchSettings, customBackendUrl
   } = useAppStore();
 
   const [realOnline, setRealOnline] = useState<boolean | null>(null);
@@ -33,7 +34,9 @@ export const PanicButton: React.FC = () => {
         return;
       }
       const base = (customBackendUrl || '').trim().replace(/\/+$/, '');
-      const urls = base ? [`${base}/api/health`, '/api/health'] : ['/api/health', 'https://api.safetylink.online/api/health'];
+      const urls = base
+        ? [`${base}/api/health`, '/api/health', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/health']
+        : ['/api/health', 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/health'];
       for (const u of urls) {
         const ctrl = new AbortController();
         const t = window.setTimeout(() => ctrl.abort(), 2500);
@@ -503,105 +506,125 @@ export const PanicButton: React.FC = () => {
         </div>
       </div>
 
-      {/* Mission Control Dispatch Strip: ONLY 1 Tick (Zero-Airtime USSD -> FCM + SMS) + Mandatory Native SMS & Call */}
-      <div className="mt-4 pt-3.5 border-t border-slate-800/40 relative z-10 space-y-2.5 text-left">
-        <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-800 cursor-pointer hover:border-emerald-500/40 transition-colors">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <input
-              type="checkbox"
-              checked={dispatchSettings?.ussdEnabled !== false}
-              onChange={(e) => {
-                const enabled = e.target.checked;
-                setDispatchSettings({ ussdEnabled: enabled, preferFcmOnline: true });
-                useAppStore.getState().addToast(
-                  enabled
-                    ? 'Zero-Airtime USSD Relay armed (Please Call Me → FCM + SMS before call)'
-                    : 'Zero-Airtime USSD Relay disabled',
-                  'info'
-                );
-              }}
-              className="mt-0.5 w-4 h-4 accent-emerald-500 rounded shrink-0"
-              data-testid="mission-control-ussd-toggle"
-            />
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-100 leading-tight">
-                Zero-Airtime USSD Relay (Please Call Me → FCM + SMS)
-              </div>
-              <div className="text-[10px] text-slate-400 leading-snug mt-0.5">
-                Auto-triggers when offline/no data: dials Please Call Me to trigger Loud FCM Alarm &amp; Zero-Airtime SMS before calling.
-              </div>
-            </div>
-          </div>
-          <span className={`shrink-0 text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${
-            dispatchSettings?.ussdEnabled !== false
-              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-              : 'bg-slate-800 text-slate-400 border-slate-700'
-          }`}>
-            {dispatchSettings?.ussdEnabled !== false ? 'ARMED' : 'OFF'}
-          </span>
-        </label>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800/80 text-[10px] font-mono">
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Lock className="w-3 h-3 text-emerald-400 shrink-0" />
-            <span className="font-bold">Native SMS + Call:</span>
-            <span className={contacts.length > 0 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-              {contacts.length > 0 ? `Mandatory (${contacts.length} contact${contacts.length === 1 ? '' : 's'})` : 'Add contacts to arm'}
+      {/* Compact Mission Control Strip — Uncluttered for Instant Panic Access */}
+      <div className="w-full mt-4 pt-3.5 border-t border-slate-800/40 relative z-10 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col text-left min-w-0">
+            <span className="text-xs font-bold text-slate-300 font-display truncate">
+              {drillMode ? "SANDBOX SIMULATOR" : "LIVE SECURITY ARMED"}
+            </span>
+            <span className="text-[10px] text-slate-500 mt-0.5 font-mono truncate">
+              {realOnline === false
+                ? dispatchSettings?.ussdEnabled !== false
+                  ? "Offline · ZeroLink USSD ready (FCM + SMS)"
+                  : "Offline · Tap ZeroLink for free relay"
+                : dispatchSettings?.ussdEnabled !== false
+                ? "ZeroLink armed · Free offline FCM + SMS"
+                : drillMode
+                ? "Simulated escalation nodes"
+                : "Sequential escalation chain active"}
             </span>
           </div>
-          <div className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
-            realOnline === true
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
-              : realOnline === false
-              ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
-              : 'bg-slate-800/60 text-slate-400 border-slate-700'
-          }`}>
-            {realOnline === true ? 'ONLINE · CLOUD FCM READY' : realOnline === false ? 'OFFLINE · USSD RELAY MODE' : 'VERIFYING LINK…'}
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Compact Blinking ZeroLink SIM / Offline Relay Toggle (replaces Test 5s) */}
+            <button
+              type="button"
+              data-testid="mission-control-ussd-toggle"
+              onClick={() => {
+                const nextEnabled = !(dispatchSettings?.ussdEnabled !== false);
+                setDispatchSettings({ ussdEnabled: nextEnabled, preferFcmOnline: true });
+                setShowZeroLinkHint(true);
+                window.setTimeout(() => setShowZeroLinkHint(false), 4500);
+                useAppStore.getState().addToast(
+                  nextEnabled
+                    ? 'ZeroLink Activated — Free zero-airtime offline USSD relay triggers loud FCM alarm + SMS.'
+                    : 'ZeroLink Off — Tap ZeroLink anytime to re-enable free zero-airtime offline alerts.',
+                  nextEnabled ? 'success' : 'warn'
+                );
+              }}
+              title={
+                dispatchSettings?.ussdEnabled !== false
+                  ? 'ZeroLink Activated: Zero-airtime offline USSD sends loud FCM alarm + SMS. Tap to toggle.'
+                  : 'ZeroLink Off: Tap to activate free zero-airtime offline USSD relay (FCM + SMS).'
+              }
+              className={`relative px-2.5 py-1.5 rounded-full flex items-center gap-1.5 border text-[9px] font-mono font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                dispatchSettings?.ussdEnabled !== false
+                  ? realOnline === false
+                    ? 'bg-amber-500/15 border-amber-400/50 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                    : 'bg-emerald-500/15 border-emerald-400/45 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                  : 'bg-slate-900/60 border-red-500/35 text-slate-400 hover:border-red-400/60 hover:text-slate-200'
+              }`}
+            >
+              {/* Blinking status dot — always visibly active/alert */}
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span
+                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-80 ${
+                    dispatchSettings?.ussdEnabled !== false
+                      ? realOnline === false
+                        ? 'bg-amber-400'
+                        : 'bg-emerald-400'
+                      : 'bg-red-500/70'
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    dispatchSettings?.ussdEnabled !== false
+                      ? realOnline === false
+                        ? 'bg-amber-400'
+                        : 'bg-emerald-400'
+                      : 'bg-red-500'
+                  }`}
+                />
+              </span>
+              {/* Compact SIM Card icon */}
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 2h7l5 5v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+                <rect x="9" y="12" width="6" height="6" rx="1" />
+                <path d="M12 12v6M9 15h6" />
+              </svg>
+              <span>ZeroLink</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => useAppStore.getState().toggleDrillMode()}
+              className={`px-3 py-1.5 rounded-full text-[9px] font-mono font-bold tracking-wider border uppercase transition-all duration-300 ${
+                drillMode
+                  ? 'bg-slate-800/60 text-amber-400 border-amber-500/20 hover:bg-slate-800 hover:border-amber-400/40'
+                  : 'bg-red-950/20 text-red-400 border-red-500/20 hover:bg-red-950/40 hover:border-red-500/40'
+              }`}
+            >
+              {drillMode ? "DRILL" : "LIVE"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSilenceAlerts(!silenceAlerts)}
+              className={`px-2.5 py-1.5 rounded-full flex items-center justify-center border transition-all duration-300 ${
+                silenceAlerts 
+                  ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
+              }`}
+              title={silenceAlerts ? "Silent Alerts Active" : "Audible Alerts Active"}
+            >
+              {silenceAlerts ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* Drill toggle block */}
-      <div className="flex items-center justify-between w-full mt-4 pt-3.5 border-t border-slate-800/40 relative z-10">
-        <div className="flex flex-col text-left">
-          <span className="text-xs font-bold text-slate-300 font-display">
-            {drillMode ? "SANDBOX SIMULATOR" : "LIVE SECURITY ARMED"}
-          </span>
-          <span className="text-[10px] text-slate-500 mt-0.5 font-mono">
-            {drillMode ? "Simulated escalation nodes" : "Sequential escalation chain active"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {activeSOSState === 'IDLE' && panicCountdown === null && (
-            <button
-              onClick={() => startMultiStagePanic("Manual fast-tap testing alert")}
-              className="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900 border border-red-500/20 rounded-full text-[8px] font-mono font-bold text-red-400 uppercase tracking-wider"
-            >
-              ⏳ Test 5s
-            </button>
-          )}
-          <button
-            onClick={() => useAppStore.getState().toggleDrillMode()}
-            className={`px-3.5 py-1.5 rounded-full text-[9px] font-mono font-bold tracking-wider border uppercase transition-all duration-300 ${
-              drillMode
-                ? 'bg-slate-800/60 text-amber-400 border-amber-500/20 hover:bg-slate-800 hover:border-amber-400/40'
-                : 'bg-red-950/20 text-red-400 border-red-500/20 hover:bg-red-950/40 hover:border-red-500/40'
-            }`}
-          >
-            {drillMode ? "DRILL TEST" : "LIVE PROTOCOL"}
-          </button>
-          <button
-            onClick={() => setSilenceAlerts(!silenceAlerts)}
-            className={`px-3 py-1.5 rounded-full flex items-center justify-center border transition-all duration-300 ${
-              silenceAlerts 
-                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                : 'bg-slate-900/40 border-slate-800 text-slate-500'
-            }`}
-            title={silenceAlerts ? "Silent Alerts Active" : "Audible Alerts Active"}
-          >
-            {silenceAlerts ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-          </button>
-        </div>
+        {/* Tiny auto-dismissing description chip when ZeroLink is toggled or offline */}
+        {(showZeroLinkHint || realOnline === false) && (
+          <div className={`px-2.5 py-1.5 rounded-lg border text-[9.5px] font-mono text-left leading-snug ${
+            dispatchSettings?.ussdEnabled !== false
+              ? 'bg-emerald-950/40 border-emerald-500/25 text-emerald-300'
+              : 'bg-amber-950/40 border-amber-500/25 text-amber-300'
+          }`}>
+            {dispatchSettings?.ussdEnabled !== false
+              ? 'ZeroLink Activated: Zero-airtime / zero-data SIM relay automatically dials Please Call Me to trigger loud FCM alarm + SMS.'
+              : 'ZeroLink Off: Tap ZeroLink above if you want free zero-airtime offline emergency alerts.'}
+          </div>
+        )}
       </div>
 
 

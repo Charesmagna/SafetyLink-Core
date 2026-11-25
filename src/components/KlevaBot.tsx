@@ -21,16 +21,17 @@ import {
   ShieldCheck,
   Sparkles,
   Zap,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { getLizzyProvider } from "../services/LizzyAIProvider";
 import {
   useGeminiLiveVoice,
   type LiveVoiceName,
 } from "../hooks/useGeminiLiveVoice";
+import { fetchGeminiApi } from "../utils/geminiApi";
 
-import { getR2StreamUrl } from "../utils/r2Assets";
-
-const klevaLogo = getR2StreamUrl("Polish_20260809_035827088.png");
+const klevaLogo = "/media/kleva_logo/IMG_20260703_235254.svg";
 
 const STORAGE_KEY = "sl_gemini_companion_chat_v2";
 
@@ -95,6 +96,9 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     lizzyInitialTab,
     postEmergencyPrompt,
     dismissPostEmergencyPrompt,
+    showKlevaFloatingIcon,
+    setShowKlevaFloatingIcon,
+    addToast,
   } = useAppStore();
 
   const [internalOpen, setInternalOpen] = useState(false);
@@ -132,11 +136,19 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     return [DEFAULT_WELCOME];
   });
 
-  // Sync requested initial tab when opened via post-emergency trigger or launcher
+  // Sync requested initial tab & auto-start hands-free voice when launched into Voice tab
   useEffect(() => {
     if (isOpen && lizzyInitialTab) {
       setActiveTab(lizzyInitialTab);
+      if (lizzyInitialTab === "voice" && !liveVoice.isConnected && !liveVoice.isConnecting) {
+        liveVoice.connect({
+          mode: "post_emergency",
+          voice: selectedVoice,
+          context: incidentContextString || undefined,
+        });
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, lizzyInitialTab]);
 
   // Persist multi-turn chat history
@@ -188,7 +200,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     if (!voiceEnabled || !text.trim()) return;
     const plain = text.replace(/[*_`#>-]+/g, " ").replace(/\s+/g, " ").trim();
     try {
-      const res = await fetch("/api/gemini/tts", {
+      const res = await fetchGeminiApi("/api/gemini/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: plain.slice(0, 450), voiceName: "Kore" }),
@@ -237,7 +249,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     setMicNoteError(null);
 
     const historySnapshot = messages
-      .filter((m) => !m.error)
+      .filter((m) => !m.error && m.id !== "welcome-lizzy" && m.text.trim().length > 0)
       .map((m) => ({
         role: m.sender === "bot" ? "model" : "user",
         text: m.text,
@@ -300,7 +312,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
 
       let streamFailed = false;
       try {
-        const res = await fetch("/api/gemini/chat/stream", {
+        const res = await fetchGeminiApi("/api/gemini/chat/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -364,7 +376,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
 
       // Automatic fallback to unary /api/gemini/chat if SSE stream failed before producing text
       if (streamFailed && !accumulatedText.trim()) {
-        const fallbackRes = await fetch("/api/gemini/chat", {
+        const fallbackRes = await fetchGeminiApi("/api/gemini/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -451,7 +463,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
           const base64 = reader.result?.toString().split(",")[1];
           if (!base64) return;
           try {
-            const res = await fetch("/api/gemini/transcribe", {
+            const res = await fetchGeminiApi("/api/gemini/transcribe", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -608,11 +620,11 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-cyan-400 to-blue-500" />
             <div className="flex justify-between items-center gap-2">
               <div className="flex items-center gap-2.5 text-left min-w-0">
-                <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl overflow-hidden border border-emerald-500/40 bg-slate-950 flex items-center justify-center p-1 shrink-0">
                   <img
                     src={klevaLogo}
-                    alt="Lizzy AI"
-                    className="w-full h-full object-cover"
+                    alt="Kleva AI"
+                    className="w-full h-full object-contain"
                   />
                 </div>
                 <div className="min-w-0">
@@ -654,6 +666,23 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
                     </button>
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !showKlevaFloatingIcon;
+                    setShowKlevaFloatingIcon(next);
+                    addToast(
+                      next
+                        ? "Kleva AI floating icon shown."
+                        : "Kleva AI floating icon hidden. Re-enable anytime in Settings or the side menu.",
+                      "info"
+                    );
+                  }}
+                  title={showKlevaFloatingIcon ? "Hide floating Kleva icon" : "Show floating Kleva icon"}
+                  className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-amber-300 transition-colors"
+                >
+                  {showKlevaFloatingIcon ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
                 <button
                   type="button"
                   onClick={closePanel}

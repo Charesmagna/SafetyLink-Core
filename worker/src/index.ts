@@ -91,6 +91,7 @@ export interface Env {
   PCM_WEBHOOK_TOKEN?: string;
   RAIN_GATEWAY_MSISDN?: string;
   RECAPTCHA_SECRET: string;
+  GEMINI_API_KEY?: string;
 }
 
 export interface Variables {
@@ -455,43 +456,42 @@ async function fireAllAlerts(
 }
 
 // ── DB INIT ───────────────────────────────────────────────────────────────────
-// Latest APK, served from R2 (the repo can stay private)
-// Three downloads: stable 2.0 (/download/safetylink.apk), beta (/download/beta/...), legacy 1.x (/download/v1/...)
+// Latest APKs served from R2:
+// - Official Stable SafetyLink Version 1 (/download/v1/safetylink.apk & /download/safetylink.apk) -> safetylink-latest.apk (full-featured main build)
+// - SafetyLink Beta (/download/beta/safetylink.apk & compatibility alias /download/v2/safetylink.apk) -> safetylink-beta-latest.apk (rolling from v1.1.1218+)
 const dl = (key: string, file: string, fallbackKey?: string) => async (c: any) => {
   const releases = (c.env as any).RELEASES;
   const obj = (await releases?.get(key)) || (fallbackKey ? await releases?.get(fallbackKey) : null);
   if (!obj) return c.json({ error: 'Not published yet' }, 404);
   return new Response(obj.body, { headers: { 'Content-Type': 'application/vnd.android.package-archive', 'Content-Disposition': `attachment; filename="${file}"`, 'Content-Length': String(obj.size), 'Cache-Control': 'no-cache' } });
 };
-app.get('/download/beta/safetylink.apk', dl('safetylink-beta-latest.apk', 'SafetyLink-beta.apk', 'safetylink-latest.apk'));
-app.get('/download/v1/safetylink.apk', dl('safetylink-v1-latest.apk', 'SafetyLink-1.x-legacy.apk', 'safetylink-latest.apk'));
-app.get('/api/app/beta/versions', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('versions-beta/index.json');
-  const list = obj ? await obj.json().catch(() => []) : [];
-  return c.json({ versions: Array.isArray(list) ? list : [] });
-});
+app.get('/download/beta/safetylink.apk', dl('safetylink-beta-latest.apk', 'SafetyLink-Beta-v1.1.1218.apk', 'safetylink-latest.apk'));
+app.get('/download/v1/safetylink.apk', dl('safetylink-latest.apk', 'SafetyLink-v1.apk', 'safetylink-v1-latest.apk'));
 
 app.get('/download/safetylink.apk', async (c) => {
-  const obj: any = await (c.env as any).RELEASES?.get('safetylink-latest.apk');
+  const obj: any = (await (c.env as any).RELEASES?.get('safetylink-latest.apk')) || (await (c.env as any).RELEASES?.get('safetylink-v1-latest.apk'));
   if (!obj) return c.json({ error: 'No release available yet' }, 404 as any);
   return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/vnd.android.package-archive',
-      'Content-Disposition': 'attachment; filename="SafetyLink.apk"',
+      'Content-Disposition': 'attachment; filename="SafetyLink-v1.apk"',
       'Content-Length': String(obj.size),
       'Cache-Control': 'no-cache',
     },
   });
 });
 
-// Version 2 Official APK, served from R2 (tracks latest main build, falling back to safetylink-v2-latest.apk)
+// SafetyLink Beta APK compatibility alias (Internal testing track starting from v1.1.1218+)
 app.get('/download/v2/safetylink.apk', async (c) => {
-  const obj: any = (await (c.env as any).RELEASES?.get('safetylink-latest.apk')) || (await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk'));
-  if (!obj) return c.json({ error: 'No v2 release available yet' }, 404 as any);
+  const obj: any =
+    (await (c.env as any).RELEASES?.get('safetylink-beta-latest.apk')) ||
+    (await (c.env as any).RELEASES?.get('safetylink-v2-latest.apk')) ||
+    (await (c.env as any).RELEASES?.get('safetylink-latest.apk'));
+  if (!obj) return c.json({ error: 'No beta build available yet' }, 404 as any);
   return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/vnd.android.package-archive',
-      'Content-Disposition': 'attachment; filename="SafetyLink-v2.apk"',
+      'Content-Disposition': 'attachment; filename="SafetyLink-Beta-v1.1.1218.apk"',
       'Content-Length': String(obj.size),
       'Cache-Control': 'no-cache',
     },
@@ -505,10 +505,13 @@ app.get('/api/app/latest', async (c) => {
   const list = obj ? await obj.json().catch(() => []) : [];
   const latest = Array.isArray(list) && list.length > 0 ? list[0] : null;
   return c.json({
-    version: latest?.version || '2.0',
-    apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk',
+    version: latest?.version || '1.1',
+    channel: 'v1-stable',
+    apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk',
     downloadUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk',
-    notes: 'SafetyLink Version 2 Release',
+    betaApkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk',
+    betaVersion: '1.1.1218',
+    notes: 'SafetyLink Version 1 — Official Stable Release (All promoted features included)',
     date: latest?.date || new Date().toISOString()
   });
 });
@@ -2083,6 +2086,173 @@ app.post('/api/sync/offline', async (c) => {
     }
   }
   return c.json({ ok: true, synced: items.length - failedItems.length, failedItems });
+});
+
+// ── GEMINI AI PROXY (FOR APK & PRODUCTION WEB) ────────────────────────────────
+const wrapPcm16ToWavBase64 = (base64Pcm: string, sampleRate = 24000): string => {
+  const binary = atob(base64Pcm);
+  const pcmLen = binary.length;
+  if (pcmLen >= 4 && binary.slice(0, 4) === 'RIFF') return base64Pcm;
+  const wav = new Uint8Array(44 + pcmLen);
+  const view = new DataView(wav.buffer);
+  const writeStr = (off: number, s: string) => {
+    for (let i = 0; i < s.length; i++) wav[off + i] = s.charCodeAt(i);
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + pcmLen, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, pcmLen, true);
+  for (let i = 0; i < pcmLen; i++) wav[44 + i] = binary.charCodeAt(i);
+  let out = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < wav.length; i += chunkSize) {
+    out += String.fromCharCode(...wav.subarray(i, i + chunkSize));
+  }
+  return btoa(out);
+};
+
+const sanitizeWorkerChatContents = (history: unknown, message: string) => {
+  const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+  if (Array.isArray(history)) {
+    for (const h of history.slice(-20)) {
+      if (!h || typeof (h as any).text !== 'string') continue;
+      const text = (h as any).text.trim();
+      if (!text) continue;
+      const role: 'user' | 'model' = (h as any).role === 'model' || (h as any).sender === 'bot' ? 'model' : 'user';
+      if (contents.length === 0 && role === 'model') continue;
+      const prev = contents[contents.length - 1];
+      if (prev && prev.role === role) prev.parts[0].text += `\n${text}`;
+      else contents.push({ role, parts: [{ text }] });
+    }
+  }
+  if (contents.length > 0 && contents[contents.length - 1].role === 'user') {
+    contents.pop();
+  }
+  contents.push({ role: 'user', parts: [{ text: message.trim() }] });
+  return contents;
+};
+
+app.post('/api/gemini/chat', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  const message = String(body?.message || '').trim();
+  if (!message) return c.json({ error: 'message is required' }, 400 as any);
+
+  const allowed = new Set(['gemini-4-hydrogen', 'gemini-3.1-flash-lite']);
+  const model = allowed.has(body?.model) ? body.model : 'gemini-3.1-flash-lite';
+  const sysText =
+    body?.systemInstruction ||
+    "You are Kleva (Lizzy), SafetyLink's calm, reassuring Post-Emergency Care Companion. Check if the user is physically safe, keep responses concise and practical, and share emergency numbers (10111 SAPS, 112 Emergency, 10177 Ambulance) when needed.";
+  const fullSystem = body?.incidentContext ? `${sysText}\n\nRecent Incident Context:\n${body.incidentContext}` : sysText;
+
+  const reqPayload: any = {
+    system_instruction: { parts: [{ text: fullSystem }] },
+    contents: sanitizeWorkerChatContents(body?.history, message),
+  };
+  if (model === 'gemini-4-hydrogen') {
+    reqPayload.generationConfig = { thinkingConfig: { thinkingLevel: 'LOW' } };
+  }
+
+  const gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      body: JSON.stringify(reqPayload),
+    }
+  );
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini error (${gRes.status})` }, gRes.status as any);
+  }
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => p?.text || '')
+    .join('')
+    .trim();
+  return c.json({ text, chunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [], model });
+});
+
+app.post('/api/gemini/tts', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  const text = String(body?.text || '').trim();
+  if (!text) return c.json({ error: 'text is required' }, 400 as any);
+
+  const gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-lite-tts:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: text.slice(0, 1000) }] }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: body?.voiceName || 'Kore' } },
+          },
+        },
+      }),
+    }
+  );
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini TTS error (${gRes.status})` }, gRes.status as any);
+  }
+  const inlineData = (data?.candidates?.[0]?.content?.parts || []).find((p: any) => p?.inlineData)?.inlineData;
+  if (!inlineData?.data) return c.json({ error: 'No audio returned by TTS model' }, 502 as any);
+  const rawMime = String(inlineData.mimeType || 'audio/L16;codec=pcm;rate=24000');
+  const rateMatch = rawMime.match(/rate=(\d+)/i);
+  const sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
+  const audioBase64 = /pcm|l16|raw/i.test(rawMime)
+    ? wrapPcm16ToWavBase64(inlineData.data, sampleRate)
+    : inlineData.data;
+  return c.json({ audioBase64, mimeType: 'audio/wav' });
+});
+
+app.post('/api/gemini/transcribe', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  if (!body?.audioBase64) return c.json({ error: 'audioBase64 is required' }, 400 as any);
+
+  const gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: 'Transcribe this spoken audio accurately in English or the spoken language. Return plain transcript text only.' },
+              { inlineData: { data: body.audioBase64, mimeType: body.mimeType || 'audio/webm' } },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini transcribe error (${gRes.status})` }, gRes.status as any);
+  }
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => p?.text || '')
+    .join('')
+    .trim();
+  return c.json({ text });
 });
 
 export default {

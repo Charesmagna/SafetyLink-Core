@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useRef } from 'react';
-import { ASSETS } from '../../utils/cloudinary';
+import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 import { R2_MEDIA } from '../../utils/r2Assets';
 
 
@@ -54,14 +54,28 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
         </div>
       )}
 
-      {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HOW IT WORKS</div>
+      {/* ── HEADER WITH LIVE VISUAL ACTION VIDEO & UNIVERSAL SAFETYLINK LOGO ── */}
+      <section style={{ position:'relative', padding:'80px 40px 64px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+        <video
+          src={vid(ACTION_VIDEOS.liveActionShowcase)}
+          poster={vidPoster(ACTION_VIDEOS.liveActionShowcase)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.32, pointerEvents:'none' }}
+        />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(105deg, rgba(7,10,15,0.94) 0%, rgba(7,10,15,0.75) 55%, rgba(7,10,15,0.45) 100%)', pointerEvents:'none' }} />
+        <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' }}>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'38px', width:'auto', objectFit:'contain' }} />
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>HOW IT WORKS · LIVE ENGINE</span>
+          </div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
-            11-Layer Autonomous<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>Emergency Ecosystem.</span>
+            11-Layer Autonomous<br/><span style={{ color:'#10b981', fontStyle:'italic' }}>Emergency Ecosystem.</span>
           </h1>
-          <p style={{ fontSize:'15px', color:'#8892a4', maxWidth:'560px', lineHeight:1.7 }}>
+          <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
             Offline, on purpose. SafetyLink is engineered to survive load-shedding, zero-data scenarios, and network failures — combining BLE hardware, AI voice dispatch, and multi-tenant command dashboards into a single POPIA-compliant infrastructure.
           </p>
         </div>
@@ -195,6 +209,47 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div key={i} style={{ background:'rgba(232,50,30,.05)', border:'1px solid rgba(232,50,30,.15)', borderRadius:'14px', padding:'28px' }}>
                 <div style={{ fontSize:'14px', fontWeight:800, color:'#e8321e', marginBottom:'10px', textTransform:'uppercase', letterSpacing:'.04em' }}>{f.title}</div>
                 <div style={{ fontSize:'13px', color:'#8892a4', lineHeight:1.6 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── LIVE FIELD ACTION VIDEO REELS ── */}
+      <section style={{ padding:'72px 40px', background:'#0b1325', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', marginBottom:'32px' }}>
+            <div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#10b981', marginBottom:'10px', fontWeight:700 }}>LIVE FIELD DEMONSTRATIONS</div>
+              <h2 style={{ fontSize:'clamp(24px,4vw,42px)', fontWeight:900, margin:0 }}>Watch the Platform Respond.</h2>
+            </div>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'34px', width:'auto', objectFit:'contain' }} />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px' }}>
+            {[
+              { id: ACTION_VIDEOS.bleItagAction, tag: 'BLE KEYFOB', title: 'Pocket BLE iTAG Trigger', desc: 'Instant emergency activation from your pocket without unlocking your phone.' },
+              { id: ACTION_VIDEOS.droneDispatch, tag: 'AERIAL PURSUIT', title: 'Autonomous Drone Dispatch', desc: 'Live GPS pin guides aerial eyes-on-scene directly to active distress coordinates.' },
+              { id: ACTION_VIDEOS.neighbourhoodWatch, tag: 'COMMUNITY MESH', title: 'Neighbourhood Watch Sync', desc: 'Simultaneous responder routing across estate guards and community patrol vehicles.' },
+            ].map((item) => (
+              <div key={item.id} style={{ borderRadius:'16px', overflow:'hidden', background:'#0f172a', border:'1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ position:'relative', height:'205px', background:'#000' }}>
+                  <video
+                    src={vid(item.id)}
+                    poster={vidPoster(item.id)}
+                    controls
+                    preload="metadata"
+                    playsInline
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
+                  <div style={{ pointerEvents:'none', position:'absolute', top:'10px', right:'10px', display:'flex', alignItems:'center', gap:'6px', padding:'4px 8px', borderRadius:'8px', background:'rgba(2,6,23,0.75)', border:'1px solid rgba(255,255,255,0.15)' }}>
+                    <img src={ASSETS.logo} alt="SafetyLink" style={{ height:'16px', width:'auto' }} />
+                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', fontWeight:700, color:'#34d399' }}>{item.tag}</span>
+                  </div>
+                </div>
+                <div style={{ padding:'16px' }}>
+                  <div style={{ fontSize:'15px', fontWeight:800, color:'#fff' }}>{item.title}</div>
+                  <div style={{ fontSize:'12px', color:'#94a3b8', marginTop:'4px', lineHeight:1.5 }}>{item.desc}</div>
+                </div>
               </div>
             ))}
           </div>

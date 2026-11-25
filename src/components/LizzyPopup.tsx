@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useGeminiLiveVoice } from '../hooks/useGeminiLiveVoice';
+import { fetchGeminiApi } from '../utils/geminiApi';
 
 type CheckInStage = 'ASKING_STATUS' | 'SAFE_UPDATE' | 'NOT_OKAY_ESCALATE' | 'NO_RESPONSE';
 
@@ -35,21 +36,40 @@ export const LizzyPopup: React.FC = () => {
 
   const [stage, setStage] = useState<CheckInStage>('ASKING_STATUS');
   const [aiMessage, setAiMessage] = useState<string>(
-    "Hi, it's Kleva from SafetyLink checking in after your emergency trigger. Are you okay right now? Please say Yes or No."
+    'Are you okay? Please say Yes if you are safe, or No if you need help.'
   );
   const [heardText, setHeardText] = useState<string>('');
   const [situationUpdate, setSituationUpdate] = useState<string>('');
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [isListening, setIsListening] = useState<boolean>(false);
+  const [listenModeLabel, setListenModeLabel] = useState<string>('Listening automatically — just speak...');
   const [waitSecondsLeft, setWaitSecondsLeft] = useState<number>(45);
 
   const liveVoice = useGeminiLiveVoice();
   const recognitionRef = useRef<any>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recorderStreamRef = useRef<MediaStream | null>(null);
+  const recorderTimerRef = useRef<number | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const speakWatchdogRef = useRef<number | null>(null);
+  const restartListenTimerRef = useRef<number | null>(null);
+
+  const isOpenRef = useRef<boolean>(showLizzyPopup);
+  isOpenRef.current = showLizzyPopup;
   const stageRef = useRef<CheckInStage>('ASKING_STATUS');
   stageRef.current = stage;
+  const liveConnectedRef = useRef<boolean>(liveVoice.isConnected);
+  liveConnectedRef.current = liveVoice.isConnected;
 
   const stopListening = useCallback(() => {
+    if (restartListenTimerRef.current) {
+      window.clearTimeout(restartListenTimerRef.current);
+      restartListenTimerRef.current = null;
+    }
+    if (recorderTimerRef.current) {
+      window.clearTimeout(recorderTimerRef.current);
+      recorderTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.onend = null;
@@ -59,12 +79,34 @@ export const LizzyPopup: React.FC = () => {
       } catch {}
       recognitionRef.current = null;
     }
+    if (recorderRef.current) {
+      try {
+        recorderRef.current.ondataavailable = null;
+        recorderRef.current.onstop = null;
+        if (recorderRef.current.state !== 'inactive') {
+          recorderRef.current.stop();
+        }
+      } catch {}
+      recorderRef.current = null;
+    }
+    if (recorderStreamRef.current) {
+      try {
+        recorderStreamRef.current.getTracks().forEach((t) => t.stop());
+      } catch {}
+      recorderStreamRef.current = null;
+    }
     setIsListening(false);
   }, []);
 
   const stopSpeaking = useCallback(() => {
+    if (speakWatchdogRef.current) {
+      window.clearTimeout(speakWatchdogRef.current);
+      speakWatchdogRef.current = null;
+    }
     if (ttsAudioRef.current) {
       try {
+        ttsAudioRef.current.onended = null;
+        ttsAudioRef.current.onerror = null;
         ttsAudioRef.current.pause();
         ttsAudioRef.current = null;
       } catch {}
@@ -77,14 +119,99 @@ export const LizzyPopup: React.FC = () => {
     setIsSpeaking(false);
   }, []);
 
+  // Fallback hands-free voice capture via MediaRecorder + Gemini Transcribe (for Android WebView where SpeechRecognition is unavailable)
+  const startMediaRecorderListener = useCallback(
+    async (onTranscript: (spoken: string) => void) => {
+      if (!isOpenRef.current || liveConnectedRef.current) return;
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (!isOpenRef.current || liveConnectedRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        recorderStreamRef.current = stream;
+        const recorder = new MediaRecorder(stream);
+        recorderRef.current = recorder;
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (ev) => {
+          if (ev.data.size > 0) chunks.push(ev.data);
+        };
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          recorderStreamRef.current = null;
+          recorderRef.current = null;
+          setIsListening(false);
+          if (!isOpenRef.current || liveConnectedRef.current) return;
+          if (chunks.length === 0) return;
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64 = reader.result?.toString().split(',')[1];
+            if (!base64 || !isOpenRef.current) return;
+            try {
+              const res = await fetchGeminiApi('/api/gemini/transcribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ audioBase64: base64, mimeType: blob.type || 'audio/webm' }),
+              });
+              const data = await res.json().catch(() => ({}));
+              const spoken = String(data?.text || '').trim();
+              if (spoken) {
+                setHeardText(spoken);
+                onTranscript(spoken);
+              } else if (isOpenRef.current && stageRef.current === 'ASKING_STATUS' && !liveConnectedRef.current) {
+                // Keep listening automatically without requiring a tap
+                restartListenTimerRef.current = window.setTimeout(() => {
+                  startMediaRecorderListener(onTranscript);
+                }, 600);
+              }
+            } catch {
+              // Retry auto-listen cleanly if popup still open
+              if (isOpenRef.current && stageRef.current === 'ASKING_STATUS' && !liveConnectedRef.current) {
+                restartListenTimerRef.current = window.setTimeout(() => {
+                  startMediaRecorderListener(onTranscript);
+                }, 1500);
+              }
+            }
+          };
+          reader.readAsDataURL(blob);
+        };
+        setListenModeLabel('Listening automatically (hands-free mic)...');
+        setIsListening(true);
+        recorder.start();
+        // Record 5.5s hands-free window then transcribe automatically
+        recorderTimerRef.current = window.setTimeout(() => {
+          if (recorder.state !== 'inactive') {
+            try {
+              recorder.stop();
+            } catch {}
+          }
+        }, 5500);
+      } catch {
+        setIsListening(false);
+      }
+    },
+    []
+  );
+
+  // Hands-free auto-listening: uses SpeechRecognition with auto-restart, falling back seamlessly to MediaRecorder + Gemini Transcribe
   const startVoiceListener = useCallback(
     (onTranscript: (spoken: string) => void) => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined' || !isOpenRef.current || liveConnectedRef.current) return;
+      stopListening();
+
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) return;
 
-      stopListening();
+      if (!SpeechRecognition) {
+        startMediaRecorderListener(onTranscript);
+        return;
+      }
+
+      let gotFinalResult = false;
       try {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -92,7 +219,10 @@ export const LizzyPopup: React.FC = () => {
         recognition.lang = 'en-US';
         recognitionRef.current = recognition;
 
-        recognition.onstart = () => setIsListening(true);
+        recognition.onstart = () => {
+          setListenModeLabel('Listening automatically — just speak...');
+          setIsListening(true);
+        };
 
         recognition.onresult = (event: any) => {
           let finalText = '';
@@ -105,27 +235,53 @@ export const LizzyPopup: React.FC = () => {
           const combined = (finalText || interimText).trim();
           if (combined) setHeardText(combined);
           if (finalText.trim()) {
+            gotFinalResult = true;
             stopListening();
             onTranscript(finalText.trim());
           }
         };
 
-        recognition.onerror = () => {
+        recognition.onerror = (ev: any) => {
           setIsListening(false);
+          const errCode = String(ev?.error || '');
+          // If browser speech recognition isn't supported/available in WebView, automatically fall back to MediaRecorder + Gemini
+          if (errCode === 'service-not-allowed' || errCode === 'network' || errCode === 'language-not-supported') {
+            stopListening();
+            startMediaRecorderListener(onTranscript);
+            return;
+          }
+          // On no-speech / aborted while still waiting for an answer, auto-restart hands-free listening
+          if (!gotFinalResult && isOpenRef.current && !liveConnectedRef.current && (errCode === 'no-speech' || errCode === 'aborted')) {
+            restartListenTimerRef.current = window.setTimeout(() => {
+              if (isOpenRef.current && !liveConnectedRef.current) {
+                startVoiceListener(onTranscript);
+              }
+            }, 400);
+          }
         };
 
         recognition.onend = () => {
           setIsListening(false);
+          // Keep listening automatically without requiring a button press while asking status
+          if (!gotFinalResult && isOpenRef.current && !liveConnectedRef.current && stageRef.current === 'ASKING_STATUS') {
+            restartListenTimerRef.current = window.setTimeout(() => {
+              if (isOpenRef.current && !liveConnectedRef.current && stageRef.current === 'ASKING_STATUS') {
+                startVoiceListener(onTranscript);
+              }
+            }, 450);
+          }
         };
 
         recognition.start();
       } catch {
         setIsListening(false);
+        startMediaRecorderListener(onTranscript);
       }
     },
-    [stopListening]
+    [startMediaRecorderListener, stopListening]
   );
 
+  // Automatically speak aloud AND immediately transition to hands-free listening without pressing anything
   const speakAndThenListen = useCallback(
     async (text: string, onHeard?: (spoken: string) => void) => {
       setAiMessage(text);
@@ -133,9 +289,17 @@ export const LizzyPopup: React.FC = () => {
       stopSpeaking();
 
       const autoSpeak = dispatchSettings.aiCheckInAutoSpeak !== false;
+      let transitioned = false;
+
       const beginListen = () => {
+        if (transitioned) return;
+        transitioned = true;
+        if (speakWatchdogRef.current) {
+          window.clearTimeout(speakWatchdogRef.current);
+          speakWatchdogRef.current = null;
+        }
         setIsSpeaking(false);
-        if (onHeard && showLizzyPopup && !liveVoice.isConnected) {
+        if (onHeard && isOpenRef.current && !liveConnectedRef.current) {
           startVoiceListener(onHeard);
         }
       };
@@ -146,14 +310,25 @@ export const LizzyPopup: React.FC = () => {
       }
 
       setIsSpeaking(true);
-      // Try Gemini high-clarity TTS first, with instant browser SpeechSynthesis fallback
+
+      // Guaranteed safety watchdog: even if audio autoplay is blocked or onend never fires on Android WebView, ALWAYS start listening automatically
+      const estimatedSpeakMs = Math.min(9000, Math.max(3800, text.length * 75));
+      speakWatchdogRef.current = window.setTimeout(() => {
+        beginListen();
+      }, estimatedSpeakMs);
+
+      // 1. Try Gemini high-clarity WAV TTS first (with fast 3.5s abort timeout so it never stalls)
       try {
-        const res = await fetch('/api/gemini/tts', {
+        const ctrl = new AbortController();
+        const timeoutId = window.setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetchGeminiApi('/api/gemini/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: text.slice(0, 500), voiceName: 'Kore' }),
+          signal: ctrl.signal,
         });
-        if (res.ok) {
+        window.clearTimeout(timeoutId);
+        if (res.ok && isOpenRef.current) {
           const data = await res.json();
           if (data.audioBase64) {
             const audio = new Audio(
@@ -166,11 +341,16 @@ export const LizzyPopup: React.FC = () => {
             return;
           }
         }
-      } catch {}
+      } catch {
+        // Fall through smoothly to device SpeechSynthesis
+      }
 
-      // Fallback to native Web Speech API
+      if (!isOpenRef.current || transitioned) return;
+
+      // 2. Instant device SpeechSynthesis fallback
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         try {
+          window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
           const voices = window.speechSynthesis.getVoices();
           utterance.voice =
@@ -182,15 +362,15 @@ export const LizzyPopup: React.FC = () => {
           utterance.onerror = beginListen;
           window.speechSynthesis.speak(utterance);
           return;
-        } catch {}
+        } catch {
+          // Fall through to immediate listening
+        }
       }
 
       beginListen();
     },
     [
       dispatchSettings.aiCheckInAutoSpeak,
-      liveVoice.isConnected,
-      showLizzyPopup,
       startVoiceListener,
       stopListening,
       stopSpeaking,
@@ -281,7 +461,7 @@ export const LizzyPopup: React.FC = () => {
   const enterSafeUpdateStage = useCallback(() => {
     setStage('SAFE_UPDATE');
     speakAndThenListen(
-      "I'm glad you're okay. Would you like to share a quick situational update for your incident log, or confirm to mark yourself safe?",
+      "I'm glad you're okay. Tell me a quick situational update, or confirm to mark yourself safe.",
       (spoken) => {
         if (/trigger|restart|not okay|help me|danger/i.test(spoken)) {
           enterNotOkayStage();
@@ -295,7 +475,7 @@ export const LizzyPopup: React.FC = () => {
   const enterNotOkayStage = useCallback(() => {
     setStage('NOT_OKAY_ESCALATE');
     speakAndThenListen(
-      "Understood — I'm right here with you. Say 'restart alert' to trigger another emergency dispatch right now, or tell me your situational update to send to your responders.",
+      "Understood — I'm right here with you. Say restart alert to trigger another emergency dispatch right now, or tell me what's happening.",
       (spoken) => {
         if (/restart|trigger|send alert|panic|yes|help now|call/i.test(spoken)) {
           handleRestartAlert(spoken);
@@ -316,7 +496,7 @@ export const LizzyPopup: React.FC = () => {
       } else {
         setSituationUpdate(spoken);
         speakAndThenListen(
-          "Thank you for updating me. Please say Yes if you are okay, or No if you want me to restart another emergency alert.",
+          'Are you okay? Please say Yes if you are safe, or No if you need help.',
           handleInitialSpokenReply
         );
       }
@@ -324,7 +504,7 @@ export const LizzyPopup: React.FC = () => {
     [enterNotOkayStage, enterSafeUpdateStage, speakAndThenListen]
   );
 
-  // Initialize talking & listening when popup opens
+  // Automatically speak "Are you okay?" and immediately listen hands-free the instant popup opens
   useEffect(() => {
     if (showLizzyPopup) {
       const timeoutSec = dispatchSettings.aiCheckInResponseTimeoutSec ?? 45;
@@ -334,7 +514,7 @@ export const LizzyPopup: React.FC = () => {
       setWaitSecondsLeft(timeoutSec);
 
       speakAndThenListen(
-        "Hi, it's Kleva from SafetyLink checking in after your trigger. Are you okay right now? Please say Yes if you are safe, or No if you need help.",
+        'Are you okay? Please say Yes if you are safe, or No if you need help.',
         handleInitialSpokenReply
       );
     } else {
@@ -356,13 +536,14 @@ export const LizzyPopup: React.FC = () => {
     if (waitSecondsLeft <= 0) {
       setStage('NO_RESPONSE');
       speakAndThenListen(
-        "I haven't received your confirmation yet. Tap Yes if you are okay, or tap Restart Alert to trigger another emergency dispatch immediately."
+        "I haven't heard from you yet. Say Yes if you are okay, or say Help to restart your emergency alert.",
+        handleInitialSpokenReply
       );
       return;
     }
     const timer = setTimeout(() => setWaitSecondsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearTimeout(timer);
-  }, [showLizzyPopup, stage, waitSecondsLeft, liveVoice.isConnected, speakAndThenListen]);
+  }, [showLizzyPopup, stage, waitSecondsLeft, liveVoice.isConnected, speakAndThenListen, handleInitialSpokenReply]);
 
   const handleOpenCareChat = () => {
     stopListening();
@@ -455,12 +636,16 @@ export const LizzyPopup: React.FC = () => {
               ) : isListening || liveVoice.isConnected ? (
                 <Mic className="text-emerald-300" size={26} />
               ) : (
-                <span className="text-xl font-black text-emerald-400">AI</span>
+                <img
+                  src="/media/kleva_logo/IMG_20260703_235254.svg"
+                  alt="Kleva AI"
+                  className="w-9 h-9 object-contain"
+                />
               )}
             </div>
 
             <span className="inline-block text-[10px] font-mono uppercase tracking-widest text-emerald-400 mb-1">
-              Kleva AI · Timed Safety Check-In ({delayMins}m Timer)
+              Kleva AI · Hands-Free Voice Check-In
             </span>
 
             <h2 className="text-xl font-bold text-white mb-2">
@@ -481,12 +666,12 @@ export const LizzyPopup: React.FC = () => {
             <div className="flex flex-wrap items-center justify-center gap-2 mb-4 text-[11px] font-mono">
               {isSpeaking && (
                 <span className="px-2.5 py-1 rounded-lg bg-cyan-950/70 border border-cyan-500/40 text-cyan-300">
-                  Speaking aloud...
+                  Asking aloud: &ldquo;Are you okay?&rdquo;...
                 </span>
               )}
               {isListening && (
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 animate-pulse">
-                  Listening for your response...
+                  {listenModeLabel}
                 </span>
               )}
               {!isSpeaking && !isListening && !liveVoice.isConnected && (
@@ -495,7 +680,7 @@ export const LizzyPopup: React.FC = () => {
                   onClick={handleManualListenAgain}
                   className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 inline-flex items-center gap-1"
                 >
-                  <Mic size={12} className="text-emerald-400" /> Tap to Speak Answer
+                  <Mic size={12} className="text-emerald-400" /> Listen Again
                 </button>
               )}
               {stage === 'ASKING_STATUS' && !liveVoice.isConnected && (

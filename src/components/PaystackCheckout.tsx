@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { loadPaystackPop } from '../utils/paystackLoader';
 
 interface Plan {
   name: string;
@@ -128,8 +127,8 @@ const PaystackCheckout: React.FC = () => {
       console.warn('Backend Paystack initialize error, falling back to inline popup:', err);
     }
 
-    // 2. Fallback to lazy-loaded inline modal using PaystackPop
-    const PaystackPop = await loadPaystackPop();
+    // 2. Fallback to inline modal using window.PaystackPop
+    const PaystackPop = (window as any).PaystackPop;
     const paystackKey = (import.meta as any).env?.VITE_PAYSTACK_PUBLIC_KEY
       || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
 

@@ -1,4 +1,5 @@
 import { R2_MEDIA } from '../../utils/r2Assets';
+import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 // @ts-nocheck
 import React, { useState } from 'react';
 
@@ -60,15 +61,29 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
   return (
     <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
-      {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// HARDWARE ECOSYSTEM</div>
+      {/* ── HEADER WITH LIVE BLE HARDWARE ACTION VIDEO & UNIVERSAL SAFETYLINK LOGO ── */}
+      <section style={{ position:'relative', padding:'80px 40px 64px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+        <video
+          src={vid(ACTION_VIDEOS.bleItagAction)}
+          poster={vidPoster(ACTION_VIDEOS.bleItagAction)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.32, pointerEvents:'none' }}
+        />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(105deg, rgba(7,10,15,0.94) 0%, rgba(7,10,15,0.75) 55%, rgba(7,10,15,0.45) 100%)', pointerEvents:'none' }} />
+        <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' }}>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'38px', width:'auto', objectFit:'contain' }} />
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>HARDWARE ECOSYSTEM</span>
+          </div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
-            Your hardware.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>Configured in minutes.</span>
+            Your hardware.<br/><span style={{ color:'#10b981', fontStyle:'italic' }}>Configured in minutes.</span>
           </h1>
-          <p style={{ fontSize:'15px', color:'#8892a4', maxWidth:'560px', lineHeight:1.7 }}>
-            SafetyLink works with BLE keyfobs, SIM-based trackers, WiFi buttons and IoT sensors. No proprietary lock-in. Replace any unit within minutes.
+          <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
+            SafetyLink works with BLE keyfobs, 4G SOS smartwatches, Hikvision panic stations, NB-IoT cellular buttons, and autonomous patrol beacons. No proprietary lock-in.
           </p>
         </div>
       </section>
@@ -128,50 +143,61 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
         </div>
       </section>
 
-      {/* ── HARDWARE VIDEO SHOWCASE ── */}
+      {/* ── HARDWARE VIDEO SHOWCASE (VERIFIED HIGH-ACTION USE CASE REELS) ── */}
       <section style={{ padding:'80px 40px', background:'transparent', backdropFilter:'blur(2px)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
         <div style={{ maxWidth:'1160px', margin:'0 auto', textAlign:'center' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// FIELD DEMONSTRATIONS & HARDWARE TEARDOWN</div>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'26px', width:'auto', objectFit:'contain' }} />
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>FIELD DEMONSTRATIONS IN ACTION</span>
+          </div>
           <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'36px' }}>Hardware in Action</h2>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', textAlign: 'left' }}>
-            {/* Video 1: BLE Vision Demo */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
-              <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
-                <video
-                  poster={R2_MEDIA.hardware.itagMacro}
-                  controls preload="none" playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                >
-                  <source src="/media/videos/Inside_the_SafetyLink_Emergency_Ecosystem.mp4" type="video/mp4" />
-                  <source src="https://res.cloudinary.com/qcp4fx2v/video/upload/q_auto,f_auto/SafetyLink_vision_when_ble_is" type="video/mp4" />
-                </video>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', textAlign: 'left' }}>
+            {[
+              {
+                id: ACTION_VIDEOS.bleItagAction,
+                tag: 'BLE KEYFOB TRIGGER',
+                color: '#10b981',
+                title: 'Real-World BLE iTAG Detection & SOS',
+                desc: 'Live field demonstration showing pocket Bluetooth keyfob activation, instant GPS lock, and automated emergency relay.',
+              },
+              {
+                id: ACTION_VIDEOS.droneDispatch,
+                tag: 'AERIAL PURSUIT NODE',
+                color: '#0ea5e9',
+                title: 'Autonomous Drone Dispatch & Tracking',
+                desc: 'See how field panic triggers immediately dispatch aerial surveillance and guide ground responders to active incidents.',
+              },
+              {
+                id: ACTION_VIDEOS.elderlyAtHome,
+                tag: 'WEARABLE & HOME CARE',
+                color: '#f59e0b',
+                title: 'Wearable Watch-Me & Elderly Protection',
+                desc: 'One-press wearable protection and proactive check-in alerts designed for vulnerable loved ones at home.',
+              },
+            ].map((item) => (
+              <div key={item.id} style={{ background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
+                  <video
+                    src={vid(item.id)}
+                    poster={vidPoster(item.id)}
+                    controls
+                    preload="metadata"
+                    playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div style={{ pointerEvents:'none', position:'absolute', top:'10px', right:'10px', display:'flex', alignItems:'center', gap:'6px', padding:'4px 8px', borderRadius:'8px', background:'rgba(2,6,23,0.78)', border:'1px solid rgba(255,255,255,0.15)' }}>
+                    <img src={ASSETS.logo} alt="SafetyLink" style={{ height:'16px', width:'auto' }} />
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: item.color, fontWeight: 700 }}>{item.tag}</span>
+                  </div>
+                </div>
+                <div style={{ padding: '20px' }}>
+                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: item.color, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{item.tag}</div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>{item.title}</h3>
+                  <p style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.6 }}>{item.desc}</p>
+                </div>
               </div>
-              <div style={{ padding: '20px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#00e676', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>BLE BEACON FIELD TEST</div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>Real-World BLE Detection & Proximity</h3>
-                <p style={{ fontSize: '12px', color: '#8892a4', lineHeight: 1.6 }}>Live vision test demonstrating Bluetooth keyfob discovery, instant RSSI ranging, and background signal relay.</p>
-              </div>
-            </div>
-
-            {/* Video 2: Hardware Lineup & Schematics */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
-              <div style={{ position: 'relative', width: '100%', height: '220px', background: '#000' }}>
-                <video
-                  controls preload="none" playsInline
-                  poster={R2_MEDIA.hardware.itagTeardown}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                >
-                  <source src="https://api.safetylink.online/api/r2/stream/Safetylink/SafetyLink_s_New_Emergency_Hardware_Lineup.mp4" type="video/mp4" />
-                  <source src="/media/videos/How_SafetyLink_Automates_Emergency_Responses.mp4" type="video/mp4" />
-                </video>
-              </div>
-              <div style={{ padding: '20px' }}>
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', color: '#0ea5e9', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '6px' }}>OFFICIAL R2 HARDWARE SHOWCASE</div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>SafetyLink Emergency Hardware Lineup</h3>
-                <p style={{ fontSize: '12px', color: '#8892a4', lineHeight: 1.6 }}>Deep dive into wearable distress buttons, rugged estate muster pillars, and automated multi-carrier fallback sensors.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

@@ -1039,6 +1039,30 @@ Rules:
     return config;
   };
 
+  const sanitizeChatHistory = (history: unknown): Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> => {
+    if (!Array.isArray(history)) return [];
+    const normalized: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+    for (const h of history.slice(-24)) {
+      if (!h || typeof (h as any).text !== "string") continue;
+      const text = (h as any).text.trim();
+      if (!text) continue;
+      const role: "user" | "model" = (h as any).role === "model" || (h as any).sender === "bot" ? "model" : "user";
+      // Gemini multi-turn history MUST begin with a user turn
+      if (normalized.length === 0 && role === "model") continue;
+      const prev = normalized[normalized.length - 1];
+      if (prev && prev.role === role) {
+        prev.parts[0].text += `\n${text}`;
+      } else {
+        normalized.push({ role, parts: [{ text }] });
+      }
+    }
+    // History passed to chats.create before sendMessage should end on a model turn
+    if (normalized.length > 0 && normalized[normalized.length - 1].role === "user") {
+      normalized.pop();
+    }
+    return normalized.slice(-20);
+  };
+
   app.post("/api/gemini/chat", async (req, res) => {
     try {
       const { message, history, systemInstruction, role, incidentContext, model, useFlashLite, useMaps, lat, lng } = req.body || {};
@@ -1055,15 +1079,7 @@ Rules:
             ? "gemini-3.1-flash-lite"
             : "gemini-4-hydrogen";
 
-      const formattedHistory = Array.isArray(history)
-        ? history
-            .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
-            .slice(-20)
-            .map((h: any) => ({
-              role: h.role === "model" || h.sender === "bot" ? "model" : "user",
-              parts: [{ text: h.text }],
-            }))
-        : [];
+      const formattedHistory = sanitizeChatHistory(history);
 
       const runChat = async (targetModel: string) => {
         const config = buildChatConfig(targetModel, { useMaps, lat, lng, role, systemInstruction, incidentContext });
@@ -1116,15 +1132,7 @@ Rules:
             ? "gemini-3.1-flash-lite"
             : "gemini-4-hydrogen";
 
-      const formattedHistory = Array.isArray(history)
-        ? history
-            .filter((h: any) => h && typeof h.text === "string" && h.text.trim().length > 0)
-            .slice(-20)
-            .map((h: any) => ({
-              role: h.role === "model" || h.sender === "bot" ? "model" : "user",
-              parts: [{ text: h.text }],
-            }))
-        : [];
+      const formattedHistory = sanitizeChatHistory(history);
 
       const openStream = async (targetModel: string) => {
         const config = buildChatConfig(targetModel, { useMaps, lat, lng, role, systemInstruction, incidentContext });
@@ -1976,7 +1984,34 @@ Rules:
       if (!inlineData?.data) {
         return res.status(502).json({ error: "No audio returned by TTS model" });
       }
-      res.json({ audioBase64: inlineData.data, mimeType: inlineData.mimeType || "audio/wav" });
+      const rawMime = String(inlineData.mimeType || "audio/L16;codec=pcm;rate=24000");
+      const rawBuf = Buffer.from(inlineData.data, "base64");
+      const isAlreadyWav = rawBuf.length >= 4 && rawBuf.subarray(0, 4).toString("ascii") === "RIFF";
+      if (!isAlreadyWav && /pcm|l16|raw/i.test(rawMime)) {
+        const rateMatch = rawMime.match(/rate=(\d+)/i);
+        const sampleRate = rateMatch ? Number(rateMatch[1]) : 24000;
+        const numChannels = 1;
+        const bitsPerSample = 16;
+        const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+        const blockAlign = numChannels * (bitsPerSample / 8);
+        const header = Buffer.alloc(44);
+        header.write("RIFF", 0, 4, "ascii");
+        header.writeUInt32LE(36 + rawBuf.length, 4);
+        header.write("WAVE", 8, 4, "ascii");
+        header.write("fmt ", 12, 4, "ascii");
+        header.writeUInt32LE(16, 16);
+        header.writeUInt16LE(1, 20); // PCM
+        header.writeUInt16LE(numChannels, 22);
+        header.writeUInt32LE(sampleRate, 24);
+        header.writeUInt32LE(byteRate, 28);
+        header.writeUInt16LE(blockAlign, 32);
+        header.writeUInt16LE(bitsPerSample, 34);
+        header.write("data", 36, 4, "ascii");
+        header.writeUInt32LE(rawBuf.length, 40);
+        const wavBase64 = Buffer.concat([header, rawBuf]).toString("base64");
+        return res.json({ audioBase64: wavBase64, mimeType: "audio/wav" });
+      }
+      res.json({ audioBase64: inlineData.data, mimeType: rawMime || "audio/wav" });
     } catch (e: any) {
       console.error("[/api/gemini/tts]", e);
       const info = extractGeminiError(e);

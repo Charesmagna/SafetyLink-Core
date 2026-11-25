@@ -3,32 +3,51 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:background="@drawable/sos_widget_circle"
-    android:padding="6dp"
-    android:elevation="12dp">
+    android:gravity="center"
+    android:padding="4dp"
+    android:elevation="16dp">
 
-    <!-- Draggable Central SOS Button -->
+    <!-- Unmistakable Circular Red Draggable Floating SOS Button -->
     <FrameLayout
         android:id="@+id/btn_sos"
-        android:layout_width="54dp"
-        android:layout_height="54dp"
-        android:background="#dc2626"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:background="@drawable/sos_widget_circle"
         android:clickable="true"
         android:focusable="true">
 
-        <TextView
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="SOS"
-            android:textColor="#ffffff"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.05" />
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SOS"
+                android:textColor="#ffffff"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:shadowColor="#7f1d1d"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="3" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HOLD"
+                android:textColor="#fee2e2"
+                android:textSize="8sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.14" />
+        </LinearLayout>
     </FrameLayout>
 
-    <!-- Hidden indicator hooks -->
+    <!-- Hidden indicator hooks kept for FloatingWidgetService compatibility -->
     <ImageView
         android:id="@+id/icon_wifi"
         android:layout_width="1dp"

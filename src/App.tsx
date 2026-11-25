@@ -80,7 +80,7 @@ const slLogoMain = getR2StreamUrl('Polish_20260914_220631067.png');
 const slLogoSet = getR2StreamUrl('IMG_20260914_223311.png');
 const newBg1 = getR2StreamUrl('Emergency_Mesh_Platform_Overview.png');
 const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
-const klevaLogo = getR2StreamUrl('Polish_20260809_035827088.png');
+const klevaLogo = '/media/kleva_logo/IMG_20260703_235254.svg';
 const polishLogo = getR2StreamUrl('limx dynamics.jpg');
 
 type TabId = 'home' | 'deck' | 'safety' | 'cameras' | 'vault' | 'contacts' | 'ble' | 'map' | 'settings' | 'subsystems' | 'profile' | 'workspace' | 'intelligence' | 'store' | 'integrations' | 'clients' | 'media';
@@ -323,10 +323,18 @@ const App: React.FC = () => {
         useAppStore.setState({
           postEmergencyPrompt: {
             incidentId: info.incidentId || `INC-${Date.now().toString().slice(-5)}`,
-            summary: `Emergency alert (${status}) dispatched. Kleva AI is available via Live Voice or Chat to stay with you until help arrives.`,
+            summary: `Emergency alert (${status}) dispatched. Kleva AI is checking in hands-free.`,
             timestamp: Date.now(),
           },
         });
+        if (store.dispatchSettings.aiCheckInEnabled !== false) {
+          window.setTimeout(() => {
+            const latest = useAppStore.getState();
+            if (!latest.showLizzyPopup) {
+              latest.setShowLizzyPopup(true);
+            }
+          }, 2500);
+        }
       }
       const coords = store.userLocation || { lat: 0, lng: 0 };
       const incidentId = info.incidentId || `INC-${Date.now()}`;
@@ -408,6 +416,8 @@ const App: React.FC = () => {
     decoyActive,
     isFloatingWidgetDeployed,
     setFloatingWidgetDeployed,
+    showKlevaFloatingIcon,
+    setShowKlevaFloatingIcon,
     demoMode,
     localOfflineQueue,
     syncOfflineQueue,
@@ -1027,7 +1037,7 @@ const App: React.FC = () => {
               <h1 className={`text-sm font-black tracking-wider uppercase font-mono leading-none flex items-center gap-1 ${
                 globalTheme === 'light' ? 'text-slate-900' : 'text-slate-100'
               }`}>
-                SafetyLink <span className="text-[8px] bg-red-500/10 text-red-400 border border-red-500/20 px-1 rounded font-normal leading-none">v2.0</span>
+                SafetyLink <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1 rounded font-normal leading-none">v1.1</span>
               </h1>
               <p className={`text-[7px] font-mono uppercase tracking-widest mt-0.5 ${
                 globalTheme === 'light' ? 'text-slate-500' : 'text-slate-500'
@@ -1091,25 +1101,23 @@ const App: React.FC = () => {
             {t(`tab.${activeTab}`)}
           </span>
 
-          {/* Quick Download APK / Hub Button */}
-          <a
-            href={
-              Capacitor.getPlatform() === 'android'
-                ? 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'
-                : 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/safetylink.apk'
-            }
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`px-2 py-1.5 rounded-xl border text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
-              globalTheme === 'light'
-                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
-                : 'bg-emerald-950/50 hover:bg-emerald-900/60 border-emerald-500/30 text-emerald-400'
-            }`}
-            title="Download SafetyLink Version 1 APK"
-          >
-            <span>⬇</span>
-            <span className="hidden sm:inline">Download</span>
-          </a>
+          {/* Quick Download APK Button — hidden inside native Android/iOS APK since user already installed it */}
+          {!Capacitor.isNativePlatform() && (
+            <a
+              href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-2 py-1.5 rounded-xl border text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
+                globalTheme === 'light'
+                  ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
+                  : 'bg-emerald-950/50 hover:bg-emerald-900/60 border-emerald-500/30 text-emerald-400'
+              }`}
+              title="Download SafetyLink Version 1 APK"
+            >
+              <span>⬇</span>
+              <span className="hidden sm:inline">Download</span>
+            </a>
+          )}
 
           {/* Theme Toggle (Sun / Moon) */}
           <button
@@ -1842,6 +1850,27 @@ const App: React.FC = () => {
                     <span className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-all ${isFloatingWidgetDeployed ? 'right-0.5' : 'left-0.5'}`} />
                   </button>
                 </div>
+
+                {/* Toggle-removable Kleva AI Floating Icon */}
+                <div className="flex items-center justify-between bg-slate-950 border border-slate-900 px-3 py-2.5 rounded-xl">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-wider font-mono block">
+                      ✨ KLEVA AI ICON
+                    </span>
+                    <span className="text-[7.5px] text-slate-500 font-mono mt-0.5">Floating AI shortcut</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !showKlevaFloatingIcon;
+                      setShowKlevaFloatingIcon(next);
+                      addToast(next ? 'Kleva AI icon shown.' : 'Kleva AI icon hidden.', 'info');
+                    }}
+                    className={`w-10 h-5 rounded-full relative transition-colors ${showKlevaFloatingIcon ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span className={`absolute top-0.5 bottom-0.5 w-4 bg-white rounded-full transition-all ${showKlevaFloatingIcon ? 'right-0.5' : 'left-0.5'}`} />
+                  </button>
+                </div>
               </div>
 
 
@@ -2129,43 +2158,26 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Always-accessible Kleva AI & SafetyLink Shield Live Voice / Care Launcher */}
-      {!isLizzyOpen && !decoyActive && !showSplash && (
-        <div className="fixed bottom-4 right-4 z-[110] flex items-center gap-2" data-testid="floating-ai-launcher">
-          <button
-            type="button"
-            onClick={() => openLizzyCompanion('voice')}
-            title="Start Real-Time Voice Conversation with Kleva / Lizzy AI"
-            className="flex items-center gap-2 pl-2 pr-3.5 py-2 rounded-full bg-slate-950/90 hover:bg-slate-900 text-cyan-300 shadow-2xl border border-cyan-500/40 text-xs font-mono font-bold tracking-wide transition-all cursor-pointer backdrop-blur-md"
-          >
-            <span className="w-7 h-7 rounded-full bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center shrink-0">
-              🎙️
-            </span>
-            <span className="hidden sm:inline">Live Voice</span>
-          </button>
+      {/* Single Compact Toggle-Removable Kleva AI Floating Icon */}
+      {showKlevaFloatingIcon && !isLizzyOpen && !decoyActive && !showSplash && (
+        <div className="fixed bottom-4 right-4 z-[110]" data-testid="floating-ai-launcher">
           <button
             type="button"
             onClick={() => openLizzyCompanion('chat')}
-            title="Open Kleva AI Safety & Post-Emergency Companion"
-            className="group flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-full bg-slate-950/95 hover:bg-slate-900 text-white shadow-[0_0_25px_rgba(16,185,129,0.35)] border border-emerald-400/50 text-xs font-mono font-black tracking-wide transition-all cursor-pointer backdrop-blur-md"
+            title="Open Kleva AI Assistant (Hide anytime in Settings or drawer)"
+            aria-label="Open Kleva AI Assistant"
+            className="w-11 h-11 rounded-full bg-slate-950/95 hover:bg-slate-900 border border-emerald-400/50 shadow-[0_6px_20px_rgba(16,185,129,0.3)] flex items-center justify-center overflow-hidden transition-transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-md"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-950 via-slate-900 to-cyan-950 border border-emerald-400/40 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
-              {!klevaLogoFailed ? (
-                <img
-                  src={klevaLogo}
-                  alt="Kleva AI"
-                  onError={() => setKlevaLogoFailed(true)}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <SLShieldLogo className="w-7 h-7" />
-              )}
-            </div>
-            <div className="text-left leading-tight">
-              <span className="block text-[10px] font-black text-emerald-300 uppercase tracking-wider">Kleva AI</span>
-              <span className="block text-[7.5px] text-slate-400 uppercase tracking-widest">Safety Care</span>
-            </div>
+            {!klevaLogoFailed ? (
+              <img
+                src={klevaLogo}
+                alt="Kleva AI"
+                onError={() => setKlevaLogoFailed(true)}
+                className="w-7 h-7 object-contain"
+              />
+            ) : (
+              <SLShieldLogo className="w-7 h-7" />
+            )}
           </button>
         </div>
       )}
@@ -2176,8 +2188,8 @@ const App: React.FC = () => {
       {/* Incoming FCM Emergency Contact Ring Modal */}
       <IncomingEmergencyRingModal />
 
-      {/* Sizable Movable Deployed Floating Panic Button Widget */}
-      <FloatingPanicWidget />
+      {/* Sizable Movable Deployed Floating Panic Button Widget — Only when user profile is active */}
+      {currentUser && !decoyActive && <FloatingPanicWidget />}
 
       {/* SafetyLink Core SA-Pty Commerce Center & Quotation Portal */}
       <FirstLaunchDisclaimer />

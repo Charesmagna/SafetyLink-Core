@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Globe, Monitor, Package, Search, Shield, Smartphone } from 'lucide-react';
+import { AlertTriangle, Check, Download, Globe, Monitor, Package, Search, Smartphone } from 'lucide-react';
+import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 
 interface Props {
   onLogin?: () => void;
@@ -41,9 +42,14 @@ export function DownloadPage({ onLogin }: Props) {
             const exeAsset = r.assets.find((a: { name?: string }) => a.name && a.name.endsWith('.exe'));
 
             if (apkAsset) {
+              const rawTag = String(r.tag_name || 'v1.1');
+              const isBetaTag = /beta|exp|v2/i.test(rawTag) || /beta|experimental/i.test(String(r.name || ''));
+              const cleanName = isBetaTag
+                ? `SafetyLink Beta (${rawTag})`
+                : `SafetyLink Version 1 (${rawTag})`;
               qualified.push({
-                version: r.tag_name || 'latest',
-                name: r.name || `SafetyLink Core ${r.tag_name}`,
+                version: rawTag,
+                name: cleanName,
                 publishedAt: r.published_at
                   ? new Date(r.published_at).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
                   : 'Verified Build',
@@ -60,11 +66,11 @@ export function DownloadPage({ onLogin }: Props) {
             setLatestRelease(qualified[0]);
           } else {
             const fallback: ReleaseItem = {
-              version: 'v2.0 (Latest Signed)',
-              name: 'SafetyLink Version 2 (Signed Android APK)',
+              version: 'v1.1.1218',
+              name: 'SafetyLink Version 1 (Official Signed Android APK)',
               publishedAt: 'Verified Release',
               sizeMb: '100.5',
-              apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk',
+              apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk',
               isLatest: true,
             };
             setReleases([fallback]);
@@ -88,107 +94,127 @@ export function DownloadPage({ onLogin }: Props) {
   );
 
   const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
-  const v2ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk';
-  const v2ExeUrl = latestRelease?.exeUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest';
+  const betaApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk';
+  const desktopExeUrl = latestRelease?.exeUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest';
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#071124] text-slate-900 dark:text-slate-100 transition-colors">
-      {/* ── HEADER ── */}
-      <section className="py-14 sm:py-16 px-4 sm:px-6 bg-gradient-to-b from-emerald-50/70 to-white dark:from-[#0d1b34]/80 dark:to-[#071124] border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-6xl mx-auto">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2">
-            Official Download Hub
-          </p>
-          <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
-            Deploy SafetyLink across Android, Windows &amp; Web.
-          </h1>
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-            Direct access to SafetyLink Legacy v1 (containing every latest feature), SafetyLink Version 2 signed Android packages, Windows Control Desk EXE, and the instant Progressive Web App.
-          </p>
+      {/* ── HEADER WITH UNIVERSAL SAFETYLINK LOGO & LIVE VISUAL ACTION PREVIEW ── */}
+      <section className="py-12 sm:py-16 px-4 sm:px-6 bg-gradient-to-b from-emerald-50/70 to-white dark:from-[#0d1b34]/85 dark:to-[#071124] border-b border-slate-200 dark:border-slate-800">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-7">
+            <div className="flex items-center gap-3 mb-4">
+              <img
+                src={ASSETS.logo}
+                alt="SafetyLink Logo"
+                className="h-10 w-auto object-contain drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]"
+              />
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Official Download Hub · Version 1 Stable
+              </span>
+            </div>
+            <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
+              Deploy SafetyLink across Android, Windows &amp; Web.
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
+              Download SafetyLink Version 1 — our official, production-signed Android release packed with every tested emergency feature — alongside Windows Control Desk EXE and the instant Web App.
+            </p>
+          </div>
+          <div className="lg:col-span-5">
+            <div className="relative rounded-2xl overflow-hidden border border-emerald-500/30 bg-slate-950 shadow-2xl">
+              <video
+                src={vid(ACTION_VIDEOS.liveActionShowcase)}
+                poster={vidPoster(ACTION_VIDEOS.liveActionShowcase)}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                className="w-full h-52 sm:h-56 object-cover block"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+              <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-emerald-400/35">
+                <img src={ASSETS.logo} alt="SafetyLink" className="h-4 w-auto object-contain" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                  VERSION 1 LIVE ACTION
+                </span>
+              </div>
+              <div className="pointer-events-none absolute bottom-3 left-3 right-3 text-xs font-semibold text-white">
+                Pocket BLE · Zero-Airtime USSD · Instant Dispatch
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── PRIMARY CHANNELS (SEPARATE ROUTES PRESERVED) ── */}
+      {/* ── OFFICIAL PRODUCTION CHANNELS (VERSION 1 FLAGSHIP + WINDOWS + WEB) ── */}
       <section className="py-14 px-4 sm:px-6 bg-slate-50/70 dark:bg-[#050d1c] border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">
-              Available Channels
+              Recommended Production Releases
             </p>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              SafetyLink Official Releases
+              SafetyLink Official Downloads
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Version 1 Legacy Full-Featured APK */}
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border-2 border-emerald-600 shadow-sm flex flex-col justify-between gap-5">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
-                    <Smartphone size={22} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            {/* Flagship Card — SafetyLink Version 1 Official Stable (Dominant Focal Anchor) */}
+            <div className="lg:col-span-6 p-7 rounded-3xl bg-white dark:bg-[#0d1b34] border-2 border-emerald-600 dark:border-emerald-500 shadow-lg shadow-emerald-950/10 flex flex-col justify-between gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <Smartphone size={24} />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                    LEGACY v1 · FULL
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
+                    RECOMMENDED · OFFICIAL STABLE
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                    SafetyLink Legacy v1
+                  <h3 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white">
+                    SafetyLink Version 1 (Android APK)
                   </h3>
-                  <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 mt-0.5">
-                    v1 Channel · All Latest Features
+                  <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 mt-1">
+                    {latestRelease?.version || 'v1.1'} · Production-Signed Android Build · All Features Shipped
                   </p>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Complete production Android APK on the v1 route with BLE iTag triggers, USSD Please Call Me relay, Password Vault, CCTV camera access, live Safety Feed, and screen-fit themes.
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Our single official consumer &amp; responder Android app. Includes every promoted beta upgrade thoroughly tested for daily protection:
+                </p>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-200">
+                  {[
+                    'Zero-Airtime Please Call Me USSD + FCM Loud Alarm',
+                    'Mandatory Native SMS & Stay-on-Screen Voice Dispatch',
+                    'BLE iTag Keyfob Triggers & Auto-Reconnect',
+                    '1-Way & 2-Way QR Contact Linking',
+                    'Live Local Safety Feed & Crime Hotspots',
+                    'Unified Light/Dark Theme & POPIA Vault',
+                  ].map((feat) => (
+                    <li key={feat} className="flex items-start gap-2">
+                      <Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="space-y-2">
+                <a
+                  href={v1ApkUrl}
+                  download="SafetyLink-v1.apk"
+                  className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 no-underline transition-all"
+                >
+                  <Download size={17} />
+                  <span>Download SafetyLink Version 1 APK</span>
+                </a>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center font-mono">
+                  Android 8.0+ · Signed Production Release · Direct Cloudflare R2 Delivery
                 </p>
               </div>
-              <a
-                href={v1ApkUrl}
-                download="SafetyLink-Legacy-v1-Full.apk"
-                className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-2 no-underline transition-colors"
-              >
-                <Download size={15} />
-                <span>Download Legacy v1 APK</span>
-              </a>
-            </div>
-
-            {/* SafetyLink Version 2 APK */}
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-5">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center">
-                    <Shield size={22} />
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-mono">
-                    VERSION 2
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                    SafetyLink Version 2
-                  </h3>
-                  <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                    {latestRelease?.version || 'v2.0'} · Signed Android APK
-                  </p>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Signed Android APK channel with durable retry queues, foreground keepalive, BLE iTag monitoring, native SMS/Voice dispatch, and POPIA compliance.
-                </p>
-              </div>
-              <a
-                href={v2ApkUrl}
-                download="SafetyLink-v2.apk"
-                className="w-full py-3 px-4 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 text-xs font-bold flex items-center justify-center gap-2 no-underline transition-opacity"
-              >
-                <Download size={15} />
-                <span>Download Version 2 APK</span>
-              </a>
             </div>
 
             {/* Windows Control Room EXE */}
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-5">
+            <div className="lg:col-span-3 p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-5">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-11 h-11 rounded-xl bg-sky-50 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
@@ -207,11 +233,11 @@ export function DownloadPage({ onLogin }: Props) {
                   </p>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Multi-screen desktop command console for security control rooms, estate managers, and dispatch centers with offline map caching.
+                  Multi-screen desktop command console for security control rooms, estate gates, and dispatch supervisors with offline map caching and Hikvision CCTV view.
                 </p>
               </div>
               <a
-                href={v2ExeUrl}
+                href={desktopExeUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-3 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-2 no-underline transition-colors"
@@ -222,7 +248,7 @@ export function DownloadPage({ onLogin }: Props) {
             </div>
 
             {/* Progressive Web App */}
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-5">
+            <div className="lg:col-span-3 p-6 rounded-2xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between gap-5">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -241,7 +267,7 @@ export function DownloadPage({ onLogin }: Props) {
                   </p>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Instant deployment directly inside any modern browser with offline service workers, theme sync, and home-screen install.
+                  Run immediately inside any modern browser with offline service workers, synced Light/Dark themes, and instant home-screen install.
                 </p>
               </div>
               <button
@@ -254,6 +280,31 @@ export function DownloadPage({ onLogin }: Props) {
               </button>
             </div>
           </div>
+
+          {/* ── DEMOTED SAFETYLINK BETA DISCLOSURE (SMALL, MUTED, DISCOURAGED — ROLLING FROM v1.1.1218) ── */}
+          <details className="mt-7 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-slate-100/70 dark:bg-slate-900/45 px-4 py-3 text-slate-600 dark:text-slate-400">
+            <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
+              <span className="inline-flex items-center gap-2">
+                <AlertTriangle size={13} className="text-amber-600/80 dark:text-amber-500/80 shrink-0" />
+                <span>Internal Testing Sandbox — SafetyLink Beta (from v1.1.1218+ · Not recommended for daily protection)</span>
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
+                Testers Only
+              </span>
+            </summary>
+            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
+                <strong className="text-amber-700 dark:text-amber-400">Not for everyday use:</strong> SafetyLink Beta (upgrading progressively from <code className="font-mono">v1.1.1218</code>) is our experimental testing track where upcoming changes are trialed before graduating to <strong>SafetyLink Version 1</strong>. For reliable daily emergency protection, always install <strong>SafetyLink Version 1</strong> above.
+              </p>
+              <a
+                href={betaApkUrl}
+                download="SafetyLink-Beta-v1.1.1218.apk"
+                className="shrink-0 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-[11px] font-mono no-underline text-center transition-colors"
+              >
+                SafetyLink Beta v1.1.1218+ (Testers Only)
+              </a>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -277,7 +328,7 @@ export function DownloadPage({ onLogin }: Props) {
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search releases (e.g. v2.0)..."
+                placeholder="Search releases (e.g. v1.1)..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
@@ -316,7 +367,7 @@ export function DownloadPage({ onLogin }: Props) {
                         </span>
                         {rel.isLatest && (
                           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-600 text-white">
-                            Latest
+                            Official Stable
                           </span>
                         )}
                       </div>
@@ -357,7 +408,7 @@ export function DownloadPage({ onLogin }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { step: '01', title: 'Download APK', desc: 'Tap Legacy v1 or Version 2 above on your Android smartphone.' },
+              { step: '01', title: 'Download Version 1 APK', desc: 'Tap "Download SafetyLink Version 1 APK" above on your Android smartphone.' },
               { step: '02', title: 'Allow Unknown Apps', desc: 'If prompted by Chrome or Files, enable "Allow from this source".' },
               { step: '03', title: 'Tap Install', desc: 'Open the downloaded package and tap Install to complete setup.' },
               { step: '04', title: 'Grant Permissions', desc: 'Allow Location, Bluetooth, SMS, and Phone permissions for reliable emergency dispatch.' },

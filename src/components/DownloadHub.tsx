@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 interface Props { onClose: () => void; }
 
 export const DownloadHub: React.FC<Props> = ({ onClose }) => {
-  const [v2ApkUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk');
+  const [v1ApkUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk');
+  const [betaApkUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk');
   const [exeUrl, setExeUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [version, setVersion] = useState('2.0 (Latest Signed)');
+  const [version, setVersion] = useState('1.1 · Official Stable');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,7 +23,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
             const apk = rel.assets.find((a: any) => a.name?.endsWith('.apk') && a.size > 80 * 1024 * 1024);
             const exe = rel.assets.find((a: any) => a.name?.endsWith('.exe'));
             if (apk?.browser_download_url) {
-              if (rel.tag_name) setVersion(`2.0 (${rel.tag_name})`);
+              if (rel.tag_name) setVersion(`1 (${rel.tag_name})`);
               if (exe?.browser_download_url) setExeUrl(exe.browser_download_url);
               break;
             }
@@ -47,9 +48,11 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
 
         <div className="p-6">
           <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 mb-3 border border-emerald-500/30 text-2xl">🛡️</div>
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 mb-3 border border-emerald-500/30 p-2">
+              <img src="/logos/Safety_Link_Logo_Transparent.png" alt="SafetyLink" className="w-full h-full object-contain" />
+            </div>
             <h2 className="text-lg font-black text-white tracking-wide uppercase font-mono">Download SafetyLink</h2>
-            {version && <p className="text-emerald-400 font-mono text-xs mt-1">Version {version} — Signed Release</p>}
+            {version && <p className="text-emerald-400 font-mono text-xs mt-1">SafetyLink Version {version} — Official Signed</p>}
           </div>
 
           {loading ? (
@@ -58,12 +61,8 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              <a href={v2ApkUrl} download className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
-                🛡️ Download Version 2 APK
-              </a>
-
-              <a href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk" download className="w-full flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-5 py-3 rounded-xl font-bold font-mono uppercase tracking-wider text-xs transition-all">
-                📱 Download Version 1 (Legacy APK)
+              <a href={v1ApkUrl} download="SafetyLink-v1.apk" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
+                🛡️ Download SafetyLink Version 1 APK
               </a>
 
               <a href={exeUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
@@ -74,6 +73,20 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
                 className="w-full flex items-center justify-center gap-3 bg-[#1a1c2e] border border-purple-500/30 text-purple-400 hover:bg-purple-500/10 px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all">
                 🌐 Open Web App (PWA)
               </a>
+
+              <details className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-[10px] font-mono text-slate-400">
+                <summary className="cursor-pointer select-none hover:text-slate-300">
+                  Testing Track · SafetyLink Beta (v1.1.1218+ · Testers Only)
+                </summary>
+                <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5">
+                  <p className="text-[10px] text-amber-400/90 leading-relaxed">
+                    Experimental builds progressing from v1.1.1218. Not recommended for everyday protection.
+                  </p>
+                  <a href={betaApkUrl} download="SafetyLink-Beta-v1.1.1218.apk" className="inline-block underline text-slate-400 hover:text-white">
+                    Download SafetyLink Beta v1.1.1218+ APK
+                  </a>
+                </div>
+              </details>
 
               <div className="pt-3 border-t border-slate-800 space-y-2">
                 <div className="flex flex-wrap justify-center gap-3 text-center">

@@ -1,4 +1,4 @@
-import { ASSETS } from '../../utils/cloudinary';
+import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 // @ts-nocheck
 import React from 'react';
 
@@ -8,25 +8,29 @@ export function Enterprise({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   return (
     <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"'Inter',system-ui,sans-serif", minHeight:'100vh' }}>
 
-      {/* ── HEADER ── */}
-      <section style={{ position:'relative', padding:'80px 40px 60px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
-        <img 
-          src={ASSETS.dashboardDark} 
-          alt="SafetyLink Enterprise" 
-          onError={(e) => {
-            e.currentTarget.onerror = null;
-            e.currentTarget.style.display = 'none';
-          }}
-          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.15 }} 
+      {/* ── HEADER WITH LIVE ENTERPRISE ACTION VIDEO & UNIVERSAL SAFETYLINK LOGO ── */}
+      <section style={{ position:'relative', padding:'80px 40px 64px', background:'linear-gradient(135deg, #070a0f 0%, #0f172a 100%)', borderBottom:'1px solid rgba(255,255,255,.07)', overflow:'hidden' }}>
+        <video
+          src={vid(ACTION_VIDEOS.governmentDispatch)}
+          poster={vidPoster(ACTION_VIDEOS.governmentDispatch)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.35, pointerEvents:'none' }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(7,10,15,0.3) 0%, rgba(13,17,23,0.5) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(7,10,15,0.94) 0%, rgba(13,17,23,0.78) 55%, rgba(13,17,23,0.45) 100%)', pointerEvents:'none' }} />
         <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// B2B ENTERPRISE</div>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' }}>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'38px', width:'auto', objectFit:'contain' }} />
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>B2B ENTERPRISE &amp; GOVERNMENT</span>
+          </div>
           <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
-            Built for Scale.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>Designed for Command.</span>
+            Built for Scale.<br/><span style={{ color:'#10b981', fontStyle:'italic' }}>Designed for Command.</span>
           </h1>
-          <p style={{ fontSize:'15px', color:'#8892a4', maxWidth:'560px', lineHeight:1.7 }}>
-            B-BBEE Level 1 certified. POPIA-compliant. SA-hosted. The first emergency response platform engineered for South African enterprise procurement.
+          <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
+            B-BBEE Level 1 certified. POPIA-compliant. SA-hosted. The first emergency response platform engineered for South African enterprise, estate, and government procurement.
           </p>
         </div>
       </section>
@@ -59,6 +63,47 @@ export function Enterprise({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               <div key={i} style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'12px', padding:'24px', textAlign:'center' }}>
                 <div style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, color:s.color, letterSpacing:'-.03em', marginBottom:'8px' }}>{s.val}</div>
                 <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', color:'#8892a4', letterSpacing:'.12em', textTransform:'uppercase' }}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ENTERPRISE & PUBLIC SAFETY IN ACTION (VISUAL VIDEO REELS) ── */}
+      <section style={{ padding:'72px 40px', background:'#0b1325', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', marginBottom:'32px' }}>
+            <div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#10b981', marginBottom:'10px', fontWeight:700 }}>ENTERPRISE FIELD REELS</div>
+              <h2 style={{ fontSize:'clamp(24px,4vw,42px)', fontWeight:900, margin:0 }}>Real-World Command Deployments.</h2>
+            </div>
+            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'34px', width:'auto', objectFit:'contain' }} />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px' }}>
+            {[
+              { id: ACTION_VIDEOS.governmentDispatch, tag: 'GOVERNMENT', title: 'Municipal & Public Safety Ops', desc: 'Coordinated regional command centers, field responder tracking, and rapid dispatch.' },
+              { id: ACTION_VIDEOS.droneDispatch, tag: 'TACTICAL DRONE', title: 'Aerial Pursuit & Perimeter Verification', desc: 'Real-time autonomous drone support linking directly to security company control desks.' },
+              { id: ACTION_VIDEOS.schoolsAndWorkplaces, tag: 'CAMPUS & CORP', title: 'Schools, Offices & Workplaces', desc: 'Floor-marshal muster verification, silent reception duress, and learner safety networks.' },
+            ].map((item) => (
+              <div key={item.id} style={{ borderRadius:'16px', overflow:'hidden', background:'#0f172a', border:'1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ position:'relative', height:'205px', background:'#000' }}>
+                  <video
+                    src={vid(item.id)}
+                    poster={vidPoster(item.id)}
+                    controls
+                    preload="metadata"
+                    playsInline
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
+                  <div style={{ pointerEvents:'none', position:'absolute', top:'10px', right:'10px', display:'flex', alignItems:'center', gap:'6px', padding:'4px 8px', borderRadius:'8px', background:'rgba(2,6,23,0.78)', border:'1px solid rgba(255,255,255,0.15)' }}>
+                    <img src={ASSETS.logo} alt="SafetyLink" style={{ height:'16px', width:'auto' }} />
+                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'9px', fontWeight:700, color:'#34d399' }}>{item.tag}</span>
+                  </div>
+                </div>
+                <div style={{ padding:'16px' }}>
+                  <div style={{ fontSize:'15px', fontWeight:800, color:'#fff' }}>{item.title}</div>
+                  <div style={{ fontSize:'12px', color:'#94a3b8', marginTop:'4px', lineHeight:1.5 }}>{item.desc}</div>
+                </div>
               </div>
             ))}
           </div>

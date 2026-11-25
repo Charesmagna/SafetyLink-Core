@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, Monitor, Shield, Smartphone, X, ChevronLeft } from 'lucide-react';
+import { Download, Monitor, Smartphone, X, ChevronLeft } from 'lucide-react';
 
 interface FloatingDownloadPromptProps {
   onOpenHub?: () => void;
@@ -12,7 +12,6 @@ export const FloatingDownloadPrompt: React.FC<FloatingDownloadPromptProps> = ({ 
   const [pulseAttention, setPulseAttention] = useState(false);
 
   const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
-  const v2ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk';
   const exeUrl = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest';
 
   // Gently peek open once after 5.5s on landing visit, then periodically pulse the edge shield tab
@@ -76,7 +75,7 @@ export const FloatingDownloadPrompt: React.FC<FloatingDownloadPromptProps> = ({ 
                       Download SafetyLink
                     </div>
                     <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">
-                      Pocket SOS · Android &amp; Windows
+                      Version 1 Official · Android &amp; Windows
                     </div>
                   </div>
                 </div>
@@ -94,38 +93,28 @@ export const FloatingDownloadPrompt: React.FC<FloatingDownloadPromptProps> = ({ 
               <div className="space-y-1.5">
                 <a
                   href={v1ApkUrl}
-                  download="SafetyLink-Legacy-v1-Full.apk"
+                  download="SafetyLink-v1.apk"
                   className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-600/25 no-underline transition-all active:scale-[0.98]"
                 >
                   <span className="flex items-center gap-2 min-w-0">
                     <Smartphone size={15} className="shrink-0" />
                     <span className="truncate">
-                      <span className="block text-xs font-extrabold leading-tight">SafetyLink APK (Legacy v1)</span>
-                      <span className="block text-[10px] text-emerald-100">All latest features included</span>
+                      <span className="block text-xs font-extrabold leading-tight">SafetyLink Version 1 APK</span>
+                      <span className="block text-[10px] text-emerald-100">Official Stable · All features included</span>
                     </span>
                   </span>
                   <Download size={14} className="shrink-0" />
                 </a>
 
-                <div className="grid grid-cols-2 gap-1.5">
-                  <a
-                    href={v2ApkUrl}
-                    download="SafetyLink-v2.apk"
-                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-bold no-underline transition-colors"
-                  >
-                    <Shield size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <span>v2 APK</span>
-                  </a>
-                  <a
-                    href={exeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-bold no-underline transition-colors"
-                  >
-                    <Monitor size={13} className="text-sky-600 dark:text-sky-400 shrink-0" />
-                    <span>Win EXE</span>
-                  </a>
-                </div>
+                <a
+                  href={exeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-[11px] font-bold no-underline transition-colors"
+                >
+                  <Monitor size={13} className="text-sky-600 dark:text-sky-400 shrink-0" />
+                  <span>Windows Control Desk EXE</span>
+                </a>
               </div>
 
               {onOpenHub && (

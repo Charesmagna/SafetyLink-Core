@@ -9,10 +9,14 @@ export const img = (publicId: string, transforms = 'q_auto,f_auto') =>
   `${IMG_BASE}/${transforms}/${publicId}`;
 
 export const vid = (publicId: string, transforms = 'q_auto,f_auto') =>
-  `${VID_BASE}/${transforms}/${publicId}`;
+  `${VID_BASE}/${transforms}/${publicId}.mp4`;
+
+/** Extracts an instant HD frame thumbnail directly from any verified Cloudinary video. */
+export const vidPoster = (publicId: string, transforms = 'so_1,w_960,q_auto,f_jpg') =>
+  `${VID_BASE}/${transforms}/${publicId}.jpg`;
 
 export const ASSETS = {
-  // Use verified transparent SafetyLink logo asset
+  // Universal verified transparent SafetyLink logo asset
   logo: '/logos/Safety_Link_Logo_Transparent.png',
   logoSvg: '/logos/New SafetyLink Official Logo.svg',
   logoTransparent: '/logos/Safety_Link_Logo_Transparent.png',
@@ -39,16 +43,34 @@ export const ASSETS = {
   mapDark: getR2StreamUrl('Polish_20260809_035827088.png'),
 };
 
+/** All verified HTTP 200 OK visual action videos hosted on Cloudinary. */
+export const ACTION_VIDEOS = {
+  familyProtection: 'Okay_now_for_the_next_scene_',
+  governmentDispatch: 'Government_use_case_senario',
+  neighbourhoodWatch: 'Neighbourhood_watch_security_c',
+  droneDispatch: 'drone_dispatch_tracking_crimin',
+  schoolsAndWorkplaces: 'Show_the_uses_in_school_and_wo',
+  elderlyAtHome: 'Old_people_scenario_alone_at_h',
+  bleItagAction: 'SafetyLink_vision_when_ble_is',
+  childrenAndSchools: 'Now_let_s_show_how_kids_would',
+  liveActionShowcase: 'Make_this_come_to_life',
+  brand3dMotion: 'Now_I_need_the_d_animation_lo',
+  fieldTacticalReel: 'petal_20260727_180314',
+  whySafetyLink: 'Why',
+  investorPitch: 'Pitch_deck',
+} as const;
+
 export const USE_CASE_VIDEOS = [
-  { id: 'Why', title: 'Why SafetyLink?', desc: 'The story behind the platform', poster: ASSETS.logo },
-  { id: 'Okay_now_for_the_next_scene', title: 'Family Protection', desc: 'How SafetyLink protects your household', poster: ASSETS.family },
-  { id: 'Government_use_case_senario', title: 'Government Use Case', desc: 'Municipal and public safety deployment', poster: ASSETS.dispatch },
-  { id: 'Neighbourhood_watch_security_c', title: 'Neighbourhood Watch', desc: 'Community security network in action', poster: ASSETS.tactical },
-  { id: 'drone_dispatch_tracking_crimin', title: 'Drone Dispatch', desc: 'Aerial response to active incidents', poster: ASSETS.drone },
-  { id: 'Show_the_uses_in_school_and_wo', title: 'Schools & Workplaces', desc: 'Protecting learners and employees', poster: ASSETS.controlRoom },
-  { id: 'Old_people_scenario_alone_at_h', title: 'Elderly at Home', desc: 'Watch-Me Timer proactive protection', poster: ASSETS.family },
-  { id: 'SafetyLink_vision_when_ble_is', title: 'BLE iTAG in Action', desc: 'How the keyfob triggers an alert', poster: ASSETS.itagAll },
-  { id: 'Now_let_s_show_how_kids_would', title: 'Children & Schools', desc: 'Smart school safety deployment', poster: ASSETS.estateTactical },
-  { id: 'K_s_south_Africa_so_multirac', title: 'Multilingual SA', desc: 'All 11 South African languages', poster: ASSETS.family },
-  { id: 'Now_I_need_the_d_animation_lo', title: 'Investor Pitch', desc: 'SafetyLink business overview', poster: ASSETS.banner },
+  { id: ACTION_VIDEOS.familyProtection,     tag: 'FAMILY SOS',      title: 'Family Protection',       desc: 'How SafetyLink protects your household in real time' },
+  { id: ACTION_VIDEOS.governmentDispatch,   tag: 'PUBLIC SAFETY',   title: 'Government Use Case',     desc: 'Municipal and public safety deployment across South Africa' },
+  { id: ACTION_VIDEOS.neighbourhoodWatch,   tag: 'COMMUNITY',       title: 'Neighbourhood Watch',     desc: 'Community security network and estate patrols in action' },
+  { id: ACTION_VIDEOS.droneDispatch,        tag: 'AERIAL PURSUIT',  title: 'Drone Dispatch',          desc: 'Autonomous aerial response tracking active incidents' },
+  { id: ACTION_VIDEOS.schoolsAndWorkplaces, tag: 'CAMPUS & OFFICE', title: 'Schools & Workplaces',    desc: 'Protecting learners, teachers, and corporate employees' },
+  { id: ACTION_VIDEOS.elderlyAtHome,        tag: 'ELDER CARE',      title: 'Elderly at Home',         desc: 'Watch-Me Timer and one-tap proactive home protection' },
+  { id: ACTION_VIDEOS.bleItagAction,        tag: 'BLE HARDWARE',    title: 'BLE iTAG in Action',      desc: 'How a pocket Bluetooth keyfob triggers an instant alert' },
+  { id: ACTION_VIDEOS.childrenAndSchools,   tag: 'SCHOOL SAFETY',   title: 'Children & Schools',      desc: 'Smart school perimeter and parent escalation deployment' },
+  { id: ACTION_VIDEOS.liveActionShowcase,   tag: 'LIVE ACTION',     title: 'SafetyLink in Motion',    desc: 'End-to-end distress trigger to responder arrival' },
+  { id: ACTION_VIDEOS.fieldTacticalReel,    tag: 'FIELD OPS',       title: 'Tactical Field Response', desc: 'On-the-ground mobile telemetry and dispatch flow' },
+  { id: ACTION_VIDEOS.whySafetyLink,        tag: 'MISSION',         title: 'Why SafetyLink?',         desc: 'The story behind South Africa’s resilient safety network' },
+  { id: ACTION_VIDEOS.investorPitch,        tag: 'OVERVIEW',        title: 'SafetyLink Overview',     desc: 'Complete ecosystem and commercial platform overview' },
 ];

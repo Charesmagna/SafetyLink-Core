@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ASSETS, vid, img } from '../../utils/cloudinary';
+import { ASSETS, ACTION_VIDEOS, USE_CASE_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 import { R2_MEDIA } from '../../utils/r2Assets';
 
 interface Props {
@@ -11,137 +11,257 @@ interface Props {
 
 interface VideoCardProps {
   publicId: string;
+  tag: string;
   title: string;
   description: string;
-  poster?: string;
 }
 
-const VideoCard = ({ publicId, title, description, poster }: VideoCardProps) => (
-  <div style={{ borderRadius:'14px', overflow:'hidden', background:'#0f172a', border:'1px solid #1e293b' }}>
-    <video
-      style={{ width:'100%', height:'200px', objectFit:'cover', display:'block' }}
-      poster={poster ? img(poster) : undefined}
-      controls
-      preload="none"
-      playsInline
-    >
-      <source
-        src={vid(publicId)}
-        type="video/mp4"
-      />
-    </video>
-    <div style={{ padding:'14px' }}>
-      <p style={{ fontWeight:'700', color:'#fff', fontSize:'14px' }}>{title}</p>
-      <p style={{ color:'#64748b', fontSize:'12px', marginTop:'4px' }}>{description}</p>
+const VideoCard = ({ publicId, tag, title, description }: VideoCardProps) => (
+  <div className="group rounded-2xl overflow-hidden bg-slate-900/90 border border-white/10 hover:border-emerald-400/45 shadow-xl transition-all duration-300 flex flex-col">
+    <div className="relative h-56 bg-black overflow-hidden">
+      <video
+        className="w-full h-full object-cover block"
+        poster={vidPoster(publicId)}
+        controls
+        preload="metadata"
+        playsInline
+      >
+        <source src={vid(publicId)} type="video/mp4" />
+      </video>
+      {/* Universal SafetyLink Logo Corner Mark */}
+      <div className="pointer-events-none absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/15">
+        <img
+          src={ASSETS.logo}
+          alt="SafetyLink"
+          className="h-4 w-auto object-contain"
+        />
+        <span className="text-[9px] font-mono font-bold tracking-wider uppercase text-emerald-300">
+          {tag}
+        </span>
+      </div>
+    </div>
+    <div className="p-4 flex-1 flex flex-col justify-between">
+      <div>
+        <h3 className="font-display font-bold text-white text-base leading-snug">{title}</h3>
+        <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">{description}</p>
+      </div>
     </div>
   </div>
 );
 
-export const USE_CASE_VIDEOS = [
-  { id: 'Okay_now_for_the_next_scene',    title: 'Family Protection',        desc: 'How SafetyLink protects your household', poster: 'Gemini_Generated_Image_virgVirg99' },
-  { id: 'Government_use_case_scenario',   title: 'Government Use Case',      desc: 'Municipal and public safety deployment', poster: 'Gemini_Generated_Image_59pss65p' },
-  { id: 'Neighbourhood_watch_security_c', title: 'Neighbourhood Watch',      desc: 'Community security network in action', poster: 'copilot_image_178696579200' },
-  { id: 'drone_dispatch_tracking_crimin', title: 'Drone Dispatch',           desc: 'Aerial response to active incidents', poster: 'Gemini_Generated_Image_chze56oh0' },
-  { id: 'Show_the_uses_in_school_and_wo', title: 'Schools & Workplaces',     desc: 'Protecting learners and employees', poster: 'Gemini_Generated_Image_4keue49e' },
-  { id: 'Old_people_scenario_alone_at_h', title: 'Elderly at Home',          desc: 'Watch-Me Timer proactive protection', poster: 'Gemini_Generated_Image_virgVirg99' },
-  { id: 'SafetyLink_vision_when_ble_is',  title: 'BLE iTAG in Action',       desc: 'How the keyfob triggers an alert', poster: 'Polish_20260818_020279883' },
-  { id: 'Now_let_s_show_how_kids_would',  title: 'Children & Schools',       desc: 'Smart school safety deployment', poster: 'Gemini_Generated_Image_59pss65p' },
-  { id: 'K_s_south_Africa_so_multirac',   title: 'Multilingual SA',          desc: 'All 11 South African languages', poster: 'Gemini_Generated_Image_virgVirg99' },
-  { id: 'Why',                            title: 'Why SafetyLink?',          desc: 'The story behind the platform', poster: 'copilot_image_178370354D283' },
-  { id: 'Pitch_deck',                     title: 'Investor Pitch',           desc: 'SafetyLink business overview', poster: 'Gemini_Generated_Image_s8bRy8s8b' },
-];
-
 const SECTORS = [
-  { emoji:'🏘️', tag:'RESIDENTIAL', title:'Gated Estates & Complexes', desc:'Real-time panic alerts, visitor tracking, perimeter alerts and armed response dispatch. Every resident protected — even with R0 airtime.', img: R2_MEDIA.usecases.estateCommunity, features:['BLE keyfob panic triggers','WhatsApp + SMS dispatch','Armed response coordination','Live GIS map for security booth'] },
-  { emoji:'🏢', tag:'ENTERPRISE', title:'Corporates & Campuses', desc:'Lone-worker protection, duress code activation, multi-floor responder routing and AES-256-GCM evidence capture.', img: R2_MEDIA.usecases.corporateCampus, features:['Silent duress code SOS','Multi-floor responder routing','Cryptographic evidence vault','API integration with HR systems'] },
-  { emoji:'🏫', tag:'EDUCATION', title:'Schools & Universities', desc:'Pupil tracking, parent notification chains, lockdown protocol dispatch and dedicated security staff escalation.', img: R2_MEDIA.usecases.schoolUniversity, features:['Learner iTag wristbands','Parent SMS + WhatsApp alerts','Lockdown mode activation','Integration with school security'] },
-  { emoji:'🏥', tag:'HEALTHCARE', title:'Clinics & Hospitals', desc:'Staff duress alerts, patient elopement detection and AI voice dispatch for code-blue events in medical facilities.', img: R2_MEDIA.usecases.hospitalHealthcare, features:['Clinical staff duress buttons','Patient elopement alerts','Code-blue dispatch chain','POPIA-compliant evidence logs'] },
-  { emoji:'🚛', tag:'LOGISTICS', title:'Transport & Field Ops', desc:'Driver SOS with GPS coordinates, route deviation alerts, cargo protection and real-time fleet situational awareness.', img: R2_MEDIA.usecases.transportLogistics, features:['Driver GPS panic trigger','Route deviation detection','Fleet command dashboard','Multi-driver dispatch coordination'] },
-  { emoji:'🏛️', tag:'MUNICIPAL', title:'Municipalities & SAPS', desc:'Community safety networks, neighborhood watch coordination, B-BBEE Level 1 compliance advantage for government procurement.', img: R2_MEDIA.usecases.municipalEmergency, features:['Community mesh network','Neighborhood watch dispatch','SAPS coordination API','B-BBEE Level 1 certified'] },
+  {
+    tag: 'RESIDENTIAL',
+    title: 'Gated Estates & Families',
+    desc: 'Real-time panic alerts, visitor tracking, perimeter alerts, and armed response dispatch. Every resident protected — even with R0 airtime.',
+    img: R2_MEDIA.usecases.estateCommunity,
+    videoId: ACTION_VIDEOS.familyProtection,
+    features: ['BLE keyfob panic triggers', 'Zero-airtime Please Call Me + FCM loud alarm', 'Armed response coordination', 'Live GIS map for security booth'],
+  },
+  {
+    tag: 'COMMUNITY',
+    title: 'Neighbourhood Watch & Patrols',
+    desc: 'Coordinate street captains, community patrol vehicles, and rapid backup alerts across suburbs and residential zones.',
+    img: R2_MEDIA.usecases.tacticalSecurity,
+    videoId: ACTION_VIDEOS.neighbourhoodWatch,
+    features: ['Instant street-level GPS pins', 'Multi-responder ETA tracking', 'Aerial drone dispatch handoff', 'Live local danger-zone feed'],
+  },
+  {
+    tag: 'ENTERPRISE',
+    title: 'Corporates & Campuses',
+    desc: 'Lone-worker protection, silent duress code activation, multi-floor responder routing, and AES-256-GCM evidence capture.',
+    img: R2_MEDIA.usecases.corporateCampus,
+    videoId: ACTION_VIDEOS.schoolsAndWorkplaces,
+    features: ['Silent duress code SOS', 'Multi-floor responder routing', 'Cryptographic evidence vault', 'Control-room Windows EXE console'],
+  },
+  {
+    tag: 'EDUCATION',
+    title: 'Schools & Universities',
+    desc: 'Student safety rosters, parent notification chains, lockdown protocol dispatch, and dedicated campus security escalation.',
+    img: R2_MEDIA.usecases.schoolUniversity,
+    videoId: ACTION_VIDEOS.childrenAndSchools,
+    features: ['Learner iTag keyfobs & wearables', 'Parent SMS + Push loud alerts', 'Campus lockdown escalation', 'Direct guard-desk alert routing'],
+  },
+  {
+    tag: 'ELDER CARE',
+    title: 'Seniors, Clinics & Home Care',
+    desc: 'Proactive Watch-Me safety timers, 4G SOS watches, staff duress buttons, and automated family + medical escalation.',
+    img: R2_MEDIA.usecases.hospitalHealthcare,
+    videoId: ACTION_VIDEOS.elderlyAtHome,
+    features: ['Watch-Me check-in timers', '4G SOS watch & pocket fobs', 'Code-blue medical dispatch chain', 'POPIA-compliant incident logs'],
+  },
+  {
+    tag: 'MUNICIPAL',
+    title: 'Government & Public Safety',
+    desc: 'Municipal safety networks, public utility worker duress protection, and B-BBEE Level 1 compliant emergency infrastructure.',
+    img: R2_MEDIA.usecases.municipalEmergency,
+    videoId: ACTION_VIDEOS.governmentDispatch,
+    features: ['Regional multi-tenant command', 'SAPS & municipal dispatch API', 'Autonomous drone pursuit integration', 'B-BBEE Level 1 certified'],
+  },
 ];
 
-export function UseCases({ onLogin, onRegisterUser, onRegisterOrg, navigate }: Props) {
+export { USE_CASE_VIDEOS };
+
+export function UseCases({ onRegisterUser, onRegisterOrg }: Props) {
   const [activeSector, setActiveSector] = useState(0);
+  const currentSector = SECTORS[activeSector];
 
   return (
-    <div style={{ background:'#070a0f', color:'#f0f4f8', fontFamily:"\'Inter\',system-ui,sans-serif", minHeight:'100vh' }}>
-      
-      {/* ── HEADER ── */}
-      <section style={{ padding:'80px 40px 60px', background:'linear-gradient(135deg,#070a0f 0%,#0d1117 100%)', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// WHO WE PROTECT</div>
-          <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
-            Every sector.<br/><span style={{ color:'#e8321e', fontStyle:'italic' }}>One platform.</span>
+    <div className="bg-[#070d1a] text-slate-100 min-h-screen">
+      {/* ── CINEMATIC VISUAL VIDEO HEADER WITH UNIVERSAL SAFETYLINK LOGO ── */}
+      <section className="relative py-20 sm:py-24 px-4 sm:px-8 border-b border-white/10 overflow-hidden">
+        <video
+          key="usecases-hero-bg"
+          src={vid(ACTION_VIDEOS.neighbourhoodWatch)}
+          poster={vidPoster(ACTION_VIDEOS.neighbourhoodWatch)}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(105deg, rgba(7,13,26,0.95) 0%, rgba(7,13,26,0.78) 55%, rgba(7,13,26,0.5) 100%)',
+          }}
+        />
+        <div className="relative z-10 max-w-6xl mx-auto">
+          <div className="flex items-center gap-3 mb-5">
+            <img
+              src={ASSETS.logo}
+              alt="SafetyLink Logo"
+              className="h-10 w-auto object-contain drop-shadow-[0_4px_16px_rgba(16,185,129,0.35)]"
+            />
+            <span className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-emerald-400">
+              Who We Protect · Live Field Scenarios
+            </span>
+          </div>
+          <h1 className="font-display text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.02] text-white mb-5">
+            Every sector.
+            <span className="block text-emerald-400 mt-1">One resilient platform.</span>
           </h1>
-          <p style={{ fontSize:'15px', color:'#8892a4', maxWidth:'560px', lineHeight:1.7 }}>
-            From gated estates to hospitals and municipal networks — SafetyLink adapts to every security environment in South Africa.
+          <p className="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed mb-7">
+            Watch real SafetyLink visual scenarios across households, neighbourhood watches, drone dispatch, schools, elderly care, and government deployments.
           </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onRegisterUser}
+              className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-extrabold transition-all"
+            >
+              Create Free Account
+            </button>
+            <button
+              type="button"
+              onClick={onRegisterOrg}
+              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/18 border border-white/20 text-white text-xs font-bold transition-colors"
+            >
+              Register Organization
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* ── VIDEOS ── */}
-      <section style={{ padding:'80px 40px', background:'#0d1117', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// SEE IT IN ACTION</div>
-          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Watch SafetyLink Work.</h2>
-          
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'20px' }}>
+      {/* ── ALL 12 VERIFIED VISUAL ACTION VIDEOS ── */}
+      <section className="py-16 px-4 sm:px-8 bg-[#0b1325] border-b border-white/10">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-emerald-400 mb-2">
+                See SafetyLink in Action
+              </p>
+              <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white">
+                Watch Real Emergency Scenarios.
+              </h2>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <img src={ASSETS.logo} alt="SafetyLink" className="h-5 w-auto object-contain" />
+              <span>12 Verified Visual Reels</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {USE_CASE_VIDEOS.map((v) => (
               <VideoCard
                 key={v.id}
                 publicId={v.id}
+                tag={v.tag}
                 title={v.title}
                 description={v.desc}
-                poster={v.poster}
               />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── SECTORS ── */}
-      <section style={{ padding:'80px 40px', background:'#070a0f', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ fontFamily:"\'JetBrains Mono\',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#e8321e', marginBottom:'16px' }}>// DEPLOYMENT SECTORS</div>
-          <h2 style={{ fontSize:'clamp(24px,4vw,44px)', fontWeight:900, marginBottom:'40px' }}>Where We Deploy.</h2>
-          
-          <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', marginBottom:'32px' }}>
+      {/* ── INTERACTIVE DEPLOYMENT SECTORS (LIVE VIDEO + FEATURE MATRIX) ── */}
+      <section className="py-16 px-4 sm:px-8 bg-[#070d1a]">
+        <div className="max-w-6xl mx-auto">
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-emerald-400 mb-2">
+            Deployment Sectors
+          </p>
+          <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-white mb-8">
+            Where We Deploy.
+          </h2>
+
+          <div className="flex gap-2 flex-wrap mb-8">
             {SECTORS.map((s, i) => (
-              <button key={i} onClick={() => setActiveSector(i)}
-                style={{ padding:'8px 16px', borderRadius:'8px', fontSize:'11px', fontWeight:700, letterSpacing:'.08em', cursor:'pointer', transition:'all .2s',
-                  background: activeSector === i ? '#e8321e' : 'rgba(255,255,255,.04)',
-                  color: activeSector === i ? '#fff' : '#8892a4',
-                  border: activeSector === i ? '1px solid #e8321e' : '1px solid rgba(255,255,255,.08)' }}>
-                {s.emoji} {s.tag}
+              <button
+                key={s.tag}
+                type="button"
+                onClick={() => setActiveSector(i)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all ${
+                  activeSector === i
+                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25'
+                    : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10'
+                }`}
+              >
+                {s.tag}
               </button>
             ))}
           </div>
 
-          <div style={{ background:'rgba(255,255,255,.03)', border:'1px solid rgba(232,50,30,.2)', borderRadius:'16px', padding:'36px', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))', gap:'40px', alignItems:'center' }}>
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(232,50,30,0.1)', border: '1px solid rgba(232,50,30,0.3)', padding: '4px 12px', borderRadius: '6px', fontSize: '11px', color: '#ff6b6b', fontWeight: 800, fontFamily: "'JetBrains Mono',monospace", marginBottom: '16px' }}>
-                {SECTORS[activeSector].emoji} {SECTORS[activeSector].tag} PROTOCOL
+          <div className="rounded-3xl bg-slate-900/75 border border-emerald-500/25 p-6 sm:p-9 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-5 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <img src={ASSETS.logo} alt="SafetyLink" className="h-6 w-auto object-contain" />
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-400">
+                  {currentSector.tag} PROTOCOL
+                </span>
               </div>
-              <div style={{ fontSize:'24px', fontWeight:900, marginBottom:'12px', color:'#fff' }}>{SECTORS[activeSector].title}</div>
-              <div style={{ fontSize:'14px', color:'#94a3b8', lineHeight:1.7, marginBottom:'24px' }}>{SECTORS[activeSector].desc}</div>
-              <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:'12px' }}>
-                {SECTORS[activeSector].features.map((f, i) => (
-                  <li key={i} style={{ display:'flex', gap:'12px', alignItems:'center', fontSize:'13px', color:'#cbd5e1' }}>
-                    <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#e8321e' }} />
-                    {f}
+              <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-white">
+                {currentSector.title}
+              </h3>
+              <p className="text-sm text-slate-300 leading-relaxed">{currentSector.desc}</p>
+              <ul className="space-y-2.5 pt-2">
+                {currentSector.features.map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-sm text-slate-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div style={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#020617', maxHeight: '340px' }}>
-              <img 
-                src={SECTORS[activeSector].img} 
-                alt={SECTORS[activeSector].title} 
-                style={{ width: '100%', height: '340px', objectFit: 'cover', display: 'block' }} 
+
+            <div className="lg:col-span-7 relative rounded-2xl overflow-hidden border border-white/15 bg-black shadow-2xl">
+              <video
+                key={currentSector.videoId}
+                src={vid(currentSector.videoId)}
+                poster={vidPoster(currentSector.videoId)}
+                autoPlay
+                muted
+                loop
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full h-72 sm:h-80 object-cover block"
               />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(2,6,23,0.95) 0%, transparent 100%)', padding: '16px 20px' }}>
-                <span style={{ fontSize: '11px', color: '#00e676', fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>
-                  TACTICAL DISPATCH REFERENCE · {SECTORS[activeSector].tag}
+              <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35">
+                <img src={ASSETS.logo} alt="SafetyLink" className="h-4 w-auto object-contain" />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                  LIVE ACTION · {currentSector.tag}
                 </span>
               </div>
             </div>

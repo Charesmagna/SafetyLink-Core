@@ -4,36 +4,78 @@ const WORKER = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
 
 type Entry = { version: string; size?: number; date?: string };
 
-/** Download hub: Version 2 (Latest Signed) and Version 1 (Legacy). */
+/** Download hub: SafetyLink Version 1 (Official Stable Release) prominently featured, with SafetyLink Beta (v1.1.1218+) tucked into a muted testing disclosure. */
 export const DownloadHubVersions: React.FC = () => {
   const [v1, setV1] = useState<Entry | null>(null);
 
   useEffect(() => {
-    fetch(WORKER + '/api/app/versions').then(r => r.json()).then(j => setV1((j.versions || [])[0] || null)).catch(() => {});
+    fetch(WORKER + '/api/app/versions')
+      .then((r) => r.json())
+      .then((j) => setV1((j.versions || [])[0] || null))
+      .catch(() => {});
   }, []);
 
-  const card = (title: string, note: string, href: string, label: string, colour: string, extra: string) => (
-    <div className={`rounded-2xl border ${colour} bg-white p-5 shadow-sm`}>
-      <h3 className="font-bold text-slate-900">{title}</h3>
-      <p className="text-xs text-slate-600 mt-1">{note}</p>
-      <p className="text-xs text-emerald-700 font-mono mt-2">{extra}</p>
-      <a className="inline-block mt-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-bold text-white transition-colors" href={href}>{label}</a>
-    </div>
-  );
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 my-6">
-      {card('SafetyLink Version 2 (Latest Signed)', 'Full Android build with Zero-Airtime Please Call Me relay, Rain SIM SMSGate retries, BLE iTAG triggers, and POPIA compliance.', WORKER + '/download/v2/safetylink.apk', 'Download Version 2 APK', 'border-emerald-400', v1 ? 'Version 2 · Build ' + v1.version : 'Version 2 Channel')}
-      {card('SafetyLink Version 1 (Legacy Stable)', 'Classic production Android build for existing installations.', WORKER + '/download/v1/safetylink.apk', 'Download Version 1 APK', 'border-slate-200', 'Version 1 Legacy Channel')}
+    <div className="my-6 space-y-3">
+      {/* Official Flagship Release — SafetyLink Version 1 */}
+      <div className="rounded-2xl border-2 border-emerald-500/80 bg-white dark:bg-[#0d1b34] p-6 shadow-md">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+            SafetyLink Version 1 — Official Stable Release
+          </h3>
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+            {v1 ? `Version 1 · Build ${v1.version}` : 'Version 1 · Recommended for Everyone'}
+          </span>
+        </div>
+        <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+          Complete signed Android release containing all promoted features: Zero-Airtime Please Call Me USSD + FCM loud alarm, mandatory native SMS &amp; voice stay-on-screen dispatch, BLE iTag panic fobs, 1-Way/2-Way QR contacts, live Safety Feed &amp; crime hotspots, unified Light/Dark themes, and POPIA encrypted vault.
+        </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <a
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition-colors no-underline"
+            href={WORKER + '/download/v1/safetylink.apk'}
+            download="SafetyLink-v1.apk"
+          >
+            Download SafetyLink Version 1 APK
+          </a>
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            Android 8.0+ · Signed Production Build
+          </span>
+        </div>
+      </div>
+
+      {/* Demoted SafetyLink Beta Disclosure — Smaller, Muted, Non-Recommended */}
+      <details className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
+        <summary className="cursor-pointer select-none font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
+          Internal Testing Sandbox · SafetyLink Beta (from v1.1.1218+ — not recommended for daily use)
+        </summary>
+        <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
+            Warning: SafetyLink Beta (upgrading from v1.1.1218) is an experimental testing channel used internally before changes graduate to SafetyLink Version 1. Everyday users should install SafetyLink Version 1 above.
+          </p>
+          <a
+            className="shrink-0 text-[11px] font-mono underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            href={WORKER + '/download/beta/safetylink.apk'}
+            download="SafetyLink-Beta-v1.1.1218.apk"
+          >
+            SafetyLink Beta v1.1.1218+ (Testers Only)
+          </a>
+        </div>
+      </details>
     </div>
   );
 };
 
-/** Older versions line, shown under the download cards. */
+/** Release summary line, shown under download cards. */
 export const OlderVersionsLine: React.FC = () => (
-  <p className="text-sm text-slate-600 mt-4">
-    Latest release: <a className="underline text-emerald-700 font-semibold" href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v2/safetylink.apk">SafetyLink Version 2 (APK)</a> · Legacy: <a className="underline text-slate-600" href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk">Version 1 (APK)</a>
+  <p className="text-sm text-slate-600 dark:text-slate-400 mt-4">
+    Official release:{' '}
+    <a
+      className="underline text-emerald-700 dark:text-emerald-400 font-semibold"
+      href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
+      download="SafetyLink-v1.apk"
+    >
+      SafetyLink Version 1 (Official Stable APK)
+    </a>
   </p>
 );
-
-
