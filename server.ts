@@ -3055,6 +3055,65 @@ Rules:
     }
   });
 
+  // Super Admin: Production Launch Health, Rain SIM Watchdog & Live Billing Telemetry
+  app.get("/api/admin/launch-health", superAdminMiddleware, async (_req: any, res: any) => {
+    try {
+      let totalAccounts = 0;
+      let activeSubscribers = 0;
+      let totalOrgs = 0;
+      try {
+        const uRes = await db.execute("SELECT COUNT(*) as n FROM users");
+        totalAccounts = Number((uRes.rows[0] as any)?.n || 0);
+        const sRes = await db.execute("SELECT COUNT(*) as n FROM users WHERE LOWER(COALESCE(subscription_status, status, '')) = 'active'");
+        activeSubscribers = Number((sRes.rows[0] as any)?.n || 0);
+      } catch {}
+      try {
+        const oRes = await db.execute("SELECT COUNT(*) as n FROM organizations");
+        totalOrgs = Number((oRes.rows[0] as any)?.n || 0);
+      } catch {}
+
+      const payfastMerchantId = String(process.env.PAYFAST_MERCHANT_ID || "").trim();
+      const payfastMerchantKey = String(process.env.PAYFAST_MERCHANT_KEY || "").trim();
+      const payfastSandbox = String(process.env.PAYFAST_SANDBOX || "").toLowerCase() === "true";
+      const paystackSecret = String(process.env.PAYSTACK_SECRET_KEY || "").trim();
+
+      res.json({
+        ok: true,
+        checkedAt: new Date().toISOString(),
+        environment: "express-server",
+        api: { status: "ONLINE", dbBound: true },
+        rainGateway: {
+          number: String(process.env.RAIN_GATEWAY_MSISDN || "+27816738186"),
+          status: "EDGE_MANAGED",
+        },
+        providers: {
+          fcm: Boolean(hasExplicitFcmCredentials),
+          smsgate: Boolean(process.env.SMSGATE_USERNAME && process.env.SMSGATE_PASSWORD),
+          twilio: Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN),
+          vapi: Boolean(VAPI_PRIVATE_KEY),
+          africasTalking: Boolean(AT_API_KEY),
+          bland: Boolean(BLAND_API_KEY),
+          bigDataCloud: Boolean(process.env.BIGDATACLOUD_API_KEY),
+          freeNewsApi: Boolean(process.env.FREENEWSAPI_KEY),
+        },
+        billing: {
+          payfastConfigured: Boolean(payfastMerchantId && payfastMerchantKey),
+          payfastLiveMode: Boolean(payfastMerchantId && payfastMerchantKey && !payfastSandbox),
+          payfastSandbox,
+          paystackConfigured: Boolean(paystackSecret),
+          paystackLiveMode: paystackSecret.startsWith("sk_live_"),
+        },
+        metrics: {
+          totalAccounts,
+          activeSubscribers,
+          totalOrgs,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message || "Launch health check failed" });
+    }
+  });
+
   // IoT Hardware Panic Webhook (NB-IoT Buttons, Hikvision AX PRO Hubs, 4G GPS Smartwatches)
   app.post("/api/webhook/iot-panic", async (req: any, res: any) => {
     try {

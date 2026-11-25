@@ -11,6 +11,7 @@ import { EditorialStudio } from './editorial/EditorialStudio';
 import { useEditorialStore } from '../utils/editorialStore';
 import { ClientDatabaseModule } from './ClientDatabaseModule';
 import { MediaHub } from './MediaHub';
+import { LaunchReadinessPanel } from './LaunchReadinessPanel';
 import { getR2StreamUrl } from '../utils/r2Assets';
 
 const slide1 = getR2StreamUrl('Random platform background.png');
@@ -21,7 +22,7 @@ const slide5 = getR2StreamUrl('IMG_20260914_223311.png');
 const newBg1 = getR2StreamUrl('Emergency_Mesh_Platform_Overview.png');
 const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
 
-type AdminTab = 'OVERVIEW' | 'USERS' | 'CLIENTS' | 'R2_MEDIA' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET' | 'EDITORIAL';
+type AdminTab = 'OVERVIEW' | 'LAUNCH' | 'USERS' | 'CLIENTS' | 'R2_MEDIA' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET' | 'EDITORIAL';
 
 export const AdminPanel: React.FC = () => {
   const [showEditorialStudio, setShowEditorialStudio] = useState(false);
@@ -382,7 +383,7 @@ export const AdminPanel: React.FC = () => {
 
       {/* Admin Nav Bar */}
       <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
-        {(['OVERVIEW', 'EDITORIAL', 'USERS', 'CLIENTS', 'R2_MEDIA', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
+        {(['OVERVIEW', 'LAUNCH', 'EDITORIAL', 'USERS', 'CLIENTS', 'R2_MEDIA', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -395,7 +396,8 @@ export const AdminPanel: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {tab === 'EDITORIAL' ? '🎨 edit environment (studio)' :
+            {tab === 'LAUNCH' ? '🚀 launch readiness' :
+             tab === 'EDITORIAL' ? '🎨 edit environment (studio)' :
              tab === 'PANICS' ? '🚨 distress signals' :
              tab === 'ORGANIZATIONS' ? '🏢 organizations' :
              tab === 'USERS' ? '👥 registered users' :
@@ -2230,6 +2232,11 @@ export const AdminPanel: React.FC = () => {
           <div className="space-y-6 animate-fadeIn text-left">
             <FleetMonitor />
           </div>
+        )}
+
+        {/* TAB 8: LAUNCH READINESS & LIVE MONITORING */}
+        {activeTab === 'LAUNCH' && (
+          <LaunchReadinessPanel />
         )}
       </main>
     </div>

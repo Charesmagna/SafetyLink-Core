@@ -1,8 +1,6 @@
-// SafetyLink Secure Payment Gateway Payment Service
-// Public key must be VITE_PAYSTACK_PUBLIC_KEY in environment
-// NEVER put secret key (gqgynogxhcomh) in frontend code
-
-import { loadPaystackPop } from './paystackLoader';
+// SafetyLink Secure Paystack Payment Service
+// Public browser key must be supplied via VITE_PAYSTACK_PUBLIC_KEY; secret keys remain server-side only.
+import { useAppStore } from './store';
 
 export const PLANS = {
   individual_premium: { name: 'SafetyLink Premium', amount: 4900, description: 'Individual Premium — R49/mo' },
@@ -13,6 +11,16 @@ export const PLANS = {
 } as const;
 
 export type PlanId = keyof typeof PLANS;
+
+function getBillingBaseUrls(): string[] {
+  const custom = (useAppStore.getState().customBackendUrl || '').trim().replace(/\/+$/, '');
+  const list = [
+    custom ? `${custom}/api/paystack/initialize` : '',
+    'https://api.safetylink.online/api/paystack/initialize',
+    '/api/paystack/initialize',
+  ].filter(Boolean);
+  return Array.from(new Set(list));
+}
 
 export async function openPaystackCheckout({
   planId,
@@ -31,53 +39,64 @@ export async function openPaystackCheckout({
   onSuccess?: (ref: string) => void;
   onClose?: () => void;
 }) {
-  const plan = planId && planId in PLANS ? PLANS[planId as PlanId] : { amount: Math.max(4900, amount || 4900), name: planName || 'SafetyLink Subscription' };
+  const store = useAppStore.getState();
+  const plan =
+    planId && planId in PLANS
+      ? PLANS[planId as PlanId]
+      : { amount: Math.max(4900, amount || 4900), name: planName || 'SafetyLink Subscription' };
   const totalAmount = Math.max(4900, plan.amount);
+  const userId = metadata.userId || store.currentUser?.id || '';
+  const orgId = metadata.orgId || store.currentOrg?.id || '';
 
-  // 1. Try backend server initialization first (Paystack official authorization URL)
-  try {
-    const res = await fetch('/api/paystack/initialize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        amount: totalAmount,
-        planId: String(planId || 'CUSTOM'),
-        metadata: {
-          merchant_id: '26778541',
-          planName: plan.name,
-          ...metadata,
+  // 1. Server-initialized Paystack checkout (preferred — keeps all secret keys server-side)
+  for (const endpoint of getBillingBaseUrls()) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          amount: totalAmount,
+          planId: String(planId || 'individual_premium'),
+          userId,
+          orgId,
+          metadata: {
+            planName: plan.name,
+            userId,
+            orgId,
+            ...metadata,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data?.authorization_url) {
+          window.location.href = data.data.authorization_url;
+          return;
         }
-      })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.data?.authorization_url) {
-        // Redirect to Paystack's official verified checkout screen
-        window.location.href = data.data.authorization_url;
-        return;
       }
+    } catch {
+      // Try next configured endpoint
     }
-  } catch (err) {
-    console.warn('Backend Paystack initialize error, attempting inline modal fallback:', err);
   }
 
-  // 2. Fallback to lazy-loaded client-side PaystackPop inline modal
-  const PaystackPop = await loadPaystackPop();
-  const key = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_live_123a593f6611ef474e5076a9d1b8c442eb9f3aa3';
+  // 2. Fallback to client-side PaystackPop inline modal when VITE_PAYSTACK_PUBLIC_KEY is configured
+  const PaystackPop = (window as any).PaystackPop;
+  const publicKey = String(import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '').trim();
 
-  if (PaystackPop && key) {
+  if (PaystackPop && publicKey) {
     const handler = PaystackPop.setup({
-      key,
+      key: publicKey,
       email,
       amount: totalAmount,
       currency: 'ZAR',
       ref: `SL-${String(planId || 'CUSTOM').toUpperCase()}-${Date.now()}`,
       label: plan.name,
       metadata: {
-        merchant_id: '26778541',
         plan_id: planId,
+        userId,
+        orgId,
         ...metadata,
       },
       callback: (transaction: any) => {
@@ -92,6 +111,9 @@ export async function openPaystackCheckout({
     return;
   }
 
-  // 3. User notification if no active Paystack keys are set up
-  alert('Paystack payments are being configured. Please ensure VITE_PAYSTACK_PUBLIC_KEY or PAYSTACK_SECRET_KEY is provided in settings.');
+  // 3. Clean in-app toast notification (never window.alert)
+  store.addToast(
+    'Paystack checkout is not configured yet on this server. Please verify live Paystack credentials or use PayFast.',
+    'warn'
+  );
 }

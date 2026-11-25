@@ -20,13 +20,21 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+      - name: Secret-leak guard on source & config
+        run: |
+          if grep -rnE '(ghp_[A-Za-z0-9]{20,}|cfut_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{20,}|bdc_[a-f0-9]{24,})' src worker server.ts public render.yaml .env.example --exclude-dir=node_modules --exclude-dir=dist; then
+            echo "::error::Potential raw secret detected in tracked source files!"
+            exit 1
+          fi
+          echo "Secret-leak guard passed cleanly."
 
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
-      - name: Run core dispatch engine unit tests
-        run: npx tsx --test src/utils/dispatchEngine.test.ts
+      - name: Run core dispatch & Worker PCM unit tests
+        run: npx tsx --test src/utils/dispatchEngine.test.ts worker/tests/pcm-auth.test.ts
 
       - name: Build production web bundle
         run: npm run build

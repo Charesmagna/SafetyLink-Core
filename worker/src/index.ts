@@ -1358,6 +1358,84 @@ app.post('/api/admin/restore-customers', async (c) => {
   return c.json(restored);
 });
 
+// Super Admin: Production Launch Health, Rain SIM Watchdog & Live Billing Telemetry
+app.get('/api/admin/launch-health', async (c) => {
+  const sessionOk = await adminAuthorised(c.env, c.req.raw);
+  let jwtSuperOk = false;
+  if (!sessionOk) {
+    const auth = c.req.header('Authorization') || '';
+    if (auth.startsWith('Bearer ')) {
+      const payload = await verifyToken(c.env, auth.slice(7));
+      if (payload && String(payload.orgId || '').toUpperCase() === 'SL-ADMIN-0000') {
+        jwtSuperOk = true;
+      }
+    }
+  }
+  if (!sessionOk && !jwtSuperOk) return c.json({ error: 'Unauthorised' }, 401 as any);
+
+  const [summary, gatewayHealth] = await Promise.all([
+    c.env.DB ? adminSummary(c.env.DB).catch(() => null) : Promise.resolve(null),
+    getGatewayHealth(c.env).catch(() => ({ json: { ok: false, gateways: [] }, status: 200 })),
+  ]);
+
+  let activeSubscribers = 0;
+  let totalOrgs = 0;
+  if (c.env.DB) {
+    try {
+      const subRow: any = await c.env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM users WHERE LOWER(COALESCE(status,'')) = 'active'`
+      ).first();
+      activeSubscribers = Number(subRow?.n ?? 0);
+    } catch {}
+    try {
+      const orgRow: any = await c.env.DB.prepare('SELECT COUNT(*) AS n FROM organisations').first();
+      totalOrgs = Number(orgRow?.n ?? 0);
+    } catch {}
+  }
+
+  const payfastMerchantId = String(c.env.PAYFAST_MERCHANT_ID || '').trim();
+  const payfastMerchantKey = String(c.env.PAYFAST_MERCHANT_KEY || '').trim();
+  const payfastSandbox = String(c.env.PAYFAST_SANDBOX || '').toLowerCase() === 'true';
+  const paystackSecret = String(c.env.PAYSTACK_SECRET_KEY || '').trim();
+  const paystackLive = paystackSecret.startsWith('sk_live_');
+
+  return c.json({
+    ok: true,
+    checkedAt: new Date().toISOString(),
+    environment: 'cloudflare-worker',
+    api: { status: 'ONLINE', dbBound: Boolean(c.env.DB) },
+    rainGateway: {
+      number: gatewayNumber(c.env),
+      ...(gatewayHealth?.json || {}),
+    },
+    providers: {
+      fcm: Boolean((c.env.FCM_SERVICE_ACCOUNT || '').trim()),
+      smsgate: Boolean((c.env.SMSGATE_USERNAME || '').trim() && (c.env.SMSGATE_PASSWORD || '').trim()),
+      twilio: Boolean((c.env.TWILIO_SID || '').trim() && (c.env.TWILIO_AUTH_TOKEN || '').trim()),
+      vapi: Boolean((c.env.VAPI_PRIVATE_KEY || '').trim()),
+      africasTalking: Boolean((c.env.AT_API_KEY || '').trim()),
+      bland: Boolean((c.env.BLAND_API_KEY || '').trim()),
+      bigDataCloud: Boolean((c.env.BIGDATACLOUD_API_KEY || '').trim()),
+      freeNewsApi: Boolean((c.env.FREENEWSAPI_KEY || '').trim()),
+    },
+    billing: {
+      payfastConfigured: Boolean(payfastMerchantId && payfastMerchantKey),
+      payfastLiveMode: Boolean(payfastMerchantId && payfastMerchantKey && !payfastSandbox),
+      payfastSandbox,
+      paystackConfigured: Boolean(paystackSecret),
+      paystackLiveMode: paystackLive,
+    },
+    metrics: {
+      totalAccounts: summary?.totalAccounts ?? 0,
+      activeSubscribers,
+      totalOrgs,
+      activeLast24Hours: summary?.activeLast24Hours ?? 0,
+      devicesRegistered: summary?.devicesRegistered ?? 0,
+      panicsLast30Days: summary?.panicsLast30Days ?? 0,
+    },
+  });
+});
+
 // IoT Hardware Panic Webhook (NB-IoT Buttons, Hikvision AX PRO Hubs, 4G GPS Smartwatches)
 app.post('/api/webhook/iot-panic', async (c) => {
   const configuredSecret = String(c.env.IOT_WEBHOOK_SECRET || c.env.PCM_WEBHOOK_TOKEN || '').trim();
@@ -1495,6 +1573,11 @@ const safeEq = (a: string, b: string): boolean => {
 };
 const hexHmac = async (secret: string, data: string): Promise<string> => {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+const hexHmacSha512 = async (secret: string, data: string): Promise<string> => {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
@@ -1814,19 +1897,154 @@ app.post('/api/payfast/notify', async (c) => {
   }
   const paymentStatus = String(incoming.payment_status || '').toUpperCase();
   const orgId = String(incoming.custom_str1 || '').trim();
-  if (paymentStatus === 'COMPLETE' && orgId && c.env.DB) {
+  const userId = String(incoming.custom_str2 || '').trim();
+  const buyerEmail = String(incoming.email_address || '').trim().toLowerCase();
+  if (paymentStatus === 'COMPLETE' && c.env.DB) {
+    // Activate individual consumer subscription by userId or buyer email
+    if (userId) {
+      await c.env.DB.prepare(
+        `UPDATE users SET status = 'active' WHERE id = ?`
+      ).bind(userId).run().catch(() => {});
+    } else if (buyerEmail) {
+      await c.env.DB.prepare(
+        `UPDATE users SET status = 'active' WHERE LOWER(email) = ?`
+      ).bind(buyerEmail).run().catch(() => {});
+    }
+    const targetRef = userId || orgId || buyerEmail || incoming.m_payment_id || 'CONSUMER';
     await c.env.DB.prepare(
       'INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)'
     ).bind(
       crypto.randomUUID(),
       'PAYFAST_ITN',
       'PAYMENT_COMPLETE',
-      orgId,
-      JSON.stringify({ pf_payment_id: incoming.pf_payment_id, amount_gross: incoming.amount_gross }),
+      targetRef,
+      JSON.stringify({
+        pf_payment_id: incoming.pf_payment_id,
+        m_payment_id: incoming.m_payment_id,
+        amount_gross: incoming.amount_gross,
+        orgId: orgId || undefined,
+        userId: userId || undefined,
+        email: buyerEmail || undefined,
+      }),
       Date.now()
     ).run().catch(() => {});
   }
   return c.json({ ok: true, payment_status: paymentStatus });
+});
+
+// ── PAYSTACK CHECKOUT INITIALIZE, VERIFY & SIGNED WEBHOOK ─────────────────────
+app.post('/api/paystack/initialize', async (c) => {
+  const secretKey = String(c.env.PAYSTACK_SECRET_KEY || '').trim();
+  if (!secretKey) {
+    return c.json({ error: 'Paystack credentials are not configured on this server.' }, 503 as any);
+  }
+  const body = (await c.req.json().catch(() => ({}))) as any;
+  const email = String(body.email || '').trim();
+  const amount = Math.round(Number(body.amount || 0));
+  const planId = String(body.planId || 'individual_premium').trim().slice(0, 64);
+  if (!email || !email.includes('@') || !Number.isFinite(amount) || amount < 100) {
+    return c.json({ error: 'Valid email and amount (in cents) are required.' }, 400 as any);
+  }
+  const reference = `SL-${planId.toUpperCase()}-${Date.now()}`;
+  const resp = await fetch('https://api.paystack.co/transaction/initialize', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      amount,
+      currency: 'ZAR',
+      reference,
+      callback_url: 'https://safetylink.online/#/payment-success',
+      metadata: {
+        planId,
+        userId: String(body.userId || body.metadata?.userId || '').trim().slice(0, 64),
+        orgId: String(body.orgId || body.metadata?.orgId || '').trim().slice(0, 64),
+        planName: String(body.metadata?.planName || planId).slice(0, 80),
+      },
+    }),
+  });
+  const data: any = await resp.json().catch(() => ({}));
+  if (!resp.ok || !data?.status) {
+    return c.json({ error: data?.message || 'Paystack initialization failed.' }, 502 as any);
+  }
+  return c.json({ status: true, data: data.data });
+});
+
+app.get('/api/paystack/verify/:reference', async (c) => {
+  const secretKey = String(c.env.PAYSTACK_SECRET_KEY || '').trim();
+  if (!secretKey) return c.json({ error: 'Paystack not configured' }, 503 as any);
+  const reference = String(c.req.param('reference') || '').trim();
+  if (!reference || !/^[A-Za-z0-9._-]{4,100}$/.test(reference)) {
+    return c.json({ error: 'Invalid payment reference' }, 400 as any);
+  }
+  const resp = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+    headers: { Authorization: `Bearer ${secretKey}` },
+  });
+  const data: any = await resp.json().catch(() => ({}));
+  const tx = data?.data;
+  const paid = resp.ok && data?.status === true && String(tx?.status || '').toLowerCase() === 'success';
+  if (paid && c.env.DB) {
+    const userId = String(tx?.metadata?.userId || '').trim();
+    const email = String(tx?.customer?.email || '').trim().toLowerCase();
+    if (userId) {
+      await c.env.DB.prepare(`UPDATE users SET status = 'active' WHERE id = ?`).bind(userId).run().catch(() => {});
+    } else if (email) {
+      await c.env.DB.prepare(`UPDATE users SET status = 'active' WHERE LOWER(email) = ?`).bind(email).run().catch(() => {});
+    }
+  }
+  return c.json({
+    ok: paid,
+    status: tx?.status || 'unknown',
+    reference,
+    amount: tx?.amount ?? 0,
+    currency: tx?.currency || 'ZAR',
+  });
+});
+
+app.post('/api/paystack/webhook', async (c) => {
+  const secretKey = String(c.env.PAYSTACK_SECRET_KEY || '').trim();
+  if (!secretKey) return c.json({ error: 'Paystack not configured' }, 503 as any);
+  const raw = await c.req.text();
+  const givenSig = String(c.req.header('x-paystack-signature') || '').trim().toLowerCase();
+  if (!givenSig) return c.json({ error: 'Missing Paystack signature' }, 401 as any);
+  const expectedSig = await hexHmacSha512(secretKey, raw);
+  if (!safeEq(givenSig, expectedSig)) {
+    return c.json({ error: 'Invalid Paystack signature' }, 401 as any);
+  }
+  let payload: any = {};
+  try { payload = JSON.parse(raw); } catch { return c.json({ error: 'Invalid JSON' }, 400 as any); }
+  const event = String(payload?.event || '');
+  const tx = payload?.data || {};
+  if (event === 'charge.success' && String(tx?.status || '').toLowerCase() === 'success' && c.env.DB) {
+    const userId = String(tx?.metadata?.userId || '').trim();
+    const orgId = String(tx?.metadata?.orgId || '').trim();
+    const email = String(tx?.customer?.email || '').trim().toLowerCase();
+    if (userId) {
+      await c.env.DB.prepare(`UPDATE users SET status = 'active' WHERE id = ?`).bind(userId).run().catch(() => {});
+    } else if (email) {
+      await c.env.DB.prepare(`UPDATE users SET status = 'active' WHERE LOWER(email) = ?`).bind(email).run().catch(() => {});
+    }
+    await c.env.DB.prepare(
+      'INSERT INTO audit_logs (id, actor, action, target_id, details, created_at) VALUES (?,?,?,?,?,?)'
+    ).bind(
+      crypto.randomUUID(),
+      'PAYSTACK_WEBHOOK',
+      'PAYMENT_COMPLETE',
+      userId || orgId || email || String(tx?.reference || 'CONSUMER'),
+      JSON.stringify({
+        reference: tx?.reference,
+        amount: tx?.amount,
+        currency: tx?.currency || 'ZAR',
+        planId: tx?.metadata?.planId,
+        email: email || undefined,
+      }),
+      Date.now()
+    ).run().catch(() => {});
+  }
+  return c.json({ ok: true, event });
 });
 
 // ── HEALTH CHECK ──────────────────────────────────────────────────────────────
