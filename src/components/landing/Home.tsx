@@ -8,8 +8,6 @@ import {
   BellRing,
   Building2,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Globe,
   Lock,
   MapPin,
@@ -81,6 +79,7 @@ const HERO_BG_SLIDES: HeroBgSlide[] = [
   { kind: 'image', src: R2_MEDIA.usecases.corporateCampus, alt: 'Corporate Campus Security Protection' },
   { kind: 'image', src: R2_MEDIA.backgrounds.darkTopology, alt: 'Dark Tactical Topology Network' },
   { kind: 'image', src: R2_MEDIA.usecases.schoolUniversity, alt: 'School & University Campus Safety' },
+  { kind: 'image', src: '/Polish_20260907_043403519.jpg', alt: 'SafetyLink Family Protection & Quick QR Access' },
   { kind: 'image', src: R2_MEDIA.backgrounds.satelliteConstellation, alt: 'Satellite GPS & Failover Constellation' },
   { kind: 'image', src: R2_MEDIA.platform.ambientHero, alt: 'SafetyLink Spatial Mesh Ambient Backdrop' },
 ];
@@ -190,6 +189,14 @@ const HERO_PLATFORM_SLIDES: HeroShowcaseSlide[] = [
     tag: 'LIVE ACTION · CARE',
     title: 'Elderly & Lone-Worker Home Care',
     caption: 'Proactive Watch-Me safety timers and hands-free Kleva AI welfare check-ins after every alert.',
+  },
+  {
+    kind: 'image',
+    src: '/Polish_20260907_043403519.jpg',
+    thumb: '/Polish_20260907_043403519.jpg',
+    tag: 'FAMILY ACCESS',
+    title: 'Instant Family Protection & QR Onboarding',
+    caption: 'Scan and connect your household contacts and emergency responders in seconds.',
   },
   {
     kind: 'image',
@@ -319,17 +326,17 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     });
   }, []);
 
-  // Independent timers so Hero background & Hero showcase rotate continuously with rich variety
+  // Calm, unhurried 30-second rotation for hero background & showcase so visuals never feel messy
   useEffect(() => {
     const bgTimer = window.setInterval(() => {
       setBgIdx((prev) => (prev + 1) % HERO_BG_SLIDES.length);
-    }, 5800);
+    }, 30000);
     const slideTimer = window.setInterval(() => {
       setSlideIdx((prev) => (prev + 1) % HERO_PLATFORM_SLIDES.length);
-    }, 6000);
+    }, 30000);
     const hwTimer = window.setInterval(() => {
       setHwIdx((prev) => (prev + 1) % HARDWARE_PHOTO_POOL.length);
-    }, 4000);
+    }, 4500);
     return () => {
       window.clearInterval(bgTimer);
       window.clearInterval(slideTimer);
@@ -378,15 +385,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     <div className="bg-transparent text-slate-900 dark:text-slate-100">
       {/* ── PROMINENT FULL-BLEED CHANGING HERO SECTION (Video background stays active across rest of page) ── */}
       <section className="relative min-h-[560px] lg:min-h-[620px] py-14 sm:py-18 lg:py-22 px-4 sm:px-6 overflow-hidden flex items-center border-b border-emerald-500/20">
-        {/* Prominent Full-Bleed Changing Hero Backdrop (Instant local base + rotating Use-Case Action Videos & R2 Scenes) */}
+        {/* Clean Full-Bleed Rotating Hero Backdrop (No static hardcoded image underneath) */}
         <div className="absolute inset-0 z-0 overflow-hidden bg-slate-950">
-          {/* Guaranteed instant local backdrop so the hero is NEVER blank even on slow mobile networks */}
-          <img
-            src="/Polish_20260907_043403519.jpg"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-45 select-none pointer-events-none"
-          />
           <AnimatePresence mode="sync">
             {currentBg.kind === 'video' ? (
               <motion.video
@@ -398,10 +398,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 loop
                 playsInline
                 preload="auto"
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 0.72, scale: 1.0 }}
+                initial={{ opacity: 0, scale: 1.03 }}
+                animate={{ opacity: 0.82, scale: 1.0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, ease: 'easeOut' }}
+                transition={{ duration: 1.4, ease: 'easeInOut' }}
                 className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
               />
             ) : (
@@ -409,14 +409,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 key={`hero-bg-img-${currentBg.src}`}
                 src={currentBg.src}
                 alt={currentBg.alt}
-                initial={{ opacity: 0, scale: 1.06 }}
-                animate={{ opacity: 0.75, scale: 1.01 }}
+                initial={{ opacity: 0, scale: 1.04 }}
+                animate={{ opacity: 0.85, scale: 1.0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.9, ease: 'easeOut' }}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-                }}
+                transition={{ duration: 1.4, ease: 'easeInOut' }}
                 className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
               />
             )}
@@ -426,7 +422,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'linear-gradient(100deg, rgba(4, 12, 28, 0.88) 0%, rgba(4, 12, 28, 0.62) 48%, rgba(4, 12, 28, 0.25) 100%)',
+                'linear-gradient(100deg, rgba(4, 12, 28, 0.86) 0%, rgba(4, 12, 28, 0.56) 48%, rgba(4, 12, 28, 0.22) 100%)',
             }}
           />
           <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-950/75 via-slate-950/25 to-transparent pointer-events-none" />
@@ -516,15 +512,15 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               style={{ transformStyle: 'preserve-3d' }}
               className="rounded-3xl overflow-hidden bg-slate-950/55 backdrop-blur-2xl border border-white/20 shadow-[0_32px_70px_rgba(0,0,0,0.55)] p-2.5 sm:p-3"
             >
-              {/* Active Slide Viewport — Plays Live Use-Case Action Videos + High-Impact Platform Screens */}
-              <div className="relative h-72 sm:h-[360px] rounded-2xl overflow-hidden bg-slate-900">
-                <AnimatePresence mode="wait">
+              {/* Clean Ambient Showcase Viewport — Calm 30-second pass-through, no timer bar, no numbers, no skip controls */}
+              <div className="relative h-80 sm:h-[400px] rounded-2xl overflow-hidden bg-slate-900">
+                <AnimatePresence mode="sync">
                   <motion.div
                     key={currentSlide.src}
-                    initial={{ opacity: 0, scale: 1.04 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.4, ease: 'easeInOut' }}
                     className="absolute inset-0 w-full h-full"
                   >
                     {currentSlide.kind === 'video' ? (
@@ -543,17 +539,13 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                       <img
                         src={currentSlide.src}
                         alt={currentSlide.title}
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-                        }}
                         className="w-full h-full object-cover block"
                       />
                     )}
                   </motion.div>
                 </AnimatePresence>
 
-                <span className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300">
+                <span className="pointer-events-none absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300">
                   {currentSlide.kind === 'video' && (
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                   )}
@@ -569,76 +561,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                   />
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent text-white z-10">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-display text-sm sm:text-base font-extrabold">{currentSlide.title}</div>
-                      <div className="text-xs text-slate-200 mt-0.5">{currentSlide.caption}</div>
-                    </div>
-                    <span className="font-mono text-[11px] font-bold text-emerald-300 shrink-0 tabular-nums">
-                      {String(slideIdx + 1).padStart(2, '0')} / {String(HERO_PLATFORM_SLIDES.length).padStart(2, '0')}
-                    </span>
-                  </div>
-                  {/* Animated Slide Timer Bar */}
-                  <div className="mt-3 h-1 w-full rounded-full bg-white/20 overflow-hidden">
-                    <motion.div
-                      key={slideIdx}
-                      initial={{ width: '0%' }}
-                      animate={{ width: '100%' }}
-                      transition={{ duration: 6.0, ease: 'linear' }}
-                      className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
-                    />
-                  </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent text-white z-10">
+                  <div className="font-display text-sm sm:text-base font-extrabold">{currentSlide.title}</div>
+                  <div className="text-xs text-slate-200 mt-0.5">{currentSlide.caption}</div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSlideIdx((slideIdx - 1 + HERO_PLATFORM_SLIDES.length) % HERO_PLATFORM_SLIDES.length)}
-                  aria-label="Previous platform view"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-slate-950/75 backdrop-blur-md border border-white/20 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg transition-all hover:scale-105"
-                >
-                  <ChevronLeft size={17} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSlideIdx((slideIdx + 1) % HERO_PLATFORM_SLIDES.length)}
-                  aria-label="Next platform view"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-slate-950/75 backdrop-blur-md border border-white/20 hover:bg-emerald-600 text-white flex items-center justify-center shadow-lg transition-all hover:scale-105"
-                >
-                  <ChevronRight size={17} />
-                </button>
-              </div>
-
-              {/* Interactive 12-Slide Video & Platform Thumbnail Strip */}
-              <div className="mt-2.5 grid grid-cols-6 gap-1.5">
-                {HERO_PLATFORM_SLIDES.map((slide, idx) => (
-                  <button
-                    key={slide.src}
-                    type="button"
-                    onClick={() => setSlideIdx(idx)}
-                    className={`relative h-10 sm:h-11 rounded-lg overflow-hidden border-2 transition-all ${
-                      idx === slideIdx
-                        ? 'border-emerald-400 ring-2 ring-emerald-400/35 scale-[1.03]'
-                        : 'border-white/10 opacity-70 hover:opacity-100'
-                    }`}
-                    title={slide.title}
-                  >
-                    <img
-                      src={slide.thumb}
-                      alt={slide.title}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-                      }}
-                      className="w-full h-full object-cover block"
-                    />
-                    {slide.kind === 'video' && (
-                      <span className="absolute bottom-0.5 right-0.5 px-1 py-[1px] rounded bg-slate-950/80 text-[7px] font-mono font-bold text-emerald-300 leading-none">
-                        ▶
-                      </span>
-                    )}
-                  </button>
-                ))}
               </div>
             </motion.div>
           </div>
