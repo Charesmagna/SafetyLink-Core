@@ -95,6 +95,7 @@ public class MainActivity extends BridgeActivity {
             WebView mainWebView = getBridge().getWebView();
             WebSettings mainSettings = mainWebView.getSettings();
             mainSettings.setTextZoom(100);
+            mainSettings.setMediaPlaybackRequiresUserGesture(false);
             mainSettings.setAllowFileAccessFromFileURLs(false);
             mainSettings.setAllowUniversalAccessFromFileURLs(false);
             mainSettings.setSupportMultipleWindows(true);
@@ -103,6 +104,17 @@ public class MainActivity extends BridgeActivity {
             mainWebView.setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
                 private Dialog popupDialog;
                 private WebView popupWebView;
+
+                @Override
+                public void onPermissionRequest(final android.webkit.PermissionRequest request) {
+                    runOnUiThread(() -> {
+                        try {
+                            request.grant(request.getResources());
+                        } catch (Exception e) {
+                            super.onPermissionRequest(request);
+                        }
+                    });
+                }
 
                 @Override
                 public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
@@ -191,7 +203,8 @@ public class MainActivity extends BridgeActivity {
             Manifest.permission.SEND_SMS,
             Manifest.permission.CALL_PHONE,
             Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.RECORD_AUDIO
         };
         for (String perm : wanted) {
             if (ContextCompat.checkSelfPermission(this, perm) != PackageManager.PERMISSION_GRANTED) need.add(perm);

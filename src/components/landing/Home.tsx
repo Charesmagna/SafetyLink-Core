@@ -302,7 +302,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const betaApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk';
   const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [releaseVersion, setReleaseVersion] = useState('v1.1 · Official Stable');
+  const [releaseVersion, setReleaseVersion] = useState('');
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const hardwareSectionRef = useRef<HTMLDivElement>(null);
@@ -348,7 +348,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
     fetch('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest')
       .then((r) => (r.ok ? r.json() : null))
       .then((info) => {
-        if (info?.version) setReleaseVersion(`Version 1 (${info.version})`);
+        if (info?.version) setReleaseVersion(`v${String(info.version).replace(/^v/i, '')}`);
       })
       .catch(() => {});
 
@@ -398,8 +398,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 loop
                 playsInline
                 preload="auto"
-                initial={{ opacity: 0, scale: 1.03 }}
-                animate={{ opacity: 0.82, scale: 1.0 }}
+                initial={{ opacity: 0, scale: 1.15 }}
+                animate={{ opacity: 0.82, scale: 1.12 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1.4, ease: 'easeInOut' }}
                 className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
@@ -409,8 +409,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 key={`hero-bg-img-${currentBg.src}`}
                 src={currentBg.src}
                 alt={currentBg.alt}
-                initial={{ opacity: 0, scale: 1.04 }}
-                animate={{ opacity: 0.85, scale: 1.0 }}
+                initial={{ opacity: 0, scale: 1.06 }}
+                animate={{ opacity: 0.85, scale: 1.02 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1.4, ease: 'easeInOut' }}
                 className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
@@ -431,13 +431,13 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
         {/* Subtle Luminous Ambient Accent Glow */}
         <div className="absolute -top-24 left-1/4 w-96 h-96 rounded-full bg-emerald-400/18 blur-3xl pointer-events-none animate-float-slow z-[1]" />
 
-        <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center relative z-10">
+        <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center relative z-10">
           {/* Hero Copy */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55 }}
-            className="lg:col-span-6 space-y-6"
+            className="lg:col-span-7 space-y-6"
           >
             <div className="flex flex-wrap items-center gap-3">
               <img
@@ -502,18 +502,18 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </div>
           </motion.div>
 
-          {/* Right: Synchronized Interactive 3D Frosted-Glass Large Platform Showcase */}
-          <div className="lg:col-span-6 sl-perspective">
+          {/* Right: Sleek Compact 16:9 Secondary-View Showcase Frame (matches Download Hub hero frame) */}
+          <div className="lg:col-span-5 sl-perspective w-full max-w-md lg:max-w-[450px] mx-auto lg:ml-auto lg:mr-0">
             <motion.div
               onMouseMove={handleHeroMouseMove}
               onMouseLeave={() => setTilt({ rx: 0, ry: 0 })}
-              animate={{ rotateX: tilt.rx, rotateY: tilt.ry }}
+              animate={{ rotateX: tilt.rx * 0.7, rotateY: tilt.ry * 0.7 }}
               transition={{ type: 'spring', stiffness: 180, damping: 18 }}
               style={{ transformStyle: 'preserve-3d' }}
-              className="rounded-3xl overflow-hidden bg-slate-950/55 backdrop-blur-2xl border border-white/20 shadow-[0_32px_70px_rgba(0,0,0,0.55)] p-2.5 sm:p-3"
+              className="relative rounded-2xl overflow-hidden border border-emerald-500/35 bg-slate-950/90 shadow-[0_24px_60px_rgba(0,0,0,0.58)] backdrop-blur-xl"
             >
-              {/* Clean Ambient Showcase Viewport — Calm 30-second pass-through, no timer bar, no numbers, no skip controls */}
-              <div className="relative h-80 sm:h-[400px] rounded-2xl overflow-hidden bg-slate-900">
+              {/* Compact 16:9 Secondary Screen — 30-second pass-through, overscan cropped so bottom AI logos stay hidden */}
+              <div className="relative w-full h-52 sm:h-56 overflow-hidden bg-slate-950">
                 <AnimatePresence mode="sync">
                   <motion.div
                     key={currentSlide.src}
@@ -521,7 +521,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 1.4, ease: 'easeInOut' }}
-                    className="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 w-full h-full overflow-hidden"
                   >
                     {currentSlide.kind === 'video' ? (
                       <video
@@ -533,37 +533,43 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                         loop
                         playsInline
                         preload="auto"
-                        className="w-full h-full object-cover block"
+                        className="w-full h-full object-cover object-center scale-[1.15] block"
                       />
                     ) : (
                       <img
                         src={currentSlide.src}
                         alt={currentSlide.title}
-                        className="w-full h-full object-cover block"
+                        className="w-full h-full object-cover object-center scale-[1.06] block"
                       />
                     )}
                   </motion.div>
                 </AnimatePresence>
 
-                <span className="pointer-events-none absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-md border border-emerald-400/35 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300">
-                  {currentSlide.kind === 'video' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  )}
-                  {currentSlide.tag}
-                </span>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/92 via-slate-950/20 to-transparent z-10" />
 
-                {/* Universal SafetyLink Logo Watermark */}
-                <div className="pointer-events-none absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/70 backdrop-blur-md border border-white/15">
+                {/* Unified Top-Left Universal SafetyLink Logo + Live Tag */}
+                <div className="pointer-events-none absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-emerald-400/35">
                   <img
                     src={ASSETS.logo}
                     alt="SafetyLink"
                     className="h-4 w-auto object-contain"
                   />
+                  {currentSlide.kind === 'video' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  )}
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    {currentSlide.tag}
+                  </span>
                 </div>
 
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent text-white z-10">
-                  <div className="font-display text-sm sm:text-base font-extrabold">{currentSlide.title}</div>
-                  <div className="text-xs text-slate-200 mt-0.5">{currentSlide.caption}</div>
+                {/* Clean Secondary-Screen Caption */}
+                <div className="pointer-events-none absolute bottom-3 left-3.5 right-3.5 z-10 text-white">
+                  <div className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate">
+                    {currentSlide.title}
+                  </div>
+                  <div className="text-[11px] text-slate-200/90 truncate mt-0.5">
+                    {currentSlide.caption}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1135,22 +1141,22 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                     <Smartphone size={20} />
                   </div>
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    OFFICIAL STABLE · {releaseVersion}
+                    VERSION 1 · OFFICIAL STABLE
                   </span>
                 </div>
                 <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                  SafetyLink Version 1 APK (Android)
+                  SafetyLink APK
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
-                  Our single official consumer &amp; responder Android build containing every tested feature: Zero-Airtime Please Call Me USSD + FCM alarm, mandatory native SMS &amp; voice dispatch, BLE iTag keyfobs, live Safety Feed, and POPIA vault.
+                  Version 1 official consumer &amp; responder Android build containing every tested feature: ZeroLink offline USSD + FCM alarm, native SMS &amp; voice dispatch, BLE iTag keyfobs, live Safety Feed, and POPIA vault.
                 </p>
               </div>
               <a
                 href={v1ApkUrl}
-                download="SafetyLink-v1.apk"
+                download="SafetyLink.apk"
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-extrabold text-center no-underline transition-all shadow-md shadow-emerald-600/20"
               >
-                Download SafetyLink Version 1 APK
+                Download SafetyLink APK
               </a>
             </div>
 
@@ -1200,19 +1206,21 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
           <details className="mt-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-100/60 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
             <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 hover:text-slate-700 dark:hover:text-slate-300">
-              <span>Internal Testing Sandbox · SafetyLink Beta (from v1.1.1218+ · Not recommended for daily protection)</span>
+              <span>
+                Internal Testing Sandbox · SafetyLink Beta (v1.1.1000+ rolling{releaseVersion.startsWith('v') ? ` · Current ${releaseVersion}` : ''} · Not recommended for daily protection)
+              </span>
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">Testers Only</span>
             </summary>
             <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
-                SafetyLink Beta progresses from v1.1.1218 for testing upcoming features before they graduate to SafetyLink Version 1. Everyday users should install SafetyLink Version 1 above.
+                SafetyLink Beta progresses from v1.1.1000+{releaseVersion.startsWith('v') ? ` (currently ${releaseVersion})` : ''} for testing upcoming changes before they graduate to SafetyLink APK (Version 1). Everyday users should install SafetyLink APK above.
               </p>
               <a
                 href={betaApkUrl}
-                download="SafetyLink-Beta-v1.1.1218.apk"
+                download={`SafetyLink-Beta-${releaseVersion.startsWith('v') ? releaseVersion : 'v1.1.1000'}.apk`}
                 className="shrink-0 font-mono text-[11px] underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
-                SafetyLink Beta v1.1.1218+ (Testers Only)
+                SafetyLink Beta ({releaseVersion.startsWith('v') ? releaseVersion : 'v1.1.1000+'}) · Testers Only
               </a>
             </div>
           </details>

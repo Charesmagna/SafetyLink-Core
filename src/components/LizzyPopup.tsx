@@ -14,8 +14,11 @@ import {
   Send,
   X,
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { useGeminiLiveVoice } from '../hooks/useGeminiLiveVoice';
 import { fetchGeminiApi } from '../utils/geminiApi';
+import { SafetyLinkEmergency } from '../services/NativeDispatchService';
+import { speakHandsFree, stopHandsFreeSpeech } from '../utils/localKlevaResponder';
 
 type CheckInStage = 'ASKING_STATUS' | 'SAFE_UPDATE' | 'NOT_OKAY_ESCALATE' | 'NO_RESPONSE';
 
@@ -27,6 +30,7 @@ export const LizzyPopup: React.FC = () => {
     resolvePanic,
     currentPanicEvent,
     dispatchSettings,
+    duressPin,
     scheduleAiCheckIn,
     cancelAiCheckIn,
     openLizzyCompanion,
@@ -34,9 +38,10 @@ export const LizzyPopup: React.FC = () => {
     addToast,
   } = useAppStore();
 
+  const safetyWord = (dispatchSettings.aiSafetyWord || 'all clear').trim();
   const [stage, setStage] = useState<CheckInStage>('ASKING_STATUS');
   const [aiMessage, setAiMessage] = useState<string>(
-    'Are you okay? Please say Yes if you are safe, or No if you need help.'
+    `Are you okay? Please say Yes or your safety word ("${safetyWord}") if you are safe, or say No if you need help.`
   );
   const [heardText, setHeardText] = useState<string>('');
   const [situationUpdate, setSituationUpdate] = useState<string>('');
@@ -50,9 +55,8 @@ export const LizzyPopup: React.FC = () => {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recorderStreamRef = useRef<MediaStream | null>(null);
   const recorderTimerRef = useRef<number | null>(null);
-  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
-  const speakWatchdogRef = useRef<number | null>(null);
   const restartListenTimerRef = useRef<number | null>(null);
+  const nativeListenActiveRef = useRef<boolean>(false);
 
   const isOpenRef = useRef<boolean>(showLizzyPopup);
   isOpenRef.current = showLizzyPopup;
@@ -62,6 +66,10 @@ export const LizzyPopup: React.FC = () => {
   liveConnectedRef.current = liveVoice.isConnected;
 
   const stopListening = useCallback(() => {
+    nativeListenActiveRef.current = false;
+    if (Capacitor.isNativePlatform()) {
+      SafetyLinkEmergency.stopListening().catch(() => {});
+    }
     if (restartListenTimerRef.current) {
       window.clearTimeout(restartListenTimerRef.current);
       restartListenTimerRef.current = null;
@@ -99,23 +107,7 @@ export const LizzyPopup: React.FC = () => {
   }, []);
 
   const stopSpeaking = useCallback(() => {
-    if (speakWatchdogRef.current) {
-      window.clearTimeout(speakWatchdogRef.current);
-      speakWatchdogRef.current = null;
-    }
-    if (ttsAudioRef.current) {
-      try {
-        ttsAudioRef.current.onended = null;
-        ttsAudioRef.current.onerror = null;
-        ttsAudioRef.current.pause();
-        ttsAudioRef.current = null;
-      } catch {}
-    }
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {}
-    }
+    stopHandsFreeSpeech();
     setIsSpeaking(false);
   }, []);
 
@@ -197,11 +189,51 @@ export const LizzyPopup: React.FC = () => {
     []
   );
 
-  // Hands-free auto-listening: uses SpeechRecognition with auto-restart, falling back seamlessly to MediaRecorder + Gemini Transcribe
+  // Hands-free auto-listening: Native Android SpeechRecognizer on APK, or SpeechRecognition -> MediaRecorder on Web
   const startVoiceListener = useCallback(
     (onTranscript: (spoken: string) => void) => {
       if (typeof window === 'undefined' || !isOpenRef.current || liveConnectedRef.current) return;
       stopListening();
+
+      // 1. Android APK: use real native Android SpeechRecognizer (works reliably inside WebView!)
+      if (Capacitor.isNativePlatform()) {
+        nativeListenActiveRef.current = true;
+        setListenModeLabel('Listening automatically — just speak...');
+        setIsListening(true);
+        (async () => {
+          while (nativeListenActiveRef.current && isOpenRef.current && !liveConnectedRef.current) {
+            try {
+              const res = await SafetyLinkEmergency.listenSpeech({ lang: 'en-US' });
+              if (!nativeListenActiveRef.current || !isOpenRef.current || liveConnectedRef.current) {
+                break;
+              }
+              const spoken = String(res?.text || '').trim();
+              if (spoken) {
+                nativeListenActiveRef.current = false;
+                setIsListening(false);
+                setHeardText(spoken);
+                onTranscript(spoken);
+                return;
+              }
+              if (res?.error && /permission|unavailable/i.test(res.error)) {
+                nativeListenActiveRef.current = false;
+                setIsListening(false);
+                startMediaRecorderListener(onTranscript);
+                return;
+              }
+              // Short breather before listening again automatically
+              await new Promise((r) => setTimeout(r, 450));
+            } catch {
+              nativeListenActiveRef.current = false;
+              setIsListening(false);
+              startMediaRecorderListener(onTranscript);
+              return;
+            }
+          }
+          setIsListening(false);
+        })();
+        return;
+      }
 
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -244,13 +276,11 @@ export const LizzyPopup: React.FC = () => {
         recognition.onerror = (ev: any) => {
           setIsListening(false);
           const errCode = String(ev?.error || '');
-          // If browser speech recognition isn't supported/available in WebView, automatically fall back to MediaRecorder + Gemini
           if (errCode === 'service-not-allowed' || errCode === 'network' || errCode === 'language-not-supported') {
             stopListening();
             startMediaRecorderListener(onTranscript);
             return;
           }
-          // On no-speech / aborted while still waiting for an answer, auto-restart hands-free listening
           if (!gotFinalResult && isOpenRef.current && !liveConnectedRef.current && (errCode === 'no-speech' || errCode === 'aborted')) {
             restartListenTimerRef.current = window.setTimeout(() => {
               if (isOpenRef.current && !liveConnectedRef.current) {
@@ -262,10 +292,18 @@ export const LizzyPopup: React.FC = () => {
 
         recognition.onend = () => {
           setIsListening(false);
-          // Keep listening automatically without requiring a button press while asking status
-          if (!gotFinalResult && isOpenRef.current && !liveConnectedRef.current && stageRef.current === 'ASKING_STATUS') {
+          if (
+            !gotFinalResult &&
+            isOpenRef.current &&
+            !liveConnectedRef.current &&
+            (stageRef.current === 'ASKING_STATUS' || stageRef.current === 'NO_RESPONSE')
+          ) {
             restartListenTimerRef.current = window.setTimeout(() => {
-              if (isOpenRef.current && !liveConnectedRef.current && stageRef.current === 'ASKING_STATUS') {
+              if (
+                isOpenRef.current &&
+                !liveConnectedRef.current &&
+                (stageRef.current === 'ASKING_STATUS' || stageRef.current === 'NO_RESPONSE')
+              ) {
                 startVoiceListener(onTranscript);
               }
             }, 450);
@@ -289,85 +327,19 @@ export const LizzyPopup: React.FC = () => {
       stopSpeaking();
 
       const autoSpeak = dispatchSettings.aiCheckInAutoSpeak !== false;
-      let transitioned = false;
-
-      const beginListen = () => {
-        if (transitioned) return;
-        transitioned = true;
-        if (speakWatchdogRef.current) {
-          window.clearTimeout(speakWatchdogRef.current);
-          speakWatchdogRef.current = null;
+      if (autoSpeak) {
+        setIsSpeaking(true);
+        try {
+          await speakHandsFree(text);
+        } catch {
+          // Proceed to hands-free listening cleanly
         }
         setIsSpeaking(false);
-        if (onHeard && isOpenRef.current && !liveConnectedRef.current) {
-          startVoiceListener(onHeard);
-        }
-      };
-
-      if (!autoSpeak) {
-        beginListen();
-        return;
       }
 
-      setIsSpeaking(true);
-
-      // Guaranteed safety watchdog: even if audio autoplay is blocked or onend never fires on Android WebView, ALWAYS start listening automatically
-      const estimatedSpeakMs = Math.min(9000, Math.max(3800, text.length * 75));
-      speakWatchdogRef.current = window.setTimeout(() => {
-        beginListen();
-      }, estimatedSpeakMs);
-
-      // 1. Try Gemini high-clarity WAV TTS first (with fast 3.5s abort timeout so it never stalls)
-      try {
-        const ctrl = new AbortController();
-        const timeoutId = window.setTimeout(() => ctrl.abort(), 3500);
-        const res = await fetchGeminiApi('/api/gemini/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text.slice(0, 500), voiceName: 'Kore' }),
-          signal: ctrl.signal,
-        });
-        window.clearTimeout(timeoutId);
-        if (res.ok && isOpenRef.current) {
-          const data = await res.json();
-          if (data.audioBase64) {
-            const audio = new Audio(
-              `data:${data.mimeType || 'audio/wav'};base64,${data.audioBase64}`
-            );
-            ttsAudioRef.current = audio;
-            audio.onended = beginListen;
-            audio.onerror = beginListen;
-            await audio.play();
-            return;
-          }
-        }
-      } catch {
-        // Fall through smoothly to device SpeechSynthesis
+      if (onHeard && isOpenRef.current && !liveConnectedRef.current) {
+        startVoiceListener(onHeard);
       }
-
-      if (!isOpenRef.current || transitioned) return;
-
-      // 2. Instant device SpeechSynthesis fallback
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        try {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
-          const voices = window.speechSynthesis.getVoices();
-          utterance.voice =
-            voices.find((v) => /female|samantha|google us english|zira/i.test(v.name)) ||
-            voices[0] ||
-            null;
-          utterance.rate = 0.98;
-          utterance.onend = beginListen;
-          utterance.onerror = beginListen;
-          window.speechSynthesis.speak(utterance);
-          return;
-        } catch {
-          // Fall through to immediate listening
-        }
-      }
-
-      beginListen();
     },
     [
       dispatchSettings.aiCheckInAutoSpeak,
@@ -488,20 +460,29 @@ export const LizzyPopup: React.FC = () => {
 
   const handleInitialSpokenReply = useCallback(
     (spoken: string) => {
-      const low = spoken.toLowerCase();
-      if (/\b(no|not okay|not ok|help|danger|need help|hurt|unsafe|restart|trigger|panic|emergency)\b/.test(low)) {
+      const low = spoken.toLowerCase().trim();
+      const safeWordLower = safetyWord.toLowerCase();
+      const duressLower = (duressPin || '').trim().toLowerCase();
+
+      if (
+        (duressLower && low.includes(duressLower)) ||
+        /\b(no|not okay|not ok|help|danger|need help|hurt|unsafe|restart|trigger|panic|emergency)\b/.test(low)
+      ) {
         enterNotOkayStage();
-      } else if (/\b(yes|yeah|yep|okay|ok|safe|fine|good|alright|i am okay|i'm okay)\b/.test(low)) {
+      } else if (
+        (safeWordLower && low.includes(safeWordLower)) ||
+        /\b(yes|yeah|yep|okay|ok|safe|fine|good|alright|all clear|i am okay|i'm okay)\b/.test(low)
+      ) {
         enterSafeUpdateStage();
       } else {
         setSituationUpdate(spoken);
         speakAndThenListen(
-          'Are you okay? Please say Yes if you are safe, or No if you need help.',
+          `I couldn't confirm that. Please say your safety word, "${safetyWord}", to confirm you are safe, or say Help to restart your emergency alert.`,
           handleInitialSpokenReply
         );
       }
     },
-    [enterNotOkayStage, enterSafeUpdateStage, speakAndThenListen]
+    [duressPin, enterNotOkayStage, enterSafeUpdateStage, safetyWord, speakAndThenListen]
   );
 
   // Automatically speak "Are you okay?" and immediately listen hands-free the instant popup opens
@@ -514,7 +495,7 @@ export const LizzyPopup: React.FC = () => {
       setWaitSecondsLeft(timeoutSec);
 
       speakAndThenListen(
-        'Are you okay? Please say Yes if you are safe, or No if you need help.',
+        `Are you okay? Please say Yes or your safety word if you are safe, or say No if you need help.`,
         handleInitialSpokenReply
       );
     } else {
@@ -536,14 +517,14 @@ export const LizzyPopup: React.FC = () => {
     if (waitSecondsLeft <= 0) {
       setStage('NO_RESPONSE');
       speakAndThenListen(
-        "I haven't heard from you yet. Say Yes if you are okay, or say Help to restart your emergency alert.",
+        `I haven't heard from you yet. Please say your safety word, "${safetyWord}", if you are okay, or say Help to restart your emergency alert.`,
         handleInitialSpokenReply
       );
       return;
     }
     const timer = setTimeout(() => setWaitSecondsLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearTimeout(timer);
-  }, [showLizzyPopup, stage, waitSecondsLeft, liveVoice.isConnected, speakAndThenListen, handleInitialSpokenReply]);
+  }, [showLizzyPopup, stage, waitSecondsLeft, liveVoice.isConnected, safetyWord, speakAndThenListen, handleInitialSpokenReply]);
 
   const handleOpenCareChat = () => {
     stopListening();
@@ -686,6 +667,11 @@ export const LizzyPopup: React.FC = () => {
               {stage === 'ASKING_STATUS' && !liveVoice.isConnected && (
                 <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 tabular-nums inline-flex items-center gap-1">
                   <Clock size={12} /> {waitSecondsLeft}s
+                </span>
+              )}
+              {(stage === 'ASKING_STATUS' || stage === 'NO_RESPONSE') && safetyWord && (
+                <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-emerald-500/25 text-emerald-300/90">
+                  Safety Word: &ldquo;{safetyWord}&rdquo;
                 </span>
               )}
             </div>

@@ -1,4 +1,3 @@
-import SituationalAwareness from './components/SituationalAwareness';
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -17,7 +16,6 @@ import { GlobalBackground } from "./components/GlobalBackground";
 import { SplashReveal } from "./components/SplashReveal";
 import { LandingPage } from './components/LandingPage';
 import { DnsSetupGuide } from './components/DnsSetupGuide';
-import { ResponderDashboard } from './components/ResponderDashboard';
 import { TrialBanner } from './components/TrialBanner';
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
 import { LizzyPopup } from './components/LizzyPopup';
@@ -35,7 +33,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
 import { startProfileSync } from './services/ProfileSync';
+import { unlockWebAudioAndSpeech } from './utils/localKlevaResponder';
 
+const SituationalAwareness = lazy(() => import('./components/SituationalAwareness'));
+const ResponderDashboard = lazy(() => import('./components/ResponderDashboard').then(m => ({ default: m.ResponderDashboard })));
 const SuperDashboard = lazy(() => import('./components/SuperDashboard').then(m => ({ default: m.SuperDashboard })));
 const OrgWarRoom = lazy(() => import('./components/OrgWarRoom').then(m => ({ default: m.OrgWarRoom })));
 const BLEScanner = lazy(() => import('./components/BLEScanner').then(m => ({ default: m.BLEScanner })));
@@ -253,6 +254,17 @@ const App: React.FC = () => {
     displaySettings.hotspotAlertSound,
     hotspotSosState,
   ]);
+
+  // Unlock browser WebAudio + SpeechSynthesis on first touch/click so multi-minute AI check-in timers speak aloud automatically
+  useEffect(() => {
+    const unlock = () => unlockWebAudioAndSpeech();
+    window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+    window.addEventListener('touchstart', unlock, { once: true, passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
 
   // Keep Theme (Light / Deep-Navy Dark / System Auto) and Auto Screen-Fit synced on resize & OS changes
   useEffect(() => {

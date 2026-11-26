@@ -496,6 +496,7 @@ const DEFAULT_DISPATCH_SETTINGS: DispatchSettings = {
   aiCheckInDelayMinutes: 5,
   aiCheckInAutoSpeak: true,
   aiCheckInResponseTimeoutSec: 45,
+  aiSafetyWord: 'all clear',
 };
 
 
@@ -1089,13 +1090,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         (window as any).__SL_CHECKIN_TIMER__ = null;
         const cur = get();
         set({ aiCheckInScheduledAt: null });
-        if (cur.activeSOSState !== 'IDLE' || delayMinutesOverride !== undefined) {
+        if (cur.dispatchSettings.aiCheckInEnabled !== false || delayMinutesOverride !== undefined) {
           cur.setShowLizzyPopup(true);
           cur.addAuditLog(
             'SYSTEM',
             'INFO',
             `Kleva AI ${mins}-Minute Welfare Check-In Triggered`,
-            'Initiating interactive voice welfare check ("Are you okay?").'
+            'Initiating hands-free voice welfare check ("Are you okay?").'
           );
         }
       }, delayMs);

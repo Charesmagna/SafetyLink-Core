@@ -810,6 +810,31 @@ export const Settings: React.FC = () => {
             </button>
           </div>
 
+          <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-2">
+              <label
+                htmlFor="sl-ai-safety-word"
+                className="text-xs font-semibold text-slate-900 dark:text-slate-100"
+              >
+                Spoken Safety Word
+              </label>
+              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 uppercase">
+                Voice Verification
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              If Lizzy cannot confirm &ldquo;Yes&rdquo;, she will ask you to say this safety word to verify you are safe.
+            </p>
+            <input
+              id="sl-ai-safety-word"
+              type="text"
+              value={dispatchSettings.aiSafetyWord ?? 'all clear'}
+              onChange={(e) => setDispatchSettings({ aiSafetyWord: e.target.value })}
+              placeholder="e.g. all clear, sunshine, green light"
+              className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#071124] text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
             <span className="text-[11px] text-slate-500 dark:text-slate-400">
               Preview the talking &amp; listening welfare check-in right now:

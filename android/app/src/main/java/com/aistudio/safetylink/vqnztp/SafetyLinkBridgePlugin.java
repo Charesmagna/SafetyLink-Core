@@ -1,30 +1,77 @@
 package com.aistudio.safetylink.vqnztp;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.WindowManager;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.util.ArrayList;
+import java.util.Locale;
+import java.util.UUID;
 
 @CapacitorPlugin(name = "SafetyLinkEmergency")
 public class SafetyLinkBridgePlugin extends Plugin {
     private static final String TAG = "SafetyLinkBridge";
     private static SafetyLinkBridgePlugin instance;
     private static volatile EmergencyService.DispatchResult lastDispatchResult = null;
+    private TextToSpeech nativeTts;
+    private volatile boolean ttsReady = false;
+    private SpeechRecognizer activeRecognizer;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
     public void load() {
         super.load();
         instance = this;
+        initNativeTts();
         Log.i(TAG, "SafetyLinkBridgePlugin initialized and registered");
+    }
+
+    private void initNativeTts() {
+        mainHandler.post(() -> {
+            try {
+                if (nativeTts != null) return;
+                nativeTts = new TextToSpeech(getContext().getApplicationContext(), status -> {
+                    if (status == TextToSpeech.SUCCESS && nativeTts != null) {
+                        int langRes = nativeTts.setLanguage(Locale.US);
+                        if (langRes == TextToSpeech.LANG_MISSING_DATA || langRes == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            nativeTts.setLanguage(Locale.getDefault());
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            nativeTts.setAudioAttributes(new AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                    .build());
+                        }
+                        nativeTts.setSpeechRate(0.96f);
+                        ttsReady = true;
+                        Log.i(TAG, "Native Android TextToSpeech ready");
+                    }
+                });
+            } catch (Exception e) {
+                Log.w(TAG, "Native TTS init note: " + e.getMessage());
+            }
+        });
     }
 
     public static SafetyLinkBridgePlugin getInstance() {
@@ -449,5 +496,209 @@ public class SafetyLinkBridgePlugin extends Plugin {
             Log.e(TAG, "Failed to get button config: " + e.getMessage(), e);
             call.reject("Failed to get button config: " + e.getMessage());
         }
+    }
+
+    @PluginMethod
+    public void speakText(PluginCall call) {
+        final String text = call.getString("text", "").trim();
+        if (text.isEmpty()) {
+            JSObject ret = new JSObject();
+            ret.put("spoken", false);
+            call.resolve(ret);
+            return;
+        }
+        mainHandler.post(() -> {
+            try {
+                if (nativeTts == null) {
+                    initNativeTts();
+                }
+                Runnable doSpeak = () -> {
+                    if (nativeTts == null || !ttsReady) {
+                        JSObject ret = new JSObject();
+                        ret.put("spoken", false);
+                        ret.put("error", "TTS engine not ready");
+                        call.resolve(ret);
+                        return;
+                    }
+                    final String utteranceId = "sl-tts-" + UUID.randomUUID().toString();
+                    final boolean[] resolved = new boolean[]{false};
+                    Runnable fallbackResolve = () -> {
+                        if (!resolved[0]) {
+                            resolved[0] = true;
+                            JSObject ret = new JSObject();
+                            ret.put("spoken", true);
+                            call.resolve(ret);
+                        }
+                    };
+                    long watchdogMs = Math.min(12000L, Math.max(3500L, text.length() * 85L));
+                    mainHandler.postDelayed(fallbackResolve, watchdogMs);
+                    nativeTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override
+                        public void onStart(String id) {}
+
+                        @Override
+                        public void onDone(String id) {
+                            if (utteranceId.equals(id)) {
+                                mainHandler.removeCallbacks(fallbackResolve);
+                                mainHandler.post(fallbackResolve);
+                            }
+                        }
+
+                        @Override
+                        public void onError(String id) {
+                            if (utteranceId.equals(id)) {
+                                mainHandler.removeCallbacks(fallbackResolve);
+                                mainHandler.post(fallbackResolve);
+                            }
+                        }
+                    });
+                    nativeTts.stop();
+                    nativeTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
+                };
+                if (ttsReady) {
+                    doSpeak.run();
+                } else {
+                    mainHandler.postDelayed(doSpeak, 750);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "speakText error: " + e.getMessage());
+                JSObject ret = new JSObject();
+                ret.put("spoken", false);
+                ret.put("error", e.getMessage());
+                call.resolve(ret);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void stopSpeaking(PluginCall call) {
+        mainHandler.post(() -> {
+            try {
+                if (nativeTts != null) nativeTts.stop();
+            } catch (Exception ignored) {}
+            JSObject ret = new JSObject();
+            ret.put("stopped", true);
+            call.resolve(ret);
+        });
+    }
+
+    @PluginMethod
+    public void listenSpeech(PluginCall call) {
+        final String lang = call.getString("lang", "en-US");
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            JSObject ret = new JSObject();
+            ret.put("text", "");
+            ret.put("error", "RECORD_AUDIO permission not granted");
+            call.resolve(ret);
+            return;
+        }
+        mainHandler.post(() -> {
+            try {
+                if (!SpeechRecognizer.isRecognitionAvailable(getContext())) {
+                    JSObject ret = new JSObject();
+                    ret.put("text", "");
+                    ret.put("error", "Speech recognition unavailable on device");
+                    call.resolve(ret);
+                    return;
+                }
+                if (activeRecognizer != null) {
+                    try {
+                        activeRecognizer.cancel();
+                        activeRecognizer.destroy();
+                    } catch (Exception ignored) {}
+                    activeRecognizer = null;
+                }
+                final boolean[] settled = new boolean[]{false};
+                final SpeechRecognizer recognizer = SpeechRecognizer.createSpeechRecognizer(getContext());
+                activeRecognizer = recognizer;
+
+                Runnable timeoutCleanup = () -> {
+                    if (!settled[0]) {
+                        settled[0] = true;
+                        try {
+                            recognizer.cancel();
+                            recognizer.destroy();
+                        } catch (Exception ignored) {}
+                        if (activeRecognizer == recognizer) activeRecognizer = null;
+                        JSObject ret = new JSObject();
+                        ret.put("text", "");
+                        ret.put("timeout", true);
+                        call.resolve(ret);
+                    }
+                };
+                mainHandler.postDelayed(timeoutCleanup, 9500L);
+
+                recognizer.setRecognitionListener(new RecognitionListener() {
+                    @Override public void onReadyForSpeech(Bundle params) {}
+                    @Override public void onBeginningOfSpeech() {}
+                    @Override public void onRmsChanged(float rmsdB) {}
+                    @Override public void onBufferReceived(byte[] buffer) {}
+                    @Override public void onEndOfSpeech() {}
+                    @Override public void onPartialResults(Bundle partialResults) {}
+                    @Override public void onEvent(int eventType, Bundle params) {}
+
+                    @Override
+                    public void onError(int error) {
+                        if (settled[0]) return;
+                        settled[0] = true;
+                        mainHandler.removeCallbacks(timeoutCleanup);
+                        try { recognizer.destroy(); } catch (Exception ignored) {}
+                        if (activeRecognizer == recognizer) activeRecognizer = null;
+                        JSObject ret = new JSObject();
+                        ret.put("text", "");
+                        ret.put("errorCode", error);
+                        call.resolve(ret);
+                    }
+
+                    @Override
+                    public void onResults(Bundle results) {
+                        if (settled[0]) return;
+                        settled[0] = true;
+                        mainHandler.removeCallbacks(timeoutCleanup);
+                        ArrayList<String> matches = results != null
+                                ? results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                                : null;
+                        String best = (matches != null && !matches.isEmpty()) ? matches.get(0) : "";
+                        try { recognizer.destroy(); } catch (Exception ignored) {}
+                        if (activeRecognizer == recognizer) activeRecognizer = null;
+                        JSObject ret = new JSObject();
+                        ret.put("text", best != null ? best : "");
+                        ret.put("matched", best != null && !best.trim().isEmpty());
+                        call.resolve(ret);
+                    }
+                });
+
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, lang);
+                intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+                intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2200L);
+                intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L);
+                recognizer.startListening(intent);
+            } catch (Exception e) {
+                Log.w(TAG, "listenSpeech error: " + e.getMessage());
+                JSObject ret = new JSObject();
+                ret.put("text", "");
+                ret.put("error", e.getMessage());
+                call.resolve(ret);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void stopListening(PluginCall call) {
+        mainHandler.post(() -> {
+            if (activeRecognizer != null) {
+                try {
+                    activeRecognizer.cancel();
+                    activeRecognizer.destroy();
+                } catch (Exception ignored) {}
+                activeRecognizer = null;
+            }
+            JSObject ret = new JSObject();
+            ret.put("stopped", true);
+            call.resolve(ret);
+        });
     }
 }

@@ -6,7 +6,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
   const [v1ApkUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk');
   const [betaApkUrl] = useState('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk');
   const [exeUrl, setExeUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [version, setVersion] = useState('1.1 · Official Stable');
+  const [betaBuild, setBetaBuild] = useState('v1.1.1000+');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
             const apk = rel.assets.find((a: any) => a.name?.endsWith('.apk') && a.size > 80 * 1024 * 1024);
             const exe = rel.assets.find((a: any) => a.name?.endsWith('.exe'));
             if (apk?.browser_download_url) {
-              if (rel.tag_name) setVersion(`1 (${rel.tag_name})`);
+              if (rel.tag_name) setBetaBuild(String(rel.tag_name));
               if (exe?.browser_download_url) setExeUrl(exe.browser_download_url);
               break;
             }
@@ -51,8 +51,8 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 mb-3 border border-emerald-500/30 p-2">
               <img src="/logos/Safety_Link_Logo_Transparent.png" alt="SafetyLink" className="w-full h-full object-contain" />
             </div>
-            <h2 className="text-lg font-black text-white tracking-wide uppercase font-mono">Download SafetyLink</h2>
-            {version && <p className="text-emerald-400 font-mono text-xs mt-1">SafetyLink Version {version} — Official Signed</p>}
+            <h2 className="text-lg font-black text-white tracking-wide uppercase font-mono">SafetyLink APK</h2>
+            <p className="text-emerald-400 font-mono text-xs mt-1">Version 1 — Official Signed Release</p>
           </div>
 
           {loading ? (
@@ -61,8 +61,8 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
             </div>
           ) : (
             <div className="space-y-3">
-              <a href={v1ApkUrl} download="SafetyLink-v1.apk" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
-                🛡️ Download SafetyLink Version 1 APK
+              <a href={v1ApkUrl} download="SafetyLink.apk" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
+                🛡️ Download SafetyLink APK
               </a>
 
               <a href={exeUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
@@ -76,14 +76,14 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
 
               <details className="rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-[10px] font-mono text-slate-400">
                 <summary className="cursor-pointer select-none hover:text-slate-300">
-                  Testing Track · SafetyLink Beta (v1.1.1218+ · Testers Only)
+                  Testing Track · SafetyLink Beta (v1.1.1000+ · {betaBuild} · Testers Only)
                 </summary>
                 <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5">
                   <p className="text-[10px] text-amber-400/90 leading-relaxed">
-                    Experimental builds progressing from v1.1.1218. Not recommended for everyday protection.
+                    Experimental builds rolling from v1.1.1000+ (current: {betaBuild}). Not recommended for everyday protection.
                   </p>
-                  <a href={betaApkUrl} download="SafetyLink-Beta-v1.1.1218.apk" className="inline-block underline text-slate-400 hover:text-white">
-                    Download SafetyLink Beta v1.1.1218+ APK
+                  <a href={betaApkUrl} download={`SafetyLink-Beta-${betaBuild}.apk`} className="inline-block underline text-slate-400 hover:text-white">
+                    Download SafetyLink Beta ({betaBuild}) APK
                   </a>
                 </div>
               </details>

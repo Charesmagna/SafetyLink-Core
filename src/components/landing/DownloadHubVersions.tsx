@@ -17,48 +17,48 @@ export const DownloadHubVersions: React.FC = () => {
 
   return (
     <div className="my-6 space-y-3">
-      {/* Official Flagship Release — SafetyLink Version 1 */}
+      {/* Official Flagship Release — SafetyLink APK (Version 1) */}
       <div className="rounded-2xl border-2 border-emerald-500/80 bg-white dark:bg-[#0d1b34] p-6 shadow-md">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
-            SafetyLink Version 1 — Official Stable Release
+            SafetyLink APK
           </h3>
           <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-            {v1 ? `Version 1 · Build ${v1.version}` : 'Version 1 · Recommended for Everyone'}
+            Version 1 · Official Stable Release
           </span>
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
-          Complete signed Android release containing all promoted features: Zero-Airtime Please Call Me USSD + FCM loud alarm, mandatory native SMS &amp; voice stay-on-screen dispatch, BLE iTag panic fobs, 1-Way/2-Way QR contacts, live Safety Feed &amp; crime hotspots, unified Light/Dark themes, and POPIA encrypted vault.
+          Complete signed Version 1 Android release containing all promoted features: ZeroLink offline USSD + FCM loud alarm, native SMS &amp; voice stay-on-screen dispatch, BLE iTag panic fobs, 1-Way/2-Way QR contacts, live Safety Feed &amp; crime hotspots, unified Light/Dark themes, and POPIA encrypted vault.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <a
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-3 text-sm font-extrabold text-white shadow-sm transition-colors no-underline"
             href={WORKER + '/download/v1/safetylink.apk'}
-            download="SafetyLink-v1.apk"
+            download="SafetyLink.apk"
           >
-            Download SafetyLink Version 1 APK
+            Download SafetyLink APK
           </a>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            Android 8.0+ · Signed Production Build
+            Version 1 · Android 8.0+ · Signed Production Build
           </span>
         </div>
       </div>
 
-      {/* Demoted SafetyLink Beta Disclosure — Smaller, Muted, Non-Recommended */}
+      {/* Demoted SafetyLink Beta Disclosure — Rolling Test Track (v1.1.1000+) */}
       <details className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
         <summary className="cursor-pointer select-none font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
-          Internal Testing Sandbox · SafetyLink Beta (from v1.1.1218+ — not recommended for daily use)
+          Internal Testing Sandbox · SafetyLink Beta (v1.1.1000+ rolling{v1 ? ` · Current v${v1.version}` : ''} — not recommended for daily use)
         </summary>
         <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
-            Warning: SafetyLink Beta (upgrading from v1.1.1218) is an experimental testing channel used internally before changes graduate to SafetyLink Version 1. Everyday users should install SafetyLink Version 1 above.
+            Warning: SafetyLink Beta (progressing from v1.1.1000+{v1 ? `, currently v${v1.version}` : ''}) is our internal testing channel before updates graduate to SafetyLink APK (Version 1). Everyday users should install SafetyLink APK above.
           </p>
           <a
             className="shrink-0 text-[11px] font-mono underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             href={WORKER + '/download/beta/safetylink.apk'}
-            download="SafetyLink-Beta-v1.1.1218.apk"
+            download={`SafetyLink-Beta-${v1 ? `v${v1.version}` : 'v1.1.1000'}.apk`}
           >
-            SafetyLink Beta v1.1.1218+ (Testers Only)
+            SafetyLink Beta ({v1 ? `v${v1.version}` : 'v1.1.1000+'}) · Testers Only
           </a>
         </div>
       </details>
@@ -73,9 +73,9 @@ export const OlderVersionsLine: React.FC = () => (
     <a
       className="underline text-emerald-700 dark:text-emerald-400 font-semibold"
       href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-      download="SafetyLink-v1.apk"
+      download="SafetyLink.apk"
     >
-      SafetyLink Version 1 (Official Stable APK)
+      SafetyLink APK (Version 1 · Official Stable)
     </a>
   </p>
 );

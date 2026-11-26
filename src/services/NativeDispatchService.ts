@@ -83,6 +83,10 @@ export interface SafetyLinkEmergencyPlugin {
   checkOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
   toggleFloatingWidget(options: { enable: boolean }): Promise<{ enabled: boolean; needsPermission?: boolean }>;
+  speakText(options: { text: string }): Promise<{ spoken: boolean; error?: string }>;
+  stopSpeaking(): Promise<{ stopped: boolean }>;
+  listenSpeech(options?: { lang?: string }): Promise<{ text: string; matched?: boolean; timeout?: boolean; errorCode?: number; error?: string }>;
+  stopListening(): Promise<{ stopped: boolean }>;
   addListener(eventName: 'onPanicStatusChange', listenerFunc: (data: NativePanicStatusEvent) => void): Promise<any>;
 }
 

@@ -46,7 +46,7 @@ export function DownloadPage({ onLogin }: Props) {
               const isBetaTag = /beta|exp|v2/i.test(rawTag) || /beta|experimental/i.test(String(r.name || ''));
               const cleanName = isBetaTag
                 ? `SafetyLink Beta (${rawTag})`
-                : `SafetyLink Version 1 (${rawTag})`;
+                : `SafetyLink APK · Version 1 (${rawTag})`;
               qualified.push({
                 version: rawTag,
                 name: cleanName,
@@ -66,10 +66,10 @@ export function DownloadPage({ onLogin }: Props) {
             setLatestRelease(qualified[0]);
           } else {
             const fallback: ReleaseItem = {
-              version: 'v1.1.1218',
-              name: 'SafetyLink Version 1 (Official Signed Android APK)',
+              version: 'v1.1.1000+',
+              name: 'SafetyLink APK (Version 1 · Official Signed)',
               publishedAt: 'Verified Release',
-              sizeMb: '100.5',
+              sizeMb: '105.4',
               apkUrl: 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk',
               isLatest: true,
             };
@@ -117,7 +117,7 @@ export function DownloadPage({ onLogin }: Props) {
               Deploy SafetyLink across Android, Windows &amp; Web.
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
-              Download SafetyLink Version 1 — our official, production-signed Android release packed with every tested emergency feature — alongside Windows Control Desk EXE and the instant Web App.
+              Download SafetyLink APK — our official Version 1 production-signed Android release packed with every tested emergency feature — alongside Windows Control Desk EXE and the instant Web App.
             </p>
           </div>
           <div className="lg:col-span-5">
@@ -173,19 +173,19 @@ export function DownloadPage({ onLogin }: Props) {
                 </div>
                 <div>
                   <h3 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white">
-                    SafetyLink Version 1 (Android APK)
+                    SafetyLink APK
                   </h3>
                   <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 mt-1">
-                    {latestRelease?.version || 'v1.1'} · Production-Signed Android Build · All Features Shipped
+                    Version 1 · Production-Signed Android Build · All Features Shipped
                   </p>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Our single official consumer &amp; responder Android app. Includes every promoted beta upgrade thoroughly tested for daily protection:
+                  Our official Version 1 consumer &amp; responder Android app. Includes every promoted upgrade thoroughly tested for daily protection:
                 </p>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 dark:text-slate-200">
                   {[
-                    'Zero-Airtime Please Call Me USSD + FCM Loud Alarm',
-                    'Mandatory Native SMS & Stay-on-Screen Voice Dispatch',
+                    'ZeroLink Offline USSD + FCM Loud Alarm',
+                    'Real Native SMS & Stay-on-Screen Voice Dispatch',
                     'BLE iTag Keyfob Triggers & Auto-Reconnect',
                     '1-Way & 2-Way QR Contact Linking',
                     'Live Local Safety Feed & Crime Hotspots',
@@ -201,14 +201,14 @@ export function DownloadPage({ onLogin }: Props) {
               <div className="space-y-2">
                 <a
                   href={v1ApkUrl}
-                  download="SafetyLink-v1.apk"
+                  download="SafetyLink.apk"
                   className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 no-underline transition-all"
                 >
                   <Download size={17} />
-                  <span>Download SafetyLink Version 1 APK</span>
+                  <span>Download SafetyLink APK</span>
                 </a>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center font-mono">
-                  Android 8.0+ · Signed Production Release · Direct Cloudflare R2 Delivery
+                  Version 1 · Android 8.0+ · Signed Production Release · Direct Cloudflare R2 Delivery
                 </p>
               </div>
             </div>
@@ -281,12 +281,14 @@ export function DownloadPage({ onLogin }: Props) {
             </div>
           </div>
 
-          {/* ── DEMOTED SAFETYLINK BETA DISCLOSURE (SMALL, MUTED, DISCOURAGED — ROLLING FROM v1.1.1218) ── */}
+          {/* ── DEMOTED SAFETYLINK TEST / BETA DISCLOSURE (ROLLING FROM v1.1.1000+ ONWARD) ── */}
           <details className="mt-7 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-slate-100/70 dark:bg-slate-900/45 px-4 py-3 text-slate-600 dark:text-slate-400">
             <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
               <span className="inline-flex items-center gap-2">
                 <AlertTriangle size={13} className="text-amber-600/80 dark:text-amber-500/80 shrink-0" />
-                <span>Internal Testing Sandbox — SafetyLink Beta (from v1.1.1218+ · Not recommended for daily protection)</span>
+                <span>
+                  Internal Testing Sandbox — SafetyLink Beta (v1.1.1000+ rolling{latestRelease?.version ? ` · Current ${latestRelease.version}` : ''} · Not recommended for daily protection)
+                </span>
               </span>
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
                 Testers Only
@@ -294,14 +296,14 @@ export function DownloadPage({ onLogin }: Props) {
             </summary>
             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                <strong className="text-amber-700 dark:text-amber-400">Not for everyday use:</strong> SafetyLink Beta (upgrading progressively from <code className="font-mono">v1.1.1218</code>) is our experimental testing track where upcoming changes are trialed before graduating to <strong>SafetyLink Version 1</strong>. For reliable daily emergency protection, always install <strong>SafetyLink Version 1</strong> above.
+                <strong className="text-amber-700 dark:text-amber-400">Not for everyday use:</strong> SafetyLink Beta (rolling progressively from <code className="font-mono">v1.1.1000+</code>{latestRelease?.version ? <> · currently <code className="font-mono">{latestRelease.version}</code></> : null}) is our experimental test track where upcoming changes are trialed before graduating to <strong>SafetyLink APK (Version 1)</strong>. For reliable daily emergency protection, always install <strong>SafetyLink APK</strong> above.
               </p>
               <a
                 href={betaApkUrl}
-                download="SafetyLink-Beta-v1.1.1218.apk"
+                download={`SafetyLink-Beta-${latestRelease?.version || 'v1.1.1000'}.apk`}
                 className="shrink-0 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-[11px] font-mono no-underline text-center transition-colors"
               >
-                SafetyLink Beta v1.1.1218+ (Testers Only)
+                SafetyLink Beta ({latestRelease?.version || 'v1.1.1000+'}) · Testers Only
               </a>
             </div>
           </details>
@@ -408,7 +410,7 @@ export function DownloadPage({ onLogin }: Props) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { step: '01', title: 'Download Version 1 APK', desc: 'Tap "Download SafetyLink Version 1 APK" above on your Android smartphone.' },
+              { step: '01', title: 'Download SafetyLink APK', desc: 'Tap "Download SafetyLink APK" (Version 1) above on your Android smartphone.' },
               { step: '02', title: 'Allow Unknown Apps', desc: 'If prompted by Chrome or Files, enable "Allow from this source".' },
               { step: '03', title: 'Tap Install', desc: 'Open the downloaded package and tap Install to complete setup.' },
               { step: '04', title: 'Grant Permissions', desc: 'Allow Location, Bluetooth, SMS, and Phone permissions for reliable emergency dispatch.' },

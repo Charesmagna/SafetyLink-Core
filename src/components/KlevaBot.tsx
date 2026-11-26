@@ -24,12 +24,19 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { getLizzyProvider } from "../services/LizzyAIProvider";
+import { SafetyLinkEmergency } from "../services/NativeDispatchService";
 import {
   useGeminiLiveVoice,
   type LiveVoiceName,
 } from "../hooks/useGeminiLiveVoice";
 import { fetchGeminiApi } from "../utils/geminiApi";
+import {
+  generateLocalKlevaResponse,
+  speakHandsFree,
+  stopHandsFreeSpeech,
+} from "../utils/localKlevaResponder";
 
 const klevaLogo = "/media/kleva_logo/IMG_20260703_235254.svg";
 
@@ -93,6 +100,7 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
     panicEvents,
     contacts,
     currentUser,
+    dispatchSettings,
     lizzyInitialTab,
     postEmergencyPrompt,
     dismissPostEmergencyPrompt,
@@ -198,32 +206,16 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
 
   const speakResponse = async (text: string) => {
     if (!voiceEnabled || !text.trim()) return;
-    const plain = text.replace(/[*_`#>-]+/g, " ").replace(/\s+/g, " ").trim();
-    try {
-      const res = await fetchGeminiApi("/api/gemini/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: plain.slice(0, 450), voiceName: "Kore" }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.audioBase64) {
-          if (ttsAudioRef.current) ttsAudioRef.current.pause();
-          const audio = new Audio(
-            `data:${data.mimeType || "audio/wav"};base64,${data.audioBase64}`
-          );
-          ttsAudioRef.current = audio;
-          await audio.play();
-          return;
-        }
-      }
-    } catch {}
-    getLizzyProvider().speak(plain).catch(() => {});
+    const spoken = await speakHandsFree(text);
+    if (!spoken) {
+      getLizzyProvider().speak(text.replace(/[*_`#>-]+/g, " ")).catch(() => {});
+    }
   };
 
   useEffect(() => {
     if (!isOpen) {
       liveVoice.disconnect();
+      stopHandsFreeSpeech();
       getLizzyProvider().cancel();
       if (ttsAudioRef.current) {
         ttsAudioRef.current.pause();
@@ -412,20 +404,29 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
         `Kleva AI (${usedModel}) replied`,
         `Role: ${role} · Query: ${clean.slice(0, 48)}`
       );
-    } catch (err: any) {
-      const errMsg =
-        err?.message || "Unable to reach Kleva AI right now. Please retry.";
+    } catch {
+      const localReply = generateLocalKlevaResponse(clean, {
+        role,
+        incidentContext: incidentContextString,
+        safetyWord: dispatchSettings?.aiSafetyWord || "all clear",
+        lat,
+        lng,
+      });
       setMessages((prev) =>
         prev.map((m) =>
           m.id === botId
             ? {
                 ...m,
-                text: `Could not complete AI response: ${errMsg}\n\nIf you are in immediate danger, contact local emergency services (South Africa: **10111** SAPS, **112** Emergency, **10177** Ambulance) or press your SafetyLink SOS button.`,
-                error: true,
+                text: localReply,
+                model: "kleva-local-safety",
+                error: false,
               }
             : m
         )
       );
+      if (voiceEnabled) {
+        await speakResponse(localReply);
+      }
     } finally {
       setIsTyping(false);
     }
@@ -441,11 +442,60 @@ export const KlevaBot: React.FC<KlevaBotProps> = ({
 
   const handleToggleVoiceNote = async () => {
     setMicNoteError(null);
+    if (Capacitor.isNativePlatform()) {
+      if (isRecording) {
+        SafetyLinkEmergency.stopListening().catch(() => {});
+        setIsRecording(false);
+        return;
+      }
+      setIsRecording(true);
+      try {
+        const res = await SafetyLinkEmergency.listenSpeech({ lang: "en-US" });
+        setIsRecording(false);
+        if (res?.text?.trim()) {
+          sendToLizzyGemini(res.text.trim());
+        } else if (res?.error) {
+          setMicNoteError(res.error);
+        }
+      } catch (err: any) {
+        setIsRecording(false);
+        setMicNoteError(err?.message || "Voice recognition unavailable.");
+      }
+      return;
+    }
+
     if (isRecording && mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       return;
     }
+
+    // Prefer instant Web SpeechRecognition when available (works offline without cloud transcription)
+    const SpeechRecognition =
+      typeof window !== "undefined"
+        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        : null;
+    if (SpeechRecognition) {
+      try {
+        const rec = new SpeechRecognition();
+        rec.lang = "en-US";
+        rec.continuous = false;
+        rec.interimResults = false;
+        setIsRecording(true);
+        rec.onresult = (ev: any) => {
+          const text = String(ev?.results?.[0]?.[0]?.transcript || "").trim();
+          setIsRecording(false);
+          if (text) sendToLizzyGemini(text);
+        };
+        rec.onerror = () => setIsRecording(false);
+        rec.onend = () => setIsRecording(false);
+        rec.start();
+        return;
+      } catch {
+        setIsRecording(false);
+      }
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);

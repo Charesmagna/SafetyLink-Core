@@ -16,13 +16,14 @@
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>SafetyLink Core</title>
-    <!-- Payment & Typography -->
-    <script data-cfasync="false" src="https://js.paystack.co/v1/inline.js"></script>
+    <!-- Payment & Typography (non-blocking so slow CDNs never stall boot) -->
+    <script data-cfasync="false" async defer src="https://js.paystack.co/v1/inline.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'" crossorigin="" />
+    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" /></noscript>
     <script data-cfasync="false">
       // Pre-paint unified Light / Deep-Navy Dark theme sync across Web, APK & EXE
       (function () {
@@ -141,25 +142,38 @@
             );
           }
         } catch (e) {}
-        Promise.all(tasks).finally(function() {
+        var resetDone = false;
+        var finishReset = function() {
+          if (resetDone) return;
+          resetDone = true;
           window.location.replace(nextUrl);
-        });
+        };
+        setTimeout(finishReset, 1500);
+        Promise.all(tasks).finally(finishReset);
       };
 
       window.addEventListener('error', function(e) {
         var msg = (e && (e.message || (e.error && e.error.message))) || '';
-        if (msg && !window.__sl_boot_error) {
+        if (msg && !/adsbygoogle|paystack|onesignal|WebSocket|HMR/i.test(msg) && !window.__sl_boot_error) {
           window.__sl_boot_error = String(msg).slice(0, 180);
         }
         console.error('SafetyLink Top-Level Error Caught:', e.error || e.message);
       });
 
-      // Safety watchdog: if React has not mounted within 12s, provide a dismissible recovery card
+      window.addEventListener('unhandledrejection', function(e) {
+        var reason = e && e.reason;
+        var msg = (reason && (reason.message || String(reason))) || '';
+        if (msg && !/adsbygoogle|paystack|onesignal|WebSocket|HMR/i.test(msg) && !window.__sl_boot_error) {
+          window.__sl_boot_error = String(msg).slice(0, 180);
+        }
+      });
+
+      // Safety watchdog: if React has not mounted within 30s, provide a dismissible recovery card
       setTimeout(function() {
         if (!window.__sl_mounted && !window.__sl_loader_dismissed) {
           var root = document.getElementById('root');
           var loader = document.getElementById('sl-initial-loader');
-          if (loader && root) {
+          if (loader && root && root.contains(loader)) {
             var errHtml = window.__sl_boot_error
               ? '<div style="margin:0 0 12px;padding:8px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-size:11px;color:#fca5a5;font-family:monospace;word-break:break-word;">' +
                 window.__sl_boot_error.replace(/[<>&]/g, function(c) { return ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c] || c); }) +
@@ -180,7 +194,7 @@
               '</div>';
           }
         }
-      }, 12000);
+      }, 30000);
     </script>
   </head>
   <body>

@@ -1,4 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { SafetyLinkEmergency } from '../services/NativeDispatchService';
+import { fetchGeminiApi } from '../utils/geminiApi';
+import {
+  generateLocalKlevaResponse,
+  speakHandsFree,
+  stopHandsFreeSpeech,
+} from '../utils/localKlevaResponder';
+import { useAppStore } from '../utils/store';
 
 export type LiveVoiceName = 'Zephyr' | 'Kore' | 'Puck' | 'Charon' | 'Fenrir';
 export type LiveVoiceMode = 'post_emergency' | 'checkin' | 'assistant';
@@ -63,6 +72,12 @@ export function useGeminiLiveVoice() {
   const nextStartTimeRef = useRef<number>(0);
   const mutedRef = useRef<boolean>(false);
 
+  // Built-in hands-free voice loop state (activates seamlessly on Android APK & Cloudflare Pages where /live WebSocket isn't hosted)
+  const fallbackActiveRef = useRef<boolean>(false);
+  const fallbackRecognitionRef = useRef<any>(null);
+  const fallbackContextRef = useRef<string | undefined>(undefined);
+  const fallbackModeRef = useRef<LiveVoiceMode>('post_emergency');
+
   const stopPlaybackQueue = useCallback(() => {
     activeSourcesRef.current.forEach((src) => {
       try {
@@ -76,10 +91,29 @@ export function useGeminiLiveVoice() {
     } else {
       nextStartTimeRef.current = 0;
     }
+    stopHandsFreeSpeech();
     setIsModelSpeaking(false);
   }, []);
 
+  const stopFallbackLoop = useCallback(() => {
+    fallbackActiveRef.current = false;
+    stopHandsFreeSpeech();
+    if (Capacitor.isNativePlatform()) {
+      SafetyLinkEmergency.stopListening().catch(() => {});
+    }
+    if (fallbackRecognitionRef.current) {
+      try {
+        fallbackRecognitionRef.current.onend = null;
+        fallbackRecognitionRef.current.onresult = null;
+        fallbackRecognitionRef.current.onerror = null;
+        fallbackRecognitionRef.current.stop();
+      } catch {}
+      fallbackRecognitionRef.current = null;
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
+    stopFallbackLoop();
     stopPlaybackQueue();
     if (wsRef.current) {
       try {
@@ -116,7 +150,7 @@ export function useGeminiLiveVoice() {
     setMicLevel(0);
     setStatus('idle');
     setStatusMessage('');
-  }, [stopPlaybackQueue]);
+  }, [stopFallbackLoop, stopPlaybackQueue]);
 
   useEffect(() => {
     return () => {
@@ -151,12 +185,145 @@ export function useGeminiLiveVoice() {
     });
   }, []);
 
+  const listenOnceHandsFree = useCallback(async (): Promise<string> => {
+    if (!fallbackActiveRef.current) return '';
+    if (Capacitor.isNativePlatform()) {
+      const res = await SafetyLinkEmergency.listenSpeech({ lang: 'en-US' });
+      return String(res?.text || '').trim();
+    }
+    const SpeechRecognition =
+      typeof window !== 'undefined'
+        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        : null;
+    if (!SpeechRecognition) return '';
+
+    return new Promise<string>((resolve) => {
+      let settled = false;
+      const done = (txt: string) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        fallbackRecognitionRef.current = null;
+        resolve(txt.trim());
+      };
+      const timer = window.setTimeout(() => done(''), 9500);
+      try {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = 'en-US';
+        fallbackRecognitionRef.current = rec;
+        rec.onresult = (ev: any) => {
+          const text = String(ev?.results?.[0]?.[0]?.transcript || '');
+          done(text);
+        };
+        rec.onerror = () => done('');
+        rec.onend = () => done('');
+        rec.start();
+      } catch {
+        done('');
+      }
+    });
+  }, []);
+
+  const answerHandsFreeTurn = useCallback(
+    async (userText: string): Promise<string> => {
+      const state = useAppStore.getState();
+      const safetyWord = (state.dispatchSettings?.aiSafetyWord || 'all clear').trim();
+      try {
+        const res = await fetchGeminiApi('/api/gemini/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userText,
+            role: fallbackModeRef.current === 'checkin' ? 'post_emergency' : 'coordinator',
+            incidentContext: fallbackContextRef.current,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data?.text && String(data.text).trim()) {
+            return String(data.text).trim();
+          }
+        }
+      } catch {
+        // Fall back to local Kleva responder cleanly
+      }
+      return generateLocalKlevaResponse(userText, {
+        role: fallbackModeRef.current,
+        incidentContext: fallbackContextRef.current,
+        safetyWord,
+        lat: state.userLocation?.lat,
+        lng: state.userLocation?.lng,
+      });
+    },
+    []
+  );
+
+  const startHandsFreeFallbackSession = useCallback(
+    async (options?: ConnectLiveOptions) => {
+      fallbackActiveRef.current = true;
+      fallbackContextRef.current = options?.context;
+      fallbackModeRef.current = options?.mode || 'post_emergency';
+      setError(null);
+      setStatus('connected');
+      setStatusMessage('Hands-free Lizzy Voice active — speak naturally.');
+
+      const safetyWord = (useAppStore.getState().dispatchSettings?.aiSafetyWord || 'all clear').trim();
+      const opening =
+        options?.mode === 'checkin'
+          ? `Are you okay? Please say Yes or your safety word, ${safetyWord}, if you are safe, or say Help if you need emergency assistance.`
+          : `Hi, I'm Lizzy. Are you okay? Say Yes or your safety word if you are safe, or tell me how I can help right now.`;
+
+      appendTranscript('assistant', opening);
+      setIsModelSpeaking(true);
+      await speakHandsFree(opening);
+      setIsModelSpeaking(false);
+
+      while (fallbackActiveRef.current) {
+        if (mutedRef.current) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        setStatusMessage('Listening automatically — speak anytime...');
+        setMicLevel(0.45);
+        const spoken = await listenOnceHandsFree();
+        setMicLevel(0);
+        if (!fallbackActiveRef.current) break;
+        if (!spoken) {
+          await new Promise((r) => setTimeout(r, 400));
+          continue;
+        }
+        appendTranscript('user', spoken);
+        setStatusMessage('Lizzy is responding...');
+        const reply = await answerHandsFreeTurn(spoken);
+        if (!fallbackActiveRef.current) break;
+        appendTranscript('assistant', reply);
+        setIsModelSpeaking(true);
+        await speakHandsFree(reply);
+        setIsModelSpeaking(false);
+      }
+    },
+    [answerHandsFreeTurn, appendTranscript, listenOnceHandsFree]
+  );
+
   const connect = useCallback(
     async (options?: ConnectLiveOptions) => {
       disconnect();
       setError(null);
       setStatus('connecting');
-      setStatusMessage('Requesting microphone & connecting to Gemini Live...');
+      setStatusMessage('Starting hands-free Lizzy Voice...');
+
+      // On Android APK or static hosts without a Node /live WebSocket server, start hands-free voice immediately
+      const host = typeof window !== 'undefined' ? window.location.host : '';
+      const isStaticOrNative =
+        Capacitor.isNativePlatform() ||
+        /safetylink\.online|pages\.dev/i.test(host);
+
+      if (isStaticOrNative) {
+        startHandsFreeFallbackSession(options);
+        return;
+      }
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -207,11 +374,14 @@ export function useGeminiLiveVoice() {
           }
         };
 
+        let wsOpened = false;
+
         ws.onopen = () => {
+          wsOpened = true;
           source.connect(processor);
           processor.connect(inCtx.destination);
           setStatus('connected');
-          setStatusMessage('Connected to Lizzy Live Voice (gemini-3.8-live). Speak naturally.');
+          setStatusMessage('Connected to Lizzy Live Voice. Speak naturally.');
         };
 
         ws.onmessage = (ev) => {
@@ -252,10 +422,9 @@ export function useGeminiLiveVoice() {
             } else if ((msg.type === 'outputTranscript' || msg.type === 'text') && msg.text) {
               appendTranscript('assistant', msg.text);
             } else if (msg.type === 'error') {
-              const errMsg = msg.message || 'Live voice session encountered an error.';
-              setError(errMsg);
-              setStatus('error');
-              setStatusMessage(errMsg);
+              // Seamlessly switch to hands-free fallback voice if Gemini Live stream rejects
+              try { ws.close(); } catch {}
+              startHandsFreeFallbackSession(options);
             } else if (msg.type === 'closed') {
               setStatus('idle');
               setStatusMessage('Voice session ended.');
@@ -266,13 +435,21 @@ export function useGeminiLiveVoice() {
         };
 
         ws.onerror = () => {
-          const msg = 'Unable to connect to the live voice server. Please check your connection and try again.';
-          setError(msg);
-          setStatus('error');
-          setStatusMessage(msg);
+          if (!wsOpened) {
+            stream.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+            startHandsFreeFallbackSession(options);
+          }
         };
 
         ws.onclose = () => {
+          if (!wsOpened && !fallbackActiveRef.current) {
+            stream.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+            startHandsFreeFallbackSession(options);
+            return;
+          }
+          if (fallbackActiveRef.current) return;
           stopPlaybackQueue();
           if (processorRef.current) {
             try {
@@ -287,17 +464,12 @@ export function useGeminiLiveVoice() {
           setMicLevel(0);
           setStatus((prev) => (prev === 'error' ? 'error' : 'idle'));
         };
-      } catch (err: any) {
-        const msg =
-          err?.name === 'NotAllowedError'
-            ? 'Microphone permission denied. Please allow microphone access to start a live voice conversation.'
-            : err?.message || 'Could not start microphone for live voice.';
-        setError(msg);
-        setStatus('error');
-        setStatusMessage(msg);
+      } catch {
+        // Fall back smoothly to hands-free speech mode instead of dead-ending
+        startHandsFreeFallbackSession(options);
       }
     },
-    [appendTranscript, disconnect, stopPlaybackQueue]
+    [appendTranscript, disconnect, startHandsFreeFallbackSession, stopPlaybackQueue]
   );
 
   const toggleMute = useCallback(() => {
@@ -305,12 +477,26 @@ export function useGeminiLiveVoice() {
     setIsMuted(mutedRef.current);
   }, []);
 
-  const sendTextTurn = useCallback((text: string) => {
-    const clean = text.trim();
-    if (!clean || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: 'text', text: clean }));
-    appendTranscript('user', clean);
-  }, [appendTranscript]);
+  const sendTextTurn = useCallback(
+    async (text: string) => {
+      const clean = text.trim();
+      if (!clean) return;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'text', text: clean }));
+        appendTranscript('user', clean);
+        return;
+      }
+      if (fallbackActiveRef.current) {
+        appendTranscript('user', clean);
+        const reply = await answerHandsFreeTurn(clean);
+        appendTranscript('assistant', reply);
+        setIsModelSpeaking(true);
+        await speakHandsFree(reply);
+        setIsModelSpeaking(false);
+      }
+    },
+    [answerHandsFreeTurn, appendTranscript]
+  );
 
   const clearTranscript = useCallback(() => setTranscript([]), []);
 

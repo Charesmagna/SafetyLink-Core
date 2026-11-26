@@ -34,18 +34,6 @@ console.error = (...args: unknown[]) => {
 if (!Capacitor.isNativePlatform()) {
 }
 
-// OneSignal — web push only
-if (!Capacitor.isNativePlatform()) {
-  try {
-    OneSignal.init({
-      appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
-      allowLocalhostAsSecureOrigin: true,
-    }).catch(() => {});
-  } catch (e) {
-    console.warn('OneSignal init error ignored:', e);
-  }
-}
-
 // Wake lock — Cordova plugin, native only
 if (Capacitor.isNativePlatform()) {
   const acquireWakeLock = () => {
@@ -62,6 +50,7 @@ if (Capacitor.isNativePlatform()) {
 }
 
 // Mount React first — nothing blocks render
+(window as any).__sl_mounted = true;
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary tabName="SafetyLink">
@@ -70,9 +59,23 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
-(window as any).__sl_mounted = true;
+(window as any).slDismissLoader?.();
 if (Capacitor.isNativePlatform()) {
   SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
+}
+
+// OneSignal — web push only, deferred after initial render so it never stalls boot
+if (!Capacitor.isNativePlatform()) {
+  setTimeout(() => {
+    try {
+      OneSignal.init({
+        appId: 'e7c4fd21-764f-465d-b98f-c44f4489662e',
+        allowLocalhostAsSecureOrigin: true,
+      }).catch(() => {});
+    } catch (e) {
+      console.warn('OneSignal init error ignored:', e);
+    }
+  }, 2500);
 }
 
 // Deep links init after render

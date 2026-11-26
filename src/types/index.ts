@@ -283,6 +283,7 @@ export interface DispatchSettings {
   aiCheckInDelayMinutes?: number;
   aiCheckInAutoSpeak?: boolean;
   aiCheckInResponseTimeoutSec?: number;
+  aiSafetyWord?: string;
 }
 
 export interface PlatformIntegration {
