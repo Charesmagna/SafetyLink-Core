@@ -15,6 +15,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { GlobalBackground } from "./components/GlobalBackground";
 import { SplashReveal } from "./components/SplashReveal";
 import { LandingPage } from './components/LandingPage';
+import { useEditorialStore } from './utils/editorialStore';
 import { DnsSetupGuide } from './components/DnsSetupGuide';
 import { TrialBanner } from './components/TrialBanner';
 import { SafetyLinkLogo } from './components/SafetyLinkLogo';
@@ -445,12 +446,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     checkAppUpdates();
+    useEditorialStore.getState().fetchRemoteState();
     const updateInterval = setInterval(() => {
       checkAppUpdates();
     }, 15 * 60 * 1000);
 
     const handleFocus = () => {
       checkAppUpdates();
+      useEditorialStore.getState().fetchRemoteState();
     };
     window.addEventListener('focus', handleFocus);
 

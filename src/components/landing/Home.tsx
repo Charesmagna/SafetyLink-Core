@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { R2MediaShowcase } from './R2MediaShowcase';
 import { R2_MEDIA } from '../../utils/r2Assets';
 import { ACTION_VIDEOS, ASSETS, vid, vidPoster } from '../../utils/cloudinary';
+import { useEditorialStore } from '../../utils/editorialStore';
 import {
   ArrowRight,
   BellRing,
@@ -240,6 +241,19 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
 
   const currentBg = HERO_BG_SLIDES[bgIdx];
   const currentHw = HARDWARE_PHOTO_POOL[hwIdx];
+  const editorialWeb = useEditorialStore((s) => s.web);
+  const webSections = useEditorialStore((s) => s.sections.web);
+  const isSectionVisible = (id: string) => {
+    const found = webSections.find((s) => s.id === id);
+    return found ? found.visible : true;
+  };
+  const heroTitle1 = language === 'en' && editorialWeb.heroTitle1 ? editorialWeb.heroTitle1 : t.h1a;
+  const heroTitle2 = language === 'en' && editorialWeb.heroTitle2 ? editorialWeb.heroTitle2 : t.h1b;
+  const heroSub = language === 'en' && editorialWeb.heroSubtitle ? editorialWeb.heroSubtitle : t.sub;
+  const heroBadgeText = editorialWeb.heroBadge || 'South African Emergency Network · POPIA Compliant';
+  const primaryCtaText = editorialWeb.heroCtaPrimary || 'Create Free Account';
+  const secondaryCtaText = editorialWeb.heroCtaSecondary || 'Register Organization';
+  const accentColor = /^#[0-9a-f]{3,8}$/i.test(editorialWeb.primaryColor || '') ? editorialWeb.primaryColor : '#10b981';
 
   return (
     <div className="bg-transparent text-slate-900 dark:text-slate-100">
@@ -293,8 +307,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 alt="SafetyLink Universal Logo"
                 className="h-9 w-auto object-contain drop-shadow-[0_4px_14px_rgba(16,185,129,0.4)]"
               />
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 drop-shadow">
-                South African Emergency Network · POPIA Compliant
+              <span className="text-xs font-bold uppercase tracking-wider drop-shadow" style={{ color: accentColor }}>
+                {heroBadgeText}
               </span>
               <select
                 value={language}
@@ -312,14 +326,14 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </div>
 
             <h1 className="font-display text-4xl sm:text-5xl lg:text-[56px] font-extrabold tracking-tight leading-[1.05] text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.55)]">
-              {t.h1a}
+              {heroTitle1}
               <span className="block bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 bg-clip-text text-transparent mt-1">
-                {t.h1b}
+                {heroTitle2}
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-slate-100/90 leading-relaxed max-w-xl drop-shadow">
-              {t.sub}
+              {heroSub}
             </p>
 
             {/* Clean Primary Account Actions */}
@@ -327,9 +341,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               <button
                 type="button"
                 onClick={onRegisterUser}
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-sm font-extrabold shadow-xl shadow-emerald-500/30 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                style={{ backgroundColor: accentColor }}
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl hover:brightness-110 text-slate-950 text-sm font-extrabold shadow-xl transition-all hover:-translate-y-0.5 active:scale-[0.98]"
               >
-                <span>Create Free Account</span>
+                <span>{primaryCtaText}</span>
                 <ArrowRight size={16} />
               </button>
               <button
@@ -337,8 +352,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 onClick={onRegisterOrg}
                 className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/14 hover:bg-white/22 backdrop-blur-xl border border-white/25 text-white text-sm font-bold shadow-lg transition-all hover:-translate-y-0.5"
               >
-                <Building2 size={16} className="text-emerald-300" />
-                <span>Register Organization</span>
+                <Building2 size={16} style={{ color: accentColor }} />
+                <span>{secondaryCtaText}</span>
               </button>
               <button
                 type="button"
@@ -353,6 +368,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
       </section>
 
       {/* ── HOW IT WORKS: 3-STEP GLASS PIPELINE (Scroll-Reactive 3D Reveal) ── */}
+      {isSectionVisible('status') && (
       <section className="py-14 px-4 sm:px-6 border-y border-slate-200/70 dark:border-slate-800/70 bg-white/45 dark:bg-[#050d1c]/55 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -361,7 +377,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                 How It Works
               </p>
               <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                Three steps from distress trigger to live response
+                {editorialWeb.armourTitle || 'Three steps from distress trigger to live response'}
               </h2>
             </div>
             <button
@@ -434,6 +450,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
           </div>
         </div>
       </section>
+      )}
 
       {/* ── SCROLL-REACTIVE 3D HARDWARE LINEUP + FOR SECURITY COMPANIES (REAL CONTROL ROOM IMAGE) ── */}
       <section ref={hardwareSectionRef} className="py-16 px-4 sm:px-6">

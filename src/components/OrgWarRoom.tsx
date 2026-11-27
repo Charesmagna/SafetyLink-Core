@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { useAppStore } from '../utils/store';
+import { useEditorialStore } from '../utils/editorialStore';
 
 export const OrgWarRoom = () => {
   const { meshNodes, panicEvents } = useAppStore();
+  const editorialExe = useEditorialStore((s) => s.exe);
   const liveSOSStream = (panicEvents || []).map((p: any) => ({
     id: p.id,
     lat: p.lat,
@@ -28,9 +30,16 @@ export const OrgWarRoom = () => {
   return (
     <div className="bg-[#020617] h-screen text-slate-200 flex flex-col font-sans">
       <div className="p-4 bg-slate-950 border-b border-slate-900 flex flex-wrap justify-between items-center gap-2">
-        <h1 className="text-xl font-bold text-slate-100 tracking-widest uppercase">
-          Live GIS Map — Commander Deck
-        </h1>
+        <div>
+          <h1 className="text-xl font-bold text-slate-100 tracking-widest uppercase">
+            {editorialExe.dispatchHeader || 'Live GIS Map — Commander Deck'}
+          </h1>
+          {editorialExe.threatLevelLabel && (
+            <p className="text-[10px] font-mono text-amber-400 uppercase tracking-wider mt-0.5">
+              {editorialExe.threatLevelLabel}
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

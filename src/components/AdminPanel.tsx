@@ -252,6 +252,7 @@ export const AdminPanel: React.FC = () => {
         body: JSON.stringify({
           commitMessage: publishMessage.trim() || 'Publish verified SafetyLink workspace updates',
           selectedPaths: selectedPublishPaths,
+          channels: publishChannels,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -283,6 +284,15 @@ export const AdminPanel: React.FC = () => {
 
   const triggerRelease = async () => {
     if (!adminBearerToken) return;
+    const selectedWorkflows: string[] = [];
+    if (publishChannels.web) selectedWorkflows.push('deploy-safetylink-web.yml');
+    if (publishChannels.worker) selectedWorkflows.push('deploy-worker.yml');
+    if (publishChannels.apk) selectedWorkflows.push('build-apk.yml');
+    if (publishChannels.exe) selectedWorkflows.push('build-electron.yml');
+    if (selectedWorkflows.length === 0) {
+      addToast('Select at least one target publish channel first.', 'error');
+      return;
+    }
     setReleaseStatus('triggering');
     try {
       const res = await fetch('/api/admin/github/dispatch', {
@@ -292,13 +302,13 @@ export const AdminPanel: React.FC = () => {
           Authorization: `Bearer ${adminBearerToken}`,
         },
         body: JSON.stringify({
-          workflows: ['deploy-safetylink-web.yml', 'deploy-worker.yml', 'build-apk.yml', 'build-electron.yml'],
+          workflows: selectedWorkflows,
         }),
       });
       const data = await res.json().catch(() => ({}));
       const allOk = res.ok && Boolean(data?.ok);
       setReleaseStatus(allOk ? 'ok' : 'fail');
-      addAuditLog('SYSTEM', allOk ? 'INFO' : 'WARN', allOk ? 'OTA Release Workflows Triggered' : 'OTA Release Workflows Failed', '');
+      addAuditLog('SYSTEM', allOk ? 'INFO' : 'WARN', allOk ? 'OTA Release Workflows Triggered' : 'OTA Release Workflows Failed', selectedWorkflows.join(', '));
       setTimeout(() => setReleaseStatus('idle'), 6000);
     } catch {
       setReleaseStatus('fail');
@@ -398,13 +408,39 @@ export const AdminPanel: React.FC = () => {
     web: editorialWeb,
     apk: editorialApk,
     exe: editorialExe,
+    sections: editorialSections,
+    publishChannels,
+    setPublishChannel,
+    lastSavedAt: editorialLastSavedAt,
+    lastWorkspaceFiles: editorialWorkspaceFiles,
+    getPendingChanges: getEditorialPendingChanges,
     updateField: updateEditorialField,
+    toggleSectionVisibility: toggleEditorialSectionVisibility,
     saveDraft: saveEditorialDraft,
     publishLive: publishEditorialLive,
     resetToDefaults: resetEditorialDefaults,
+    fetchRemoteState: fetchEditorialState,
     isSaving: isEditorialSaving,
-    isPublishing: isEditorialPublishing
+    isPublishing: isEditorialPublishing,
   } = useEditorialStore();
+
+  const [editorialReleaseNotes, setEditorialReleaseNotes] = useState('');
+  const [editorialPushToGithub, setEditorialPushToGithub] = useState(true);
+  const [editorialStatusBanner, setEditorialStatusBanner] = useState<{
+    ok: boolean;
+    message: string;
+    commitSha?: string;
+    commitUrl?: string;
+    workspaceFiles?: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    void fetchEditorialState();
+  }, [fetchEditorialState]);
+
+  const editorialPendingChanges = getEditorialPendingChanges();
+  const hasAnyPublishChannelSelected =
+    publishChannels.web || publishChannels.apk || publishChannels.exe || publishChannels.worker;
 
   const handleDownloadCsv = () => {
     const headers = 'ID,Full Name,Username,Phone,WhatsApp,Email,Org Code,Org Name,Role,Status,Registration Date,Home Address,Work Address,Preferred Hospital,Medical Notes,Emergency Contacts,Live SMS Enabled\n';
@@ -912,6 +948,45 @@ export const AdminPanel: React.FC = () => {
                         )}
                       </div>
 
+                      {/* Target Publish Channels Selector */}
+                      <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-slate-300 font-bold uppercase">Target Publish Channels</span>
+                          <span className="text-slate-500">Only selected channels build &amp; deploy</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {([
+                            { key: 'web', label: '🌐 Website', sub: 'Landing & Web App' },
+                            { key: 'apk', label: '📱 Android APK', sub: 'Mobile Build' },
+                            { key: 'exe', label: '💻 Windows EXE', sub: 'Desktop Console' },
+                            { key: 'worker', label: '⚡ Worker API', sub: 'Cloudflare Edge' },
+                          ] as const).map((ch) => {
+                            const active = publishChannels[ch.key];
+                            return (
+                              <label
+                                key={ch.key}
+                                className={`flex items-start gap-2 p-2 rounded-lg border text-[10px] font-mono cursor-pointer transition-colors ${
+                                  active
+                                    ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200'
+                                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={active}
+                                  onChange={(e) => setPublishChannel(ch.key, e.target.checked)}
+                                  className="accent-emerald-500 mt-0.5"
+                                />
+                                <span className="min-w-0">
+                                  <span className="font-bold block truncate">{ch.label}</span>
+                                  <span className="text-[8px] text-slate-400 block truncate">{ch.sub}</span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Commit Message + Publish & Workflow Trigger Buttons */}
                       <div className="space-y-2.5">
                         <input
@@ -924,21 +999,21 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             type="button"
-                            disabled={isPublishingGitHub || selectedPublishPaths.length === 0}
+                            disabled={isPublishingGitHub || selectedPublishPaths.length === 0 || !hasAnyPublishChannelSelected}
                             onClick={() => void handlePublishWorkspaceToGitHub()}
                             className="flex-1 px-4 py-2.5 text-[10px] font-mono font-black rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-black uppercase transition-colors"
                           >
                             {isPublishingGitHub
                               ? 'PUBLISHING TO SAFETYLINK-CORE...'
-                              : `🚀 PUBLISH ${selectedPublishPaths.length} FILE(S) TO MAIN`}
+                              : `🚀 PUBLISH ${selectedPublishPaths.length} FILE(S) TO SELECTED CHANNELS`}
                           </button>
                           <button
                             type="button"
-                            disabled={releaseStatus === 'triggering'}
+                            disabled={releaseStatus === 'triggering' || !hasAnyPublishChannelSelected}
                             onClick={() => void triggerRelease()}
                             className="px-4 py-2.5 text-[10px] font-mono font-bold rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-600 text-white uppercase transition-colors whitespace-nowrap"
                           >
-                            {releaseStatus === 'triggering' ? 'TRIGGERING CI...' : '⚡ TRIGGER CI WORKFLOWS'}
+                            {releaseStatus === 'triggering' ? 'TRIGGERING CI...' : '⚡ TRIGGER SELECTED CI'}
                           </button>
                         </div>
                       </div>
@@ -1019,17 +1094,22 @@ export const AdminPanel: React.FC = () => {
             {/* Top Overview & Launch Canvas Banner */}
             <div className="p-6 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-red-950/30 border border-amber-500/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xl">🎨</span>
                   <h2 className="text-sm font-black font-mono text-white uppercase tracking-wider">
-                    Platform Environment Studio (Multi-Target CMS)
+                    Platform Environment Studio (Multi-Channel CMS)
                   </h2>
                   <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] font-mono font-bold">
                     v{studioVersion} LIVE
                   </span>
+                  {editorialPendingChanges.length > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[9px] font-mono font-bold">
+                      {editorialPendingChanges.length} UNSAVED CHANGE{editorialPendingChanges.length === 1 ? '' : 'S'}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-                  Interactively modify headlines, banners, tactical colors, and emergency copy across <strong>SafetyLink.online</strong>, <strong>Android APK</strong>, and <strong>Command Desktop EXE</strong>, then deploy live OTA updates directly to all devices.
+                  Edits write directly to <span className="font-mono text-slate-200">public/editorial-config.json</span> (tracked in Workspace Changes), update the live landing page/APK/EXE UI immediately, and can deploy selectively to <strong>Website</strong>, <strong>Android APK</strong>, <strong>Windows EXE</strong>, or <strong>Worker API</strong>.
                 </p>
               </div>
 
@@ -1037,38 +1117,210 @@ export const AdminPanel: React.FC = () => {
                 <button
                   type="button"
                   onClick={async () => {
-                    const ok = await saveEditorialDraft();
-                    if (ok) addToast('Editorial draft saved successfully.', 'success');
+                    setEditorialStatusBanner(null);
+                    const res = await saveEditorialDraft(adminBearerToken || undefined);
+                    if (res.ok) {
+                      setEditorialStatusBanner({
+                        ok: true,
+                        message: `Saved configuration to workspace (${(res.workspaceFiles || ['public/editorial-config.json']).join(', ')}). It now appears in GitHub Publisher → Changed Workspace Files.`,
+                        workspaceFiles: res.workspaceFiles,
+                      });
+                      addToast('Saved to public/editorial-config.json!', 'success');
+                      if (adminBearerToken) void scanWorkspaceForGitHub(adminBearerToken);
+                    } else {
+                      setEditorialStatusBanner({ ok: false, message: res.error || 'Failed to save workspace config.' });
+                      addToast(res.error || 'Failed to save workspace config', 'error');
+                    }
                   }}
                   disabled={isEditorialSaving}
                   className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-mono text-xs font-bold transition-all"
                 >
-                  {isEditorialSaving ? 'Saving...' : '💾 Save Draft'}
+                  {isEditorialSaving ? 'Saving...' : '💾 Save to Workspace'}
                 </button>
                 <button
                   type="button"
                   onClick={async () => {
-                    const res = await publishEditorialLive(`Platform update v${studioVersion}`);
-                    if (res.success) addToast(`Published live to version v${res.version}`, 'success');
+                    setEditorialStatusBanner(null);
+                    const res = await publishEditorialLive({
+                      notes: editorialReleaseNotes.trim() || `Editorial update for ${editorialTargetPlatform.toUpperCase()}`,
+                      channels: publishChannels,
+                      pushToGitHub: editorialPushToGithub,
+                      bearerToken: adminBearerToken || undefined,
+                    });
+                    if (res.success) {
+                      setEditorialStatusBanner({
+                        ok: true,
+                        message: res.message || `Published v${res.version}`,
+                        commitSha: res.commitSha,
+                        commitUrl: res.commitUrl,
+                        workspaceFiles: res.workspaceFiles,
+                      });
+                      addToast(res.message || `Published v${res.version}`, 'success');
+                      if (adminBearerToken) void scanWorkspaceForGitHub(adminBearerToken);
+                    } else {
+                      setEditorialStatusBanner({ ok: false, message: res.error || 'Publish failed.' });
+                      addToast(res.error || 'Publish failed', 'error');
+                    }
                   }}
-                  disabled={isEditorialPublishing}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-mono font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/50 transition-all cursor-pointer"
+                  disabled={isEditorialPublishing || !hasAnyPublishChannelSelected}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 disabled:opacity-40 text-white font-mono font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/50 transition-all cursor-pointer"
                 >
-                  {isEditorialPublishing ? 'Deploying...' : '🚀 Publish Live (OTA)'}
+                  {isEditorialPublishing ? 'Publishing...' : '🚀 Publish Selected Channels'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowEditorialStudio(true)}
                   className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-amber-950 cursor-pointer"
                 >
-                  <span>🖥️ Open Fullscreen Canvas</span>
+                  <span>🖥️ Fullscreen Canvas</span>
                 </button>
               </div>
             </div>
 
+            {/* Channel Selector + Live Workspace Configuration Changes Card */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Target Publish Channels */}
+              <div className="glass-panel p-4 rounded-2xl border border-emerald-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black font-mono text-emerald-300 uppercase tracking-wider">
+                    📡 Target Publish Channels
+                  </h3>
+                  <span className="text-[9px] font-mono text-slate-400">Choose where edits deploy</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { key: 'web', label: '🌐 Website / Landing', desc: 'safetylink.online' },
+                    { key: 'apk', label: '📱 Android APK', desc: 'Mobile APK build' },
+                    { key: 'exe', label: '💻 Windows EXE', desc: 'Desktop console' },
+                    { key: 'worker', label: '⚡ Worker API', desc: 'Cloudflare edge' },
+                  ] as const).map((ch) => {
+                    const active = publishChannels[ch.key];
+                    return (
+                      <label
+                        key={ch.key}
+                        className={`flex items-start gap-2 p-2.5 rounded-xl border text-xs font-mono cursor-pointer transition-all ${
+                          active
+                            ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200'
+                            : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={active}
+                          onChange={(e) => setPublishChannel(ch.key, e.target.checked)}
+                          className="accent-emerald-500 mt-0.5"
+                        />
+                        <span className="min-w-0">
+                          <span className="font-bold text-[11px] block">{ch.label}</span>
+                          <span className="text-[9px] text-slate-400 block">{ch.desc}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="space-y-2 pt-1">
+                  <input
+                    type="text"
+                    value={editorialReleaseNotes}
+                    onChange={(e) => setEditorialReleaseNotes(e.target.value)}
+                    placeholder="Release note (e.g. Updated landing hero headline & accent color)"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-[11px] font-mono text-slate-200 placeholder-slate-500"
+                  />
+                  <label className="flex items-center gap-2 text-[10px] font-mono text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editorialPushToGithub}
+                      onChange={(e) => setEditorialPushToGithub(e.target.checked)}
+                      className="accent-emerald-500"
+                    />
+                    <span>
+                      Commit &amp; push <span className="text-emerald-300">public/editorial-config.json</span> to GitHub (<span className="text-slate-100">main</span>) &amp; run selected channels
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Pending Workspace & Configuration Changes */}
+              <div className="glass-panel p-4 rounded-2xl border border-amber-500/20 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-black font-mono text-amber-300 uppercase tracking-wider">
+                    🧾 Workspace &amp; Configuration Changes
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('SETTINGS');
+                      if (adminBearerToken) void scanWorkspaceForGitHub(adminBearerToken);
+                    }}
+                    className="text-[9px] font-mono font-bold text-blue-400 hover:text-blue-300 underline"
+                  >
+                    Open GitHub Publisher →
+                  </button>
+                </div>
+
+                {editorialPendingChanges.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 text-[10px] font-mono text-slate-400 space-y-1">
+                    <div className="text-emerald-400 font-bold">✓ All edited fields match saved workspace config.</div>
+                    <div>
+                      Tracked files: <span className="text-slate-200">{(editorialWorkspaceFiles.length ? editorialWorkspaceFiles : ['public/editorial-config.json']).join(', ')}</span>
+                    </div>
+                    {editorialLastSavedAt && (
+                      <div className="text-slate-500">Last saved: {new Date(editorialLastSavedAt).toLocaleString()}</div>
+                    )}
+                    {ghStatus && ghStatus.changedFiles.length > 0 && (
+                      <div className="text-amber-300 pt-1">
+                        • {ghStatus.changedFiles.length} workspace file(s) currently pending push to GitHub main.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                    {editorialPendingChanges.map((diff) => (
+                      <div
+                        key={`${diff.platform}:${diff.key}`}
+                        className="p-2 rounded-lg bg-slate-950/90 border border-amber-500/30 text-[10px] font-mono space-y-0.5"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-slate-200">{diff.label}</span>
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[8px] uppercase">
+                            {diff.platform}
+                          </span>
+                        </div>
+                        <div className="text-slate-500 truncate">Before: {diff.before || '—'}</div>
+                        <div className="text-emerald-300 truncate">After: {diff.after || '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {editorialStatusBanner && (
+                  <div
+                    className={`p-2.5 rounded-xl text-[10px] font-mono border ${
+                      editorialStatusBanner.ok
+                        ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
+                        : 'bg-red-950/60 border-red-500/40 text-red-200'
+                    }`}
+                  >
+                    <div>{editorialStatusBanner.message}</div>
+                    {editorialStatusBanner.commitUrl && (
+                      <a
+                        href={editorialStatusBanner.commitUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-300 underline mt-1 inline-block"
+                      >
+                        View commit {editorialStatusBanner.commitSha} on GitHub →
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Target Platform Selector */}
-            <div className="flex items-center gap-2 border-b border-slate-900 pb-3">
-              <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest mr-2">Target Environment:</span>
+            <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-900 pb-3">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest mr-2">Editing Target:</span>
               {[
                 { id: 'web', name: '🌐 SafetyLink.online (Web)', desc: 'Official Public Gateway' },
                 { id: 'apk', name: '📱 Mobile APK (Android)', desc: 'Field & Student Devices' },
@@ -1087,7 +1339,39 @@ export const AdminPanel: React.FC = () => {
                   {p.name}
                 </button>
               ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  resetEditorialDefaults(editorialTargetPlatform);
+                  addToast(`Reset ${editorialTargetPlatform.toUpperCase()} fields to defaults (save to apply).`, 'info');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] font-mono text-slate-400 hover:text-slate-200"
+              >
+                ↺ Reset {editorialTargetPlatform.toUpperCase()} Defaults
+              </button>
             </div>
+
+            {/* Landing Section Visibility Quick Toggles (for Web) */}
+            {editorialTargetPlatform === 'web' && editorialSections?.web && (
+              <div className="flex flex-wrap items-center gap-2 bg-slate-950/60 border border-slate-900 rounded-xl px-3.5 py-2.5 text-[10px] font-mono">
+                <span className="text-slate-400 font-bold uppercase mr-1">Landing Sections:</span>
+                {editorialSections.web.map((sec) => (
+                  <button
+                    key={sec.id}
+                    type="button"
+                    onClick={() => toggleEditorialSectionVisibility('web', sec.id)}
+                    className={`px-2.5 py-1 rounded-lg border transition-all ${
+                      sec.visible
+                        ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                        : 'bg-slate-900 border-slate-800 text-slate-500 line-through'
+                    }`}
+                  >
+                    {sec.icon} {sec.name}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Platform Editing Forms */}
             {editorialTargetPlatform === 'web' && (

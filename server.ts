@@ -597,11 +597,157 @@ app.use(cors({
   });
 
   // ── EDITORIAL PLATFORM STUDIO APIS ──────────────────────────
+  const EDITORIAL_PUBLIC_FILE = path.join(process.cwd(), "public", "editorial-config.json");
   const EDITORIAL_DATA_FILE = path.join(process.cwd(), "data", "editorial_state.json");
 
-  // 1. Fetch current editorial state
+  const verifyEditorialSuperAdmin = (req: any, res: any, next: any) => {
+    const authHeader = String(req.headers.authorization || "");
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    if (!token) {
+      return res.status(401).json({ error: "Super Admin session required to modify live environment configuration." });
+    }
+    const decoded = verifySessionToken(token);
+    if (!decoded || !decoded.superAdmin) {
+      return res.status(403).json({ error: "Invalid or expired Super Admin session. Please unlock in Tools & Settings." });
+    }
+    next();
+  };
+
+  const formatChannelCommitSuffix = (channels?: { web?: boolean; apk?: boolean; exe?: boolean; worker?: boolean }): string => {
+    if (!channels || typeof channels !== "object") return "";
+    const chosen: string[] = [];
+    if (channels.web) chosen.push("[ch:web]");
+    if (channels.apk) chosen.push("[ch:apk]");
+    if (channels.exe) chosen.push("[ch:exe]");
+    if (channels.worker) chosen.push("[ch:worker]");
+    if (chosen.length === 0) return "";
+    // If all 3 main channels are selected and worker is off, omit tag only if caller didn't explicitly filter;
+    // always include explicit tag when channels object is provided so CI honors exact selection.
+    return ` [channels-selected] ${chosen.join(" ")}`;
+  };
+
+  const bumpPatchVersion = (v?: string): string => {
+    const clean = String(v || "1.1.1170").replace(/^v/i, "").trim();
+    const parts = clean.split(".").map((p) => parseInt(p, 10));
+    if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
+      return `${parts[0]}.${parts[1]}.${parts[2] + 1}`;
+    }
+    return "1.1.1171";
+  };
+
+  const publishEditorialFilesToGithub = async (
+    relPaths: string[],
+    commitMessage: string,
+    channels?: { web?: boolean; apk?: boolean; exe?: boolean; worker?: boolean }
+  ): Promise<{ ok: boolean; commitSha?: string; commitUrl?: string; workflowsTriggered?: string[]; error?: string }> => {
+    const token = String(process.env.GITHUB_TOKEN || process.env.GITHUB_PAT || process.env.GH_TOKEN || "").trim();
+    if (!token) {
+      return { ok: false, error: "Server GITHUB_TOKEN is not configured in Settings → Secrets." };
+    }
+    const owner = "Charesmagna";
+    const repo = "SafetyLink-Core";
+    const branch = "main";
+    const ghFetch = (apiPath: string, init?: RequestInit) =>
+      fetch(`https://api.github.com/repos/${owner}/${repo}${apiPath}`, {
+        ...init,
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "SafetyLink-Editorial-Publisher",
+          ...(init?.headers || {}),
+        },
+      });
+
+    const refRes = await ghFetch(`/git/ref/heads/${branch}`);
+    if (!refRes.ok) {
+      const errData: any = await refRes.json().catch(() => ({}));
+      return { ok: false, error: errData?.message || `GitHub ref read failed (HTTP ${refRes.status})` };
+    }
+    const parentSha = String(((await refRes.json()) as any)?.object?.sha || "");
+    const parentCommitRes = await ghFetch(`/git/commits/${parentSha}`);
+    if (!parentCommitRes.ok) return { ok: false, error: "Failed reading remote HEAD commit." };
+    const baseTreeSha = String(((await parentCommitRes.json()) as any)?.tree?.sha || "");
+
+    const rootDir = path.resolve(process.cwd());
+    const treeEntries: Array<{ path: string; mode: string; type: string; sha: string }> = [];
+    for (const rel of relPaths) {
+      const abs = path.resolve(rootDir, rel);
+      if (!abs.startsWith(rootDir + path.sep) || !fs.existsSync(abs)) continue;
+      const contentB64 = fs.readFileSync(abs).toString("base64");
+      const blobRes = await ghFetch("/git/blobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: contentB64, encoding: "base64" }),
+      });
+      if (!blobRes.ok) {
+        const errData: any = await blobRes.json().catch(() => ({}));
+        return { ok: false, error: `Blob failed for ${rel}: ${errData?.message || blobRes.status}` };
+      }
+      const blobData: any = await blobRes.json();
+      treeEntries.push({ path: rel, mode: "100644", type: "blob", sha: String(blobData.sha) });
+    }
+    if (treeEntries.length === 0) {
+      return { ok: false, error: "No editorial configuration files found to publish." };
+    }
+
+    const newTreeRes = await ghFetch("/git/trees", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries }),
+    });
+    if (!newTreeRes.ok) return { ok: false, error: "Failed creating GitHub tree." };
+    const newTreeSha = String(((await newTreeRes.json()) as any)?.sha || "");
+
+    const finalMsg = `${commitMessage}${formatChannelCommitSuffix(channels)}`.slice(0, 240);
+    const newCommitRes = await ghFetch("/git/commits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: finalMsg, tree: newTreeSha, parents: [parentSha] }),
+    });
+    if (!newCommitRes.ok) return { ok: false, error: "Failed creating GitHub commit." };
+    const newCommitSha = String(((await newCommitRes.json()) as any)?.sha || "");
+
+    const patchRes = await ghFetch(`/git/refs/heads/${branch}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sha: newCommitSha, force: false }),
+    });
+    if (!patchRes.ok) {
+      const errData: any = await patchRes.json().catch(() => ({}));
+      return { ok: false, error: errData?.message || "Failed updating main branch ref." };
+    }
+
+    const workflowsTriggered: string[] = [];
+    if (channels?.web) workflowsTriggered.push("deploy-safetylink-web.yml");
+    if (channels?.apk) workflowsTriggered.push("build-apk.yml");
+    if (channels?.exe) workflowsTriggered.push("build-electron.yml");
+    if (channels?.worker) {
+      workflowsTriggered.push("deploy-worker.yml");
+      // Worker workflow only auto-runs on push if worker/** changed, so dispatch explicitly when selected
+      await ghFetch(`/actions/workflows/deploy-worker.yml/dispatches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: branch }),
+      }).catch(() => {});
+    }
+
+    return {
+      ok: true,
+      commitSha: newCommitSha.slice(0, 7),
+      commitUrl: `https://github.com/${owner}/${repo}/commit/${newCommitSha}`,
+      workflowsTriggered,
+    };
+  };
+
+  // 1. Fetch current editorial state (public read-only: serves tracked public/editorial-config.json)
   app.get("/api/editorial/state", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     try {
+      if (fs.existsSync(EDITORIAL_PUBLIC_FILE)) {
+        const content = fs.readFileSync(EDITORIAL_PUBLIC_FILE, "utf-8");
+        return res.json(JSON.parse(content));
+      }
       if (fs.existsSync(EDITORIAL_DATA_FILE)) {
         const content = fs.readFileSync(EDITORIAL_DATA_FILE, "utf-8");
         return res.json(JSON.parse(content));
@@ -613,35 +759,83 @@ app.use(cors({
     }
   });
 
-  // 2. Save draft state
-  app.post("/api/editorial/save", (req, res) => {
+  // 2. Save draft state directly into tracked public/editorial-config.json (shows immediately in Workspace Changes!)
+  app.post("/api/editorial/save", verifyEditorialSuperAdmin, (req, res) => {
     try {
-      const dir = path.dirname(EDITORIAL_DATA_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(EDITORIAL_DATA_FILE, JSON.stringify(req.body, null, 2), "utf-8");
-      console.log(`🎨 [EDITORIAL STUDIO] Draft saved: platform ${req.body.activePlatform || 'all'}`);
-      return res.json({ success: true, savedAt: new Date().toISOString() });
+      const now = new Date().toISOString();
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const persistedPayload = {
+        version: String(body.version || "1.1.1170"),
+        updatedAt: now,
+        activePlatform: body.activePlatform || "web",
+        publishedChannels: body.publishedChannels || { web: true, apk: true, exe: true, worker: false },
+        sections: body.sections || {},
+        web: body.web || {},
+        apk: body.apk || {},
+        exe: body.exe || {},
+      };
+
+      const pubDir = path.dirname(EDITORIAL_PUBLIC_FILE);
+      if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
+      fs.writeFileSync(EDITORIAL_PUBLIC_FILE, JSON.stringify(persistedPayload, null, 2) + "\n", "utf-8");
+
+      const dataDir = path.dirname(EDITORIAL_DATA_FILE);
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      fs.writeFileSync(EDITORIAL_DATA_FILE, JSON.stringify(persistedPayload, null, 2) + "\n", "utf-8");
+
+      console.log(`🎨 [EDITORIAL STUDIO] Saved workspace config: public/editorial-config.json (platform: ${persistedPayload.activePlatform})`);
+      return res.json({
+        success: true,
+        savedAt: now,
+        workspaceFiles: ["public/editorial-config.json"],
+      });
     } catch (e: any) {
       console.error("[Editorial API] Save error:", e);
       return res.status(500).json({ error: e.message || "Failed to save draft" });
     }
   });
 
-  // 3. Publish live & bump OTA version
-  app.post("/api/editorial/publish", (req, res) => {
+  // 3. Publish live to selected channels (Website, APK, EXE, Worker) & optionally commit straight to GitHub main
+  app.post("/api/editorial/publish", verifyEditorialSuperAdmin, async (req, res) => {
     try {
-      const { version, releaseNotes, state } = req.body;
-      const targetVersion = version || "1.1.897";
-      const now = new Date().toISOString();
+      const { version, releaseNotes, state, channels, pushToGitHub } = req.body || {};
+      const selectedChannels = {
+        web: channels?.web !== undefined ? Boolean(channels.web) : true,
+        apk: channels?.apk !== undefined ? Boolean(channels.apk) : true,
+        exe: channels?.exe !== undefined ? Boolean(channels.exe) : true,
+        worker: Boolean(channels?.worker),
+      };
 
-      // Update editorial state
-      const dir = path.dirname(EDITORIAL_DATA_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      if (state) {
-        fs.writeFileSync(EDITORIAL_DATA_FILE, JSON.stringify(state, null, 2), "utf-8");
+      if (!selectedChannels.web && !selectedChannels.apk && !selectedChannels.exe && !selectedChannels.worker) {
+        return res.status(400).json({ success: false, error: "Select at least one target publish channel (Website, APK, EXE, or Worker)." });
       }
 
-      // Update public/version.json
+      const targetVersion = bumpPatchVersion(version || state?.version || "1.1.1170");
+      const now = new Date().toISOString();
+      const notes = String(releaseNotes || "Platform configuration update via Edit Environment").trim().slice(0, 160);
+
+      // Write tracked public/editorial-config.json + data mirror
+      const persistedPayload = {
+        version: targetVersion,
+        updatedAt: now,
+        releaseNotes: notes,
+        activePlatform: state?.activePlatform || "web",
+        publishedChannels: selectedChannels,
+        sections: state?.sections || {},
+        web: state?.web || {},
+        apk: state?.apk || {},
+        exe: state?.exe || {},
+      };
+
+      const pubDir = path.dirname(EDITORIAL_PUBLIC_FILE);
+      if (!fs.existsSync(pubDir)) fs.mkdirSync(pubDir, { recursive: true });
+      fs.writeFileSync(EDITORIAL_PUBLIC_FILE, JSON.stringify(persistedPayload, null, 2) + "\n", "utf-8");
+
+      const dataDir = path.dirname(EDITORIAL_DATA_FILE);
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      fs.writeFileSync(EDITORIAL_DATA_FILE, JSON.stringify(persistedPayload, null, 2) + "\n", "utf-8");
+
+      // Update public/version.json with selected channel metadata
       const versionFile = path.join(process.cwd(), "public", "version.json");
       let versionObj: any = {
         version: targetVersion,
@@ -649,11 +843,12 @@ app.use(cors({
         releaseName: `SafetyLink Core v${targetVersion}`,
         apkUrl: `https://github.com/Charesmagna/SafetyLink-Core/releases/download/v${targetVersion}/SafetyLink-v${targetVersion}-Signed.apk`,
         liveWebUrl: "https://safetylink.online",
+        publishedChannels: selectedChannels,
         features: [
-          releaseNotes || "Platform layout & content update via Studio",
-          "Dynamic Web, APK, and EXE synchronization",
-          "High-speed OTA content delivery"
-        ]
+          notes,
+          "Channel-targeted SafetyLink Editorial configuration",
+          "Live Web, APK, and EXE synchronization",
+        ],
       };
 
       if (fs.existsSync(versionFile)) {
@@ -664,26 +859,62 @@ app.use(cors({
             version: targetVersion,
             buildTime: now,
             releaseName: `SafetyLink Core v${targetVersion}`,
-            features: [
-              releaseNotes || "Platform Studio Live Release",
-              ...(current.features || []).slice(0, 3)
-            ]
+            publishedChannels: selectedChannels,
+            features: [notes, ...(Array.isArray(current.features) ? current.features.slice(0, 3) : [])],
           };
-        } catch (_) {}
+        } catch {}
       }
 
-      fs.writeFileSync(versionFile, JSON.stringify(versionObj, null, 2), "utf-8");
+      fs.writeFileSync(versionFile, JSON.stringify(versionObj, null, 2) + "\n", "utf-8");
+      const workspaceFiles = ["public/editorial-config.json", "public/version.json"];
 
-      console.log(`🚀 [EDITORIAL STUDIO] Published LIVE update! Version: v${targetVersion}`);
+      const channelNames = [
+        selectedChannels.web ? "Website" : null,
+        selectedChannels.apk ? "Android APK" : null,
+        selectedChannels.exe ? "Windows EXE" : null,
+        selectedChannels.worker ? "Worker API" : null,
+      ].filter(Boolean);
+
+      let commitSha: string | undefined;
+      let commitUrl: string | undefined;
+      let workflowsTriggered: string[] = [];
+
+      if (pushToGitHub) {
+        const ghRes = await publishEditorialFilesToGithub(
+          workspaceFiles,
+          `chore(editorial): ${notes} (v${targetVersion})`,
+          selectedChannels
+        );
+        if (!ghRes.ok) {
+          return res.status(502).json({
+            success: false,
+            version: targetVersion,
+            workspaceFiles,
+            error: `Saved locally to workspace, but GitHub publish failed: ${ghRes.error}`,
+          });
+        }
+        commitSha = ghRes.commitSha;
+        commitUrl = ghRes.commitUrl;
+        workflowsTriggered = ghRes.workflowsTriggered || [];
+      }
+
+      console.log(`🚀 [EDITORIAL STUDIO] Published v${targetVersion} for [${channelNames.join(", ")}]${commitSha ? ` -> GitHub ${commitSha}` : ""}`);
       return res.json({
         success: true,
         version: targetVersion,
         publishedAt: now,
-        message: `Version v${targetVersion} broadcasted to all live clients.`
+        channels: selectedChannels,
+        workspaceFiles,
+        commitSha,
+        commitUrl,
+        workflowsTriggered,
+        message: pushToGitHub
+          ? `Published v${targetVersion} to GitHub (${commitSha}) for: ${channelNames.join(", ")}.`
+          : `Saved v${targetVersion} to workspace config (${workspaceFiles.join(", ")}) for: ${channelNames.join(", ")}.`,
       });
     } catch (e: any) {
       console.error("[Editorial API] Publish error:", e);
-      return res.status(500).json({ error: e.message || "Failed to publish" });
+      return res.status(500).json({ success: false, error: e.message || "Failed to publish" });
     }
   });
 
@@ -3470,13 +3701,16 @@ Rules:
         });
       }
 
-      const commitMessage = String(req.body?.commitMessage || "Publish verified SafetyLink workspace updates")
+      const baseCommitMessage = String(req.body?.commitMessage || "Publish verified SafetyLink workspace updates")
         .replace(/[\r\n]+/g, " ")
         .trim()
-        .slice(0, 200);
-      if (commitMessage.length < 3) {
+        .slice(0, 190);
+      if (baseCommitMessage.length < 3) {
         return res.status(400).json({ ok: false, error: "Commit message must be at least 3 characters." });
       }
+      const reqChannels = req.body?.channels && typeof req.body.channels === "object" ? req.body.channels : null;
+      const channelSuffix = reqChannels ? formatChannelCommitSuffix(reqChannels) : "";
+      const commitMessage = `${baseCommitMessage}${channelSuffix}`.slice(0, 240);
 
       const refRes = await githubApiFetch(token, `/git/ref/heads/${GH_PUBLISH_BRANCH}`);
       if (!refRes.ok) {
@@ -3622,12 +3856,21 @@ Rules:
         // Optional audit table
       }
 
+      if (reqChannels?.worker) {
+        await githubApiFetch(token, `/actions/workflows/deploy-worker.yml/dispatches`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: GH_PUBLISH_BRANCH }),
+        }).catch(() => {});
+      }
+
       return res.json({
         ok: true,
         commitSha: newCommitSha.slice(0, 7),
         fullSha: newCommitSha,
         commitUrl: `https://github.com/${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}/commit/${newCommitSha}`,
         filesPublished: filesToPublish.map((f) => f.path),
+        channels: reqChannels || undefined,
         message: `Published ${filesToPublish.length} file(s) to ${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO} (${GH_PUBLISH_BRANCH}).`,
       });
     } catch (e: any) {

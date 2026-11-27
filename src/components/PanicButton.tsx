@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { Lock, ShieldAlert, X, AlertTriangle, Volume2, VolumeX, Video } from 'lucide-react';
 import { DistressVideoStream } from './DistressVideoStream';
+import { useEditorialStore } from '../utils/editorialStore';
 
 
 export const PanicButton: React.FC = () => {
@@ -23,6 +24,7 @@ export const PanicButton: React.FC = () => {
     silenceAlerts, setSilenceAlerts,
     dispatchSettings, setDispatchSettings, customBackendUrl
   } = useAppStore();
+  const editorialApk = useEditorialStore((s) => s.apk);
 
   const [realOnline, setRealOnline] = useState<boolean | null>(null);
 
@@ -141,12 +143,14 @@ export const PanicButton: React.FC = () => {
       <div className="text-center mb-6 relative z-10">
         <div className="flex items-center justify-center gap-2 mb-2">
           <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.25em] font-display">
-            {activeSOSState !== 'IDLE' ? "TRANSMITTING DISTRESS SIGNAL" : "MISSION-CONTROL SOS ACTUATOR"}
+            {activeSOSState !== 'IDLE'
+              ? (editorialApk.sosHoldText || "TRANSMITTING DISTRESS SIGNAL")
+              : (editorialApk.statusTag || "MISSION-CONTROL SOS ACTUATOR")}
           </h3>
         </div>
         <p className="text-[11px] text-slate-400 max-w-[300px] mx-auto leading-relaxed">
           {activeSOSState === 'IDLE' 
-            ? "Depress and hold central beacon for 1.5s to initiate sequential security escalation chain." 
+            ? (editorialApk.offlineFallbackNotice || "Depress and hold central beacon for 1.5s to initiate sequential security escalation chain.") 
             : "Emergency beacon actively transmitting real-time coordinates & ambient diagnostics."}
         </p>
       </div>

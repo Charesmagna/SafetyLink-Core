@@ -1,0 +1,89 @@
+{
+  "version": "1.1.1170",
+  "updatedAt": "2026-11-27T18:30:00.000Z",
+  "activePlatform": "web",
+  "publishedChannels": {
+    "web": true,
+    "apk": true,
+    "exe": true,
+    "worker": false
+  },
+  "sections": {
+    "web": [
+      { "id": "hero", "name": "Hero Banner", "category": "hero", "icon": "🌟", "visible": true, "order": 0 },
+      { "id": "status", "name": "How It Works", "category": "status", "icon": "📡", "visible": true, "order": 1 },
+      { "id": "armour", "name": "BLE Hardware Showcase", "category": "features", "icon": "🛡️", "visible": true, "order": 2 },
+      { "id": "explore", "name": "Explore Cards", "category": "features", "icon": "📱", "visible": true, "order": 3 },
+      { "id": "downloads", "name": "Download Hub", "category": "system", "icon": "⬇️", "visible": true, "order": 4 }
+    ],
+    "apk": [
+      { "id": "hero", "name": "SOS Action Hub", "category": "hero", "icon": "🚨", "visible": true, "order": 0 },
+      { "id": "status", "name": "Hardware BLE Sensor", "category": "status", "icon": "📡", "visible": true, "order": 1 },
+      { "id": "features", "name": "Emergency Chain", "category": "contacts", "icon": "👥", "visible": true, "order": 2 }
+    ],
+    "exe": [
+      { "id": "hero", "name": "Command Deck", "category": "hero", "icon": "🖥️", "visible": true, "order": 0 },
+      { "id": "status", "name": "GIS Fleet Map", "category": "system", "icon": "🗺️", "visible": true, "order": 1 },
+      { "id": "features", "name": "Incident Logs", "category": "features", "icon": "📋", "visible": true, "order": 2 }
+    ]
+  },
+  "web": {
+    "heroBadge": "South African Emergency Network · POPIA Compliant",
+    "heroTitle1": "Protect What Matters Most.",
+    "heroTitle2": "Family Security, Reimagined.",
+    "heroSubtitle": "Seamless end-to-end emergency protection from pocket BLE key fob and smartphone to live control-room dispatch — built for South African households, estates, and security companies.",
+    "heroCtaPrimary": "Create Free Account",
+    "heroCtaSecondary": "Register Organization",
+    "statusTickerItems": [
+      "BLE GATEWAY ● LIVE",
+      "FCM ALARM ● LIVE",
+      "SMS GATEWAY ● LIVE",
+      "CONTROL ROOM ● LIVE"
+    ],
+    "armourTitle": "Three steps from distress trigger to live response",
+    "armourSubtitle": "From pocket BLE key fob to native Android PanicService and live control-room dispatch.",
+    "features": [
+      { "icon": "⚡", "title": "2-Second Hold Panic", "desc": "Instantly trigger emergency alerts via BLE keyfob or on-screen SOS." },
+      { "icon": "📡", "title": "Multi-Channel Dispatch", "desc": "Sequential FCM Loud Alarm -> SMS -> Voice -> Zero-Airtime PCM." },
+      { "icon": "🧠", "title": "Live Responder Routing", "desc": "Real-time GPS coordinates and Street View navigation for responders." },
+      { "icon": "🔒", "title": "POPIA Compliant Security", "desc": "End-to-end protected telemetry and organization-scoped access." }
+    ],
+    "pricingTiers": [
+      { "name": "Individual", "monthly": "R49", "onceOff": "R149", "planCode": "IND_01", "features": ["BLE panic binding", "15 Emergency contacts", "Offline map"] },
+      { "name": "Family Mesh", "monthly": "R129", "onceOff": "R399", "planCode": "FAM_01", "popular": true, "features": ["Up to 5 family members", "Watch-Me proactive timer", "Live guard routing"] },
+      { "name": "Estate / Business", "monthly": "R999", "onceOff": "Custom", "planCode": "EST_01", "features": ["Unlimited members", "Guard patrol telemetry", "Dedicated control desk"] }
+    ],
+    "hotlinePhone": "+27 68 009 911",
+    "hotlineEmail": "info@safetylink.online",
+    "logoImage": "/logos/Safety_Link_Logo_Transparent.png",
+    "heroPosterImage": "/media/Safetylink_Visual_Overview_Deck.png",
+    "primaryColor": "#10b981",
+    "showLiveLog": true
+  },
+  "apk": {
+    "appName": "SafetyLink Mobile",
+    "statusTag": "MISSION-CONTROL SOS ACTUATOR",
+    "sosButtonText": "HOLD FOR SOS",
+    "sosHoldText": "TRANSMITTING DISTRESS SIGNAL",
+    "duressCodePrompt": "Enter Duress Safe Code",
+    "bleStatusText": "iTAG HARDWARE PERIMETER",
+    "keyfobPairedText": "BLE Beacon Linked (UUID: FFE0)",
+    "offlineFallbackNotice": "Depress and hold central beacon for 1.5s to initiate sequential security escalation chain.",
+    "emergencyContactsTitle": "Rapid Escalation Chain",
+    "hudThemeColor": "#ef4444",
+    "shieldIconUrl": "/logos/Safety_Link_Logo_Transparent.png",
+    "enableVibration": true,
+    "holdDurationSeconds": 2
+  },
+  "exe": {
+    "windowTitle": "SafetyLink War Room Command",
+    "dispatchHeader": "Live GIS Map — Commander Deck",
+    "warRoomSubtitle": "Tactical telemetry and responder dispatch control",
+    "threatLevelLabel": "OPERATIONAL WATCH — LIVE TELEMETRY",
+    "satelliteFeedStatus": "ORBITAL GIS FEED ACTIVE",
+    "evidenceLedgerTitle": "Tamper-Evident Evidence Vault",
+    "primaryTheme": "slate",
+    "multiMonitorEnabled": true,
+    "commandHotline": "+27 68 009 911"
+  }
+}

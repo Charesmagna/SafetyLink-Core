@@ -16,6 +16,9 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
     web,
     apk,
     exe,
+    publishChannels,
+    setPublishChannel,
+    getPendingChanges,
     updateField,
     reorderSection,
     toggleSectionVisibility,
@@ -42,7 +45,18 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [releaseNotes, setReleaseNotes] = useState('');
-  const [publishResult, setPublishResult] = useState<{ success: boolean; version?: string; message?: string } | null>(null);
+  const [pushToGitHub, setPushToGitHub] = useState(true);
+  const [publishResult, setPublishResult] = useState<{
+    success: boolean;
+    version?: string;
+    message?: string;
+    error?: string;
+    commitSha?: string;
+    commitUrl?: string;
+    workspaceFiles?: string[];
+  } | null>(null);
+  const pendingChanges = getPendingChanges();
+  const hasChannelSelected = publishChannels.web || publishChannels.apk || publishChannels.exe || publishChannels.worker;
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -88,15 +102,25 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
   };
 
   const handleSave = async () => {
-    const ok = await saveDraft();
-    if (ok) showToast('Draft saved successfully');
+    const res = await saveDraft();
+    if (res.ok) {
+      showToast(`Saved to ${(res.workspaceFiles || ['public/editorial-config.json']).join(', ')}`);
+    } else {
+      showToast(res.error || 'Save failed — ensure Super Admin session is unlocked');
+    }
   };
 
   const handlePublish = async () => {
-    const res = await publishLive(releaseNotes || `Editorial update for ${activePlatform.toUpperCase()}`);
+    const res = await publishLive({
+      notes: releaseNotes || `Editorial update for ${activePlatform.toUpperCase()}`,
+      channels: publishChannels,
+      pushToGitHub,
+    });
     setPublishResult(res);
     if (res.success) {
-      showToast(`Published live! Platform updated to v${res.version}`);
+      showToast(res.message || `Published v${res.version}`);
+    } else {
+      showToast(res.error || 'Publish failed');
     }
   };
 
@@ -126,6 +150,11 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">
               v{version}
             </span>
+            {pendingChanges.length > 0 && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/50 font-bold">
+                {pendingChanges.length} change{pendingChanges.length === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
 
           <div className="h-4 w-[1px] bg-slate-800" />
@@ -1068,14 +1097,66 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   <div className="flex justify-between text-slate-400">
                     <span>Next Version:</span>
                     <span className="text-emerald-400 font-bold">
-                      v{version.split('.').map((p, i) => i === 2 ? (parseInt(p, 10) || 896) + 1 : p).join('.')}
+                      v{version.split('.').map((p, i) => (i === 2 ? (parseInt(p, 10) || 1170) + 1 : p)).join('.')}
                     </span>
                   </div>
                   <div className="flex justify-between text-slate-400">
-                    <span>Target Platforms:</span>
-                    <span className="text-amber-400">Web • APK • EXE</span>
+                    <span>Workspace Files:</span>
+                    <span className="text-slate-200">public/editorial-config.json, public/version.json</span>
                   </div>
                 </div>
+
+                {/* Target Publish Channels */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-slate-400 uppercase block">
+                    Select Target Publish Channels
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: 'web', label: '🌐 Website / Landing', sub: 'safetylink.online' },
+                      { key: 'apk', label: '📱 Android APK', sub: 'Mobile build' },
+                      { key: 'exe', label: '💻 Windows EXE', sub: 'Desktop console' },
+                      { key: 'worker', label: '⚡ Worker API', sub: 'Cloudflare edge' },
+                    ] as const).map((ch) => {
+                      const active = publishChannels[ch.key];
+                      return (
+                        <label
+                          key={ch.key}
+                          className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs font-mono cursor-pointer ${
+                            active
+                              ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-200'
+                              : 'bg-slate-950 border-slate-800 text-slate-400'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={(e) => setPublishChannel(ch.key, e.target.checked)}
+                            className="accent-emerald-500 mt-0.5"
+                          />
+                          <span>
+                            <span className="font-bold block">{ch.label}</span>
+                            <span className="text-[9px] text-slate-400">{ch.sub}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Pending Config Diff Preview */}
+                {pendingChanges.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-slate-950 border border-amber-500/30 space-y-1 max-h-28 overflow-y-auto text-[10px] font-mono">
+                    <div className="text-amber-300 font-bold uppercase">
+                      {pendingChanges.length} Configuration Change{pendingChanges.length === 1 ? '' : 's'}:
+                    </div>
+                    {pendingChanges.map((d) => (
+                      <div key={`${d.platform}:${d.key}`} className="text-slate-300 truncate">
+                        • [{d.platform.toUpperCase()}] {d.label}: <span className="text-emerald-300">{d.after}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div>
                   <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">
@@ -1084,15 +1165,24 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   <input
                     type="text"
                     value={releaseNotes}
-                    onChange={e => setReleaseNotes(e.target.value)}
-                    placeholder="e.g. Updated emergency headlines & new hero branding"
+                    onChange={(e) => setReleaseNotes(e.target.value)}
+                    placeholder="e.g. Updated landing hero headline & accent color"
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-white outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 text-xs text-emerald-300 font-mono">
-                  📡 <strong>Live OTA Broadcast:</strong> Connected users will receive an in-app "Update Available" notification and will instantly pull these new texts, images, and layout without redownloading a full APK binary!
-                </div>
+                <label className="flex items-start gap-2 p-3 rounded-lg bg-emerald-950/25 border border-emerald-500/30 text-xs text-emerald-200 font-mono cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pushToGitHub}
+                    onChange={(e) => setPushToGitHub(e.target.checked)}
+                    className="accent-emerald-500 mt-0.5"
+                  />
+                  <span>
+                    <strong>Push to GitHub (main) &amp; Deploy Selected Channels:</strong> Commits{' '}
+                    <span className="text-white">public/editorial-config.json</span> and triggers only the checked workflows above.
+                  </span>
+                </label>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -1103,22 +1193,34 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   </button>
                   <button
                     onClick={handlePublish}
-                    disabled={isPublishing}
-                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white text-xs font-mono font-bold shadow-lg"
+                    disabled={isPublishing || !hasChannelSelected}
+                    className="px-5 py-2 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 disabled:opacity-40 text-white text-xs font-mono font-bold shadow-lg"
                   >
-                    {isPublishing ? 'Broadcasting Update...' : 'Confirm & Publish Live'}
+                    {isPublishing ? 'Publishing...' : 'Confirm & Publish Selected Channels'}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="text-center py-4 space-y-4 font-mono">
-                <div className="text-4xl">🎉</div>
-                <div className="text-base font-bold text-emerald-400">
-                  {publishResult.message}
+                <div className="text-4xl">{publishResult.success ? '🎉' : '⚠️'}</div>
+                <div className={`text-sm font-bold ${publishResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {publishResult.success ? publishResult.message : publishResult.error || 'Publish failed'}
                 </div>
-                <p className="text-xs text-slate-400">
-                  The live platform version has been incremented to v{publishResult.version}. All clients will pull this updated layout.
-                </p>
+                {publishResult.commitUrl && (
+                  <a
+                    href={publishResult.commitUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-xs text-emerald-300 underline"
+                  >
+                    View GitHub Commit {publishResult.commitSha} →
+                  </a>
+                )}
+                {publishResult.workspaceFiles && publishResult.workspaceFiles.length > 0 && (
+                  <p className="text-[11px] text-slate-400">
+                    Updated workspace files: {publishResult.workspaceFiles.join(', ')}
+                  </p>
+                )}
                 <button
                   onClick={() => {
                     setPublishModalOpen(false);

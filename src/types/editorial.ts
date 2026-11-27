@@ -1,5 +1,20 @@
 export type EditorialPlatform = 'web' | 'apk' | 'exe';
 
+export interface PublishChannels {
+  web: boolean;
+  apk: boolean;
+  exe: boolean;
+  worker: boolean;
+}
+
+export interface EditorialFieldDiff {
+  platform: EditorialPlatform;
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+}
+
 export interface EditorialSection {
   id: string;
   name: string;

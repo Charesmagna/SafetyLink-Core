@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[channels-selected]') || contains(github.event.head_commit.message, '[ch:apk]')
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
