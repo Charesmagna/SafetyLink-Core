@@ -1069,14 +1069,15 @@ export const Settings: React.FC = () => {
                 onChange={e => {
                   const val = e.target.value as any;
                   setDispatchSettings({ mapProvider: val });
-                  useAppStore.getState().addToast(`Map provider updated to ${val.replace('_', ' ')}`, 'info');
+                  useAppStore.getState().addToast(`Map provider updated to ${val.replace(/_/g, ' ')}`, 'info');
                 }}
                 className="w-full bg-slate-950 border border-slate-900 rounded-xl px-3 py-2 text-[10px] text-slate-200 focus:outline-none focus:border-red-500/50 font-mono"
               >
-                <option value="GOOGLE_MAPS">Google Maps (Hybrid & Live Traffic)</option>
-                <option value="OPENSTREETMAP">OpenStreetMap (Offline GIS Vector Tiles)</option>
-                <option value="MAPBOX">Mapbox Tactical Dark Mode</option>
+                <option value="OPENSTREETMAP">Open Live Map (OpenStreetMap Free Interactive)</option>
+                <option value="GOOGLE_MAPS">Google Maps (Roadmap, Hybrid &amp; Satellite)</option>
                 <option value="HYBRID_SATELLITE">High-Resolution Satellite Imagery</option>
+                <option value="THREE_3D">3D Tactical Map (Three.js Interactive Twin)</option>
+                <option value="MAPBOX">Mapbox Tactical Dark Mode</option>
               </select>
             </div>
           </div>

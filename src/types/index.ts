@@ -267,7 +267,7 @@ export interface DispatchSettings {
   countdownDuration: number;
   countdownOverlayEnabled: boolean;
   dispatchPreset: 'STRICT_OFFLINE' | 'VIP_TWILIO_CLOUD' | 'SMS_ONLY' | 'CUSTOM';
-  mapProvider: 'GOOGLE_MAPS' | 'OPENSTREETMAP' | 'MAPBOX' | 'OFFLINE_GIS_VECTOR' | 'HYBRID_SATELLITE';
+  mapProvider: 'GOOGLE_MAPS' | 'OPENSTREETMAP' | 'MAPBOX' | 'OFFLINE_GIS_VECTOR' | 'HYBRID_SATELLITE' | 'THREE_3D';
   customChannels?: string[];
   // Zero-Data USSD & Please-Call-Me (PCM) Settings
   ussdEnabled: boolean;

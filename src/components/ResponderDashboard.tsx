@@ -1,9 +1,18 @@
-import React, { Suspense, lazy, useState } from 'react';
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { APIProvider, Map as GoogleMap, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import { useAppStore } from '../utils/store';
 import { SceneErrorBoundary } from './three/SceneErrorBoundary';
 
 const TacticalCampus3DScene = lazy(() => import('./three/TacticalCampus3DScene'));
+
+const ResponderMapPanner: React.FC<{ lat: number; lng: number; focusKey: string }> = ({ lat, lng, focusKey }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    map.panTo({ lat, lng });
+  }, [map, focusKey, lat, lng]);
+  return null;
+};
 
 const STATUS_COLORS: Record<string, string> = {
   safe: '#22c55e',
@@ -15,7 +24,7 @@ export const ResponderDashboard: React.FC = () => {
   const currentUser = useAppStore(s => s.currentUser);
   const users = useAppStore(s => s.users);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState({ lat: -26.3085, lng: 27.8344 });
+  const [mapCenter] = useState({ lat: -26.3085, lng: 27.8344 });
   const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid' | 'satellite'>('roadmap');
   const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
@@ -134,17 +143,17 @@ export const ResponderDashboard: React.FC = () => {
           </SceneErrorBoundary>
         ) : (
           <APIProvider apiKey={GMAPS_KEY} language="en" region="ZA">
-            <Map
-              defaultCenter={mapCenter}
-              center={{ lat: focusLat, lng: focusLng }}
+            <GoogleMap
+              defaultCenter={{ lat: focusLat, lng: focusLng }}
               defaultZoom={14}
               mapId="DEMO_MAP_ID"
-              internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
+              internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio", "gmp_git_agentskills_v1"]}
               mapTypeId={mapTypeId}
               style={{ width: '100%', height: '100%' }}
               gestureHandling="greedy"
               disableDefaultUI={false}
             >
+              <ResponderMapPanner lat={focusLat} lng={focusLng} focusKey={selectedUser?.id || 'default'} />
               {guardedUsers.map(u => {
                 const loc = (u as any).lastLocation as any;
                 if (!loc?.lat || !loc?.lng) return null;
@@ -173,7 +182,7 @@ export const ResponderDashboard: React.FC = () => {
                   </AdvancedMarker>
                 );
               })}
-            </Map>
+            </GoogleMap>
           </APIProvider>
         )}
       </div>
@@ -188,13 +197,11 @@ export const ResponderDashboard: React.FC = () => {
           guardedUsers.map(u => {
             const status = getUserStatus(u);
             const color = STATUS_COLORS[status];
-            const loc = (u as any).lastLocation as any;
             return (
               <div
                 key={u.id}
                 onClick={() => {
                   setSelectedUserId(u.id);
-                  if (loc?.lat) setMapCenter({ lat: loc.lat, lng: loc.lng });
                 }}
                 className={`flex items-center gap-3 px-4 py-2.5 border-b border-slate-800/50 cursor-pointer hover:bg-slate-800/50 transition-colors ${selectedUserId === u.id ? 'bg-slate-800' : ''}`}
               >

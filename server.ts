@@ -1553,6 +1553,245 @@ Rules:
     return { label: "Clear Conditions", hazardous: false, severity: "LOW" };
   };
 
+  const geoLocateCache = new Map<string, { expiresAt: number; payload: any }>();
+
+  app.get("/api/geo/locate", async (req, res) => {
+    try {
+      const modeRaw = String(req.query.mode || "auto").toLowerCase();
+      const mode: "auto" | "ip" | "reverse" =
+        modeRaw === "ip" || modeRaw === "reverse" ? modeRaw : "auto";
+      const providerRaw = String(req.query.provider || "auto").toLowerCase();
+      const preferredProvider: "auto" | "bigdatacloud" | "nominatim" =
+        providerRaw === "bigdatacloud" || providerRaw === "nominatim" ? providerRaw : "auto";
+
+      const hasLatParam = req.query.lat !== undefined && String(req.query.lat).trim() !== "";
+      const hasLngParam = req.query.lng !== undefined && String(req.query.lng).trim() !== "";
+      const parsedLat = hasLatParam ? Number(req.query.lat) : NaN;
+      const parsedLng = hasLngParam ? Number(req.query.lng) : NaN;
+
+      if ((hasLatParam || hasLngParam) && mode !== "ip") {
+        if (
+          !Number.isFinite(parsedLat) ||
+          !Number.isFinite(parsedLng) ||
+          parsedLat < -90 ||
+          parsedLat > 90 ||
+          parsedLng < -180 ||
+          parsedLng > 180
+        ) {
+          return res.status(400).json({ ok: false, error: "Invalid latitude/longitude coordinates." });
+        }
+      }
+
+      const bdcKey = String(process.env.BIGDATACLOUD_API_KEY || "").trim();
+      const hasValidCoords =
+        Number.isFinite(parsedLat) &&
+        Number.isFinite(parsedLng) &&
+        (parsedLat !== 0 || parsedLng !== 0);
+
+      const rawForwarded = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
+        .split(",")[0]
+        .trim()
+        .replace(/^::ffff:/i, "");
+      const isPublicIp =
+        Boolean(rawForwarded) &&
+        /^[0-9a-fA-F:.]{3,45}$/.test(rawForwarded) &&
+        !/^(::1|fe80:|fc|fd|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|169\.254\.)/i.test(rawForwarded);
+      const safeClientIp = isPublicIp ? rawForwarded : "";
+
+      const resolvedMode: "ip" | "reverse" =
+        mode === "ip" || (mode === "auto" && !hasValidCoords) ? "ip" : "reverse";
+
+      const cacheKey =
+        resolvedMode === "ip"
+          ? `ip:${preferredProvider}:${safeClientIp || "self"}`
+          : `rev:${preferredProvider}:${parsedLat.toFixed(4)},${parsedLng.toFixed(4)}`;
+
+      const cached = geoLocateCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        return res.json(cached.payload);
+      }
+
+      let lat = hasValidCoords ? parsedLat : -26.3085;
+      let lng = hasValidCoords ? parsedLng : 27.8344;
+      let detectedIp = safeClientIp || "";
+      let suburb = "";
+      let city = "";
+      let state = "";
+      let country = "";
+      let countryCode = "ZA";
+      let providerUsed = "FALLBACK";
+      let accuracyLabel = resolvedMode === "ip" ? "IP Geolocation (~5km)" : "Reverse Geocoded";
+
+      if (resolvedMode === "ip") {
+        let ipResolved = false;
+
+        // 1. Authenticated BigDataCloud IP Geolocation (server-side API key)
+        if (bdcKey) {
+          try {
+            const ipQuery = safeClientIp ? `ip=${encodeURIComponent(safeClientIp)}&` : "";
+            const bdcIpResp = await fetch(
+              `https://api-bdc.net/data/ip-geolocation?${ipQuery}localityLanguage=en&key=${encodeURIComponent(bdcKey)}`,
+              { signal: AbortSignal.timeout(5000) }
+            );
+            if (bdcIpResp.ok) {
+              const data: any = await bdcIpResp.json();
+              const loc = data?.location || {};
+              if (Number.isFinite(Number(loc.latitude)) && Number.isFinite(Number(loc.longitude))) {
+                lat = Number(loc.latitude);
+                lng = Number(loc.longitude);
+                detectedIp = String(data?.ip || safeClientIp || "");
+                suburb = String(loc.localityName || "");
+                city = String(loc.city || loc.principalSubdivision || "");
+                state = String(loc.principalSubdivision || "");
+                country = String(data?.country?.name || "");
+                countryCode = String(data?.country?.isoAlpha2 || "ZA").toUpperCase();
+                providerUsed = "BIGDATACLOUD_IP";
+                accuracyLabel = "BigDataCloud IP Geolocation";
+                ipResolved = true;
+              }
+            }
+          } catch (err) {
+            console.warn("[geo/locate] BigDataCloud IP lookup skipped:", (err as any)?.message);
+          }
+        }
+
+        // 2. Public HTTPS IP Geolocation fallback (when BIGDATACLOUD_API_KEY is not configured)
+        if (!ipResolved) {
+          try {
+            const ipWhoUrl = safeClientIp
+              ? `https://ipwho.is/${encodeURIComponent(safeClientIp)}`
+              : "https://ipwho.is/";
+            const fallbackResp = await fetch(ipWhoUrl, { signal: AbortSignal.timeout(5000) });
+            if (fallbackResp.ok) {
+              const d: any = await fallbackResp.json();
+              if (d?.success !== false && Number.isFinite(Number(d?.latitude)) && Number.isFinite(Number(d?.longitude))) {
+                lat = Number(d.latitude);
+                lng = Number(d.longitude);
+                detectedIp = String(d.ip || safeClientIp || "");
+                city = String(d.city || "");
+                state = String(d.region || "");
+                country = String(d.country || "");
+                countryCode = String(d.country_code || "ZA").toUpperCase();
+                providerUsed = "IPWHOIS_FALLBACK";
+                accuracyLabel = "IP Geolocation (Public Fallback)";
+                ipResolved = true;
+              }
+            }
+          } catch (err) {
+            console.warn("[geo/locate] Public IP fallback skipped:", (err as any)?.message);
+          }
+        }
+
+        // Enrich IP coordinates with suburb-level locality via BigDataCloud free reverse-geocode-client
+        if (ipResolved && !suburb) {
+          try {
+            const enrichResp = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lng))}&localityLanguage=en`,
+              { signal: AbortSignal.timeout(4500) }
+            );
+            if (enrichResp.ok) {
+              const b: any = await enrichResp.json();
+              if (b?.locality && b.locality !== b.city) suburb = String(b.locality);
+              if (!city && b?.city) city = String(b.city);
+              if (!state && b?.principalSubdivision) state = String(b.principalSubdivision);
+              if (!country && b?.countryName) country = String(b.countryName);
+              if (providerUsed === "IPWHOIS_FALLBACK") {
+                providerUsed = "BIGDATACLOUD_FREE";
+              }
+            }
+          } catch {}
+        }
+      } else {
+        let revResolved = false;
+
+        // 1. BigDataCloud Reverse Geocode (Authenticated key first, then free client endpoint)
+        if (preferredProvider !== "nominatim") {
+          try {
+            const url = bdcKey
+              ? `https://api-bdc.net/data/reverse-geocode?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lng))}&localityLanguage=en&key=${encodeURIComponent(bdcKey)}`
+              : `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lng))}&localityLanguage=en`;
+            const bdcResp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            if (bdcResp.ok) {
+              const b: any = await bdcResp.json();
+              if (b && (b.locality || b.city || b.principalSubdivision || b.countryName)) {
+                suburb = b.locality && b.locality !== b.city ? String(b.locality) : "";
+                city = String(b.city || b.locality || "");
+                state = String(b.principalSubdivision || "");
+                country = String(b.countryName || "");
+                countryCode = String(b.countryCode || "ZA").toUpperCase();
+                providerUsed = bdcKey ? "BIGDATACLOUD" : "BIGDATACLOUD_FREE";
+                accuracyLabel = bdcKey ? "BigDataCloud Precision Reverse" : "BigDataCloud Reverse Geocode";
+                revResolved = true;
+              }
+            }
+          } catch (err) {
+            console.warn("[geo/locate] BigDataCloud reverse geocode skipped:", (err as any)?.message);
+          }
+        }
+
+        // 2. OpenStreetMap Nominatim (Primary when selected, or automatic fallback)
+        if (!revResolved) {
+          try {
+            const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lng))}&zoom=16&addressdetails=1`;
+            const nomResp = await fetch(nomUrl, {
+              headers: {
+                "User-Agent": "SafetyLink-Core/1.0 (https://safetylink.online)",
+                "Accept-Language": "en",
+              },
+              signal: AbortSignal.timeout(5500),
+            });
+            if (nomResp.ok) {
+              const n: any = await nomResp.json();
+              const addr = n?.address || {};
+              suburb = String(addr.road || addr.suburb || addr.neighbourhood || addr.quarter || addr.village || "");
+              city = String(addr.city || addr.town || addr.municipality || addr.county || "");
+              state = String(addr.state || addr.region || "");
+              country = String(addr.country || "");
+              countryCode = String(addr.country_code || "ZA").toUpperCase();
+              providerUsed = "NOMINATIM";
+              accuracyLabel = "OpenStreetMap Nominatim";
+              revResolved = true;
+            }
+          } catch (err) {
+            console.warn("[geo/locate] Nominatim reverse geocode skipped:", (err as any)?.message);
+          }
+        }
+      }
+
+      const parts = [suburb, city, state, country].filter((v, i, arr) => Boolean(v) && arr.indexOf(v) === i);
+      const displayLocation = parts.length > 0 ? parts.slice(0, 3).join(", ") : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+      const payload = {
+        ok: true,
+        mode: resolvedMode,
+        provider: providerUsed,
+        bigDataCloudConfigured: Boolean(bdcKey),
+        ip: detectedIp || null,
+        lat,
+        lng,
+        suburb,
+        city,
+        state,
+        country,
+        countryCode,
+        displayLocation,
+        accuracyLabel,
+        timestamp: Date.now(),
+      };
+
+      if (geoLocateCache.size >= 500) {
+        const oldestKey = geoLocateCache.keys().next().value;
+        if (oldestKey) geoLocateCache.delete(oldestKey);
+      }
+      geoLocateCache.set(cacheKey, { expiresAt: Date.now() + 10 * 60_000, payload });
+
+      return res.json(payload);
+    } catch (err: any) {
+      console.error("[geo/locate] error:", err);
+      return res.status(500).json({ ok: false, error: "Geolocation service unavailable." });
+    }
+  });
+
   app.get("/api/safety-feed/live", async (req, res) => {
     try {
       const rawLat = req.query.lat !== undefined ? Number(req.query.lat) : NaN;

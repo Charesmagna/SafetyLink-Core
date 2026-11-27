@@ -1936,9 +1936,30 @@ const App: React.FC = () => {
       
 
       {mapsQuotaError && (
-        <div className="sticky top-0 z-[99998] w-full bg-amber-950/95 border-b border-amber-500/40 px-4 py-2 text-amber-200 text-xs font-mono flex items-center justify-between gap-3">
-          <span>⚠️ {mapsQuotaError} (Emergency dispatch remains unaffected.)</span>
-          <button onClick={() => setMapsQuotaError(null)} className="text-amber-400 hover:text-white font-bold px-2">Dismiss</button>
+        <div
+          role="alert"
+          className="sticky top-0 z-[99998] flex items-center justify-between gap-4 bg-amber-50 border-b border-amber-200 px-4 py-3 text-sm text-amber-900"
+        >
+          <span>
+            <strong>Google Maps daily quota reached.</strong>{' '}
+            The map cannot load right now — you can switch to Open Live Map or 3D Map, or continue with your own Google Cloud API key. (Emergency dispatch remains unaffected.){' '}
+            <a
+              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-medium hover:text-amber-950"
+            >
+              Learn how to fix this
+            </a>
+          </span>
+          <button
+            type="button"
+            onClick={() => setMapsQuotaError(null)}
+            aria-label="Dismiss Google Maps quota notice"
+            className="text-amber-700 hover:text-amber-950 font-bold text-lg leading-none px-1"
+          >
+            &times;
+          </button>
         </div>
       )}
 
