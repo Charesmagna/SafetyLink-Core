@@ -1,3 +1,4 @@
+import { ApkBuildInfo } from './ApkBuildInfo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -120,6 +121,7 @@ export const ApkDownloadPopup: React.FC = () => {
                 <h2 className="text-2xl font-mono font-bold text-white tracking-tight mt-1">
                   SafetyLink Sideload Package
                 </h2>
+                <ApkBuildInfo tone="dark" className="mt-2" />
               </div>
             </div>
 

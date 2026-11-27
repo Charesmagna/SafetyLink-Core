@@ -1,3 +1,4 @@
+import { ApkBuildInfo } from './components/ApkBuildInfo';
 import { FirstLaunchDisclaimer } from "./components/FirstLaunchDisclaimer";
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -1130,7 +1131,8 @@ const App: React.FC = () => {
               title="Download SafetyLink Version 1 APK"
             >
               <span>⬇</span>
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">Download Stable</span>
+              <ApkBuildInfo variant="tiny" className="hidden md:inline text-[8px]" />
             </a>
           )}
 

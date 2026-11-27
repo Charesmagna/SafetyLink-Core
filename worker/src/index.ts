@@ -560,6 +560,31 @@ app.get('/api/app/versions', async (c) => {
   return c.json({ versions: Array.isArray(list) ? list : [] });
 });
 
+// Stable (main) vs Testing (beta) build numbers, used by every APK download button
+app.get('/api/app/channels', async (c) => {
+  const r2: any = (c.env as any).RELEASES;
+  const read = async (key: string) => {
+    try {
+      const obj: any = await r2?.get(key);
+      const list = obj ? await obj.json().catch(() => []) : [];
+      const top: any = Array.isArray(list) && list.length ? list[0] : null;
+      if (!top) return null;
+      const build = parseInt(String(top.version || '').split('.').pop() || '', 10);
+      return { version: String(top.version), build: isNaN(build) ? null : build, date: top.date || null, size: top.size || null };
+    } catch { return null; }
+  };
+  const stable: any = await read('versions/index.json');
+  const testing: any = await read('versions-beta/index.json');
+  let relation = 'no-testing';
+  if (!stable) relation = 'no-stable';
+  else if (testing && stable.build != null && testing.build != null) {
+    relation = testing.build === stable.build ? 'same' : testing.build > stable.build ? 'testing-ahead' : 'testing-behind';
+  }
+  c.header('Cache-Control', 'public, max-age=60');
+  return c.json({ stable, testing, relation });
+});
+
+
 app.get('/api/app/beta/versions', async (c) => {
   const obj: any = await (c.env as any).RELEASES?.get('versions-beta/index.json');
   const list = obj ? await obj.json().catch(() => []) : [];
