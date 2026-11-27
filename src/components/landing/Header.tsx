@@ -113,33 +113,23 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               {downloadMenuOpen && (
                 <div
                   onMouseLeave={() => setDownloadMenuOpen(false)}
-                  className="absolute right-0 top-full mt-2 w-64 p-2 rounded-xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-700 shadow-xl z-50 space-y-1"
+                  className="absolute right-0 top-full mt-2 w-60 p-2 rounded-xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-700 shadow-xl z-50 space-y-1"
                 >
                   <a
                     href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                    download="SafetyLink-v1.apk"
+                    download="SafetyLink.apk"
                     onClick={() => setDownloadMenuOpen(false)}
                     className="block px-3 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 transition-colors no-underline"
                   >
-                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">SafetyLink Version 1 APK</div>
-                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Official Stable · All latest features</div>
-                  </a>
-                  <a
-                    href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => setDownloadMenuOpen(false)}
-                    className="block px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors no-underline"
-                  >
-                    <div className="text-xs font-bold text-slate-900 dark:text-white">Windows Control Desk EXE</div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Desktop command console</div>
+                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">SafetyLink APK</div>
+                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Official Android download</div>
                   </a>
                   <button
                     type="button"
                     onClick={(e) => handleLinkClick(e, 'download')}
                     className="w-full text-left px-3 py-2 rounded-lg border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                   >
-                    Open Full Download Hub →
+                    More versions &amp; platforms →
                   </button>
                 </div>
               )}
@@ -209,19 +199,18 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 gap-2">
               <a
                 href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                download="SafetyLink-v1.apk"
+                download="SafetyLink.apk"
                 className="w-full py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold text-center no-underline"
               >
-                Download SafetyLink Version 1 APK (Official Stable)
+                Download SafetyLink APK
               </a>
-              <a
-                href="https://github.com/Charesmagna/SafetyLink-Core/releases/latest"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-2.5 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold text-center no-underline"
+              <button
+                type="button"
+                onClick={(e) => handleLinkClick(e, 'download')}
+                className="w-full py-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 text-xs font-bold text-center"
               >
-                Windows Control Desk EXE
-              </a>
+                More versions &amp; platforms →
+              </button>
             </div>
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex gap-2">

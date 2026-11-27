@@ -8,6 +8,7 @@ import { VoiceAccessibilityAssistant } from './VoiceAccessibilityAssistant';
 import { PopiaLegalModal } from './PopiaLegalModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from '../utils/cloudinary';
+import { generateOrganizationCode } from '../utils/orgCode';
 
 const slide1 = ASSETS.logo;
 const slide2 = ASSETS.logo;
@@ -225,14 +226,14 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
 
     setTimeout(() => {
       const { organizations } = useAppStore.getState();
-      const isFamily = orgName.toLowerCase().includes('family') || orgName.toLowerCase().includes('home');
-      const prefix = isFamily ? 'SL-FAM' : 'SL-ORG';
-      const existing = organizations.filter(o => o.id.startsWith(prefix));
-      const nextNum = existing.length + 1;
-      const code = `${prefix}-${nextNum.toString().padStart(3, '0')}`;
+      const existingIds = new Set(organizations.map((o) => o.id.toUpperCase()));
+      let code = generateOrganizationCode(orgName);
+      for (let i = 0; i < 8 && existingIds.has(code); i++) {
+        code = generateOrganizationCode(orgName);
+      }
       setGeneratedOrgId(code);
       setIsGenerating(false);
-    }, 1200);
+    }, 500);
   };
 
   const handleOrgRegister = async (e: React.FormEvent) => {

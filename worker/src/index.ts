@@ -97,15 +97,44 @@ export interface Env {
 export interface Variables {
   orgId: string;
   email: string;
+  userId: string;
 }
 
 const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+// ── CORS (Strict Trusted-Origin Allowlist) ────────────────────────────────────
+const ALLOWED_CORS_ORIGINS = new Set([
+  'https://safetylink.online',
+  'https://www.safetylink.online',
+  'https://api.safetylink.online',
+  'https://safetylink-core.pages.dev',
+  'capacitor://localhost',
+  'https://localhost',
+  'http://localhost',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+]);
+
+const isTrustedCorsOrigin = (origin?: string | null): boolean => {
+  if (!origin) return false;
+  if (ALLOWED_CORS_ORIGINS.has(origin)) return true;
+  try {
+    const u = new URL(origin);
+    if (u.protocol === 'https:' && (u.hostname.endsWith('.safetylink.online') || u.hostname.endsWith('.safetylink-core.pages.dev') || u.hostname.endsWith('.run.app'))) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 app.use('*', cors({
-  origin: (origin) => origin || '*',
+  origin: (origin) => (isTrustedCorsOrigin(origin) ? origin : ''),
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'Range', 'X-Profile-Token', 'X-PCM-Token', 'X-Signature', 'X-Hmac-Sha256', 'X-IoT-Token', 'X-Webhook-Secret'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Range', 'X-Profile-Token', 'X-PCM-Token', 'X-Signature', 'X-Hmac-Sha256', 'X-IoT-Token', 'X-Webhook-Secret', 'X-Internal-Secret'],
   exposeHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
   credentials: true,
 }));
@@ -175,8 +204,9 @@ const authMiddleware = async (c: any, next: any) => {
     }
   }
   if (payload.orgId && await checkTrialExpired(c.env.DB, payload.orgId)) return c.json({ error: 'Trial expired', code: 'TRIAL_EXPIRED' }, 403);
-  c.set('orgId', payload.orgId);
-  c.set('email', payload.email);
+  c.set('orgId', payload.orgId || '');
+  c.set('email', payload.email || '');
+  c.set('userId', payload.userId || '');
   await next();
 };
 
@@ -435,7 +465,13 @@ async function fireAllAlerts(
         }));
       }
       if (!called && twAuth && tw.from) {
-        called = await attempt('VOICE', 'twilio', to, () => twPost('Calls', { From: tw.from, To: to, Twiml: `<Response><Say voice="alice">${spoken}</Say><Pause length="1"/><Say voice="alice">${spoken}</Say></Response>` }));
+        const safeSpokenXml = spoken
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+        called = await attempt('VOICE', 'twilio', to, () => twPost('Calls', { From: tw.from, To: to, Twiml: `<Response><Say voice="alice">${safeSpokenXml}</Say><Pause length="1"/><Say voice="alice">${safeSpokenXml}</Say></Response>` }));
       }
       if (!called && bl.key && bl.key !== 'not_provided') {
         await attempt('VOICE', 'bland', to, () => fetch('https://api.bland.ai/v1/calls', {
@@ -576,6 +612,17 @@ app.post('/api/fcm/test-ring', async (c) => {
   const targetPhone = normalizePhone(body.phone || '');
   if (!targetPhone) return c.json({ ok: false, error: 'Valid target phone number is required' }, 400);
 
+  // Per-phone 20s rate limit so anonymous callers cannot abuse loud-ring test endpoint
+  try {
+    await c.env.DB.prepare('CREATE TABLE IF NOT EXISTS sl_fcm_test_rl (phone TEXT PRIMARY KEY, last_at INTEGER NOT NULL)').run();
+    const rlRow: any = await c.env.DB.prepare('SELECT last_at FROM sl_fcm_test_rl WHERE phone = ?').bind(targetPhone).first();
+    if (rlRow && Date.now() - Number(rlRow.last_at || 0) < 20_000) {
+      return c.json({ ok: false, error: 'Please wait 20 seconds before sending another test ring to this number.' }, 429);
+    }
+    await c.env.DB.prepare('INSERT INTO sl_fcm_test_rl (phone, last_at) VALUES (?, ?) ON CONFLICT(phone) DO UPDATE SET last_at=excluded.last_at')
+      .bind(targetPhone, Date.now()).run();
+  } catch {}
+
   const tokens = await tokensForPhone(c.env.DB, targetPhone);
   if (tokens.length === 0) {
     return c.json({
@@ -686,9 +733,14 @@ app.get('/api/safety-feed/article/:uuid', async (c) => {
   return c.redirect(resolved.url, 302);
 });
 
-// Cloudflare R2 Media Stream & Download Routes (MEDIA bucket priority + Byte-Range support)
+// Cloudflare R2 Media Stream & Download Routes (strictly isolated to MEDIA bucket; never exposes RELEASES backups)
 async function getR2AssetFromEnv(env: any, rawKey: string, rangeHeader?: string | null) {
-  const key = decodeURIComponent(rawKey).replace(/^\/+/, '');
+  let decoded = '';
+  try { decoded = decodeURIComponent(rawKey); } catch { return null; }
+  const key = decoded.replace(/^\/+/, '');
+  if (!key || key.includes('..') || key.includes('\\') || /^(backups|versions|versions-beta)\//i.test(key) || /\.(sql|db|sqlite|env)$/i.test(key)) {
+    return null;
+  }
   const candidates = key.startsWith('Safetylink/') ? [key, key.replace(/^Safetylink\//, '')] : ['Safetylink/' + key, key];
 
   let parsedRange: { offset: number; length?: number; end?: number } | undefined;
@@ -707,25 +759,29 @@ async function getR2AssetFromEnv(env: any, rawKey: string, rangeHeader?: string 
     }
   }
 
-  for (const bucket of [env.MEDIA, env.RELEASES]) {
-    if (!bucket) continue;
-    for (const candidate of candidates) {
-      const obj = parsedRange
-        ? await bucket.get(candidate, { range: parsedRange }).catch(() => null)
-        : await bucket.get(candidate).catch(() => null);
-      if (obj) {
-        return { obj, key: candidate, hasRange: Boolean(parsedRange), rangeStart, hasEnd, requestedEnd };
-      }
+  // Strictly serve public media from MEDIA bucket only (never RELEASES bucket where D1 SQL backups live)
+  const bucket = env.MEDIA;
+  if (!bucket) return null;
+  for (const candidate of candidates) {
+    const obj = parsedRange
+      ? await bucket.get(candidate, { range: parsedRange }).catch(() => null)
+      : await bucket.get(candidate).catch(() => null);
+    if (obj) {
+      return { obj, key: candidate, hasRange: Boolean(parsedRange), rangeStart, hasEnd, requestedEnd };
     }
   }
   return null;
 }
 
 app.get('/api/r2/assets', async (c) => {
-  const prefix = c.req.query('prefix') || 'Safetylink/';
-  const bucket = c.env.MEDIA || c.env.RELEASES;
+  const rawPrefix = String(c.req.query('prefix') || 'Safetylink/').replace(/^\/+/, '');
+  if (rawPrefix.includes('..') || /^(backups|versions|versions-beta)\/?/i.test(rawPrefix)) {
+    return c.json({ success: false, assets: [], error: 'Invalid prefix' }, 400);
+  }
+  const prefix = rawPrefix;
+  const bucket = c.env.MEDIA;
   if (!bucket) {
-    return c.json({ success: false, assets: [], error: 'R2 bucket binding not configured' }, 503);
+    return c.json({ success: false, assets: [], error: 'R2 media bucket binding not configured' }, 503);
   }
   const assets: any[] = [];
   const categories: Record<string, number> = {};
@@ -814,7 +870,7 @@ app.get('/api/r2/download/*', async (c) => {
     return c.json({ error: 'Asset not found in R2 storage' }, 404);
   }
   const { obj, key } = found;
-  const filename = key.split('/').pop() || 'download';
+  const filename = (key.split('/').pop() || 'download').replace(/["\\\r\n]/g, '');
   return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/octet-stream',
@@ -870,6 +926,16 @@ app.post('/api/r2/delete', async (c) => handleR2Delete(c));
 
 
 app.get('/api/init-db', async (c) => {
+  const isAdmin = await adminAuthorised(c.env, c.req.raw);
+  const internalSecret = String(c.env.INTERNAL_API_SECRET || '').trim();
+  const givenInternal = String(
+    c.req.header('X-Internal-Secret') ||
+    (c.req.header('Authorization') || '').replace(/^Bearer\s+/i, '')
+  ).trim();
+  const internalOk = Boolean(internalSecret && givenInternal && safeEq(givenInternal, internalSecret));
+  if (!isAdmin && !internalOk) {
+    return c.json({ error: 'Unauthorised' }, 401 as any);
+  }
   const initStatements = `
     CREATE TABLE IF NOT EXISTS organisations (
       id TEXT PRIMARY KEY,
@@ -939,6 +1005,43 @@ app.get('/api/init-db', async (c) => {
 });
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+const ORG_STOP_WORDS = new Set([
+  'THE', 'OF', 'AND', 'FOR', 'IN', 'AT', 'BY', 'TO', 'A', 'AN',
+  'PTY', 'LTD', 'LIMITED', 'INC', 'LLC', 'CO', 'CC', 'SA', 'NPC',
+]);
+const ORG_RAND_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function buildOrgAbbrev(orgName: string): string {
+  const cleaned = String(orgName || '')
+    .toUpperCase()
+    .replace(/&/g, ' ')
+    .replace(/[^A-Z0-9\s-]/g, ' ')
+    .replace(/-/g, ' ')
+    .trim();
+  const rawWords = cleaned.split(/\s+/).filter(Boolean);
+  const meaningful = rawWords.filter((w) => !ORG_STOP_WORDS.has(w));
+  const words = meaningful.length > 0 ? meaningful : rawWords;
+  if (words.length === 0) return 'NODE';
+  if (words.length >= 3) return words.slice(0, 5).map((w) => w[0]).join('');
+  if (words.length === 2) {
+    const [w1, w2] = words;
+    if (w1.length <= 3 && w2.length >= 1) return `${w1}${w2[0]}`.slice(0, 5);
+    return `${w1.slice(0, 2)}${w2.slice(0, 2)}`;
+  }
+  const single = words[0].replace(/[^A-Z0-9]/g, '');
+  return single.length <= 4 ? single.padEnd(2, 'X') : single.slice(0, 4);
+}
+
+function generateCryptoOrgSuffix(length = 5): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += ORG_RAND_ALPHABET[bytes[i] % ORG_RAND_ALPHABET.length];
+  }
+  return out;
+}
+
 const handleRegisterOrg = async (c: any) => {
   const body: any = await c.req.json();
   const email = body.email || body.contactEmail || body.contact_email;
@@ -947,13 +1050,30 @@ const handleRegisterOrg = async (c: any) => {
   const contactName = body.contactName || body.contact_name || orgName || 'Admin';
 
   if (!email || !password || !orgName || !contactName) return c.json({ error: 'All fields required' }, 400);
-  const cleanName = orgName.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const abbrev = cleanName.length >= 3 ? cleanName.slice(0, 9) : (cleanName || 'ORG');
-  // The server always issues the code. Any code sent by the phone is ignored.
-  // Format: SL-<NAME>-001, 002, ... numbered from the highest existing number, so codes never repeat.
-  const last = await c.env.DB!.prepare("SELECT id FROM organisations WHERE id LIKE ? ORDER BY id DESC LIMIT 1").bind(`SL-${abbrev}-%`).first() as any;
-  const lastNum = last?.id ? parseInt(String(last.id).split('-').pop() || '0', 10) : 0;
-  const orgId = `SL-${abbrev}-${String((isNaN(lastNum) ? 0 : lastNum) + 1).padStart(3, '0')}`;
+  const abbrev = buildOrgAbbrev(orgName);
+
+  // If the client previewed a valid non-predictable SL-<ABBREV>-<RAND5> code, honour it if unused;
+  // reject legacy sequential SL-ORG-001 / SL-FAM-001 hints and always generate a cryptographic random suffix.
+  const requestedId = String(body.id || body.org_code || body.orgCode || '').trim().toUpperCase();
+  const matchesRequested =
+    requestedId.startsWith(`SL-${abbrev}-`) &&
+    new RegExp(`^SL-${abbrev}-[A-HJ-NP-Z2-9]{5}$`).test(requestedId) &&
+    !/^SL-(ORG|FAM)-\d{3}$/.test(requestedId);
+
+  let orgId = '';
+  if (matchesRequested) {
+    const taken = await c.env.DB!.prepare('SELECT id FROM organisations WHERE id = ?').bind(requestedId).first();
+    if (!taken) orgId = requestedId;
+  }
+  for (let attempt = 0; attempt < 8 && !orgId; attempt++) {
+    const candidate = `SL-${abbrev}-${generateCryptoOrgSuffix(5)}`;
+    const taken = await c.env.DB!.prepare('SELECT id FROM organisations WHERE id = ?').bind(candidate).first();
+    if (!taken) orgId = candidate;
+  }
+  if (!orgId) {
+    orgId = `SL-${abbrev}-${generateCryptoOrgSuffix(6)}`;
+  }
+
   const hash = await hashPassword(password, c.env.JWT_SECRET || 'sl-salt');
   const now = Date.now();
   try {
@@ -1442,16 +1562,17 @@ app.get('/api/admin/launch-health', async (c) => {
 // IoT Hardware Panic Webhook (NB-IoT Buttons, Hikvision AX PRO Hubs, 4G GPS Smartwatches)
 app.post('/api/webhook/iot-panic', async (c) => {
   const configuredSecret = String(c.env.IOT_WEBHOOK_SECRET || c.env.PCM_WEBHOOK_TOKEN || '').trim();
-  if (configuredSecret) {
-    const provided = String(
-      c.req.header('X-IoT-Token')
-      || c.req.header('X-Webhook-Secret')
-      || c.req.query('token')
-      || ''
-    ).trim();
-    if (!provided || !safeEq(provided, configuredSecret)) {
-      return c.json({ error: 'Unauthorized IoT webhook token' }, 401 as any);
-    }
+  if (!configuredSecret) {
+    return c.json({ error: 'IoT webhook authentication is not configured on this server' }, 503 as any);
+  }
+  const provided = String(
+    c.req.header('X-IoT-Token')
+    || c.req.header('X-Webhook-Secret')
+    || c.req.query('token')
+    || ''
+  ).trim();
+  if (!provided || !safeEq(provided, configuredSecret)) {
+    return c.json({ error: 'Unauthorized IoT webhook token' }, 401 as any);
   }
 
   const body: any = await c.req.json().catch(() => ({}));
@@ -1500,14 +1621,16 @@ app.post('/api/webhook/iot-panic', async (c) => {
       for (const target of contactPhones) {
         const toks = await tokensForPhone(c.env.DB, target).catch(() => []);
         for (const tok of toks) {
-          const sent = await sendLoudAlarm(c.env, tok, {
+          const alarmTitle = '🚨 EMERGENCY: Hardware SOS Alert';
+          const alarmBody = `Hardware SOS Triggered (${deviceType} · ${zone})${battery !== null ? ` · Battery ${battery}%` : ''}`;
+          const sent = await sendLoudAlarm(c.env.FCM_SERVICE_ACCOUNT, tok, alarmTitle, alarmBody, {
             incidentId,
             callerName: `${deviceType} (${deviceId || ownerPhone})`,
-            callerPhone: ownerPhone,
-            message: `Hardware SOS Triggered (${deviceType} · ${zone})${battery !== null ? ` · Battery ${battery}%` : ''}`,
-            lat: lat ?? 0,
-            lng: lng ?? 0,
-            source: 'IOT_HARDWARE',
+            callerNumber: ownerPhone,
+            location: lat !== null && lng !== null ? `https://maps.google.com/?q=${lat},${lng}` : 'Hardware Panic Trigger',
+            triggerSource: 'IOT_HARDWARE',
+            ...(lat !== null ? { lat: String(lat) } : {}),
+            ...(lng !== null ? { lng: String(lng) } : {}),
           }).catch(() => ({ ok: false, unregistered: false } as any));
           if (sent?.ok) fcmTriggered++;
           if (sent?.unregistered) await pruneDeviceToken(c.env.DB, tok).catch(() => {});
@@ -1623,6 +1746,22 @@ async function handlePcmWebhookInner(c: any) {
   let body: any = {};
   try { body = JSON.parse(raw); } catch { try { body = Object.fromEntries(new URLSearchParams(raw)); } catch { body = {}; } }
 
+  // Support native SMSGate (sms-gate.app) webhook events cleanly without retry loops
+  const webhookEvent = String(body.event || '').trim().toLowerCase();
+  if (webhookEvent === 'system:ping') {
+    const hb = await recordGatewayHeartbeat(c.env, {
+      gatewayId: String(body.deviceId || body.payload?.deviceId || 'smsgate-1'),
+      battery: body.payload?.battery ?? body.battery,
+      network: body.payload?.network ?? body.network,
+    }).catch(() => ({ json: { ok: true }, status: 200 }));
+    return c.json({ ok: true, event: 'system:ping', heartbeat: hb.json }, 200);
+  }
+  if (webhookEvent && webhookEvent.startsWith('sms:') && webhookEvent !== 'sms:received') {
+    return c.json({ ok: true, alerted: false, ignoredEvent: webhookEvent }, 200);
+  }
+
+  const nested = body && typeof body.payload === 'object' && body.payload ? body.payload : {};
+
   const rawText = String(
     body.rawMessage ||
     body.pcmText ||
@@ -1633,6 +1772,9 @@ async function handlePcmWebhookInner(c: any) {
     body.content ||
     body.sms_body ||
     body.sms ||
+    nested.message ||
+    nested.text ||
+    nested.body ||
     ''
   ).trim();
 
@@ -1641,11 +1783,16 @@ async function handlePcmWebhookInner(c: any) {
     body.sender ||
     body.from ||
     body.phone ||
+    body.phoneNumber ||
     body.address ||
     body.number ||
     body.sms_from ||
     body.originatingAddress ||
     body.from_number ||
+    nested.phoneNumber ||
+    nested.sender ||
+    nested.from ||
+    nested.phone ||
     ''
   ).trim();
 
@@ -1739,9 +1886,12 @@ app.post('/api/org/:orgId/join-requests', authMiddleware, async (c) => {
   const orgId = c.req.param('orgId').toUpperCase();
   const body: any = await c.req.json().catch(() => ({}));
   const reqId = crypto.randomUUID();
+  const authedUserId = String(c.get('userId') || '').trim();
+  const isSuper = String(c.get('orgId') || '').toUpperCase() === 'SL-ADMIN-0000';
+  const targetUserId = isSuper ? (body.userId || authedUserId || reqId) : (authedUserId || reqId);
   await c.env.DB?.prepare(
     `INSERT INTO org_join_requests (id, org_id, user_id, username, full_name, phone, email, requested_role, status, created_at) VALUES (?,?,?,?,?,?,?,?,'PENDING',?)`
-  ).bind(reqId, orgId, body.userId || reqId, body.username || '', body.fullName || '', body.phone || '', body.email || c.get('email') || '', body.requestedRole || 'Community Member', Date.now()).run();
+  ).bind(reqId, orgId, targetUserId, body.username || '', body.fullName || '', body.phone || '', body.email || c.get('email') || '', body.requestedRole || 'Community Member', Date.now()).run();
   return c.json({ ok: true, id: reqId, status: 'PENDING' });
 });
 
@@ -1786,7 +1936,10 @@ app.delete('/api/org/:orgId/members/:userId', authMiddleware, async (c) => {
 
 app.post('/api/user/org/disconnect', authMiddleware, async (c) => {
   const body: any = await c.req.json().catch(() => ({}));
-  const userId = String(body.userId || '').trim();
+  const authedUserId = String(c.get('userId') || '').trim();
+  const isSuper = String(c.get('orgId') || '').toUpperCase() === 'SL-ADMIN-0000';
+  const requestedUserId = String(body.userId || '').trim();
+  const userId = isSuper ? (requestedUserId || authedUserId) : authedUserId;
   const email = String(c.get('email') || '').trim();
   if (!userId && !email) return c.json({ error: 'User identity required' }, 400);
   if (userId) {
@@ -2148,8 +2301,15 @@ app.post('/api/gemini/chat', async (c) => {
   const message = String(body?.message || '').trim();
   if (!message) return c.json({ error: 'message is required' }, 400 as any);
 
-  const allowed = new Set(['gemini-4-hydrogen', 'gemini-3.1-flash-lite']);
-  const model = allowed.has(body?.model) ? body.model : 'gemini-3.1-flash-lite';
+  const allowedModels: Record<string, string> = {
+    'gemini-2.5-flash': 'gemini-2.5-flash',
+    'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
+    'gemini-2.5-pro': 'gemini-2.5-pro',
+    // Backward-compatible aliases from earlier APK/web builds
+    'gemini-3.1-flash-lite': 'gemini-2.5-flash',
+    'gemini-4-hydrogen': 'gemini-2.5-flash',
+  };
+  const model = allowedModels[String(body?.model || '')] || 'gemini-2.5-flash';
   const sysText =
     body?.systemInstruction ||
     "You are Kleva (Lizzy), SafetyLink's calm, reassuring Post-Emergency Care Companion. Check if the user is physically safe, keep responses concise and practical, and share emergency numbers (10111 SAPS, 112 Emergency, 10177 Ambulance) when needed.";
@@ -2159,15 +2319,12 @@ app.post('/api/gemini/chat', async (c) => {
     system_instruction: { parts: [{ text: fullSystem }] },
     contents: sanitizeWorkerChatContents(body?.history, message),
   };
-  if (model === 'gemini-4-hydrogen') {
-    reqPayload.generationConfig = { thinkingConfig: { thinkingLevel: 'LOW' } };
-  }
 
   const gRes = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
       body: JSON.stringify(reqPayload),
     }
   );
@@ -2190,10 +2347,10 @@ app.post('/api/gemini/tts', async (c) => {
   if (!text) return c.json({ error: 'text is required' }, 400 as any);
 
   const gRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash-lite-tts:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: text.slice(0, 1000) }] }],
         generationConfig: {
@@ -2227,10 +2384,10 @@ app.post('/api/gemini/transcribe', async (c) => {
   if (!body?.audioBase64) return c.json({ error: 'audioBase64 is required' }, 400 as any);
 
   const gRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-transcribe:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
       body: JSON.stringify({
         contents: [
           {

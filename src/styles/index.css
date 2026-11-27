@@ -208,35 +208,52 @@ html.dark .hud-panel {
 }
 
 /* =========================================================
-   MISSION-CONTROL 3D COCKPIT PANEL (.carbon-panel) — RESTORED
+   MISSION-CONTROL 3D COCKPIT PANEL (.carbon-panel)
+   Restored original woven carbon-fiber mesh ("net") + frosted glass shine
    ========================================================= */
 .carbon-panel {
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.84) 0%, rgba(241, 245, 249, 0.76) 100%);
+  background-color: rgba(248, 250, 252, 0.80);
+  background-image:
+    linear-gradient(45deg, rgba(15, 23, 42, 0.045) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(15, 23, 42, 0.045) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(15, 23, 42, 0.045) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(15, 23, 42, 0.045) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 26px;
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
   box-shadow:
-    0 28px 64px rgba(15, 23, 42, 0.14),
+    0 24px 56px rgba(15, 23, 42, 0.13),
     0 6px 18px rgba(15, 23, 42, 0.06),
-    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 1px 1px rgba(255, 255, 255, 0.92),
     inset 0 -1px 0 rgba(15, 23, 42, 0.06);
 }
 html.dark .carbon-panel {
-  background: linear-gradient(160deg, rgba(15, 29, 58, 0.78) 0%, rgba(7, 16, 36, 0.86) 55%, rgba(4, 10, 24, 0.92) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  background-color: rgba(11, 15, 25, 0.78);
+  background-image:
+    linear-gradient(45deg, rgba(5, 7, 12, 0.72) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(5, 7, 12, 0.72) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(5, 7, 12, 0.72) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(5, 7, 12, 0.72) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
   box-shadow:
-    0 32px 72px rgba(2, 6, 23, 0.78),
-    0 0 36px rgba(16, 185, 129, 0.10),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 24px 60px rgba(0, 0, 0, 0.82),
+    0 0 30px rgba(16, 185, 129, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.09),
     inset 0 -1px 0 rgba(0, 0, 0, 0.55);
 }
 
-/* Restored Tactical Grid, Scanlines, Lens Flare & Neon Glows */
+/* Restored Tactical Grid, Scanlines, Glass Wave Reflection & Neon Glows */
 .digital-grid {
   background-image:
-    linear-gradient(rgba(56, 189, 248, 0.11) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.11) 1px, transparent 1px);
+    linear-gradient(rgba(56, 189, 248, 0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.10) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -255,16 +272,33 @@ html.dark .carbon-panel {
   z-index: 1;
 }
 
+/* Original gentle diagonal glass reflection wave sweep (GPU-composited, lightweight) */
 .lens-flare-overlay::after {
   content: "";
   position: absolute;
-  top: -40%;
-  left: -30%;
-  width: 160%;
-  height: 90%;
-  background: radial-gradient(ellipse at 35% 30%, rgba(255, 255, 255, 0.14), transparent 62%);
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.04) 48%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.04) 52%,
+    transparent 55%
+  );
+  transform: translate3d(-28%, -28%, 0) rotate(-15deg);
+  will-change: transform;
   pointer-events: none;
   z-index: 1;
+  animation: light-sweep 9s ease-in-out infinite;
+}
+
+@keyframes light-sweep {
+  0% { transform: translate3d(-28%, -28%, 0) rotate(-15deg); }
+  50% { transform: translate3d(28%, 28%, 0) rotate(-15deg); }
+  100% { transform: translate3d(-28%, -28%, 0) rotate(-15deg); }
 }
 
 .neon-glow-red {

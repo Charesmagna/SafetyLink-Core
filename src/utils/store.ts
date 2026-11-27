@@ -11,6 +11,7 @@ import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
 const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 import { UpdateInfo } from '../services/UpdateService';
+import { generateOrganizationCode } from './orgCode';
 export type { UpdateInfo, SimCardInfo };
 
 interface AppState {
@@ -1778,12 +1779,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 1. If in demo mode, do local mock registration and auto-login
     if (get().demoMode) {
       const orgs = get().organizations;
-      const isFamily = org.name.toLowerCase().includes('family') || org.name.toLowerCase().includes('home');
-      const prefix = isFamily ? 'SL-FAM' : 'SL-ORG';
-      const existing = orgs.filter(o => o.id.startsWith(prefix));
-      const nextNum = existing.length + 1;
-      const numericId = `${prefix}-${nextNum.toString().padStart(3, '0')}`;
-      const generatedId = (org.id || numericId).trim().toUpperCase();
+      const existingIds = new Set(orgs.map((o) => o.id.toUpperCase()));
+      const candidate = String(org.id || '').trim().toUpperCase();
+      const isLegacyPredictable = /^SL-(ORG|FAM)-\d{3}$/.test(candidate);
+      let generatedId = candidate && !isLegacyPredictable ? candidate : generateOrganizationCode(org.name);
+      for (let i = 0; i < 8 && existingIds.has(generatedId); i++) {
+        generatedId = generateOrganizationCode(org.name);
+      }
 
       const newOrg: Organization = {
         name: org.name,

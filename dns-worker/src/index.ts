@@ -5,6 +5,23 @@
 export interface Env {
   BLOCKLIST: KVNamespace;
   UPSTREAM_DOH: string;
+  ADMIN_API_KEY?: string;
+}
+
+function safeEq(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function isDnsAdmin(request: Request, env: Env): { ok: boolean; status: number } {
+  const expected = String(env.ADMIN_API_KEY || '').trim();
+  if (!expected) return { ok: false, status: 503 };
+  const auth = String(request.headers.get('Authorization') || '').trim();
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token || !safeEq(token, expected)) return { ok: false, status: 401 };
+  return { ok: true, status: 200 };
 }
 
 // Default blocklist — extended by KV on each request
@@ -62,29 +79,37 @@ export default {
       return Response.json({ status: 'ok', service: 'SafetyLink DNS Shield' });
     }
 
-    // Admin: add domain to blocklist
+    // Admin: add domain to blocklist (requires Bearer ADMIN_API_KEY)
     if (url.pathname === '/admin/block' && request.method === 'POST') {
-      const { domain } = await request.json<{ domain: string }>();
-      if (!domain) return Response.json({ error: 'domain required' }, { status: 400 });
-      await env.BLOCKLIST.put(domain, '1');
-      return Response.json({ blocked: domain });
+      const auth = isDnsAdmin(request, env);
+      if (!auth.ok) return Response.json({ error: auth.status === 503 ? 'Admin key not configured' : 'Unauthorized' }, { status: auth.status });
+      const { domain } = await request.json<{ domain: string }>().catch(() => ({ domain: '' }));
+      const cleanDomain = String(domain || '').trim().toLowerCase();
+      if (!cleanDomain || !/^[a-z0-9.-]{3,253}$/.test(cleanDomain)) return Response.json({ error: 'valid domain required' }, { status: 400 });
+      await env.BLOCKLIST.put(cleanDomain, '1');
+      return Response.json({ blocked: cleanDomain });
     }
 
-    // Admin: remove domain
+    // Admin: remove domain (requires Bearer ADMIN_API_KEY)
     if (url.pathname === '/admin/unblock' && request.method === 'POST') {
-      const { domain } = await request.json<{ domain: string }>();
-      await env.BLOCKLIST.delete(domain);
-      return Response.json({ unblocked: domain });
+      const auth = isDnsAdmin(request, env);
+      if (!auth.ok) return Response.json({ error: auth.status === 503 ? 'Admin key not configured' : 'Unauthorized' }, { status: auth.status });
+      const { domain } = await request.json<{ domain: string }>().catch(() => ({ domain: '' }));
+      const cleanDomain = String(domain || '').trim().toLowerCase();
+      if (!cleanDomain) return Response.json({ error: 'domain required' }, { status: 400 });
+      await env.BLOCKLIST.delete(cleanDomain);
+      return Response.json({ unblocked: cleanDomain });
     }
 
     // DNS JSON API (GET /dns-query?name=example.com&type=A)
     if (url.pathname === '/dns-query' && request.method === 'GET') {
-      const name = url.searchParams.get('name') || '';
-      const type = url.searchParams.get('type') || 'A';
+      const name = String(url.searchParams.get('name') || '').trim().toLowerCase();
+      const type = String(url.searchParams.get('type') || 'A').trim().toUpperCase();
+      if (!name) return Response.json({ error: 'name required' }, { status: 400 });
       if (await isBlocked(env, name)) {
         return Response.json({ Status: 3, Question: [{ name, type: 1 }], Answer: [] });
       }
-      const upstream = await fetch(`${env.UPSTREAM_DOH}?name=${name}&type=${type}`, {
+      const upstream = await fetch(`${env.UPSTREAM_DOH}?name=${encodeURIComponent(name)}&type=${encodeURIComponent(type)}`, {
         headers: { Accept: 'application/dns-json' }
       });
       return new Response(upstream.body, { headers: { 'Content-Type': 'application/dns-json', 'Access-Control-Allow-Origin': '*' } });

@@ -3419,6 +3419,40 @@ Rules:
   });
 
   // Register new org with 14-day trial
+  const ORG_STOP_WORDS = new Set([
+    'THE', 'OF', 'AND', 'FOR', 'IN', 'AT', 'BY', 'TO', 'A', 'AN',
+    'PTY', 'LTD', 'LIMITED', 'INC', 'LLC', 'CO', 'CC', 'SA', 'NPC',
+  ]);
+  const ORG_RAND_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const buildServerOrgAbbrev = (rawName: string): string => {
+    const cleaned = String(rawName || '')
+      .toUpperCase()
+      .replace(/&/g, ' ')
+      .replace(/[^A-Z0-9\s-]/g, ' ')
+      .replace(/-/g, ' ')
+      .trim();
+    const rawWords = cleaned.split(/\s+/).filter(Boolean);
+    const meaningful = rawWords.filter((w) => !ORG_STOP_WORDS.has(w));
+    const words = meaningful.length > 0 ? meaningful : rawWords;
+    if (words.length === 0) return 'NODE';
+    if (words.length >= 3) return words.slice(0, 5).map((w) => w[0]).join('');
+    if (words.length === 2) {
+      const [w1, w2] = words;
+      if (w1.length <= 3 && w2.length >= 1) return `${w1}${w2[0]}`.slice(0, 5);
+      return `${w1.slice(0, 2)}${w2.slice(0, 2)}`;
+    }
+    const single = words[0].replace(/[^A-Z0-9]/g, '');
+    return single.length <= 4 ? single.padEnd(2, 'X') : single.slice(0, 4);
+  };
+  const generateServerOrgSuffix = (length = 5): string => {
+    const bytes = crypto.randomBytes(length);
+    let out = '';
+    for (let i = 0; i < length; i++) {
+      out += ORG_RAND_ALPHABET[bytes[i] % ORG_RAND_ALPHABET.length];
+    }
+    return out;
+  };
+
   const handleRegisterOrg = async (req: any, res: any) => {
     try {
       const { org_name, orgName, admin_password, name, password, id, org_code: explicitCode, orgCode } = req.body || {};
@@ -3429,7 +3463,26 @@ Rules:
       }
       const contactName = req.body.contactName || req.body.contact_name || final_org_name || 'Admin';
       const contactEmail = req.body.contactEmail || req.body.contact_email || req.body.email || '';
-      const org_code = id || explicitCode || orgCode || ('SL-' + String(final_org_name || 'ORG').toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6) + '-' + Math.floor(1000 + Math.random() * 9000));
+      const abbrev = buildServerOrgAbbrev(final_org_name);
+      const requested = String(id || explicitCode || orgCode || '').trim().toUpperCase();
+      const validRequested =
+        requested.startsWith(`SL-${abbrev}-`) &&
+        new RegExp(`^SL-${abbrev}-[A-HJ-NP-Z2-9]{5}$`).test(requested) &&
+        !/^SL-(ORG|FAM)-\d{3}$/.test(requested);
+
+      let org_code = '';
+      if (validRequested) {
+        const exists = await db.execute({ sql: "SELECT org_code FROM organizations WHERE org_code = ?", args: [requested] });
+        if (!exists.rows.length) org_code = requested;
+      }
+      for (let attempt = 0; attempt < 8 && !org_code; attempt++) {
+        const candidate = `SL-${abbrev}-${generateServerOrgSuffix(5)}`;
+        const exists = await db.execute({ sql: "SELECT org_code FROM organizations WHERE org_code = ?", args: [candidate] });
+        if (!exists.rows.length) org_code = candidate;
+      }
+      if (!org_code) {
+        org_code = `SL-${abbrev}-${generateServerOrgSuffix(6)}`;
+      }
       const hash = hashPasswordSecure(final_admin_password);
       const trial_expires = new Date(Date.now() + 14 * 86400000).toISOString();
       const now = Date.now();

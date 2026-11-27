@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { R2MediaShowcase } from './R2MediaShowcase';
-import { getR2StreamUrl, R2_MEDIA } from '../../utils/r2Assets';
+import { fetchR2Assets, R2_MEDIA } from '../../utils/r2Assets';
 import { ACTION_VIDEOS, ASSETS, vid, vidPoster } from '../../utils/cloudinary';
 import {
   ArrowRight,
@@ -61,152 +61,170 @@ const TRANSLATIONS: Record<string, { h1a: string; h1b: string; sub: string }> = 
   },
 };
 
-// ── 1. DEDICATED HERO FULL-BLEED BACKGROUND SLIDES (14 rotating active use-case videos + R2 visuals — never loops quickly, never blank) ──
+// ── 1. DEDICATED HERO FULL-BLEED BACKGROUND SLIDES (Wide cinematic action videos + abstract ambient scenes ONLY) ──
 type HeroBgSlide =
   | { kind: 'video'; src: string; poster: string; alt: string }
   | { kind: 'image'; src: string; alt: string };
 
 const HERO_BG_SLIDES: HeroBgSlide[] = [
   { kind: 'video', src: vid(ACTION_VIDEOS.neighbourhoodWatch), poster: vidPoster(ACTION_VIDEOS.neighbourhoodWatch), alt: 'SafetyLink Neighbourhood Watch Patrol in Action' },
-  { kind: 'image', src: R2_MEDIA.usecases.estateCommunity, alt: 'Protected South African Residential Estate' },
-  { kind: 'video', src: vid(ACTION_VIDEOS.droneDispatch), poster: vidPoster(ACTION_VIDEOS.droneDispatch), alt: 'Autonomous Aerial Drone Dispatch Tracking' },
   { kind: 'image', src: R2_MEDIA.backgrounds.cyberMesh, alt: 'Emergency Cyber Mesh Network' },
-  { kind: 'video', src: vid(ACTION_VIDEOS.familyProtection), poster: vidPoster(ACTION_VIDEOS.familyProtection), alt: 'Household Family Emergency Response' },
-  { kind: 'image', src: R2_MEDIA.usecases.tacticalSecurity, alt: 'Armed Response & Tactical Patrol Teams' },
-  { kind: 'video', src: vid(ACTION_VIDEOS.bleItagAction), poster: vidPoster(ACTION_VIDEOS.bleItagAction), alt: 'Pocket BLE iTAG Panic Trigger in Action' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.droneDispatch), poster: vidPoster(ACTION_VIDEOS.droneDispatch), alt: 'Autonomous Aerial Drone Dispatch Tracking' },
   { kind: 'image', src: R2_MEDIA.backgrounds.telemetryRadar, alt: 'Live Responder Telemetry Radar' },
-  { kind: 'video', src: vid(ACTION_VIDEOS.liveActionShowcase), poster: vidPoster(ACTION_VIDEOS.liveActionShowcase), alt: 'End-to-End SafetyLink Emergency Response' },
-  { kind: 'image', src: R2_MEDIA.usecases.corporateCampus, alt: 'Corporate Campus Security Protection' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.familyProtection), poster: vidPoster(ACTION_VIDEOS.familyProtection), alt: 'Household Family Emergency Response' },
   { kind: 'image', src: R2_MEDIA.backgrounds.darkTopology, alt: 'Dark Tactical Topology Network' },
-  { kind: 'image', src: R2_MEDIA.usecases.schoolUniversity, alt: 'School & University Campus Safety' },
-  { kind: 'image', src: '/Polish_20260907_043403519.jpg', alt: 'SafetyLink Family Protection & Quick QR Access' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.bleItagAction), poster: vidPoster(ACTION_VIDEOS.bleItagAction), alt: 'Pocket BLE iTAG Panic Trigger in Action' },
   { kind: 'image', src: R2_MEDIA.backgrounds.satelliteConstellation, alt: 'Satellite GPS & Failover Constellation' },
-  { kind: 'image', src: R2_MEDIA.platform.ambientHero, alt: 'SafetyLink Spatial Mesh Ambient Backdrop' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.liveActionShowcase), poster: vidPoster(ACTION_VIDEOS.liveActionShowcase), alt: 'End-to-End SafetyLink Emergency Response' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.neonGrid, alt: 'Neon Security Mesh Grid' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.schoolsAndWorkplaces), poster: vidPoster(ACTION_VIDEOS.schoolsAndWorkplaces), alt: 'Schools & Workplace Safety Mesh' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.quantumCircuit, alt: 'Quantum Telemetry Circuit Backdrop' },
+  { kind: 'video', src: vid(ACTION_VIDEOS.elderlyAtHome), poster: vidPoster(ACTION_VIDEOS.elderlyAtHome), alt: 'Elderly & Home Welfare Protection' },
+  { kind: 'image', src: R2_MEDIA.backgrounds.ambientSphere, alt: 'Global SafetyLink Mesh Sphere' },
 ];
 
-// ── 2. DEDICATED HERO FOREGROUND PLATFORM & ACTION VIDEO SHOWCASE (12 rich rotating slides: 6 active use-case videos + 6 platform screens) ──
+// Normalized filenames used by the main Hero Background — NEVER duplicated in the Hero Showcase Card
+const HERO_BG_KEY_SET = new Set(
+  HERO_BG_SLIDES.map((s) => decodeURIComponent(s.src.split('/').pop() || '').toLowerCase())
+);
+
+// ── 2. DEDICATED HERO FOREGROUND IMAGE SHOWCASE (Images ONLY — zero videos from background; dynamically expanded with all 75+ live R2 images) ──
 type HeroShowcaseSlide = {
-  kind: 'video' | 'image';
   src: string;
-  thumb: string;
-  poster?: string;
   tag: string;
   title: string;
   caption: string;
 };
 
-const HERO_PLATFORM_SLIDES: HeroShowcaseSlide[] = [
+const HERO_INITIAL_SHOWCASE_SLIDES: HeroShowcaseSlide[] = [
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.familyProtection),
-    poster: vidPoster(ACTION_VIDEOS.familyProtection),
-    thumb: vidPoster(ACTION_VIDEOS.familyProtection),
-    tag: 'LIVE ACTION · FAMILY',
-    title: 'Household & Family Emergency Protection',
-    caption: 'Instant BLE keyfob or phone panic trigger alerting loved ones and armed response in seconds.',
-  },
-  {
-    kind: 'image',
     src: R2_MEDIA.platform.commandDeckDark,
-    thumb: R2_MEDIA.platform.commandDeckDark,
     tag: 'CONTROL ROOM',
     title: 'Live Organization Command Deck',
     caption: 'Real-time incident map, severity triage, patrol telemetry, and instant responder dispatch.',
   },
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.droneDispatch),
-    poster: vidPoster(ACTION_VIDEOS.droneDispatch),
-    thumb: vidPoster(ACTION_VIDEOS.droneDispatch),
-    tag: 'LIVE ACTION · DRONE',
-    title: 'Autonomous Aerial Drone Dispatch',
-    caption: 'Live aerial response tracking active incidents and guiding ground patrol units directly to coordinates.',
-  },
-  {
-    kind: 'image',
     src: R2_MEDIA.platform.mobileTelemetry,
-    thumb: R2_MEDIA.platform.mobileTelemetry,
     tag: 'MOBILE APP',
     title: 'Android & PWA One-Tap SOS Telemetry',
-    caption: 'Native PanicService with 10-second PIN lock, silent duress code, and live GPS triangulation.',
+    caption: 'Native PanicService with PIN lock, silent duress code, and live GPS triangulation.',
   },
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.neighbourhoodWatch),
-    poster: vidPoster(ACTION_VIDEOS.neighbourhoodWatch),
-    thumb: vidPoster(ACTION_VIDEOS.neighbourhoodWatch),
-    tag: 'LIVE ACTION · PATROL',
-    title: 'Neighbourhood Watch & Estate Patrols',
-    caption: 'Coordinate street captains, community responders, and instant GPS panic pins across suburbs.',
+    src: R2_MEDIA.usecases.estateCommunity,
+    tag: 'ESTATES & HOMES',
+    title: 'Protected Residential Estates',
+    caption: 'Perimeter geo-fencing, household circles, and rapid armed-response linkage.',
   },
   {
-    kind: 'image',
     src: R2_MEDIA.platform.signalMap,
-    thumb: R2_MEDIA.platform.signalMap,
     tag: 'GIS & RADAR',
     title: 'Live Incident & Signal Coverage Map',
-    caption: 'Track active alerts, nearby danger zones, and patrol proximity across estates and campuses.',
+    caption: 'Track active alerts, nearby crime hotspots, and patrol proximity across estates.',
   },
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.bleItagAction),
-    poster: vidPoster(ACTION_VIDEOS.bleItagAction),
-    thumb: vidPoster(ACTION_VIDEOS.bleItagAction),
-    tag: 'LIVE ACTION · BLE FOB',
-    title: 'Pocket BLE iTAG Hardware in Action',
-    caption: 'Trigger covert SOS from your pocket or keyring even while your smartphone screen is locked.',
+    src: R2_MEDIA.hardware.itagFinderProduct,
+    tag: 'BLE HARDWARE',
+    title: 'Pocket BLE iTAG Panic Keyfobs',
+    caption: 'Trigger covert SOS from your pocket or keyring even while your phone screen is locked.',
   },
   {
-    kind: 'image',
     src: R2_MEDIA.platform.dispatchControl,
-    thumb: R2_MEDIA.platform.dispatchControl,
     tag: 'DISPATCH OPS',
     title: 'ZeroLink Offline USSD + FCM Dispatch',
-    caption: 'Automated loud FCM alarm, native SMS, stay-on-screen voice call, and zero-airtime Please Call Me failover.',
+    caption: 'Automated loud FCM alarm, native SMS, voice call, and zero-airtime Please Call Me failover.',
   },
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.schoolsAndWorkplaces),
-    poster: vidPoster(ACTION_VIDEOS.schoolsAndWorkplaces),
-    thumb: vidPoster(ACTION_VIDEOS.schoolsAndWorkplaces),
-    tag: 'LIVE ACTION · CAMPUS',
-    title: 'Schools & Workplace Safety Mesh',
-    caption: 'Protect learners, teachers, and corporate staff with instant security routing and parent alerts.',
+    src: R2_MEDIA.usecases.tacticalSecurity,
+    tag: 'ARMED RESPONSE',
+    title: 'Tactical Patrol & Responder Routing',
+    caption: 'Instant GPS navigation and live telemetry straight to patrol units in the field.',
   },
   {
-    kind: 'image',
+    src: R2_MEDIA.architecture.responseOverview,
+    tag: 'ARCHITECTURE',
+    title: 'Multi-Channel Emergency Architecture',
+    caption: 'Redundant online and offline escalation pipelines designed for zero single-point failure.',
+  },
+  {
     src: R2_MEDIA.platform.telemetryDesk,
-    thumb: R2_MEDIA.platform.telemetryDesk,
     tag: 'OPERATIONS DESK',
     title: 'Multi-Tenant Security Operations Console',
     caption: 'Manage linked households, approve or suspend members, and monitor CCTV streams.',
   },
   {
-    kind: 'video',
-    src: vid(ACTION_VIDEOS.elderlyAtHome),
-    poster: vidPoster(ACTION_VIDEOS.elderlyAtHome),
-    thumb: vidPoster(ACTION_VIDEOS.elderlyAtHome),
-    tag: 'LIVE ACTION · CARE',
-    title: 'Elderly & Lone-Worker Home Care',
-    caption: 'Proactive Watch-Me safety timers and hands-free Kleva AI welfare check-ins after every alert.',
+    src: R2_MEDIA.usecases.schoolUniversity,
+    tag: 'CAMPUS SAFETY',
+    title: 'Schools & University Protection',
+    caption: 'Learner safety rosters, campus security routing, and automated parent alert chains.',
   },
   {
-    kind: 'image',
-    src: '/Polish_20260907_043403519.jpg',
-    thumb: '/Polish_20260907_043403519.jpg',
-    tag: 'FAMILY ACCESS',
-    title: 'Instant Family Protection & QR Onboarding',
-    caption: 'Scan and connect your household contacts and emergency responders in seconds.',
+    src: R2_MEDIA.hardware.fieldBeaconAntenna,
+    tag: 'FIELD BEACONS',
+    title: 'Fixed Industrial Mesh Beacons',
+    caption: 'Weatherproof SIM/GPS/BLE field beacons built for load-shedding resilience.',
   },
   {
-    kind: 'image',
     src: R2_MEDIA.platform.networkGrid,
-    thumb: R2_MEDIA.platform.networkGrid,
     tag: 'INDOOR MESH',
     title: 'Spatial Beacon & Indoor Trilateration',
     caption: 'Floor-level beacon localization for malls, campuses, clinics, and high-rise offices.',
   },
+  {
+    src: R2_MEDIA.usecases.corporateCampus,
+    tag: 'ENTERPRISE',
+    title: 'Corporate Offices & Safe-Zones',
+    caption: 'Floor-marshal muster verification, desk panic nodes, and silent reception duress codes.',
+  },
+  {
+    src: R2_MEDIA.usecases.hospitalHealthcare,
+    tag: 'HEALTHCARE',
+    title: 'Clinics & Hospital Staff Duress',
+    caption: 'Rapid clinical staff alert escalation with POPIA-compliant incident logging.',
+  },
+  {
+    src: R2_MEDIA.hardware.limxDynamicsRobot,
+    tag: 'ROBOTICS & IOT',
+    title: 'Autonomous Patrol Integration',
+    caption: 'Mobile BLE mesh repeaters and perimeter verification linked to the Command Deck.',
+  },
+  {
+    src: R2_MEDIA.architecture.universalResilience,
+    tag: 'RESILIENCE',
+    title: 'Offline-First Failover Matrix',
+    caption: 'Seamless failover across FCM, SMS, voice calls, and zero-airtime USSD relays.',
+  },
 ];
+
+function formatR2SlideMeta(rawKey: string): { tag: string; title: string; caption: string } {
+  const filename = decodeURIComponent(rawKey.split('/').pop() || rawKey).replace(/\.[^.]+$/, '');
+  const lower = filename.toLowerCase();
+  if (lower.includes('architecture') || lower.includes('overview') || lower.includes('comparison') || lower.includes('resilience')) {
+    return {
+      tag: 'ARCHITECTURE',
+      title: filename.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim(),
+      caption: 'SafetyLink multi-channel resilience and dispatch network topology.',
+    };
+  }
+  if (lower.includes('itag') || lower.includes('finder') || lower.includes('ac_') || lower.includes('limx') || lower.includes('cat with')) {
+    return {
+      tag: 'SAFETY HARDWARE',
+      title: 'BLE Keyfob & Perimeter Hardware',
+      caption: 'Physical one-press distress hardware linked directly to the SafetyLink app.',
+    };
+  }
+  if (lower.includes('polish') || lower.includes('img_')) {
+    return {
+      tag: 'FIELD & PLATFORM',
+      title: 'SafetyLink Live Ecosystem Snapshot',
+      caption: 'Real-world household protection, mobile telemetry, and field responder coverage.',
+    };
+  }
+  return {
+    tag: 'SAFETYLINK GALLERY',
+    title: 'End-to-End Emergency Protection',
+    caption: 'Visual highlights from across the South African SafetyLink emergency network.',
+  };
+}
 
 // ── 3. DEDICATED BLE HARDWARE PHOTO POOL (Actual Hardware Only) ──
 const HARDWARE_PHOTO_POOL = [
@@ -295,6 +313,7 @@ const SHOWCASE_GALLERY = [
 export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeProps) {
   const [language, setLanguage] = useState('en');
   const [bgIdx, setBgIdx] = useState(0);
+  const [showcaseSlides, setShowcaseSlides] = useState<HeroShowcaseSlide[]>(HERO_INITIAL_SHOWCASE_SLIDES);
   const [slideIdx, setSlideIdx] = useState(0);
   const [hwIdx, setHwIdx] = useState(0);
   const [tilt, setTilt] = useState({ rx: 0, ry: 0 });
@@ -314,35 +333,76 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const hardwareRotate = useTransform(hwScroll, [0, 0.5, 1], [-4, 0, 4]);
   const hardwareScale = useTransform(hwScroll, [0, 0.5, 1], [0.94, 1.04, 0.98]);
 
+  // Dynamically enrich the Hero Showcase Card with ALL ~80+ live R2 images (excluding anything in HERO_BG_SLIDES)
+  useEffect(() => {
+    let alive = true;
+    fetchR2Assets('Safetylink/')
+      .then((res) => {
+        if (!alive || !Array.isArray(res?.assets) || res.assets.length === 0) return;
+        const existingKeys = new Set(
+          HERO_INITIAL_SHOWCASE_SLIDES.map((s) => decodeURIComponent(s.src.split('/').pop() || '').toLowerCase())
+        );
+        const extras: HeroShowcaseSlide[] = [];
+        for (const asset of res.assets) {
+          const key = String(asset.key || '');
+          if (!/\.(png|jpe?g|webp)$/i.test(key)) continue;
+          const fileName = decodeURIComponent(key.split('/').pop() || '').toLowerCase();
+          if (!fileName || HERO_BG_KEY_SET.has(fileName) || existingKeys.has(fileName)) continue;
+          if (fileName.includes('paystack') || fileName.includes('download (2)')) continue;
+          const url = asset.streamUrl;
+          if (!url) continue;
+          existingKeys.add(fileName);
+          const meta = formatR2SlideMeta(key);
+          extras.push({ src: url, ...meta });
+        }
+        // Shuffle the additional R2 catalog images so every session rotates broadly through the full library
+        for (let i = extras.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [extras[i], extras[j]] = [extras[j], extras[i]];
+        }
+        if (extras.length > 0) {
+          setShowcaseSlides([...HERO_INITIAL_SHOWCASE_SLIDES, ...extras]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // Preload initial Hero thumbnails & backdrops smoothly
   useEffect(() => {
     HERO_BG_SLIDES.slice(0, 4).forEach((s) => {
       const img = new Image();
       img.src = s.kind === 'video' ? s.poster : s.src;
     });
-    HERO_PLATFORM_SLIDES.slice(0, 6).forEach((s) => {
+    HERO_INITIAL_SHOWCASE_SLIDES.slice(0, 6).forEach((s) => {
       const img = new Image();
-      img.src = s.thumb;
+      img.src = s.src;
     });
   }, []);
 
-  // Calm, unhurried 30-second rotation for hero background & showcase so visuals never feel messy
+  // Staggered independent rotations: background shifts calmly every 24s, showcase card rotates through all 75+ images every 6s
   useEffect(() => {
     const bgTimer = window.setInterval(() => {
       setBgIdx((prev) => (prev + 1) % HERO_BG_SLIDES.length);
-    }, 30000);
-    const slideTimer = window.setInterval(() => {
-      setSlideIdx((prev) => (prev + 1) % HERO_PLATFORM_SLIDES.length);
-    }, 30000);
+    }, 24000);
     const hwTimer = window.setInterval(() => {
       setHwIdx((prev) => (prev + 1) % HARDWARE_PHOTO_POOL.length);
     }, 4500);
     return () => {
       window.clearInterval(bgTimer);
-      window.clearInterval(slideTimer);
       window.clearInterval(hwTimer);
     };
   }, []);
+
+  useEffect(() => {
+    if (showcaseSlides.length <= 1) return;
+    const slideTimer = window.setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % showcaseSlides.length);
+    }, 6000);
+    return () => window.clearInterval(slideTimer);
+  }, [showcaseSlides.length]);
 
   useEffect(() => {
     fetch('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest')
@@ -371,7 +431,7 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   }, []);
 
   const currentBg = HERO_BG_SLIDES[bgIdx];
-  const currentSlide = HERO_PLATFORM_SLIDES[slideIdx];
+  const currentSlide = showcaseSlides[slideIdx % showcaseSlides.length] || HERO_INITIAL_SHOWCASE_SLIDES[0];
   const currentHw = HARDWARE_PHOTO_POOL[hwIdx];
 
   const handleHeroMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -502,8 +562,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             </div>
           </motion.div>
 
-          {/* Right: Sleek Compact 16:9 Secondary-View Showcase Frame (matches Download Hub hero frame) */}
-          <div className="lg:col-span-5 sl-perspective w-full max-w-md lg:max-w-[450px] mx-auto lg:ml-auto lg:mr-0">
+          {/* Right: Distinct 4:3 Image Gallery Showcase Frame (Strictly separate from Hero Video Backdrop — rotates across all 75+ R2 images) */}
+          <div className="lg:col-span-5 sl-perspective w-full max-w-md lg:max-w-[440px] mx-auto lg:ml-auto lg:mr-0">
             <motion.div
               onMouseMove={handleHeroMouseMove}
               onMouseLeave={() => setTilt({ rx: 0, ry: 0 })}
@@ -512,57 +572,41 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
               style={{ transformStyle: 'preserve-3d' }}
               className="relative rounded-2xl overflow-hidden border border-emerald-500/35 bg-slate-950/90 shadow-[0_24px_60px_rgba(0,0,0,0.58)] backdrop-blur-xl"
             >
-              {/* Compact 16:9 Secondary Screen — 30-second pass-through, overscan cropped so bottom AI logos stay hidden */}
-              <div className="relative w-full h-52 sm:h-56 overflow-hidden bg-slate-950">
+              {/* Distinct 4:3 Image Showcase Frame (never mirrors the widescreen hero video background) */}
+              <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-950">
                 <AnimatePresence mode="sync">
                   <motion.div
                     key={currentSlide.src}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, scale: 1.03 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 1.4, ease: 'easeInOut' }}
+                    transition={{ duration: 1.1, ease: 'easeInOut' }}
                     className="absolute inset-0 w-full h-full overflow-hidden"
                   >
-                    {currentSlide.kind === 'video' ? (
-                      <video
-                        key={currentSlide.src}
-                        src={currentSlide.src}
-                        poster={currentSlide.poster || currentSlide.thumb}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="auto"
-                        className="w-full h-full object-cover object-center scale-[1.15] block"
-                      />
-                    ) : (
-                      <img
-                        src={currentSlide.src}
-                        alt={currentSlide.title}
-                        className="w-full h-full object-cover object-center scale-[1.06] block"
-                      />
-                    )}
+                    <img
+                      src={currentSlide.src}
+                      alt={currentSlide.title}
+                      onError={() => setSlideIdx((prev) => (prev + 1) % showcaseSlides.length)}
+                      className="w-full h-full object-cover object-center block"
+                    />
                   </motion.div>
                 </AnimatePresence>
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/92 via-slate-950/20 to-transparent z-10" />
 
-                {/* Unified Top-Left Universal SafetyLink Logo + Live Tag */}
+                {/* Unified Top-Left Universal SafetyLink Logo + Category Tag */}
                 <div className="pointer-events-none absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md border border-emerald-400/35">
                   <img
                     src={ASSETS.logo}
                     alt="SafetyLink"
                     className="h-4 w-auto object-contain"
                   />
-                  {currentSlide.kind === 'video' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                  )}
                   <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                     {currentSlide.tag}
                   </span>
                 </div>
 
-                {/* Clean Secondary-Screen Caption */}
+                {/* Clean Image Showcase Caption */}
                 <div className="pointer-events-none absolute bottom-3 left-3.5 right-3.5 z-10 text-white">
                   <div className="font-display text-xs sm:text-sm font-extrabold leading-tight truncate">
                     {currentSlide.title}
