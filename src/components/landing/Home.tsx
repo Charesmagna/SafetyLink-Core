@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { R2MediaShowcase } from './R2MediaShowcase';
 import { R2_MEDIA } from '../../utils/r2Assets';
 import { ACTION_VIDEOS, ASSETS, vid, vidPoster } from '../../utils/cloudinary';
 import { useEditorialStore } from '../../utils/editorialStore';
+import { SceneErrorBoundary } from '../three/SceneErrorBoundary';
+
+const HardwareTag3DScene = lazy(() => import('../three/HardwareTag3DScene'));
 import {
   ArrowRight,
   BellRing,
@@ -175,6 +178,8 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
   const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
   const [releaseVersion, setReleaseVersion] = useState('');
+  const [hwViewMode, setHwViewMode] = useState<'3d' | 'photos'>('3d');
+  const [hw3dFullscreen, setHw3dFullscreen] = useState(false);
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
   const hardwareSectionRef = useRef<HTMLDivElement>(null);
@@ -462,47 +467,113 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
             viewport={{ once: true, amount: 0.2 }}
             className="lg:col-span-6 p-6 sm:p-8 rounded-3xl sl-glass-card flex flex-col justify-between gap-6 overflow-hidden"
           >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">
-                Hardware
-              </p>
-              <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
-                BLE iTag Panic Buttons
-              </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                Compact Bluetooth key fobs in five colors with customizable single, double, triple, or long-press emergency profiles.
-              </p>
-            </div>
-
-            <div className="rounded-2xl overflow-hidden bg-white dark:bg-[#0d1b34]/85 border border-slate-200/80 dark:border-white/10 p-5 flex flex-col items-center justify-center gap-4 sl-perspective">
-              <motion.img
-                key={currentHw.src}
-                src={currentHw.src}
-                alt={currentHw.label}
-                style={{ y: hardwareY, rotate: hardwareRotate, scale: hardwareScale }}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/Polish_20260907_043403519.jpg';
-                }}
-                className="max-h-48 w-auto object-contain rounded-xl drop-shadow-[0_18px_24px_rgba(2,6,23,0.22)]"
-              />
-              <div className="grid grid-cols-4 gap-2 w-full">
-                {[
-                  { src: R2_MEDIA.hardware.itagWhite, label: 'White iTag' },
-                  { src: R2_MEDIA.hardware.itagBlack, label: 'Black iTag' },
-                  { src: R2_MEDIA.hardware.hardwarePack, label: 'Hardware Pack' },
-                  { src: R2_MEDIA.hardware.bleTransmitter, label: 'BLE Transmitter' },
-                ].map((hw) => (
-                  <div
-                    key={hw.label}
-                    className="h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200/60 dark:border-white/10"
-                    title={hw.label}
-                  >
-                    <img src={hw.src} alt={hw.label} loading="lazy" className="w-full h-full object-cover block" />
-                  </div>
-                ))}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">
+                  Hardware
+                </p>
+                <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
+                  BLE iTag Panic Buttons
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Compact Bluetooth key fobs in five colors with customizable single, double, triple, or long-press emergency profiles.
+                </p>
+              </div>
+              <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setHwViewMode('3d')}
+                  className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hwViewMode === '3d'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  Interactive 3D
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHwViewMode('photos')}
+                  className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+                    hwViewMode === 'photos'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  Photos
+                </button>
               </div>
             </div>
+
+            {hwViewMode === '3d' ? (
+              <SceneErrorBoundary title="Interactive 3D BLE iTag" heightClass="h-[340px]">
+                <Suspense
+                  fallback={
+                    <div className="h-[340px] rounded-2xl bg-[#060c18] border border-slate-800 flex items-center justify-center text-xs font-mono text-emerald-400">
+                      Loading Interactive 3D iTAG...
+                    </div>
+                  }
+                >
+                  <HardwareTag3DScene
+                    heightClass="h-[340px]"
+                    compact
+                    onFullscreenToggle={() => setHw3dFullscreen(true)}
+                  />
+                </Suspense>
+              </SceneErrorBoundary>
+            ) : (
+              <div className="rounded-2xl overflow-hidden bg-white dark:bg-[#0d1b34]/85 border border-slate-200/80 dark:border-white/10 p-5 flex flex-col items-center justify-center gap-4 sl-perspective">
+                <motion.img
+                  key={currentHw.src}
+                  src={currentHw.src}
+                  alt={currentHw.label}
+                  style={{ y: hardwareY, rotate: hardwareRotate, scale: hardwareScale }}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/Polish_20260907_043403519.jpg';
+                  }}
+                  className="max-h-48 w-auto object-contain rounded-xl drop-shadow-[0_18px_24px_rgba(2,6,23,0.22)]"
+                />
+                <div className="grid grid-cols-4 gap-2 w-full">
+                  {[
+                    { src: R2_MEDIA.hardware.itagWhite, label: 'White iTag' },
+                    { src: R2_MEDIA.hardware.itagBlack, label: 'Black iTag' },
+                    { src: R2_MEDIA.hardware.hardwarePack, label: 'Hardware Pack' },
+                    { src: R2_MEDIA.hardware.bleTransmitter, label: 'BLE Transmitter' },
+                  ].map((hw) => (
+                    <div
+                      key={hw.label}
+                      className="h-16 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200/60 dark:border-white/10"
+                      title={hw.label}
+                    >
+                      <img src={hw.src} alt={hw.label} loading="lazy" className="w-full h-full object-cover block" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {hw3dFullscreen && (
+              <div className="fixed inset-0 z-[120] bg-slate-950/95 p-3 sm:p-6 flex flex-col">
+                <div className="flex-1 min-h-0">
+                  <SceneErrorBoundary title="Fullscreen 3D BLE iTag Inspector" heightClass="h-full">
+                    <Suspense
+                      fallback={
+                        <div className="h-full rounded-2xl bg-[#060c18] flex items-center justify-center text-xs font-mono text-emerald-400">
+                          Loading Fullscreen 3D Hardware Inspector...
+                        </div>
+                      }
+                    >
+                      <HardwareTag3DScene
+                        heightClass="h-full"
+                        isFullscreen
+                        onFullscreenToggle={() => setHw3dFullscreen(false)}
+                      />
+                    </Suspense>
+                  </SceneErrorBoundary>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

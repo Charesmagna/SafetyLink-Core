@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
 import { sendTestEvent } from '../services/ThingsBoardService';
@@ -13,6 +13,9 @@ import { ClientDatabaseModule } from './ClientDatabaseModule';
 import { MediaHub } from './MediaHub';
 import { LaunchReadinessPanel } from './LaunchReadinessPanel';
 import { getR2StreamUrl } from '../utils/r2Assets';
+import { SceneErrorBoundary } from './three/SceneErrorBoundary';
+
+const CommandGlobe3DScene = lazy(() => import('./three/CommandGlobe3DScene'));
 
 const slide1 = getR2StreamUrl('Random platform background.png');
 const slide2 = getR2StreamUrl('Emergency_Response_Platform_Architecture_Overview.png');
@@ -22,7 +25,7 @@ const slide5 = getR2StreamUrl('IMG_20260914_223311.png');
 const newBg1 = getR2StreamUrl('Emergency_Mesh_Platform_Overview.png');
 const newLogo1 = getR2StreamUrl('IMG_20260914_223547.png');
 
-type AdminTab = 'OVERVIEW' | 'LAUNCH' | 'USERS' | 'CLIENTS' | 'R2_MEDIA' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET' | 'EDITORIAL';
+type AdminTab = 'OVERVIEW' | 'GLOBE_3D' | 'LAUNCH' | 'USERS' | 'CLIENTS' | 'R2_MEDIA' | 'ORGANIZATIONS' | 'PANICS' | 'SETTINGS' | 'ADVANCED_ROLES' | 'EVIDENCE' | 'FLEET' | 'EDITORIAL';
 
 export const AdminPanel: React.FC = () => {
   const [showEditorialStudio, setShowEditorialStudio] = useState(false);
@@ -581,7 +584,7 @@ export const AdminPanel: React.FC = () => {
 
       {/* Admin Nav Bar */}
       <nav className="bg-slate-900/50 border-b border-slate-900 flex p-1 justify-start gap-1 overflow-x-auto relative z-10">
-        {(['OVERVIEW', 'LAUNCH', 'EDITORIAL', 'USERS', 'CLIENTS', 'R2_MEDIA', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
+        {(['OVERVIEW', 'GLOBE_3D', 'LAUNCH', 'EDITORIAL', 'USERS', 'CLIENTS', 'R2_MEDIA', 'ORGANIZATIONS', 'PANICS', 'FLEET', 'SETTINGS', 'ADVANCED_ROLES'] as AdminTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -594,7 +597,8 @@ export const AdminPanel: React.FC = () => {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            {tab === 'LAUNCH' ? '🚀 launch readiness' :
+            {tab === 'GLOBE_3D' ? '🌐 3d command globe' :
+             tab === 'LAUNCH' ? '🚀 launch readiness' :
              tab === 'EDITORIAL' ? '🎨 edit environment (studio)' :
              tab === 'PANICS' ? '🚨 distress signals' :
              tab === 'ORGANIZATIONS' ? '🏢 organizations' :
@@ -617,9 +621,68 @@ export const AdminPanel: React.FC = () => {
       {/* Content Body */}
       <main className="flex-1 overflow-y-auto min-h-0 max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6 relative z-10">
         
+        {/* TAB: 3D GLOBAL OPERATIONS COMMAND GLOBE */}
+        {activeTab === 'GLOBE_3D' && (
+          <div className="space-y-4 animate-fadeIn text-left">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-black font-mono text-amber-400 uppercase tracking-wider">
+                  SafetyLink 3D Global Operations Network Globe
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Interactive orbital visualization of active organizations, regional PoPs, LEO relay satellites, and live emergency alert arcs.
+                </p>
+              </div>
+            </div>
+            <SceneErrorBoundary title="3D Global Operations Globe" heightClass="h-[620px]">
+              <Suspense
+                fallback={
+                  <div className="h-[620px] rounded-2xl bg-[#040914] border border-slate-800 flex items-center justify-center text-xs font-mono text-amber-400">
+                    Initializing 3D Command Globe...
+                  </div>
+                }
+              >
+                <CommandGlobe3DScene heightClass="h-[620px]" />
+              </Suspense>
+            </SceneErrorBoundary>
+          </div>
+        )}
+
         {/* TAB 1: OVERVIEW */}
         {activeTab === 'OVERVIEW' && (
           <div className="space-y-6 animate-fadeIn text-left">
+
+            {/* Live 3D Operations Globe Preview Card */}
+            <div className="rounded-2xl bg-slate-950 border border-slate-800 p-4 space-y-3 shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-xs font-black font-mono text-amber-400 uppercase tracking-wider">
+                    Live 3D Network Command Globe
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Click any glowing node tower to focus &amp; inspect organization health or active distress arcs.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('GLOBE_3D')}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono font-bold text-amber-300 uppercase"
+                >
+                  Expand Full Globe →
+                </button>
+              </div>
+              <SceneErrorBoundary title="3D Network Command Globe" heightClass="h-[380px]">
+                <Suspense
+                  fallback={
+                    <div className="h-[380px] rounded-2xl bg-[#040914] border border-slate-800 flex items-center justify-center text-xs font-mono text-amber-400">
+                      Loading 3D Network Command Globe...
+                    </div>
+                  }
+                >
+                  <CommandGlobe3DScene heightClass="h-[380px]" />
+                </Suspense>
+              </SceneErrorBoundary>
+            </div>
             
             {/* Platform Studio Visual Customizer Card */}
             <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-red-950/30 border border-amber-500/40 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">

@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { useAppStore } from '../utils/store';
+import { SceneErrorBoundary } from './three/SceneErrorBoundary';
+
+const TacticalCampus3DScene = lazy(() => import('./three/TacticalCampus3DScene'));
 
 const STATUS_COLORS: Record<string, string> = {
   safe: '#22c55e',
@@ -14,6 +17,7 @@ export const ResponderDashboard: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState({ lat: -26.3085, lng: 27.8344 });
   const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'hybrid' | 'satellite'>('roadmap');
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
   const panicEvents = useAppStore(s => s.panicEvents);
   const orgCode = currentUser?.orgCode;
@@ -49,13 +53,35 @@ export const ResponderDashboard: React.FC = () => {
           <p className="text-gray-400 text-xs font-mono mt-0.5">{guardedUsers.length} residents · {panicUsers.length} alerts</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMapTypeId(prev => prev === 'roadmap' ? 'hybrid' : prev === 'hybrid' ? 'satellite' : 'roadmap')}
-            className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 uppercase"
-          >
-            Layer: {mapTypeId}
-          </button>
+          <div className="inline-flex rounded-lg border border-slate-700 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setViewMode('2d')}
+              className={`text-[10px] font-mono font-bold px-2.5 py-1 uppercase ${
+                viewMode === '2d' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              2D Map
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('3d')}
+              className={`text-[10px] font-mono font-bold px-2.5 py-1 uppercase ${
+                viewMode === '3d' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              3D Campus
+            </button>
+          </div>
+          {viewMode === '2d' && (
+            <button
+              type="button"
+              onClick={() => setMapTypeId(prev => prev === 'roadmap' ? 'hybrid' : prev === 'hybrid' ? 'satellite' : 'roadmap')}
+              className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 hover:bg-slate-700 uppercase"
+            >
+              Layer: {mapTypeId}
+            </button>
+          )}
           <a
             href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${focusLat},${focusLng}`}
             target="_blank"
@@ -92,50 +118,64 @@ export const ResponderDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Map */}
+      {/* Map or 3D Campus Tactical View */}
       <div className="flex-1 min-h-[260px]">
-        <APIProvider apiKey={GMAPS_KEY} language="en" region="ZA">
-          <Map
-            defaultCenter={mapCenter}
-            center={{ lat: focusLat, lng: focusLng }}
-            defaultZoom={14}
-            mapId="DEMO_MAP_ID"
-            internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
-            mapTypeId={mapTypeId}
-            style={{ width: '100%', height: '100%' }}
-            gestureHandling="greedy"
-            disableDefaultUI={false}
-          >
-            {guardedUsers.map(u => {
-              const loc = (u as any).lastLocation as any;
-              if (!loc?.lat || !loc?.lng) return null;
-              const status = getUserStatus(u);
-              const color = STATUS_COLORS[status];
-              return (
-                <AdvancedMarker
-                  key={u.id}
-                  position={{ lat: loc.lat, lng: loc.lng }}
-                  onClick={() => setSelectedUserId(u.id)}
-                >
-                  <div
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      background: color,
-                      border: '2px solid white',
-                      boxShadow: `0 0 8px ${color}`,
-                      cursor: 'pointer',
-                      transform: selectedUserId === u.id ? 'scale(1.6)' : 'scale(1)',
-                      transition: 'transform 0.15s',
-                    }}
-                    title={u.fullName}
-                  />
-                </AdvancedMarker>
-              );
-            })}
-          </Map>
-        </APIProvider>
+        {viewMode === '3d' ? (
+          <SceneErrorBoundary title="3D Responder Campus View" heightClass="h-full">
+            <Suspense
+              fallback={
+                <div className="w-full h-full flex items-center justify-center bg-[#050b16] text-xs font-mono text-emerald-400">
+                  Loading 3D Campus Tactical View...
+                </div>
+              }
+            >
+              <TacticalCampus3DScene heightClass="h-full" />
+            </Suspense>
+          </SceneErrorBoundary>
+        ) : (
+          <APIProvider apiKey={GMAPS_KEY} language="en" region="ZA">
+            <Map
+              defaultCenter={mapCenter}
+              center={{ lat: focusLat, lng: focusLng }}
+              defaultZoom={14}
+              mapId="DEMO_MAP_ID"
+              internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
+              mapTypeId={mapTypeId}
+              style={{ width: '100%', height: '100%' }}
+              gestureHandling="greedy"
+              disableDefaultUI={false}
+            >
+              {guardedUsers.map(u => {
+                const loc = (u as any).lastLocation as any;
+                if (!loc?.lat || !loc?.lng) return null;
+                const status = getUserStatus(u);
+                const color = STATUS_COLORS[status];
+                return (
+                  <AdvancedMarker
+                    key={u.id}
+                    position={{ lat: loc.lat, lng: loc.lng }}
+                    onClick={() => setSelectedUserId(u.id)}
+                  >
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: '50%',
+                        background: color,
+                        border: '2px solid white',
+                        boxShadow: `0 0 8px ${color}`,
+                        cursor: 'pointer',
+                        transform: selectedUserId === u.id ? 'scale(1.6)' : 'scale(1)',
+                        transition: 'transform 0.15s',
+                      }}
+                      title={u.fullName}
+                    />
+                  </AdvancedMarker>
+                );
+              })}
+            </Map>
+          </APIProvider>
+        )}
       </div>
 
       {/* Resident list */}

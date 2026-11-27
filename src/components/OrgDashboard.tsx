@@ -1,6 +1,10 @@
 import WorkspaceIntegrations from "./WorkspaceIntegrations";
 import OrgWarRoom from "./OrgWarRoom";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useMemo, useEffect } from 'react';
+import { SceneErrorBoundary } from './three/SceneErrorBoundary';
+
+const TacticalCampus3DScene = lazy(() => import('./three/TacticalCampus3DScene'));
+const BleMeshVisualizer3DScene = lazy(() => import('./three/BleMeshVisualizer3DScene'));
 import { GlobalRadarBackground } from './GlobalRadarBackground';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -42,6 +46,7 @@ import {
   Copy,
   Check,
   Globe,
+  Box,
 } from 'lucide-react';
 
 export const OrgDashboard: React.FC = () => {
@@ -306,6 +311,7 @@ export const OrgDashboard: React.FC = () => {
       items: [
         { id: 'cctv', label: 'CCTV / Hikvision', icon: Video, show: true },
         { id: 'live-gis', label: 'Live GIS War Room', icon: Globe, show: true },
+        { id: 'tactical-3d', label: '3D Tactical Twin', icon: Box, show: true },
         { id: 'mesh-orchestration', label: 'Mesh Orchestration', icon: Radio, show: !isResponder },
         { id: 'offline-sync', label: 'Offline Sync', icon: RefreshCw, show: !isResponder, badge: localOfflineQueue.length > 0 ? localOfflineQueue.length : undefined },
         { id: 'branding', label: 'Branding & SLA', icon: Palette, show: !isResponder },
@@ -1337,6 +1343,31 @@ export const OrgDashboard: React.FC = () => {
             <OrgWarRoom />
           </div>
         )}
+        {activeSubTab === 'tactical-3d' && (
+          <div className="animate-fadeIn mt-2 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wider font-mono text-emerald-400">
+                  3D Tactical Campus &amp; Floor-by-Floor Command Twin
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Isolate building floors, inspect vertical distress beacons, monitor patrol units, and trace BLE relay uplinks.
+                </p>
+              </div>
+            </div>
+            <SceneErrorBoundary title="3D Tactical Campus Twin" heightClass="h-[600px]">
+              <Suspense
+                fallback={
+                  <div className="h-[600px] rounded-2xl bg-[#050b16] border border-slate-800 flex items-center justify-center text-xs font-mono text-emerald-400">
+                    Initializing 3D Tactical Campus Twin...
+                  </div>
+                }
+              >
+                <TacticalCampus3DScene heightClass="h-[600px]" orgName={currentOrg?.name} />
+              </Suspense>
+            </SceneErrorBoundary>
+          </div>
+        )}
         {activeSubTab === 'mphakati-overwatch' && (
           <div className="animate-fadeIn -mx-4 sm:-mx-8 lg:-mx-8">
             <MphakatiOverwatch />
@@ -1344,7 +1375,20 @@ export const OrgDashboard: React.FC = () => {
         )}
 
         {activeSubTab === 'mesh-orchestration' && (
-          <NodeMeshOrchestration />
+          <div className="space-y-4 animate-fadeIn">
+            <SceneErrorBoundary title="3D BLE Proximity & Offline Mesh Visualizer" heightClass="h-[420px]">
+              <Suspense
+                fallback={
+                  <div className="h-[420px] rounded-2xl bg-[#050b16] border border-slate-800 flex items-center justify-center text-xs font-mono text-emerald-400">
+                    Initializing 3D BLE Mesh Radar...
+                  </div>
+                }
+              >
+                <BleMeshVisualizer3DScene heightClass="h-[420px]" />
+              </Suspense>
+            </SceneErrorBoundary>
+            <NodeMeshOrchestration />
+          </div>
         )}
         
         {activeSubTab === 'incident-reporting' && (

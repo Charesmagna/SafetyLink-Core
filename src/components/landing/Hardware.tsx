@@ -1,7 +1,10 @@
 import { R2_MEDIA } from '../../utils/r2Assets';
 import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
+import { SceneErrorBoundary } from '../three/SceneErrorBoundary';
+
+const HardwareTag3DScene = lazy(() => import('../three/HardwareTag3DScene'));
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
@@ -85,6 +88,28 @@ export function Hardware({ onLogin, onRegisterUser, onRegisterOrg, navigate }: P
           <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
             SafetyLink works with BLE keyfobs, 4G SOS smartwatches, Hikvision panic stations, NB-IoT cellular buttons, and autonomous patrol beacons. No proprietary lock-in.
           </p>
+        </div>
+      </section>
+
+      {/* ── INTERACTIVE 3D HARDWARE TEARDOWN & SOS SIGNAL LAB ── */}
+      <section style={{ padding:'56px 40px', background:'#060c18', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#10b981', marginBottom:'10px' }}>// INTERACTIVE 3D HARDWARE LAB</div>
+          <h2 style={{ fontSize:'clamp(24px,4vw,40px)', fontWeight:900, marginBottom:'10px' }}>Inspect the BLE iTAG Inside &amp; Out.</h2>
+          <p style={{ fontSize:'14px', color:'#94a3b8', maxWidth:'660px', marginBottom:'24px', lineHeight:1.6 }}>
+            Orbit the SafetyLink iTAG in real time, slide to explode the IP65 housing, nRF52 PCB core, and CR2032 cell, switch shell finishes, or simulate a live 3D BLE-to-Phone SOS relay wave.
+          </p>
+          <SceneErrorBoundary title="Interactive 3D BLE iTag Lab" heightClass="h-[500px]">
+            <Suspense
+              fallback={
+                <div style={{ height:'500px', borderRadius:'16px', background:'#050b16', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:'12px', color:'#34d399' }}>
+                  Initializing 3D Hardware Inspector...
+                </div>
+              }
+            >
+              <HardwareTag3DScene heightClass="h-[500px]" />
+            </Suspense>
+          </SceneErrorBoundary>
         </div>
       </section>
 

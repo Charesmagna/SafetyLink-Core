@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useAppStore } from '../utils/store';
 import { motion, AnimatePresence } from 'motion/react';
 import { ITagPluginService, ITagDevice } from '../services/ITagPluginService';
 import { DeviceScanner } from './DeviceScanner';
 
 import { PepxiOrderModal } from './PepxiOrderModal';
-import { Sparkles, Truck, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Truck, ShieldCheck, CheckCircle2, Box } from 'lucide-react';
+import { SceneErrorBoundary } from './three/SceneErrorBoundary';
+
+const BleMeshVisualizer3DScene = lazy(() => import('./three/BleMeshVisualizer3DScene'));
 
 export const BLEScanner: React.FC = () => {
   const { bleDevices, discoveredDevices, isScanning, pairingProgress, startBleScan, disconnectBleDevice, connectBleDevice, removeDevice, registerDiscoveredDevice, demoMode, isBackgroundServiceRunning, bleButtonConfig, handleHardwareButtonPress } = useAppStore();
@@ -26,6 +29,7 @@ export const BLEScanner: React.FC = () => {
   const [isDeviceScannerOpen, setIsDeviceScannerOpen] = React.useState<boolean>(false);
   const [showUpgradeGate, setShowUpgradeGate] = React.useState<boolean>(false);
   const [showPepxiModal, setShowPepxiModal] = React.useState<boolean>(false);
+  const [show3dRadar, setShow3dRadar] = React.useState<boolean>(false);
   const { currentUser } = useAppStore();
 
   const isTrial = currentUser?.subscriptionStatus === 'trial';
@@ -271,6 +275,45 @@ export const BLEScanner: React.FC = () => {
           <div className={`w-1.5 h-1.5 rounded-full ${isBackgroundServiceRunning ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
           <span className="text-[7.5px] font-bold uppercase tracking-wider">{isBackgroundServiceRunning ? 'ACTIVE' : 'STOPPED'}</span>
         </div>
+      </div>
+
+      {/* INTERACTIVE 3D BLE PROXIMITY & ZEROLINK OFFLINE MESH RADAR */}
+      <div className="relative z-10 w-full mb-3 bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-left">
+            <Box className="w-4 h-4 text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-[10px] font-mono font-bold text-emerald-300 uppercase tracking-wider">
+                3D BLE Proximity &amp; Offline Mesh Lab
+              </p>
+              <p className="text-[8.5px] font-mono text-slate-400">
+                Visualize paired iTAG RSSI &amp; test cellular blackout multi-hop relay
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShow3dRadar((v) => !v)}
+            className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-[9px] font-mono font-bold uppercase shrink-0"
+          >
+            {show3dRadar ? 'Hide 3D' : 'Open 3D Radar'}
+          </button>
+        </div>
+        {show3dRadar && (
+          <div className="mt-3">
+            <SceneErrorBoundary title="3D BLE Proximity Radar" heightClass="h-[340px]">
+              <Suspense
+                fallback={
+                  <div className="h-[340px] rounded-2xl bg-[#050b16] border border-slate-800 flex items-center justify-center text-[10px] font-mono text-emerald-400">
+                    Loading 3D BLE Proximity Radar...
+                  </div>
+                }
+              >
+                <BleMeshVisualizer3DScene heightClass="h-[340px]" />
+              </Suspense>
+            </SceneErrorBoundary>
+          </div>
+        )}
       </div>
 
       {/* FREE APP + 14-DAY ITAG TRIAL STATUS BANNER */}

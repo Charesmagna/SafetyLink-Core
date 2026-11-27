@@ -1,8 +1,12 @@
 // @ts-nocheck
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useRef, useEffect } from 'react';
 import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
 import { fetchR2Assets, R2_MEDIA } from '../../utils/r2Assets';
+import { SceneErrorBoundary } from '../three/SceneErrorBoundary';
 
+const CommandGlobe3DScene = lazy(() => import('../three/CommandGlobe3DScene'));
+const BleMeshVisualizer3DScene = lazy(() => import('../three/BleMeshVisualizer3DScene'));
+const TacticalCampus3DScene = lazy(() => import('../three/TacticalCampus3DScene'));
 
 import './Home.css';
 
@@ -26,6 +30,7 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const [platformRotation, setPlatformRotation] = useState(0);
   const [gallerySlides, setGallerySlides] = useState(INITIAL_PLATFORM_GALLERY);
   const [galleryIdx, setGalleryIdx] = useState(0);
+  const [active3dTab, setActive3dTab] = useState<'globe' | 'ble' | 'campus'>('globe');
   const tourIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -153,6 +158,60 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
               </div>
             );
           })()}
+        </div>
+      </section>
+
+      {/* ── INTERACTIVE 3D ECOSYSTEM COMMAND & MESH SIMULATOR ── */}
+      <section style={{ padding:'64px 40px', background:'#050b16', borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div style={{ display:'flex', flexWrap:'wrap', alignItems:'flex-end', justifyContent:'space-between', gap:'16px', marginBottom:'24px' }}>
+            <div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', letterSpacing:'.18em', color:'#10b981', marginBottom:'8px' }}>// LIVE 3D ARCHITECTURE SUITE</div>
+              <h2 style={{ fontSize:'clamp(24px,4vw,42px)', fontWeight:900, marginBottom:'6px' }}>Explore SafetyLink in Interactive 3D.</h2>
+              <p style={{ fontSize:'13px', color:'#94a3b8', maxWidth:'620px', lineHeight:1.6 }}>
+                Spin the Global Command Mesh Globe, test how ZeroLink reroutes BLE panic packets during a cellular blackout, or inspect a floor-by-floor 3D Tactical Campus Twin.
+              </p>
+            </div>
+            <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+              {[
+                { id: 'globe', label: '3D Operations Globe' },
+                { id: 'ble', label: '3D BLE Offline Mesh' },
+                { id: 'campus', label: '3D Tactical Campus' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActive3dTab(tab.id as 'globe' | 'ble' | 'campus')}
+                  style={{
+                    padding:'9px 14px',
+                    borderRadius:'10px',
+                    fontFamily:"'JetBrains Mono',monospace",
+                    fontSize:'11px',
+                    fontWeight:700,
+                    cursor:'pointer',
+                    background: active3dTab === tab.id ? '#059669' : 'rgba(15,23,42,0.9)',
+                    color: active3dTab === tab.id ? '#ffffff' : '#94a3b8',
+                    border: active3dTab === tab.id ? '1px solid #34d399' : '1px solid rgba(148,163,184,0.25)',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <SceneErrorBoundary title="3D Platform Architecture Suite" heightClass="h-[520px]">
+            <Suspense
+              fallback={
+                <div style={{ height:'520px', borderRadius:'16px', background:'#040914', border:'1px solid rgba(255,255,255,.08)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'JetBrains Mono',monospace", fontSize:'12px', color:'#34d399' }}>
+                  Loading 3D Interactive Scene...
+                </div>
+              }
+            >
+              {active3dTab === 'globe' && <CommandGlobe3DScene heightClass="h-[520px]" />}
+              {active3dTab === 'ble' && <BleMeshVisualizer3DScene heightClass="h-[520px]" />}
+              {active3dTab === 'campus' && <TacticalCampus3DScene heightClass="h-[520px]" />}
+            </Suspense>
+          </SceneErrorBoundary>
         </div>
       </section>
 
