@@ -3,17 +3,6 @@ name: Build Android APK
 on:
   push:
     branches: [ "master", "main", "beta" ]
-    # Do not rebuild or republish the production APK for website-only changes.
-    paths:
-      - 'android/**'
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'capacitor.config.*'
-      - 'vite.config.*'
-      - '!src/components/LandingPage.tsx'
-      - '!public/preview/**'
   workflow_dispatch:
 
 jobs:
@@ -86,12 +75,20 @@ jobs:
       run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
 
     - name: Write signing properties
+      env:
+        KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
       run: |
-        cat > android/signing.properties << 'PROPS'
+        if [ -z "$KS_PASS" ] || [ -z "$KS_KEY_PASS" ]; then
+          echo "::error::Missing KEYSTORE_PASSWORD or KEY_PASSWORD GitHub repository secrets."
+          exit 1
+        fi
+        cat > android/signing.properties << PROPS
         storeFile=safetylink-release.keystore
-        storePassword=SafetyLink2024!
-        keyAlias=safetylink
-        keyPassword=SafetyLink2024!
+        storePassword=${KS_PASS}
+        keyAlias=${KS_ALIAS:-safetylink}
+        keyPassword=${KS_KEY_PASS}
         PROPS
 
     - name: Set Android version (matches the release name)
@@ -143,15 +140,19 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
+      env:
+        KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
       run: |
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
         ./gradlew assembleRelease \
           -PKEYSTORE_PATH="$KEYSTORE_ABS" \
-          -PKEYSTORE_PASSWORD="SafetyLink2024!" \
-          -PKEY_ALIAS="safetylink" \
-          -PKEY_PASSWORD="SafetyLink2024!" \
+          -PKEYSTORE_PASSWORD="$KS_PASS" \
+          -PKEY_ALIAS="${KS_ALIAS:-safetylink}" \
+          -PKEY_PASSWORD="$KS_KEY_PASS" \
           --init-script ../init.gradle \
           --no-daemon --no-parallel --no-build-cache
         echo "=== Build output files ==="
@@ -201,12 +202,16 @@ jobs:
         DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         BASE="https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects"
         case "$BRANCH" in
-          main) LATEST=safetylink-latest.apk; DIR=versions ;;          # stable 2.0
+          main) LATEST=safetylink-latest.apk; DIR=versions ;;          # stable 2.0 + full-featured v1 legacy sync
           beta) LATEST=safetylink-beta-latest.apk; DIR=versions-beta ;; # beta (testing)
           version-1-archive) LATEST=safetylink-v1-latest.apk; DIR=versions-v1 ;; # legacy 1.x
           *) LATEST=safetylink-dev-latest.apk; DIR=versions-dev ;;
         esac
-        for KEY in "$LATEST" "$DIR/$NAME"; do
+        KEYS="$LATEST $DIR/$NAME"
+        if [ "$BRANCH" = "main" ]; then
+          KEYS="$KEYS safetylink-v1-latest.apk"
+        fi
+        for KEY in $KEYS; do
           curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" "$BASE/$KEY" > /dev/null
           echo "published $KEY"
         done

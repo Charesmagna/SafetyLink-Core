@@ -6,6 +6,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -38,6 +40,7 @@ public class SafetyFcmService extends FirebaseMessagingService {
     public static final String KEY_PENDING_RING_JSON = "pending_fcm_ring_json";
 
     private static Ringtone activeAlarmRingtone = null;
+    private static MediaPlayer activeAlarmMediaPlayer = null;
     private static PowerManager.WakeLock activeWakeLock = null;
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static Runnable pendingStopRunnable = null;
@@ -57,6 +60,15 @@ public class SafetyFcmService extends FirebaseMessagingService {
                     activeAlarmRingtone.stop();
                 }
                 activeAlarmRingtone = null;
+            }
+            if (activeAlarmMediaPlayer != null) {
+                try {
+                    if (activeAlarmMediaPlayer.isPlaying()) {
+                        activeAlarmMediaPlayer.stop();
+                    }
+                    activeAlarmMediaPlayer.release();
+                } catch (Exception ignored) {}
+                activeAlarmMediaPlayer = null;
             }
             if (ctx != null) {
                 Vibrator v = (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
@@ -175,20 +187,62 @@ public class SafetyFcmService extends FirebaseMessagingService {
         final int durationMs = ringDurationSec * 1000;
         try {
             stopActiveAlarmRingtone(appCtx);
+            // Ensure STREAM_ALARM volume is audible (>= 80% max) so emergency ring cannot be silent
+            try {
+                AudioManager am = (AudioManager) appCtx.getSystemService(Context.AUDIO_SERVICE);
+                if (am != null) {
+                    int maxVol = am.getStreamMaxVolume(AudioManager.STREAM_ALARM);
+                    int curVol = am.getStreamVolume(AudioManager.STREAM_ALARM);
+                    int targetVol = Math.max(1, (int) Math.ceil(maxVol * 0.85));
+                    if (curVol < targetVol) {
+                        am.setStreamVolume(AudioManager.STREAM_ALARM, targetVol, 0);
+                    }
+                }
+            } catch (Exception volErr) {
+                Log.w(TAG, "Alarm stream volume check skipped: " + volErr.getMessage());
+            }
+
+            boolean startedAudio = false;
             if (sound != null) {
-                Ringtone r = RingtoneManager.getRingtone(appCtx, sound);
-                if (r != null) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        r.setAudioAttributes(new AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build());
+                try {
+                    Ringtone r = RingtoneManager.getRingtone(appCtx, sound);
+                    if (r != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            r.setAudioAttributes(new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build());
+                        }
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            r.setLooping(true);
+                        }
+                        r.play();
+                        activeAlarmRingtone = r;
+                        startedAudio = true;
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        r.setLooping(true);
+                } catch (Exception ringErr) {
+                    Log.w(TAG, "Ringtone fallback to MediaPlayer: " + ringErr.getMessage());
+                }
+
+                if (!startedAudio) {
+                    try {
+                        MediaPlayer mp = new MediaPlayer();
+                        mp.setDataSource(appCtx, sound);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            mp.setAudioAttributes(new AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build());
+                        } else {
+                            mp.setAudioStreamType(AudioManager.STREAM_ALARM);
+                        }
+                        mp.setLooping(true);
+                        mp.prepare();
+                        mp.start();
+                        activeAlarmMediaPlayer = mp;
+                    } catch (Exception mpErr) {
+                        Log.w(TAG, "MediaPlayer alarm playback error: " + mpErr.getMessage());
                     }
-                    r.play();
-                    activeAlarmRingtone = r;
                 }
             }
             Vibrator vibrator = (Vibrator) appCtx.getSystemService(Context.VIBRATOR_SERVICE);

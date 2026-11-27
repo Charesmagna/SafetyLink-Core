@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { useAppStore } from '../utils/store';
 import { SafetyLinkLogo } from './SafetyLinkLogo';
 import { useGeminiLiveVoice, type LiveVoiceName } from '../hooks/useGeminiLiveVoice';
+import { fetchGeminiApi } from '../utils/geminiApi';
 import {
   Mic,
   MicOff,
@@ -150,7 +151,7 @@ export const AIHub: React.FC = () => {
         } catch {}
       }
 
-      const response = await fetch('/api/gemini/chat', {
+      const response = await fetchGeminiApi('/api/gemini/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -215,7 +216,7 @@ export const AIHub: React.FC = () => {
         { sender: 'user', text: `[Evidence Photograph Uploaded: ${file.name}]`, timestamp: Date.now() },
       ]);
 
-      fetch('/api/gemini/analyze-image', {
+      fetchGeminiApi('/api/gemini/analyze-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -278,7 +279,7 @@ export const AIHub: React.FC = () => {
     reader.onloadend = async () => {
       try {
         const base64 = reader.result?.toString().split(',')[1];
-        const res = await fetch('/api/gemini/transcribe', {
+        const res = await fetchGeminiApi('/api/gemini/transcribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ audioBase64: base64, mimeType: blob.type || 'audio/webm' }),
@@ -330,7 +331,7 @@ export const AIHub: React.FC = () => {
     if (!transcriptText.trim() || ttsSpeaking) return;
     setTtsSpeaking(true);
     try {
-      const res = await fetch('/api/gemini/tts', {
+      const res = await fetchGeminiApi('/api/gemini/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: transcriptText, voiceName: 'Kore' }),
@@ -370,7 +371,7 @@ export const AIHub: React.FC = () => {
         return;
       }
 
-      const res = await fetch('/api/gemini/safety-feed', {
+      const res = await fetchGeminiApi('/api/gemini/safety-feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

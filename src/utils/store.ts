@@ -164,6 +164,7 @@ interface AppState {
   currentOrg: Organization | null;
   superAdminActive: boolean;
   token: string | null;
+  localAdminToken: string | null;
   customTools: CustomTool[];
 
   // Actions
@@ -1242,6 +1243,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isTrialEnabled: enabled });
   },
   token: getStoredJSON<string | null>('sl_jwt_token', null),
+  localAdminToken: null,
   customTools: getStoredJSON<CustomTool[]>('sl_custom_tools', []),
   cameras: getStoredJSON<CameraDevice[]>('sl_hikvision_cameras', []),
   cameraEvidenceSnapshots: getStoredJSON<CameraEvidenceSnapshot[]>('sl_hikvision_snapshots', []),
@@ -1909,25 +1911,94 @@ export const useAppStore = create<AppState>((set, get) => ({
     const rawOrgCode = (orgCode || '').trim();
     const rawPassword = (password || '').trim();
 
-    // Superadmin: always verified against the server when logging in as "safetylink".
-    if (rawUsername.toLowerCase() === 'safetylink') {
+    const compactAdminUser = rawUsername.toLowerCase().replace(/\s+/g, '');
+    const compactAdminOrg = rawOrgCode.toLowerCase().replace(/\s+/g, '');
+    const isSuperAdminAttempt =
+      compactAdminUser === 'safetylink' ||
+      compactAdminUser === 'sl-admin-0000' ||
+      (!compactAdminUser && compactAdminOrg === 'sl-admin-0000');
+
+    // Superadmin: always verified against the server when logging in as "safetylink", "safety link", or "SL-admin-0000".
+    if (isSuperAdminAttempt) {
+      const payload = JSON.stringify({ email: 'safetylink', password: rawPassword });
+      const isPreviewServerHost =
+        !Capacitor.isNativePlatform() &&
+        typeof window !== 'undefined' &&
+        (['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.endsWith('.run.app'));
+
+      let lastErrMsg = '';
+      let reachedAnyServer = false;
+
+      // 1. On local / AI Studio preview server, try same-origin Express first.
+      // It verifies against both local config AND live production api.safetylink.online,
+      // returning both the Worker token and a signed local publisher token in one step.
+      if (isPreviewServerHost) {
+        try {
+          const localRes = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+          });
+          if (localRes.status !== 404 && localRes.status !== 502 && localRes.status !== 503) {
+            reachedAnyServer = true;
+            const localData = await localRes.json().catch(() => ({} as any));
+            if (localRes.ok && localData?.token) {
+              setStoredJSON('sl_super_admin', true);
+              setStoredJSON('sl_jwt_token', localData.token);
+              set({
+                currentUser: null,
+                currentOrg: null,
+                superAdminActive: true,
+                token: localData.token,
+                localAdminToken: localData.localToken || localData.token,
+              });
+              setTimeout(() => get().fetchSuperAdminData(), 50);
+              return { success: true, role: 'ADMIN' };
+            }
+            if (localData?.error) {
+              lastErrMsg = String(localData.error);
+            }
+            if (localRes.status === 429) {
+              return { success: false, error: lastErrMsg || 'Too many login attempts. Please wait 15 minutes and try again.', role: 'ADMIN' };
+            }
+          }
+        } catch {
+          // Fall through to live Cloudflare Worker endpoints
+        }
+      }
+
+      // 2. Fallback / production direct verification against Cloudflare Worker
       try {
         const { response: adminRes } = await fetchBackendApi('/api/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'safetylink', password: rawPassword }),
+          body: payload,
         }, get().customBackendUrl);
-        if (adminRes.ok) {
-          const adminData = await adminRes.json();
+        reachedAnyServer = true;
+        const adminData = await adminRes.json().catch(() => ({} as any));
+        if (adminRes.ok && adminData?.token) {
           setStoredJSON('sl_super_admin', true);
           setStoredJSON('sl_jwt_token', adminData.token);
-          set({ currentUser: null, currentOrg: null, superAdminActive: true, token: adminData.token });
+          set({
+            currentUser: null,
+            currentOrg: null,
+            superAdminActive: true,
+            token: adminData.token,
+            localAdminToken: adminData.localToken || null,
+          });
           setTimeout(() => get().fetchSuperAdminData(), 50);
           return { success: true, role: 'ADMIN' };
         }
-        return { success: false, error: 'Invalid credentials. Please verify username and password.', role: 'ADMIN' };
+        const exactError = adminData?.error || lastErrMsg || 'Invalid credentials. Please verify username and password.';
+        return { success: false, error: exactError, role: 'ADMIN' };
       } catch {
-        return { success: false, error: 'No connection to the SafetyLink server. Try again when you are online.', role: 'ADMIN' };
+        return {
+          success: false,
+          error: reachedAnyServer && lastErrMsg
+            ? lastErrMsg
+            : 'No connection to the SafetyLink server. Try again when you are online.',
+          role: 'ADMIN',
+        };
       }
     }
 
@@ -2561,7 +2632,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   logout: () => {
-    set({ currentUser: null, currentOrg: null, superAdminActive: false, token: null });
+    set({ currentUser: null, currentOrg: null, superAdminActive: false, token: null, localAdminToken: null });
     setStoredJSON('sl_current_user', null);
     setStoredJSON('sl_current_org', null);
     setStoredJSON('sl_super_admin', false);

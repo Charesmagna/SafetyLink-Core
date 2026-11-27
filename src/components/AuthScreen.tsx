@@ -52,6 +52,7 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
   const [loginUsername, setLoginUsername] = useState('');
   const [loginOrgCode, setLoginOrgCode] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [showPopia, setShowPopia] = useState(false);
   const [showReferralInput, setShowReferralInput] = useState(false);
@@ -495,14 +496,24 @@ export const AuthScreen: React.FC<{ onBackToSite?: () => void; initialView?: 'LO
               </div>
               <div className="flex flex-col mt-2">
                 <label className="text-[9px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Password</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={e => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="bg-slate-950 border border-slate-900 rounded-2xl p-3.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={e => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-950 border border-slate-900 rounded-2xl p-3.5 pr-16 text-xs text-slate-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/10 font-mono transition-all"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-slate-100 transition-colors"
+                    aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showLoginPassword ? 'HIDE' : 'SHOW'}
+                  </button>
+                </div>
               </div>
 
               {/* REFERRAL CODE — collapsible */}

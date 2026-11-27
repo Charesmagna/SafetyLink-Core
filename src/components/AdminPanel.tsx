@@ -54,7 +54,8 @@ export const AdminPanel: React.FC = () => {
     adminAuditLogs,
     minSupportedVersion,
     adminUpdateUserStatus,
-    updateMinSupportedVersion
+    updateMinSupportedVersion,
+    localAdminToken,
   } = useAppStore();
   const [minVerInput, setMinVerInput] = useState(minSupportedVersion || '1.0.0');
   const [isRestoringDb, setIsRestoringDb] = useState(false);
@@ -111,36 +112,197 @@ export const AdminPanel: React.FC = () => {
   const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
   
-  // OTA Release state
-  const [githubToken, setGithubToken] = useState('');
+  // Server-Side Super Admin Session (in-memory only) + GitHub Publisher state
+  const [adminBearerToken, setAdminBearerToken] = useState<string>(() =>
+    localAdminToken || ''
+  );
+  const [authStatus, setAuthStatus] = useState<{ configured: boolean; needsBootstrap: boolean; githubSecretConfigured: boolean } | null>(null);
+  const [adminPassInput, setAdminPassInput] = useState('');
+  const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
+  const [isAuthenticatingAdmin, setIsAuthenticatingAdmin] = useState(false);
+
+  const [ghStatus, setGhStatus] = useState<{
+    tokenConfigured: boolean;
+    repo?: string;
+    branch?: string;
+    remoteHeadSha?: string;
+    remoteHeadMessage?: string;
+    changedFiles: Array<{ path: string; status: 'modified' | 'added'; size: number }>;
+    unchangedCount?: number;
+    message?: string;
+  } | null>(null);
+  const [selectedPublishPaths, setSelectedPublishPaths] = useState<string[]>([]);
+  const [publishMessage, setPublishMessage] = useState('feat: hero 10-video reel, Solutions gallery move, Contacts FCM config & full Worker Gemini routes');
+  const [isScanningGitHub, setIsScanningGitHub] = useState(false);
+  const [isPublishingGitHub, setIsPublishingGitHub] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ ok: boolean; message: string; commitUrl?: string; commitSha?: string } | null>(null);
   const [releaseStatus, setReleaseStatus] = useState<'idle' | 'triggering' | 'ok' | 'fail'>('idle');
 
+  const checkAdminAuthStatus = async () => {
+    try {
+      const res = await fetch('/api/admin/auth-status');
+      if (res.ok) {
+        const data = await res.json();
+        setAuthStatus({
+          configured: Boolean(data.configured),
+          needsBootstrap: Boolean(data.needsBootstrap),
+          githubSecretConfigured: Boolean(data.githubSecretConfigured),
+        });
+      }
+    } catch {
+      // ignore offline preview errors
+    }
+  };
+
+  useEffect(() => {
+    void checkAdminAuthStatus();
+  }, []);
+
+  const scanWorkspaceForGitHub = async (bearerOverride?: string) => {
+    const activeToken = bearerOverride ?? adminBearerToken;
+    if (!activeToken) return;
+    setIsScanningGitHub(true);
+    setPublishResult(null);
+    try {
+      const res = await fetch('/api/admin/github/status', {
+        headers: { Authorization: `Bearer ${activeToken}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        setAdminBearerToken('');
+        setAdminAuthError('Super Admin session expired. Please unlock again.');
+        return;
+      }
+      if (!res.ok) {
+        setPublishResult({ ok: false, message: data?.error || `Scan failed (HTTP ${res.status})` });
+        return;
+      }
+      const files = Array.isArray(data.changedFiles) ? data.changedFiles : [];
+      setGhStatus({
+        tokenConfigured: Boolean(data.tokenConfigured),
+        repo: data.repo,
+        branch: data.branch,
+        remoteHeadSha: data.remoteHeadSha,
+        remoteHeadMessage: data.remoteHeadMessage,
+        changedFiles: files,
+        unchangedCount: data.unchangedCount,
+        message: data.message,
+      });
+      setSelectedPublishPaths(files.map((f: any) => f.path));
+    } catch (err: any) {
+      setPublishResult({ ok: false, message: err?.message || 'Unable to scan workspace.' });
+    } finally {
+      setIsScanningGitHub(false);
+    }
+  };
+
+  useEffect(() => {
+    if (adminBearerToken) {
+      void scanWorkspaceForGitHub(adminBearerToken);
+    }
+  }, [adminBearerToken]);
+
+  useEffect(() => {
+    if (localAdminToken && !adminBearerToken) {
+      setAdminBearerToken(localAdminToken);
+    }
+  }, [localAdminToken, adminBearerToken]);
+
+  const handleSuperAdminUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminPassInput.trim()) return;
+    setIsAuthenticatingAdmin(true);
+    setAdminAuthError(null);
+    try {
+      // Always try /api/admin/login first — it verifies against BOTH local config and live production api.safetylink.online
+      const loginRes = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'safetylink', password: adminPassInput }),
+      });
+      const loginData = await loginRes.json().catch(() => ({}));
+      const unlockedToken = loginData?.localToken || loginData?.token;
+      if (loginRes.ok && unlockedToken) {
+        setAdminBearerToken(unlockedToken);
+        setAdminPassInput('');
+        await checkAdminAuthStatus();
+        addToast('Super Admin server session unlocked.', 'success');
+        return;
+      }
+      // If local server has no password configured yet and production check failed, surface clear error
+      setAdminAuthError(loginData?.error || `Authentication failed (HTTP ${loginRes.status})`);
+    } catch (err: any) {
+      setAdminAuthError(err?.message || 'Authentication error');
+    } finally {
+      setIsAuthenticatingAdmin(false);
+    }
+  };
+
+  const handlePublishWorkspaceToGitHub = async () => {
+    if (!adminBearerToken || selectedPublishPaths.length === 0) return;
+    setIsPublishingGitHub(true);
+    setPublishResult(null);
+    try {
+      const res = await fetch('/api/admin/github/publish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminBearerToken}`,
+        },
+        body: JSON.stringify({
+          commitMessage: publishMessage.trim() || 'Publish verified SafetyLink workspace updates',
+          selectedPaths: selectedPublishPaths,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        setAdminBearerToken('');
+        setAdminAuthError('Super Admin session expired. Please unlock again.');
+        return;
+      }
+      if (!res.ok || !data?.ok) {
+        setPublishResult({ ok: false, message: data?.error || `Publish failed (HTTP ${res.status})` });
+        addToast(data?.error || 'GitHub publish failed', 'error');
+        return;
+      }
+      setPublishResult({
+        ok: true,
+        message: data.message || `Published commit ${data.commitSha}`,
+        commitUrl: data.commitUrl,
+        commitSha: data.commitSha,
+      });
+      addAuditLog('SYSTEM', 'INFO', 'Published workspace to SafetyLink-Core main', data.commitSha || '');
+      addToast(`Published ${data.filesPublished?.length || 0} file(s) to SafetyLink-Core main!`, 'success');
+      await scanWorkspaceForGitHub(adminBearerToken);
+    } catch (err: any) {
+      setPublishResult({ ok: false, message: err?.message || 'Network error while publishing' });
+    } finally {
+      setIsPublishingGitHub(false);
+    }
+  };
+
   const triggerRelease = async () => {
-    if (!githubToken) return;
+    if (!adminBearerToken) return;
     setReleaseStatus('triggering');
     try {
-      const workflows = ['build-apk.yml', 'build-electron.yml', 'deploy-safetylink-web.yml'];
-      let allOk = true;
-      for (const wf of workflows) {
-        const res = await fetch(`https://api.github.com/repos/Charesmagna/SafetyLink-Core/actions/workflows/${wf}/dispatches`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'Authorization': `Bearer ${githubToken.trim()}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ ref: 'main' })
-        });
-        if (!res.ok) {
-          allOk = false;
-        }
-      }
+      const res = await fetch('/api/admin/github/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminBearerToken}`,
+        },
+        body: JSON.stringify({
+          workflows: ['deploy-safetylink-web.yml', 'deploy-worker.yml', 'build-apk.yml', 'build-electron.yml'],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const allOk = res.ok && Boolean(data?.ok);
       setReleaseStatus(allOk ? 'ok' : 'fail');
       addAuditLog('SYSTEM', allOk ? 'INFO' : 'WARN', allOk ? 'OTA Release Workflows Triggered' : 'OTA Release Workflows Failed', '');
-      setTimeout(() => setReleaseStatus('idle'), 5000);
-    } catch (err) {
+      setTimeout(() => setReleaseStatus('idle'), 6000);
+    } catch {
       setReleaseStatus('fail');
-      setTimeout(() => setReleaseStatus('idle'), 5000);
+      setTimeout(() => setReleaseStatus('idle'), 6000);
     }
   };
 
@@ -605,33 +767,218 @@ export const AdminPanel: React.FC = () => {
               {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach IoT Dashboard. Check the token and your connection.</p>}
             </div>
 
-            {/* OTA Release Management */}
-            <div className="glass-panel p-6 space-y-4 text-left">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200">Over-The-Air (OTA) Release Management</h3>
-                <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  Trigger the GitHub Actions workflows to build and publish a new release of SafetyLink (APK, EXE, and Web).
-                  Requires a GitHub Personal Access Token with repo workflow permissions.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="password"
-                  value={githubToken}
-                  onChange={(e) => setGithubToken(e.target.value)}
-                  placeholder="GitHub Personal Access Token (PAT)"
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
-                />
-                <button
-                  disabled={!githubToken || releaseStatus === 'triggering'}
-                  onClick={triggerRelease}
-                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors whitespace-nowrap"
+            {/* Secure Server-Side GitHub Publisher & OTA Release Management */}
+            <div className="glass-panel p-6 space-y-4 text-left border border-purple-500/20">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                    <span>🚀</span> Super Admin GitHub Publisher &amp; OTA Release Deck
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                    Publishes verified workspace changes directly to <span className="font-mono text-slate-200">Charesmagna/SafetyLink-Core (main)</span> via the server-side GitHub API using your secret stored in <strong>Settings → Secrets</strong> (<span className="font-mono text-emerald-300">GITHUB_TOKEN</span>). Secrets never enter the browser.
+                  </p>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[9px] font-mono font-bold border ${
+                    authStatus?.githubSecretConfigured
+                      ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                      : 'bg-amber-950/70 border-amber-500/40 text-amber-300'
+                  }`}
                 >
-                  {releaseStatus === 'triggering' ? 'TRIGGERING...' : 'PUBLISH RELEASE'}
-                </button>
+                  {authStatus?.githubSecretConfigured ? '● SERVER GITHUB SECRET ACTIVE' : '○ SET GITHUB_TOKEN IN SETTINGS → SECRETS'}
+                </span>
               </div>
-              {releaseStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Workflows triggered successfully. Check the GitHub Actions tab.</p>}
-              {releaseStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to trigger workflows. Ensure your PAT has the correct permissions.</p>}
+
+              {!adminBearerToken ? (
+                <form onSubmit={handleSuperAdminUnlock} className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3">
+                  <div className="text-xs font-bold text-slate-200">
+                    Unlock Super Admin Server Publisher
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Enter your Super Admin password (<span className="font-mono text-slate-200">safetylink</span>) to authorize publishing to Charesmagna/SafetyLink-Core. Verified server-side against production SafetyLink auth.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="password"
+                      value={adminPassInput}
+                      onChange={(e) => setAdminPassInput(e.target.value)}
+                      placeholder="Enter your Super Admin password"
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={isAuthenticatingAdmin || !adminPassInput.trim()}
+                      className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-black uppercase whitespace-nowrap"
+                    >
+                      {isAuthenticatingAdmin ? 'VERIFYING...' : 'UNLOCK PUBLISHER'}
+                    </button>
+                  </div>
+                  {adminAuthError && <p className="text-[10px] font-mono text-red-400">{adminAuthError}</p>}
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-[10px] font-mono">
+                    <div className="text-slate-300">
+                      Remote HEAD:{' '}
+                      <span className="text-emerald-300 font-bold">{ghStatus?.remoteHeadSha || '—'}</span>
+                      {ghStatus?.remoteHeadMessage && (
+                        <span className="text-slate-500 ml-2 truncate">({ghStatus.remoteHeadMessage.slice(0, 60)})</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isScanningGitHub}
+                      onClick={() => void scanWorkspaceForGitHub()}
+                      className="px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold uppercase disabled:opacity-50"
+                    >
+                      {isScanningGitHub ? 'SCANNING...' : '🔄 SCAN CHANGED FILES'}
+                    </button>
+                  </div>
+
+                  {ghStatus && !ghStatus.tokenConfigured ? (
+                    <div className="p-3 rounded-xl bg-amber-950/50 border border-amber-500/30 text-xs text-amber-200">
+                      {ghStatus.message || 'Add GITHUB_TOKEN (or GITHUB_PAT) in Settings → Secrets, then click Scan Changed Files.'}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Changed Files Checklist */}
+                      <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-slate-300 font-bold uppercase">
+                            Changed Workspace Files ({selectedPublishPaths.length} / {ghStatus?.changedFiles.length || 0} selected)
+                          </span>
+                          {ghStatus && ghStatus.changedFiles.length > 0 && (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPublishPaths(ghStatus.changedFiles.map((f) => f.path))}
+                                className="text-blue-400 hover:text-blue-300 underline"
+                              >
+                                Select all
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPublishPaths([])}
+                                className="text-slate-400 hover:text-slate-200 underline"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {!ghStatus || isScanningGitHub ? (
+                          <p className="text-[10px] font-mono text-slate-500 py-2">Comparing local workspace against SafetyLink-Core main...</p>
+                        ) : ghStatus.changedFiles.length === 0 ? (
+                          <p className="text-[10px] font-mono text-emerald-400 py-2">✓ Workspace matches SafetyLink-Core main — no pending file changes.</p>
+                        ) : (
+                          <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                            {ghStatus.changedFiles.map((file) => {
+                              const checked = selectedPublishPaths.includes(file.path);
+                              return (
+                                <label
+                                  key={file.path}
+                                  className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-slate-900/70 hover:bg-slate-900 border border-slate-800/70 text-[10px] font-mono cursor-pointer"
+                                >
+                                  <span className="flex items-center gap-2 min-w-0">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        setSelectedPublishPaths((prev) =>
+                                          e.target.checked
+                                            ? Array.from(new Set([...prev, file.path]))
+                                            : prev.filter((p) => p !== file.path),
+                                        );
+                                      }}
+                                      className="accent-emerald-500"
+                                    />
+                                    <span className="text-slate-200 truncate">{file.path}</span>
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase shrink-0 ${
+                                      file.status === 'added'
+                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
+                                        : 'bg-blue-950 text-blue-300 border border-blue-500/30'
+                                    }`}
+                                  >
+                                    {file.status}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Commit Message + Publish & Workflow Trigger Buttons */}
+                      <div className="space-y-2.5">
+                        <input
+                          type="text"
+                          value={publishMessage}
+                          onChange={(e) => setPublishMessage(e.target.value)}
+                          placeholder="Commit message for SafetyLink-Core main..."
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
+                        />
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <button
+                            type="button"
+                            disabled={isPublishingGitHub || selectedPublishPaths.length === 0}
+                            onClick={() => void handlePublishWorkspaceToGitHub()}
+                            className="flex-1 px-4 py-2.5 text-[10px] font-mono font-black rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-black uppercase transition-colors"
+                          >
+                            {isPublishingGitHub
+                              ? 'PUBLISHING TO SAFETYLINK-CORE...'
+                              : `🚀 PUBLISH ${selectedPublishPaths.length} FILE(S) TO MAIN`}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={releaseStatus === 'triggering'}
+                            onClick={() => void triggerRelease()}
+                            className="px-4 py-2.5 text-[10px] font-mono font-bold rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-slate-800 disabled:text-slate-600 text-white uppercase transition-colors whitespace-nowrap"
+                          >
+                            {releaseStatus === 'triggering' ? 'TRIGGERING CI...' : '⚡ TRIGGER CI WORKFLOWS'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {publishResult && (
+                    <div
+                      className={`p-3 rounded-xl text-[10px] font-mono border ${
+                        publishResult.ok
+                          ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200'
+                          : 'bg-red-950/60 border-red-500/40 text-red-200'
+                      }`}
+                    >
+                      <div>{publishResult.message}</div>
+                      {publishResult.commitUrl && (
+                        <a
+                          href={publishResult.commitUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-300 underline mt-1 inline-block"
+                        >
+                          View commit {publishResult.commitSha} on GitHub →
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {releaseStatus === 'ok' && (
+                    <p className="text-[10px] text-emerald-400 font-mono">
+                      ✓ Web, Worker, APK, and Desktop CI workflows triggered on SafetyLink-Core main.
+                    </p>
+                  )}
+                  {releaseStatus === 'fail' && (
+                    <p className="text-[10px] text-red-400 font-mono">
+                      ✗ Could not trigger all workflows. Check GitHub Actions permissions on your server secret.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Recent Activity & Security Action Audit Logs */}

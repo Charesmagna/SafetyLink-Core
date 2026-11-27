@@ -319,9 +319,26 @@ const connection = { url: process.env.REDIS_URL };
 async function startServer() {
   const app = express();
 
-// Enable CORS for frontend domain
+// Enable CORS for frontend domain (including AI Studio preview .run.app origins)
 app.use(cors({
-  origin: ["https://safetylink.online", "https://www.safetylink.online", "http://localhost:5173", "http://localhost:3000"],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const exactAllowed = [
+      "https://safetylink.online",
+      "https://www.safetylink.online",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ];
+    if (exactAllowed.includes(origin)) return callback(null, true);
+    try {
+      const u = new URL(origin);
+      if (u.protocol === "https:" && (u.hostname.endsWith(".run.app") || u.hostname.endsWith(".safetylink.online") || u.hostname.endsWith(".safetylink-core.pages.dev"))) {
+        return callback(null, true);
+      }
+    } catch {}
+    return callback(null, false);
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true
 }));
@@ -2661,25 +2678,186 @@ Rules:
     next();
   };
 
-  // Super Admin login backed strictly by server environment credentials
+  const verifyScryptHash = (password: string, stored: string): boolean => {
+    const parts = String(stored || '').split(':');
+    if (parts.length !== 2) return false;
+    const [salt, expectedHex] = parts;
+    if (!salt || !expectedHex) return false;
+    try {
+      const derived = crypto.scryptSync(password, salt, 64);
+      const expected = Buffer.from(expectedHex, 'hex');
+      if (derived.length !== expected.length) return false;
+      return crypto.timingSafeEqual(derived, expected);
+    } catch {
+      return false;
+    }
+  };
+
+  const hashScryptPassword = (password: string): string => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const derived = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `${salt}:${derived}`;
+  };
+
+  const getStoredBootstrapAdminHash = async (): Promise<string> => {
+    try {
+      const row = await db.execute({
+        sql: "SELECT value FROM app_config WHERE key = 'super_admin_password_hash'",
+        args: [],
+      });
+      return String((row.rows?.[0] as any)?.value || '').trim();
+    } catch {
+      return '';
+    }
+  };
+
+  // Super Admin auth configuration status (never leaks credentials)
+  app.get("/api/admin/auth-status", async (_req: any, res: any) => {
+    const hasEnvPass = Boolean((process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '').trim());
+    const storedHash = hasEnvPass ? '' : await getStoredBootstrapAdminHash();
+    res.json({
+      ok: true,
+      configured: hasEnvPass || Boolean(storedHash),
+      needsBootstrap: !hasEnvPass && !storedHash,
+      githubSecretConfigured: Boolean((process.env.GITHUB_TOKEN || process.env.GITHUB_PAT || process.env.GH_TOKEN || '').trim()),
+    });
+  });
+
+  // One-time Super Admin first-run bootstrap when ADMIN_PASSWORD env is unset in preview
+  app.post("/api/admin/bootstrap", async (req: any, res: any) => {
+    try {
+      const hasEnvPass = Boolean((process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '').trim());
+      if (hasEnvPass) {
+        return res.status(409).json({ error: "Super Admin password is already configured via server environment." });
+      }
+      const existingHash = await getStoredBootstrapAdminHash();
+      if (existingHash) {
+        return res.status(409).json({ error: "Super Admin passcode has already been claimed. Please sign in." });
+      }
+      const password = String(req.body?.password || '');
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Choose an administrator password with at least 8 characters." });
+      }
+      const hashed = hashScryptPassword(password);
+      await db.execute({
+        sql: "INSERT OR REPLACE INTO app_config (key, value, updated_at) VALUES ('super_admin_password_hash', ?, ?)",
+        args: [hashed, Date.now()],
+      });
+      const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+      return res.status(201).json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+    } catch (e: any) {
+      return res.status(500).json({ error: e?.message || 'Bootstrap failed' });
+    }
+  });
+
+  // Helper: verify Super Admin credentials against live production Worker over HTTPS
+  const verifyAgainstProductionWorker = async (email: string, password: string): Promise<{
+    ok: boolean;
+    status: number;
+    token?: string;
+    error?: string;
+  }> => {
+    const prodOrigins = [
+      "https://api.safetylink.online",
+      "https://safetylink-api.tshilidzi-mukwevho54.workers.dev",
+    ];
+    let lastStatus = 502;
+    let lastError = "Unable to reach SafetyLink production authentication server.";
+    for (const origin of prodOrigins) {
+      try {
+        const resp = await fetch(`${origin}/api/admin/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const data: any = await resp.json().catch(() => ({}));
+        if (resp.ok && data?.token) {
+          return { ok: true, status: 200, token: String(data.token) };
+        }
+        lastStatus = resp.status;
+        lastError = String(data?.error || `Authentication failed (HTTP ${resp.status})`);
+        if (resp.status === 401 || resp.status === 429) {
+          return { ok: false, status: resp.status, error: lastError };
+        }
+      } catch (err: any) {
+        lastError = err?.message || lastError;
+      }
+    }
+    return { ok: false, status: lastStatus, error: lastError };
+  };
+
+  // Super Admin login: verifies against local server config (ADMIN_PASSWORD or claimed scrypt hash)
+  // AND falls back to server-side verification against live production api.safetylink.online so
+  // production Super Admin credentials seamlessly unlock both the console and local GitHub Publisher.
   app.post("/api/admin/login", async (req: any, res: any) => {
     try {
-      const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
-      if (!configuredPass) {
-        return res.status(503).json({ error: "SuperAdmin server credentials not configured." });
-      }
       const { email, password } = req.body || {};
-      const who = String(email || '').trim().toLowerCase();
+      const rawEmail = String(email || 'safetylink').trim();
+      const compactWho = rawEmail.toLowerCase().replace(/\s+/g, '');
       const allowedEmail = String(process.env.ADMIN_EMAIL || 'safetylink').trim().toLowerCase();
       const pass = String(password || '');
-      const emailOk = who === 'safetylink' || who === allowedEmail;
-      const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
-      const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
-      if (!emailOk || !safeEqualStr(passDigest, expectedDigest)) {
-        return res.status(401).json({ error: "Invalid administrator credentials." });
+      if (!pass) {
+        return res.status(400).json({ error: "Password is required." });
       }
-      const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
-      return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+
+      const emailLooksSuperAdmin =
+        compactWho === 'safetylink' ||
+        compactWho === 'sl-admin-0000' ||
+        compactWho === allowedEmail ||
+        rawEmail.includes('@');
+
+      if (!emailLooksSuperAdmin) {
+        return res.status(401).json({ error: "Invalid administrator username." });
+      }
+
+      const configuredPass = (process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '').trim();
+      const storedHash = configuredPass ? '' : await getStoredBootstrapAdminHash();
+
+      let localMatch = false;
+      if (configuredPass) {
+        const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+        const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+        localMatch = safeEqualStr(passDigest, expectedDigest);
+      } else if (storedHash) {
+        localMatch = verifyScryptHash(pass, storedHash);
+      }
+
+      if (localMatch) {
+        const localToken = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+        return res.json({
+          token: localToken,
+          localToken,
+          org_name: 'SafetyLink Super Admin',
+          org_code: 'SL-ADMIN-0000',
+          superAdmin: true,
+          verifiedBy: 'local_server',
+        });
+      }
+
+      // Server-side verification against live production SafetyLink Worker (PBKDF2-SHA256)
+      const workerEmail = compactWho === 'sl-admin-0000' || compactWho === 'safetylink' ? 'safetylink' : rawEmail.toLowerCase();
+      const prodCheck = await verifyAgainstProductionWorker(workerEmail, pass);
+      if (prodCheck.ok && prodCheck.token) {
+        const localToken = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+        return res.json({
+          token: prodCheck.token,
+          localToken,
+          org_name: 'SafetyLink Super Admin',
+          org_code: 'SL-ADMIN-0000',
+          superAdmin: true,
+          verifiedBy: 'production_worker',
+        });
+      }
+
+      if (prodCheck.status === 429) {
+        return res.status(429).json({ error: prodCheck.error || "Too many attempts. Try again in 15 minutes." });
+      }
+
+      return res.status(prodCheck.status === 401 ? 401 : 401).json({
+        error: prodCheck.error || "Invalid administrator credentials.",
+        needsBootstrap: !configuredPass && !storedHash,
+      });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
@@ -2705,20 +2883,32 @@ Rules:
       const { username, org_code, orgCode, admin_password, password } = req.body || {};
       const targetOrgCode = org_code || orgCode;
       const pass = String(admin_password || password || '');
-      const normUsername = String(username || '').trim().toLowerCase();
+      const normUsername = String(username || '').trim().toLowerCase().replace(/\s+/g, '');
 
-      // Super admin check ONLY via configured env password (never hardcoded)
+      // Super admin check via configured env password, local scrypt hash, or live production Worker
       const isSuperAdminIdentifier = normUsername === 'safetylink' || normUsername === 'sl-admin-0000' ||
-                                     String(targetOrgCode || '').toUpperCase() === 'SL-ADMIN-0000';
+                                     String(targetOrgCode || '').trim().toUpperCase().replace(/\s+/g, '') === 'SL-ADMIN-0000';
       if (isSuperAdminIdentifier) {
-        const configuredPass = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '';
-        const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
-        const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
-        if (configuredPass && safeEqualStr(passDigest, expectedDigest)) {
-          const token = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
-          return res.json({ token, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+        const configuredPass = (process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD || '').trim();
+        const storedHash = configuredPass ? '' : await getStoredBootstrapAdminHash();
+        let localMatch = false;
+        if (configuredPass) {
+          const passDigest = crypto.createHash('sha256').update(pass).digest('hex');
+          const expectedDigest = crypto.createHash('sha256').update(configuredPass).digest('hex');
+          localMatch = safeEqualStr(passDigest, expectedDigest);
+        } else if (storedHash) {
+          localMatch = verifyScryptHash(pass, storedHash);
         }
-        return res.status(401).json({ error: "Invalid administrator credentials." });
+        if (localMatch) {
+          const localToken = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+          return res.json({ token: localToken, localToken, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+        }
+        const prodCheck = await verifyAgainstProductionWorker('safetylink', pass);
+        if (prodCheck.ok && prodCheck.token) {
+          const localToken = signSessionToken({ superAdmin: true, orgId: 0, orgCode: 'SL-ADMIN-0000' }, 8 * 3600_000);
+          return res.json({ token: prodCheck.token, localToken, org_name: 'SafetyLink Super Admin', org_code: 'SL-ADMIN-0000', superAdmin: true });
+        }
+        return res.status(prodCheck.status === 429 ? 429 : 401).json({ error: prodCheck.error || "Invalid administrator credentials." });
       }
 
       // Check organization account if targetOrgCode or org-matching username is provided
@@ -3087,6 +3277,395 @@ Rules:
       res.json({ ok: true, totalCount: users.length, sources, users });
     } catch (e: any) {
       res.status(500).json({ error: e.message || "Failed to restore customer database" });
+    }
+  });
+
+  // ── Super Admin: Server-Side GitHub Publisher (Git Data REST API, zero shell execution) ──
+  const GH_PUBLISH_OWNER = "Charesmagna";
+  const GH_PUBLISH_REPO = "SafetyLink-Core";
+  const GH_PUBLISH_BRANCH = "main";
+  const GH_ALLOWED_WORKFLOWS = new Set([
+    "build-apk.yml",
+    "build-electron.yml",
+    "deploy-safetylink-web.yml",
+    "deploy-worker.yml",
+  ]);
+  const GH_EXCLUDED_DIRS = new Set([
+    "node_modules",
+    "dist",
+    ".git",
+    ".vite",
+    ".aistudio",
+    "data",
+    ".wrangler",
+    ".gradle",
+    ".kotlin",
+    ".idea",
+    "build",
+    "captures",
+    ".restored_features_backup",
+    ".externalNativeBuild",
+    ".cxx",
+  ]);
+  const GH_MAX_FILE_BYTES = 2 * 1024 * 1024;
+  const GH_MAX_FILES_PER_COMMIT = 60;
+
+  const getServerGithubToken = (): string =>
+    String(process.env.GITHUB_TOKEN || process.env.GITHUB_PAT || process.env.GH_TOKEN || "").trim();
+
+  const isSafePublishRelativePath = (relPosix: string): boolean => {
+    if (!relPosix || relPosix.startsWith("/") || relPosix.includes("..")) return false;
+    const segments = relPosix.split("/");
+    for (const seg of segments) {
+      if (!seg || seg === "." || seg === "..") return false;
+      if (GH_EXCLUDED_DIRS.has(seg)) return false;
+    }
+    if (relPosix.startsWith("android/app/src/main/assets/public/")) return false;
+    const base = segments[segments.length - 1];
+    if (base === ".env") return false;
+    if (base.startsWith(".env.") && base !== ".env.example") return false;
+    if (base.startsWith(".dev.vars") && base !== ".dev.vars.example") return false;
+    if (/^(local\.properties|keystore\.properties|debug\.keystore|job_log\.txt)$/i.test(base)) return false;
+    if (/\.(db|db-shm|db-wal|sqlite|sqlite3|log|zip|apk|aab|keystore|jks|pem|key|p12|pfx)$/i.test(base)) return false;
+    if (/(service-account|adminsdk|safetylink-99e56-).*\.json$/i.test(base)) return false;
+    return true;
+  };
+
+  const gitBlobSha1 = (buf: Buffer): string =>
+    crypto
+      .createHash("sha1")
+      .update(`blob ${buf.length}\0`)
+      .update(buf)
+      .digest("hex");
+
+  const collectSafeWorkspaceFiles = (): Map<string, { absPath: string; size: number; sha: string }> => {
+    const rootDir = path.resolve(process.cwd());
+    const files = new Map<string, { absPath: string; size: number; sha: string }>();
+
+    const walk = (dir: string) => {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = path.resolve(dir, entry.name);
+        if (!full.startsWith(rootDir + path.sep)) continue;
+        const relPosix = path.relative(rootDir, full).split(path.sep).join("/");
+        if (entry.isDirectory()) {
+          if (GH_EXCLUDED_DIRS.has(entry.name)) continue;
+          if (relPosix === "android/app/src/main/assets/public") continue;
+          walk(full);
+        } else if (entry.isFile()) {
+          if (!isSafePublishRelativePath(relPosix)) continue;
+          try {
+            const stat = fs.statSync(full);
+            if (stat.size > GH_MAX_FILE_BYTES) continue;
+            const buf = fs.readFileSync(full);
+            files.set(relPosix, { absPath: full, size: stat.size, sha: gitBlobSha1(buf) });
+          } catch {
+            // Skip unreadable transient files
+          }
+        }
+      }
+    };
+
+    walk(rootDir);
+    return files;
+  };
+
+  const githubApiFetch = async (token: string, apiPath: string, init?: RequestInit) => {
+    const url = `https://api.github.com/repos/${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}${apiPath}`;
+    return fetch(url, {
+      ...init,
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "SafetyLink-SuperAdmin-Publisher",
+        ...(init?.headers || {}),
+      },
+    });
+  };
+
+  app.get("/api/admin/github/status", superAdminMiddleware, async (_req: any, res: any) => {
+    try {
+      const token = getServerGithubToken();
+      if (!token) {
+        return res.json({
+          ok: true,
+          tokenConfigured: false,
+          repo: `${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}`,
+          branch: GH_PUBLISH_BRANCH,
+          changedFiles: [],
+          message: "Add GITHUB_TOKEN (or GITHUB_PAT) in Settings → Secrets to enable 1-click server publishing.",
+        });
+      }
+
+      const refRes = await githubApiFetch(token, `/git/ref/heads/${GH_PUBLISH_BRANCH}`);
+      if (!refRes.ok) {
+        const errData: any = await refRes.json().catch(() => ({}));
+        return res.status(refRes.status === 401 ? 401 : 502).json({
+          ok: false,
+          tokenConfigured: true,
+          error: errData?.message || `GitHub ref lookup failed (HTTP ${refRes.status})`,
+        });
+      }
+      const refData: any = await refRes.json();
+      const remoteHeadSha = String(refData?.object?.sha || "");
+
+      const commitRes = await githubApiFetch(token, `/git/commits/${remoteHeadSha}`);
+      if (!commitRes.ok) {
+        return res.status(502).json({ ok: false, tokenConfigured: true, error: "Could not read remote HEAD commit." });
+      }
+      const commitData: any = await commitRes.json();
+      const baseTreeSha = String(commitData?.tree?.sha || "");
+
+      const treeRes = await githubApiFetch(token, `/git/trees/${baseTreeSha}?recursive=1`);
+      if (!treeRes.ok) {
+        return res.status(502).json({ ok: false, tokenConfigured: true, error: "Could not read remote repository tree." });
+      }
+      const treeData: any = await treeRes.json();
+      const remoteShaMap = new Map<string, string>();
+      for (const item of Array.isArray(treeData?.tree) ? treeData.tree : []) {
+        if (item?.type === "blob" && item?.path && item?.sha) {
+          remoteShaMap.set(String(item.path), String(item.sha));
+        }
+      }
+
+      const localFiles = collectSafeWorkspaceFiles();
+      const changedFiles: Array<{ path: string; status: "modified" | "added"; size: number }> = [];
+      let unchangedCount = 0;
+
+      for (const [relPath, info] of localFiles.entries()) {
+        const remoteSha = remoteShaMap.get(relPath);
+        if (!remoteSha) {
+          changedFiles.push({ path: relPath, status: "added", size: info.size });
+        } else if (remoteSha !== info.sha) {
+          changedFiles.push({ path: relPath, status: "modified", size: info.size });
+        } else {
+          unchangedCount++;
+        }
+      }
+
+      changedFiles.sort((a, b) => a.path.localeCompare(b.path));
+      return res.json({
+        ok: true,
+        tokenConfigured: true,
+        repo: `${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}`,
+        branch: GH_PUBLISH_BRANCH,
+        remoteHeadSha: remoteHeadSha.slice(0, 7),
+        remoteHeadMessage: String(commitData?.message || "").split("\n")[0],
+        changedFiles,
+        unchangedCount,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: e?.message || "Failed to inspect GitHub status" });
+    }
+  });
+
+  app.post("/api/admin/github/publish", superAdminMiddleware, async (req: any, res: any) => {
+    try {
+      const token = getServerGithubToken();
+      if (!token) {
+        return res.status(503).json({
+          ok: false,
+          error: "Server GitHub token is not configured. Add GITHUB_TOKEN in Settings → Secrets.",
+        });
+      }
+
+      const commitMessage = String(req.body?.commitMessage || "Publish verified SafetyLink workspace updates")
+        .replace(/[\r\n]+/g, " ")
+        .trim()
+        .slice(0, 200);
+      if (commitMessage.length < 3) {
+        return res.status(400).json({ ok: false, error: "Commit message must be at least 3 characters." });
+      }
+
+      const refRes = await githubApiFetch(token, `/git/ref/heads/${GH_PUBLISH_BRANCH}`);
+      if (!refRes.ok) {
+        const errData: any = await refRes.json().catch(() => ({}));
+        return res.status(refRes.status === 401 ? 401 : 502).json({
+          ok: false,
+          error: errData?.message || `Unable to read ${GH_PUBLISH_BRANCH} ref`,
+        });
+      }
+      const refData: any = await refRes.json();
+      const parentSha = String(refData?.object?.sha || "");
+
+      const commitRes = await githubApiFetch(token, `/git/commits/${parentSha}`);
+      if (!commitRes.ok) return res.status(502).json({ ok: false, error: "Failed to read parent commit." });
+      const parentCommit: any = await commitRes.json();
+      const baseTreeSha = String(parentCommit?.tree?.sha || "");
+
+      const treeRes = await githubApiFetch(token, `/git/trees/${baseTreeSha}?recursive=1`);
+      if (!treeRes.ok) return res.status(502).json({ ok: false, error: "Failed to read base tree." });
+      const remoteTreeData: any = await treeRes.json();
+      const remoteShaMap = new Map<string, string>();
+      for (const item of Array.isArray(remoteTreeData?.tree) ? remoteTreeData.tree : []) {
+        if (item?.type === "blob" && item?.path && item?.sha) {
+          remoteShaMap.set(String(item.path), String(item.sha));
+        }
+      }
+
+      const localFiles = collectSafeWorkspaceFiles();
+      const requestedPaths: string[] | null = Array.isArray(req.body?.selectedPaths)
+        ? req.body.selectedPaths.map((p: any) => String(p || "").trim()).filter(Boolean)
+        : null;
+
+      const filesToPublish: Array<{ path: string; absPath: string }> = [];
+      if (requestedPaths && requestedPaths.length > 0) {
+        for (const p of requestedPaths) {
+          const entry = localFiles.get(p);
+          if (!entry || !isSafePublishRelativePath(p)) {
+            return res.status(400).json({ ok: false, error: `File not permitted or not found: ${p}` });
+          }
+          if (remoteShaMap.get(p) !== entry.sha) {
+            filesToPublish.push({ path: p, absPath: entry.absPath });
+          }
+        }
+      } else {
+        for (const [relPath, entry] of localFiles.entries()) {
+          if (remoteShaMap.get(relPath) !== entry.sha) {
+            filesToPublish.push({ path: relPath, absPath: entry.absPath });
+          }
+        }
+      }
+
+      if (filesToPublish.length === 0) {
+        return res.json({
+          ok: true,
+          upToDate: true,
+          commitSha: parentSha.slice(0, 7),
+          filesPublished: [],
+          message: "SafetyLink-Core main is already up to date with the selected files.",
+        });
+      }
+      if (filesToPublish.length > GH_MAX_FILES_PER_COMMIT) {
+        return res.status(400).json({
+          ok: false,
+          error: `Selected ${filesToPublish.length} files, exceeding the safety limit of ${GH_MAX_FILES_PER_COMMIT} files per publish. Select a smaller set of files.`,
+        });
+      }
+
+      const treeEntries: Array<{ path: string; mode: string; type: string; sha: string }> = [];
+      for (const item of filesToPublish) {
+        const contentB64 = fs.readFileSync(item.absPath).toString("base64");
+        const blobRes = await githubApiFetch(token, "/git/blobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: contentB64, encoding: "base64" }),
+        });
+        if (!blobRes.ok) {
+          const errData: any = await blobRes.json().catch(() => ({}));
+          return res.status(502).json({
+            ok: false,
+            error: `Failed creating blob for ${item.path}: ${errData?.message || blobRes.status}`,
+          });
+        }
+        const blobData: any = await blobRes.json();
+        treeEntries.push({
+          path: item.path,
+          mode: "100644",
+          type: "blob",
+          sha: String(blobData.sha),
+        });
+      }
+
+      const newTreeRes = await githubApiFetch(token, "/git/trees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base_tree: baseTreeSha, tree: treeEntries }),
+      });
+      if (!newTreeRes.ok) {
+        const errData: any = await newTreeRes.json().catch(() => ({}));
+        return res.status(502).json({ ok: false, error: errData?.message || "Failed creating Git tree" });
+      }
+      const newTreeData: any = await newTreeRes.json();
+
+      const newCommitRes = await githubApiFetch(token, "/git/commits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: commitMessage,
+          tree: String(newTreeData.sha),
+          parents: [parentSha],
+        }),
+      });
+      if (!newCommitRes.ok) {
+        const errData: any = await newCommitRes.json().catch(() => ({}));
+        return res.status(502).json({ ok: false, error: errData?.message || "Failed creating Git commit" });
+      }
+      const newCommitData: any = await newCommitRes.json();
+      const newCommitSha = String(newCommitData.sha);
+
+      const updateRefRes = await githubApiFetch(token, `/git/refs/heads/${GH_PUBLISH_BRANCH}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sha: newCommitSha, force: false }),
+      });
+      if (!updateRefRes.ok) {
+        const errData: any = await updateRefRes.json().catch(() => ({}));
+        return res.status(409).json({
+          ok: false,
+          error: errData?.message || "Failed to fast-forward main branch (remote may have changed; refresh and retry).",
+        });
+      }
+
+      try {
+        await db.execute({
+          sql: "INSERT INTO admin_audit_logs (action, target_id, details, created_at) VALUES (?, ?, ?, ?)",
+          args: [
+            "GITHUB_PUBLISH",
+            `${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}@${newCommitSha.slice(0, 7)}`,
+            `Published ${filesToPublish.length} file(s): ${commitMessage}`,
+            Date.now(),
+          ],
+        });
+      } catch {
+        // Optional audit table
+      }
+
+      return res.json({
+        ok: true,
+        commitSha: newCommitSha.slice(0, 7),
+        fullSha: newCommitSha,
+        commitUrl: `https://github.com/${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO}/commit/${newCommitSha}`,
+        filesPublished: filesToPublish.map((f) => f.path),
+        message: `Published ${filesToPublish.length} file(s) to ${GH_PUBLISH_OWNER}/${GH_PUBLISH_REPO} (${GH_PUBLISH_BRANCH}).`,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: e?.message || "GitHub publish failed" });
+    }
+  });
+
+  app.post("/api/admin/github/dispatch", superAdminMiddleware, async (req: any, res: any) => {
+    try {
+      const token = getServerGithubToken();
+      if (!token) {
+        return res.status(503).json({
+          ok: false,
+          error: "Server GitHub token is not configured. Add GITHUB_TOKEN in Settings → Secrets.",
+        });
+      }
+      const requested: string[] = Array.isArray(req.body?.workflows) && req.body.workflows.length > 0
+        ? req.body.workflows.map((w: any) => String(w || "").trim())
+        : ["deploy-safetylink-web.yml", "deploy-worker.yml", "build-apk.yml"];
+
+      const validWorkflows = requested.filter((w) => GH_ALLOWED_WORKFLOWS.has(w));
+      if (validWorkflows.length === 0) {
+        return res.status(400).json({ ok: false, error: "No valid workflows specified." });
+      }
+
+      const results: Array<{ workflow: string; ok: boolean; status: number }> = [];
+      for (const wf of validWorkflows) {
+        const r = await githubApiFetch(token, `/actions/workflows/${encodeURIComponent(wf)}/dispatches`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ref: GH_PUBLISH_BRANCH }),
+        });
+        results.push({ workflow: wf, ok: r.ok, status: r.status });
+      }
+      const allOk = results.every((r) => r.ok);
+      return res.status(allOk ? 200 : 207).json({ ok: allOk, results });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: e?.message || "Workflow dispatch failed" });
     }
   });
 
@@ -3796,6 +4375,46 @@ Rules:
       });
     } catch (e: any) {
       return res.status(500).json({ error: String(e?.message || e) });
+    }
+  });
+
+  app.post('/api/device/tokens/status', async (req, res) => {
+    try {
+      await ensureZeroAirtimeLocalTables();
+      const rawPhones: string[] = Array.isArray(req.body?.phones)
+        ? req.body.phones.map((p: any) => String(p || '').trim()).filter(Boolean).slice(0, 25)
+        : [];
+      const statuses = await Promise.all(
+        rawPhones.map(async (raw) => {
+          const phone = normalizeSaE164(raw);
+          if (!phone) return { inputPhone: raw, phone: '', registered: false, deviceCount: 0, lastUpdated: null };
+          const variants = saPhoneVariants(phone);
+          const ph = variants.map(() => '?').join(', ');
+          const r = await db.execute({
+            sql: `SELECT token, updated_at FROM sl_device_tokens WHERE phone IN (${ph}) ORDER BY updated_at DESC LIMIT 8`,
+            args: variants,
+          });
+          const valid = r.rows.filter((x: any) => String(x.token || '').trim().length > 20);
+          const lastUpdated = valid.length ? Math.max(...valid.map((x: any) => Number(x.updated_at || 0))) : null;
+          return {
+            inputPhone: raw,
+            phone,
+            registered: valid.length > 0,
+            deviceCount: valid.length,
+            lastUpdated,
+          };
+        }),
+      );
+      return res.json({
+        ok: true,
+        fcmConfigured: hasExplicitFcmCredentials,
+        checkedAt: Date.now(),
+        linkedCount: statuses.filter((s) => s.registered).length,
+        totalDevices: statuses.reduce((sum, s) => sum + (s.deviceCount || 0), 0),
+        statuses,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ ok: false, error: String(e?.message || e) });
     }
   });
 

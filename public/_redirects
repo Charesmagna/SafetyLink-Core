@@ -1,1 +1,2 @@
 /SafetyLink.apk /download/apk 302
+/api/* https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/:splat 200

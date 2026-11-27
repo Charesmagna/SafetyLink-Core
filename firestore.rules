@@ -1,8 +1,414 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Pillar 0: Global Default-Deny Catch-All Safety Net
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // =========================================================
+    // GLOBAL HARDENED PRIMITIVES (Phase 3)
+    // =========================================================
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'tshilidzi.mukwevho54@gmail.com' ||
+        request.auth.token.email == 'Tshilidzi.mukwevho54@gmail.com'
+      );
+    }
+
+    // =========================================================
+    // VALIDATION BLUEPRINTS (Pillar 2: Anti-Update-Gap)
+    // =========================================================
+    function isValidUserPublic(data, userId) {
+      return data.keys().hasAll(['uid', 'username', 'role', 'createdAt'])
+        && data.keys().hasOnly([
+          'uid', 'username', 'fullName', 'role', 'orgCode',
+          'lat', 'lng', 'activeSOS', 'battery', 'lastLocationUpdate',
+          'createdAt', 'updatedAt'
+        ])
+        && data.uid is string && data.uid == userId && isValidId(data.uid)
+        && data.username is string && data.username.size() >= 2 && data.username.size() <= 64
+        && data.role in ['Community Member', 'Responder', 'Control Room Operator', 'Dispatcher', 'Organization Administrator']
+        && (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 120))
+        && (!('orgCode' in data) || (data.orgCode is string && data.orgCode.size() <= 64))
+        && (!('lat' in data) || data.lat is number)
+        && (!('lng' in data) || data.lng is number)
+        && (!('activeSOS' in data) || data.activeSOS is bool)
+        && (!('battery' in data) || data.battery is number)
+        && (!('lastLocationUpdate' in data) || data.lastLocationUpdate is number);
+    }
+
+    function isValidUserPrivatePII(data, userId) {
+      return data.keys().hasAll(['uid'])
+        && data.keys().hasOnly(['uid', 'email', 'phone', 'whatsapp', 'medicalInfo', 'homeAddress', 'workAddress', 'updatedAt'])
+        && data.uid is string && data.uid == userId && isValidId(data.uid)
+        && (!('email' in data) || (data.email is string && data.email.size() <= 160))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 32))
+        && (!('whatsapp' in data) || (data.whatsapp is string && data.whatsapp.size() <= 32))
+        && (!('medicalInfo' in data) || (data.medicalInfo is string && data.medicalInfo.size() <= 1000))
+        && (!('homeAddress' in data) || (data.homeAddress is string && data.homeAddress.size() <= 300))
+        && (!('workAddress' in data) || (data.workAddress is string && data.workAddress.size() <= 300));
+    }
+
+    function isValidOrganization(data, orgId) {
+      return data.keys().hasAll(['orgId', 'ownerUid', 'name', 'subscriptionStatus', 'createdAt'])
+        && data.keys().hasOnly(['orgId', 'ownerUid', 'name', 'subscriptionStatus', 'referralCode', 'primaryColor', 'createdAt', 'updatedAt'])
+        && data.orgId is string && data.orgId == orgId && isValidId(data.orgId)
+        && data.ownerUid is string && isValidId(data.ownerUid)
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.subscriptionStatus in ['trial', 'active', 'locked']
+        && (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() <= 32))
+        && (!('primaryColor' in data) || (data.primaryColor is string && data.primaryColor.size() <= 24));
+    }
+
+    function isValidOrgJoinRequest(data, requestId) {
+      return data.keys().hasAll(['requestId', 'userId', 'orgId', 'requestedRole', 'status', 'createdAt'])
+        && data.keys().hasOnly(['requestId', 'userId', 'orgId', 'requestedRole', 'status', 'createdAt', 'updatedAt'])
+        && data.requestId is string && data.requestId == requestId && isValidId(data.requestId)
+        && data.userId is string && isValidId(data.userId)
+        && data.orgId is string && isValidId(data.orgId)
+        && data.requestedRole in ['Community Member', 'Responder', 'Dispatcher']
+        && data.status in ['PENDING', 'APPROVED', 'REJECTED'];
+    }
+
+    function isValidPanicEvent(data, eventId) {
+      return data.keys().hasAll(['incidentId', 'userId', 'orgId', 'status', 'latitude', 'longitude', 'createdAt'])
+        && data.keys().hasOnly(['incidentId', 'userId', 'orgId', 'status', 'severity', 'latitude', 'longitude', 'description', 'createdAt', 'updatedAt'])
+        && data.incidentId is string && data.incidentId == eventId && isValidId(data.incidentId)
+        && data.userId is string && isValidId(data.userId)
+        && data.orgId is string && data.orgId.size() >= 2 && data.orgId.size() <= 64
+        && data.status in ['TRIGGERED', 'COUNTDOWN', 'DISPATCHING', 'PARTIAL_SUCCESS', 'DISPATCHED', 'FAILED', 'CANCELLED', 'RESOLVED']
+        && (!('severity' in data) || data.severity in ['INFO', 'WARN', 'CRITICAL'])
+        && data.latitude is number && data.longitude is number
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1000));
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['userId', 'category', 'severity', 'message', 'createdAt'])
+        && data.keys().hasOnly(['userId', 'orgId', 'category', 'severity', 'message', 'createdAt'])
+        && data.userId is string && isValidId(data.userId)
+        && (!('orgId' in data) || (data.orgId is string && data.orgId.size() <= 64))
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 32
+        && data.severity in ['INFO', 'WARN', 'SEVERE']
+        && data.message is string && data.message.size() <= 300;
+    }
+
+    function isValidCameraDevice(data, cameraId) {
+      return data.keys().hasAll(['id', 'ownerUid', 'orgId', 'name', 'brand', 'mode', 'channel', 'triggerOnPanic', 'status', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'orgId', 'name', 'brand', 'mode',
+          'signalingMode', 'streamProfile',
+          'serialNumber', 'host', 'httpPort', 'rtspPort', 'channel',
+          'whepUrl', 'stunServers', 'turnUrls',
+          'ptzEnabled', 'twoWayAudioEnabled', 'ptzPresets',
+          'softIoTriggerId', 'triggerOnPanic', 'status', 'createdAt', 'updatedAt'
+        ])
+        && data.id is string && data.id == cameraId && isValidId(data.id)
+        && data.ownerUid is string && isValidId(data.ownerUid)
+        && data.orgId is string && data.orgId.size() >= 2 && data.orgId.size() <= 64
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 100
+        && data.brand in ['HIKVISION', 'HILOOK', 'ONVIF_GENERIC']
+        && data.mode in ['HIK_CONNECT_P2P', 'LAN_ISAPI', 'WHEP_HLS_RELAY']
+        && (!('signalingMode' in data) || data.signalingMode in ['WHEP_DIRECT', 'SERVER_PROXY', 'LAN_ISAPI_POLL', 'HIK_CONNECT_P2P'])
+        && (!('streamProfile' in data) || data.streamProfile in ['MAIN_HD', 'SUB_MOBILE'])
+        && (!('serialNumber' in data) || (data.serialNumber is string && data.serialNumber.size() <= 64))
+        && (!('host' in data) || (data.host is string && data.host.size() <= 128))
+        && (!('httpPort' in data) || (data.httpPort is number && data.httpPort >= 1 && data.httpPort <= 65535))
+        && (!('rtspPort' in data) || (data.rtspPort is number && data.rtspPort >= 1 && data.rtspPort <= 65535))
+        && data.channel is number && data.channel >= 1 && data.channel <= 1024
+        && (!('whepUrl' in data) || (data.whepUrl is string && data.whepUrl.size() <= 512 && data.whepUrl.matches('^https?://[^@]*$')))
+        && (!('stunServers' in data) || (data.stunServers is list && data.stunServers.size() <= 5))
+        && (!('turnUrls' in data) || (data.turnUrls is list && data.turnUrls.size() <= 4))
+        && (!('ptzEnabled' in data) || data.ptzEnabled is bool)
+        && (!('twoWayAudioEnabled' in data) || data.twoWayAudioEnabled is bool)
+        && (!('ptzPresets' in data) || (data.ptzPresets is list && data.ptzPresets.size() <= 8))
+        && (!('softIoTriggerId' in data) || (data.softIoTriggerId is number && data.softIoTriggerId >= 1 && data.softIoTriggerId <= 64))
+        && data.triggerOnPanic is bool
+        && data.status in ['UNVERIFIED', 'ONLINE', 'OFFLINE', 'ERROR'];
+    }
+
+    // =========================================================
+    // COLLECTIONS
+    // =========================================================
+    match /test/connection {
+      allow get: if true;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isVerified() && (request.auth.uid == adminUid || isAdmin());
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (
+        request.auth.uid == userId ||
+        isAdmin() ||
+        (
+          'orgCode' in existing() && existing().orgCode != '' &&
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgCode == existing().orgCode
+        )
+      );
+      allow list: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserPublic(incoming(), userId)
+        && incoming().role == 'Community Member'
+        && incoming().createdAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(userId)
+        && isValidUserPublic(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && (
+          isAdmin() ||
+          (
+            request.auth.uid == userId &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'fullName', 'lat', 'lng', 'activeSOS', 'battery', 'lastLocationUpdate', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+
+      // Pillar 6: Split Private PII Subcollection
+      match /private/{docId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(docId) && (request.auth.uid == userId || isAdmin());
+        allow list: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin());
+
+        allow create: if isVerified()
+          && isValidId(userId)
+          && isValidId(docId)
+          && request.auth.uid == userId
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && isValidUserPrivatePII(incoming(), userId)
+          && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time);
+
+        allow update: if isVerified()
+          && isValidId(userId)
+          && isValidId(docId)
+          && (request.auth.uid == userId || isAdmin())
+          && isValidUserPrivatePII(incoming(), userId)
+          && incoming().uid == existing().uid
+          && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+          && incoming().diff(existing()).affectedKeys().hasOnly([
+            'email', 'phone', 'whatsapp', 'medicalInfo', 'homeAddress', 'workAddress', 'updatedAt'
+          ]);
+
+        allow delete: if isAdmin() && isValidId(userId) && isValidId(docId);
+      }
+    }
+
+    match /organizations/{orgId} {
+      allow get: if isSignedIn() && isValidId(orgId) && (
+        existing().ownerUid == request.auth.uid ||
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgCode == orgId
+        )
+      );
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(orgId)
+        && isValidOrganization(incoming(), orgId)
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(orgId)
+        && isValidOrganization(incoming(), orgId)
+        && incoming().orgId == existing().orgId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'referralCode', 'primaryColor', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(orgId);
+    }
+
+    match /orgJoinRequests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (
+        existing().userId == request.auth.uid ||
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/organizations/$(existing().orgId)) &&
+          get(/databases/$(database)/documents/organizations/$(existing().orgId)).data.ownerUid == request.auth.uid
+        )
+      );
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(requestId)
+        && isValidOrgJoinRequest(incoming(), requestId)
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'PENDING'
+        && exists(/databases/$(database)/documents/organizations/$(incoming().orgId))
+        && incoming().createdAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(requestId)
+        && isValidOrgJoinRequest(incoming(), requestId)
+        && existing().status == 'PENDING'
+        && incoming().requestId == existing().requestId
+        && incoming().userId == existing().userId
+        && incoming().orgId == existing().orgId
+        && incoming().createdAt == existing().createdAt
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && (
+          isAdmin() ||
+          (
+            exists(/databases/$(database)/documents/organizations/$(existing().orgId)) &&
+            get(/databases/$(database)/documents/organizations/$(existing().orgId)).data.ownerUid == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isVerified() && isValidId(requestId) && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /panicEvents/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId) && (
+        existing().userId == request.auth.uid ||
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgCode == existing().orgId
+        )
+      );
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(eventId)
+        && isValidPanicEvent(incoming(), eventId)
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(eventId)
+        && isValidPanicEvent(incoming(), eventId)
+        && incoming().incidentId == existing().incidentId
+        && incoming().userId == existing().userId
+        && incoming().orgId == existing().orgId
+        && incoming().createdAt == existing().createdAt
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && (
+          isAdmin() ||
+          (
+            !(existing().status in ['RESOLVED', 'CANCELLED']) &&
+            (
+              (
+                existing().userId == request.auth.uid &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['status', 'latitude', 'longitude', 'description', 'updatedAt'])
+              ) ||
+              (
+                exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgCode == existing().orgId &&
+                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Responder', 'Control Room Operator', 'Dispatcher', 'Organization Administrator'] &&
+                incoming().diff(existing()).affectedKeys().hasOnly(['status', 'description', 'updatedAt'])
+              )
+            )
+          )
+        );
+
+      allow delete: if isAdmin() && isValidId(eventId);
+    }
+
+    match /auditLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(logId)
+        && isValidAuditLog(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    match /cameras/{cameraId} {
+      allow get: if isSignedIn() && isValidId(cameraId) && (
+        existing().ownerUid == request.auth.uid ||
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgCode == existing().orgId
+        )
+      );
+      allow list: if isSignedIn() && (existing().ownerUid == request.auth.uid || isAdmin());
+
+      allow create: if isVerified()
+        && isValidId(cameraId)
+        && isValidCameraDevice(incoming(), cameraId)
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time;
+
+      allow update: if isVerified()
+        && isValidId(cameraId)
+        && isValidCameraDevice(incoming(), cameraId)
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().orgId == existing().orgId
+        && incoming().createdAt == existing().createdAt
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && (
+          isAdmin() ||
+          (
+            (
+              existing().ownerUid == request.auth.uid ||
+              (
+                exists(/databases/$(database)/documents/organizations/$(existing().orgId)) &&
+                get(/databases/$(database)/documents/organizations/$(existing().orgId)).data.ownerUid == request.auth.uid
+              )
+            ) &&
+            incoming().diff(existing()).affectedKeys().hasOnly([
+              'name', 'brand', 'mode', 'signalingMode', 'streamProfile',
+              'serialNumber', 'host', 'httpPort', 'rtspPort', 'channel',
+              'whepUrl', 'stunServers', 'turnUrls',
+              'ptzEnabled', 'twoWayAudioEnabled', 'ptzPresets',
+              'softIoTriggerId', 'triggerOnPanic', 'status', 'updatedAt'
+            ])
+          )
+        );
+
+      allow delete: if isVerified() && isValidId(cameraId) && (existing().ownerUid == request.auth.uid || isAdmin());
     }
   }
 }

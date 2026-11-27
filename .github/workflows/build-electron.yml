@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - beta
   workflow_dispatch:
 
 jobs:
@@ -30,10 +29,6 @@ jobs:
           rm -f package-lock.json
           npm install --prefer-offline
 
-      - name: Install Electron runtime
-        shell: bash
-        run: npm install --no-save --no-audit --no-fund electron@43.1.1
-
       - name: Build Web
         shell: bash
         env:
@@ -45,14 +40,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win --x64 --publish never -c.extraMetadata.main=electron-main.cjs -c.extraMetadata.version=${{ steps.version.outputs.version }}
-
-      - name: Upload beta Windows build for review
-        if: github.ref == 'refs/heads/beta'
-        uses: actions/upload-artifact@v4
-        with:
-          name: safetylink-windows-beta-${{ github.run_number }}
-          path: electron-dist/*.exe
-          if-no-files-found: error
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

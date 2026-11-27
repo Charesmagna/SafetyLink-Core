@@ -1,9 +1,11 @@
+import { fetchGeminiApi } from '../utils/geminiApi';
+
 /**
  * Server-proxied Lizzy AI welfare & onboarding messages powered by free-tier Gemini models.
  */
 export async function onboardingBot(socket: any, userId: string) {
   try {
-    const res = await fetch('/api/gemini/chat', {
+    const res = await fetchGeminiApi('/api/gemini/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -28,7 +30,7 @@ export async function getLizzyMessage(panicStatus: string, lang: string): Promis
   };
 
   try {
-    const res = await fetch('/api/gemini/chat', {
+    const res = await fetchGeminiApi('/api/gemini/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

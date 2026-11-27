@@ -18,13 +18,23 @@ android {
     }
     signingConfigs {
         release {
-            def ksPath = System.getenv("KEYSTORE_PATH") ?: "${projectDir}/safetylink-release.keystore"
-            def ksFile = new File(ksPath)
-            println "Keystore path: ${ksPath} exists: ${ksFile.exists()}"
-            storeFile ksFile.exists() ? ksFile : new File("${projectDir}/safetylink-release.keystore")
-            storePassword 'SafetyLink2024!'
-            keyAlias 'safetylink'
-            keyPassword 'SafetyLink2024!'
+            def signingProps = new Properties()
+            def signingPropsFile = rootProject.file("signing.properties")
+            if (signingPropsFile.exists()) {
+                signingPropsFile.withInputStream { signingProps.load(it) }
+            }
+            def ksPath = project.findProperty("KEYSTORE_PATH") ?: System.getenv("KEYSTORE_PATH") ?: signingProps.getProperty("storeFile") ?: "${projectDir}/safetylink-release.keystore"
+            def ksFile = new File(ksPath.toString())
+            if (!ksFile.isAbsolute()) {
+                ksFile = rootProject.file(ksPath.toString())
+                if (!ksFile.exists()) {
+                    ksFile = new File("${projectDir}/${ksPath}")
+                }
+            }
+            storeFile ksFile
+            storePassword (project.findProperty("KEYSTORE_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: signingProps.getProperty("storePassword") ?: "")
+            keyAlias (project.findProperty("KEY_ALIAS") ?: System.getenv("KEY_ALIAS") ?: signingProps.getProperty("keyAlias") ?: "safetylink")
+            keyPassword (project.findProperty("KEY_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: signingProps.getProperty("keyPassword") ?: "")
         }
     }
 
@@ -35,8 +45,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             debuggable false
             jniDebuggable false

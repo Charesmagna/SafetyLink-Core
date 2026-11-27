@@ -1,9 +1,4 @@
-/*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://static.cloudflareinsights.com https://pagead2.googlesyndication.com https://unpkg.com https://cdnjs.cloudflare.com https://maps.googleapis.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https://api.safetylink.online https://safetylink-api.tshilidzi-mukwevho54.workers.dev https://res.cloudinary.com; connect-src 'self' https: wss:; frame-src 'self' https://checkout.paystack.com https://js.paystack.co https://googleads.g.doubleclick.net https://*.firebaseapp.com; object-src 'none'; base-uri 'self';
-  X-Frame-Options: SAMEORIGIN
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(self), microphone=(self), camera=(self)
 
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
+/*
+  Content-Security-Policy: script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://unpkg.com https://fonts.googleapis.com https://cdnjs.cloudflare.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.googleadservices.com https://adservice.google.com https://www.googletagservices.com https://apis.google.com https://accounts.google.com https://www.gstatic.com https://www.google.com
+  X-Frame-Options: SAMEORIGIN

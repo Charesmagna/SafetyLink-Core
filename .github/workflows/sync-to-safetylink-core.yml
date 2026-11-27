@@ -1,0 +1,56 @@
+name: Sync Staging Repo to SafetyLink-Core Main
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  mirror-to-production:
+    # Never run inside the production SafetyLink-Core repository itself
+    if: github.repository != 'Charesmagna/SafetyLink-Core'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging workspace
+        uses: actions/checkout@v4
+        with:
+          path: staging
+
+      - name: Check out SafetyLink-Core main
+        uses: actions/checkout@v4
+        with:
+          repository: Charesmagna/SafetyLink-Core
+          ref: main
+          token: ${{ secrets.SAFETYLINK_CORE_TOKEN || secrets.GITHUB_PAT }}
+          path: prod
+
+      - name: Sync workspace changes into SafetyLink-Core
+        run: |
+          set -e
+          rsync -av \
+            --exclude='.git/' \
+            --exclude='node_modules/' \
+            --exclude='dist/' \
+            --include='.env.example' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='*.db' \
+            --exclude='data/' \
+            --exclude='.aistudio/' \
+            --exclude='.github/workflows/sync-to-safetylink-core.yml' \
+            staging/ prod/
+
+      - name: Commit and push to SafetyLink-Core main
+        working-directory: prod
+        run: |
+          set -e
+          git config user.name "Charesmagna"
+          git config user.email "tshilidzi.mukwevho54@gmail.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to push — SafetyLink-Core main is already up to date."
+            exit 0
+          fi
+          MSG=$(git -C ../staging log -1 --pretty=%s || echo "Sync latest updates from AI Studio")
+          git commit -m "$MSG"
+          git push origin main

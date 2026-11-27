@@ -1,24 +1,73 @@
 // @ts-nocheck
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
-import { R2_MEDIA } from '../../utils/r2Assets';
+import { fetchR2Assets, R2_MEDIA } from '../../utils/r2Assets';
 
 
 import './Home.css';
 
 interface Props { onLogin: () => void; onRegisterUser: () => void; onRegisterOrg: () => void; navigate?: (p: string) => void; }
 
+const INITIAL_PLATFORM_GALLERY = [
+  { src: R2_MEDIA.platform.commandDeckDark, tag: 'CONTROL ROOM', title: 'Live Organization Command Deck' },
+  { src: R2_MEDIA.platform.mobileTelemetry, tag: 'MOBILE APP', title: 'Android & PWA One-Tap SOS Telemetry' },
+  { src: R2_MEDIA.platform.signalMap, tag: 'GIS & RADAR', title: 'Live Incident & Signal Coverage Map' },
+  { src: R2_MEDIA.platform.dispatchControl, tag: 'DISPATCH OPS', title: 'ZeroLink Offline USSD + FCM Dispatch' },
+  { src: R2_MEDIA.architecture.responseOverview, tag: 'ARCHITECTURE', title: 'Multi-Channel Emergency Architecture' },
+  { src: R2_MEDIA.hardware.itagFinderProduct, tag: 'BLE HARDWARE', title: 'Pocket BLE iTAG Panic Keyfobs' },
+  { src: R2_MEDIA.usecases.estateCommunity, tag: 'ESTATES', title: 'Protected Residential Estates' },
+  { src: R2_MEDIA.usecases.tacticalSecurity, tag: 'ARMED RESPONSE', title: 'Tactical Patrol & Responder Routing' },
+];
+
 export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoSrc, setVideoSrc] = useState('');
   const [activePanel, setActivePanel] = useState<number | null>(1);
   const [platformRotation, setPlatformRotation] = useState(0);
+  const [gallerySlides, setGallerySlides] = useState(INITIAL_PLATFORM_GALLERY);
+  const [galleryIdx, setGalleryIdx] = useState(0);
   const tourIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setInterval(() => setPlatformRotation(r => r + 1), 7000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    fetchR2Assets('Safetylink/')
+      .then((res) => {
+        if (!alive || !Array.isArray(res?.assets) || res.assets.length === 0) return;
+        const seen = new Set(INITIAL_PLATFORM_GALLERY.map((g) => decodeURIComponent(g.src.split('/').pop() || '').toLowerCase()));
+        const extras: { src: string; tag: string; title: string }[] = [];
+        for (const asset of res.assets) {
+          const key = String(asset.key || '');
+          if (!/\.(png|jpe?g|webp)$/i.test(key)) continue;
+          const file = decodeURIComponent(key.split('/').pop() || '').toLowerCase();
+          if (!file || seen.has(file) || file.includes('paystack') || file.includes('download (2)')) continue;
+          if (!asset.streamUrl) continue;
+          seen.add(file);
+          extras.push({
+            src: asset.streamUrl,
+            tag: 'ECOSYSTEM GALLERY',
+            title: file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 42) || 'SafetyLink Visual',
+          });
+        }
+        for (let i = extras.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [extras[i], extras[j]] = [extras[j], extras[i]];
+        }
+        if (extras.length > 0) setGallerySlides([...INITIAL_PLATFORM_GALLERY, ...extras]);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (gallerySlides.length <= 1) return;
+    const t = setInterval(() => setGalleryIdx((i) => (i + 1) % gallerySlides.length), 6000);
+    return () => clearInterval(t);
+  }, [gallerySlides.length]);
 
   const blueprintPool = [
     { src: R2_MEDIA.architecture.responseArchitecture, title: 'R2 BLUEPRINT: EMERGENCY RESPONSE ARCHITECTURE' },
@@ -67,17 +116,43 @@ export function Platform({ onLogin, onRegisterUser, onRegisterOrg }: Props) {
           style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:0.32, pointerEvents:'none' }}
         />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(105deg, rgba(7,10,15,0.94) 0%, rgba(7,10,15,0.75) 55%, rgba(7,10,15,0.45) 100%)', pointerEvents:'none' }} />
-        <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' }}>
-            <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'38px', width:'auto', objectFit:'contain' }} />
-            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>HOW IT WORKS · LIVE ENGINE</span>
+        <div style={{ position:'relative', zIndex:1, maxWidth:'1160px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'36px', alignItems:'center' }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' }}>
+              <img src={ASSETS.logo} alt="SafetyLink Logo" style={{ height:'38px', width:'auto', objectFit:'contain' }} />
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'11px', letterSpacing:'.18em', color:'#10b981', fontWeight:700 }}>HOW IT WORKS · LIVE ENGINE</span>
+            </div>
+            <h1 style={{ fontSize:'clamp(36px,6vw,64px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.94, marginBottom:'20px' }}>
+              11-Layer Autonomous<br/><span style={{ color:'#10b981', fontStyle:'italic' }}>Emergency Ecosystem.</span>
+            </h1>
+            <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
+              Offline, on purpose. SafetyLink is engineered to survive load-shedding, zero-data scenarios, and network failures — combining BLE hardware, AI voice dispatch, and multi-tenant command dashboards into a single POPIA-compliant infrastructure.
+            </p>
           </div>
-          <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, letterSpacing:'-.04em', lineHeight:.92, marginBottom:'20px' }}>
-            11-Layer Autonomous<br/><span style={{ color:'#10b981', fontStyle:'italic' }}>Emergency Ecosystem.</span>
-          </h1>
-          <p style={{ fontSize:'15px', color:'#cbd5e1', maxWidth:'560px', lineHeight:1.7 }}>
-            Offline, on purpose. SafetyLink is engineered to survive load-shedding, zero-data scenarios, and network failures — combining BLE hardware, AI voice dispatch, and multi-tenant command dashboards into a single POPIA-compliant infrastructure.
-          </p>
+
+          {/* Relocated R2 Visual Showcase Frame (lives on Solutions/Platform instead of the main Home Hero) */}
+          {(() => {
+            const slide = gallerySlides[galleryIdx % gallerySlides.length] || INITIAL_PLATFORM_GALLERY[0];
+            return (
+              <div style={{ position:'relative', borderRadius:'18px', overflow:'hidden', border:'1px solid rgba(16,185,129,0.35)', background:'#020617', boxShadow:'0 24px 60px rgba(0,0,0,0.55)', aspectRatio:'4 / 3' }}>
+                <img
+                  key={slide.src}
+                  src={slide.src}
+                  alt={slide.title}
+                  onError={() => setGalleryIdx((i) => (i + 1) % gallerySlides.length)}
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
+                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(2,6,23,0.92) 0%, rgba(2,6,23,0.18) 55%, transparent 100%)', pointerEvents:'none' }} />
+                <div style={{ position:'absolute', top:'12px', left:'12px', display:'inline-flex', alignItems:'center', gap:'6px', padding:'5px 10px', borderRadius:'8px', background:'rgba(2,6,23,0.8)', border:'1px solid rgba(16,185,129,0.35)' }}>
+                  <img src={ASSETS.logo} alt="SafetyLink" style={{ height:'14px', width:'auto' }} />
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'10px', fontWeight:700, color:'#6ee7b7', letterSpacing:'.08em' }}>{slide.tag}</span>
+                </div>
+                <div style={{ position:'absolute', bottom:'12px', left:'14px', right:'14px', color:'#ffffff', fontSize:'13px', fontWeight:800, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {slide.title}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </section>
 

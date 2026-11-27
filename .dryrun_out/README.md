@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "safetylink-api" generated at 2026-11-25T21:04:12.702Z.

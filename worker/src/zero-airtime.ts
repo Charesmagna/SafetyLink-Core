@@ -113,7 +113,7 @@ export async function syncProfile(env: ZeroEnv, body: any, presentedToken: strin
   if (!env.DB) return { status: 503, json: { error: 'Database not configured' } };
   const phone = toE164(body?.phone || '');
   if (!phone) return { status: 400, json: { error: 'phone is required' } };
-  const contacts = Array.isArray(body?.contacts) ? body.contacts.slice(0, 5) : [];
+  const contacts = Array.isArray(body?.contacts) ? body.contacts.slice(0, 15) : [];
   await ensureZeroAirtimeSchema(env.DB);
   const existing = await env.DB.prepare('SELECT token FROM sl_profiles WHERE phone=?').bind(phone).first<{ token: string }>();
   if (existing?.token && existing.token !== presentedToken) {

@@ -189,6 +189,7 @@ export interface Contact {
   template?: string;
   channelType?: 'CALL' | 'SMS' | 'WHATSAPP' | 'GROUP' | 'POLICE';
   hasWhatsApp?: boolean;
+  fcmEnabled?: boolean;
   priority: number;
   triggerTypes?: EmergencyProfileType[];
 }

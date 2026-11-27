@@ -91,7 +91,9 @@ export async function syncProfile(force = false): Promise<boolean> {
   const effectiveUserId = user?.id || org?.id || '';
   const loc = s.userLocation;
   const alertNote = String(user?.alertNote || '').trim().slice(0, 140);
-  const contacts = (s.contacts || []).slice(0, 5).map((c: any) => ({ name: c.name, phone: c.phone }));
+  const contacts = (s.contacts || [])
+    .slice(0, 15)
+    .map((c: any) => ({ name: c.name || c.label || 'Emergency Contact', phone: c.phone }));
   const ds = s.dispatchSettings || {};
 
   const backends = resolveProfileSyncBackends(s.customBackendUrl);
@@ -134,7 +136,7 @@ export async function syncProfile(force = false): Promise<boolean> {
       duressPin: s.duressPin || '',
       sosCountdownSeconds: typeof s.sosCountdownDuration === 'number' ? s.sosCountdownDuration : 10,
       contacts: (s.contacts || []).map((c: any) => ({
-        name: c.name,
+        name: c.name || c.label || 'Emergency Contact',
         phone: c.phone,
         sms: c.sms !== false,
         call: Boolean(c.call || c.priorityCall || c.priority),

@@ -1,53 +1,175 @@
 {
-  "collections": {
-    "users": {
-      "documentId": "User UID",
-      "fields": {
-        "fullName": "string",
-        "username": "string",
-        "phone": "string",
-        "email": "string",
-        "role": "string",
-        "orgCode": "string",
-        "isPro": "boolean",
-        "accountNumber": "string",
-        "medicalInfo": "string",
-        "riskNotes": "string",
-        "createdAt": "timestamp"
-      }
+  "entities": {
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Non-PII operational profile of a SafetyLink user or responder.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "username": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["Community Member", "Responder", "Control Room Operator", "Dispatcher", "Organization Administrator"] },
+        "orgCode": { "type": "string", "maxLength": 64 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "activeSOS": { "type": "boolean" },
+        "battery": { "type": "number" },
+        "lastLocationUpdate": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "username", "role", "createdAt"]
     },
-    "organizations": {
-      "documentId": "Organization Code (e.g. SL-ORG-1234)",
-      "fields": {
-        "name": "string",
-        "plan": "string",
-        "activeSubscribers": "number",
-        "referralCode": "string",
-        "primaryColor": "string",
-        "secondaryColor": "string",
-        "logoUrl": "string"
-      }
+    "UserPrivatePII": {
+      "title": "UserPrivatePII",
+      "description": "Isolated PII & emergency medical data accessible strictly to owner or superadmin.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 160 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "whatsapp": { "type": "string", "maxLength": 32 },
+        "medicalInfo": { "type": "string", "maxLength": 1000 },
+        "homeAddress": { "type": "string", "maxLength": 300 },
+        "workAddress": { "type": "string", "maxLength": 300 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid"]
     },
-    "panicEvents": {
-      "documentId": "Auto-generated UUID",
-      "fields": {
-        "timestamp": "string",
-        "status": "string (ACTIVE | RESOLVED | DISPATCHED)",
-        "location": "map { lat: number, lng: number }",
-        "description": "string",
-        "responderAssigned": "string",
-        "mediaUrl": "string"
-      }
+    "Organization": {
+      "title": "Organization",
+      "description": "SafetyLink multi-tenant organization / control room node.",
+      "type": "object",
+      "properties": {
+        "orgId": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "subscriptionStatus": { "type": "string", "enum": ["trial", "active", "locked"] },
+        "referralCode": { "type": "string", "maxLength": 32 },
+        "primaryColor": { "type": "string", "maxLength": 24 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "ownerUid", "name", "subscriptionStatus", "createdAt"]
     },
-    "auditLogs": {
-      "documentId": "Auto-generated UUID",
-      "fields": {
-        "timestamp": "string",
-        "category": "string",
-        "level": "string",
-        "title": "string",
-        "message": "string"
-      }
+    "OrgJoinRequest": {
+      "title": "OrgJoinRequest",
+      "description": "Membership join request scoped to a SafetyLink organization.",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orgId": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "requestedRole": { "type": "string", "enum": ["Community Member", "Responder", "Dispatcher"] },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "userId", "orgId", "requestedRole", "status", "createdAt"]
+    },
+    "PanicEvent": {
+      "title": "PanicEvent",
+      "description": "Organization-scoped SOS emergency event record.",
+      "type": "object",
+      "properties": {
+        "incidentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orgId": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "enum": ["TRIGGERED", "COUNTDOWN", "DISPATCHING", "PARTIAL_SUCCESS", "DISPATCHED", "FAILED", "CANCELLED", "RESOLVED"] },
+        "severity": { "type": "string", "enum": ["INFO", "WARN", "CRITICAL"] },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["incidentId", "userId", "orgId", "status", "latitude", "longitude", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Append-only security & dispatch audit entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orgId": { "type": "string", "maxLength": 64 },
+        "category": { "type": "string", "maxLength": 32 },
+        "severity": { "type": "string", "enum": ["INFO", "WARN", "SEVERE"] },
+        "message": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "severity", "message", "createdAt"]
+    },
+    "CameraDevice": {
+      "title": "CameraDevice",
+      "description": "Organization or user CCTV/Hikvision camera onboarding & WebRTC metadata (no raw passwords or tokens stored in Firestore).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orgId": { "type": "string", "minLength": 2, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "brand": { "type": "string", "enum": ["HIKVISION", "HILOOK", "ONVIF_GENERIC"] },
+        "mode": { "type": "string", "enum": ["HIK_CONNECT_P2P", "LAN_ISAPI", "WHEP_HLS_RELAY"] },
+        "signalingMode": { "type": "string", "enum": ["WHEP_DIRECT", "SERVER_PROXY", "LAN_ISAPI_POLL", "HIK_CONNECT_P2P"] },
+        "streamProfile": { "type": "string", "enum": ["MAIN_HD", "SUB_MOBILE"] },
+        "serialNumber": { "type": "string", "maxLength": 64 },
+        "host": { "type": "string", "maxLength": 128 },
+        "httpPort": { "type": "number" },
+        "rtspPort": { "type": "number" },
+        "channel": { "type": "number" },
+        "whepUrl": { "type": "string", "maxLength": 512 },
+        "stunServers": { "type": "array", "maxItems": 5, "items": { "type": "string", "maxLength": 200 } },
+        "turnUrls": { "type": "array", "maxItems": 4, "items": { "type": "string", "maxLength": 200 } },
+        "ptzEnabled": { "type": "boolean" },
+        "twoWayAudioEnabled": { "type": "boolean" },
+        "ptzPresets": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "properties": {
+              "presetId": { "type": "number" },
+              "label": { "type": "string", "maxLength": 40 }
+            },
+            "required": ["presetId", "label"]
+          }
+        },
+        "softIoTriggerId": { "type": "number" },
+        "triggerOnPanic": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["UNVERIFIED", "ONLINE", "OFFLINE", "ERROR"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerUid", "orgId", "name", "brand", "mode", "channel", "triggerOnPanic", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "User operational telemetry & role metadata; PII split into private subcollection."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivatePII" },
+      "description": "Isolated PII & emergency medical info readable only by owner or superadmin."
+    },
+    "/organizations/{orgId}": {
+      "schema": { "$ref": "#/entities/Organization" },
+      "description": "Multi-tenant organization nodes keyed by org code."
+    },
+    "/orgJoinRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/OrgJoinRequest" },
+      "description": "Organization membership join requests."
+    },
+    "/panicEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/PanicEvent" },
+      "description": "SOS panic incidents scoped to user & organization."
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Immutable security & emergency dispatch audit logs."
+    },
+    "/cameras/{cameraId}": {
+      "schema": { "$ref": "#/entities/CameraDevice" },
+      "description": "Hikvision/ONVIF camera deployment metadata scoped to owner and organization."
     }
   }
 }

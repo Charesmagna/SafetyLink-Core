@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../utils/store';
+import { fetchGeminiApi } from '../utils/geminiApi';
 
 interface GroundedLink {
   title: string;
@@ -45,7 +46,7 @@ export default function SituationalAwareness() {
         const [weatherRes, newsRes, saferRes] = await Promise.allSettled([
           fetch(`/api/ninjas/weather?lat=${currentLat}&lon=${currentLng}`),
           fetch(`/api/ninjas/news?text=${encodeURIComponent(locName)}`),
-          fetch('/api/gemini/safety-feed', {
+          fetchGeminiApi('/api/gemini/safety-feed', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

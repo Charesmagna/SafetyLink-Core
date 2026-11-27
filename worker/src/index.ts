@@ -602,6 +602,32 @@ app.get('/api/device/token/status', async (c) => {
   });
 });
 
+// Batch live FCM registration status check for all emergency contacts (never exposes raw tokens)
+app.post('/api/device/tokens/status', async (c) => {
+  if (!c.env.DB) return c.json({ ok: false, error: 'Database not configured' }, 503);
+  const body: any = await c.req.json().catch(() => ({}));
+  const rawPhones: string[] = Array.isArray(body?.phones)
+    ? body.phones.map((p: any) => String(p || '').trim()).filter(Boolean).slice(0, 25)
+    : [];
+  const fcmConfigured = !!(c.env as any).FCM_SERVICE_ACCOUNT;
+  const statuses = await Promise.all(
+    rawPhones.map(async (raw) => {
+      const st = await tokenStatusForPhone(c.env.DB, raw);
+      return { inputPhone: raw, ...st };
+    }),
+  );
+  const linkedCount = statuses.filter((s) => s.registered).length;
+  const totalDevices = statuses.reduce((sum, s) => sum + (s.deviceCount || 0), 0);
+  return c.json({
+    ok: true,
+    fcmConfigured,
+    checkedAt: Date.now(),
+    linkedCount,
+    totalDevices,
+    statuses,
+  });
+});
+
 // Send a real high-priority data-only FCM loud ring test to a registered SafetyLink phone
 app.post('/api/fcm/test-ring', async (c) => {
   if (!(c.env as any).FCM_SERVICE_ACCOUNT) {
@@ -2294,6 +2320,15 @@ const sanitizeWorkerChatContents = (history: unknown, message: string) => {
   return contents;
 };
 
+app.get('/api/gemini/health', (c) => {
+  return c.json({
+    ok: true,
+    configured: Boolean(c.env.GEMINI_API_KEY),
+    defaultModel: 'gemini-2.5-flash',
+    endpoints: ['chat', 'generate', 'tts', 'transcribe', 'analyze-image', 'safety-feed'],
+  });
+});
+
 app.post('/api/gemini/chat', async (c) => {
   const apiKey = c.env.GEMINI_API_KEY;
   if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
@@ -2309,7 +2344,9 @@ app.post('/api/gemini/chat', async (c) => {
     'gemini-3.1-flash-lite': 'gemini-2.5-flash',
     'gemini-4-hydrogen': 'gemini-2.5-flash',
   };
-  const model = allowedModels[String(body?.model || '')] || 'gemini-2.5-flash';
+  const model = body?.useFlashLite
+    ? 'gemini-2.5-flash-lite'
+    : (allowedModels[String(body?.model || '')] || 'gemini-2.5-flash');
   const sysText =
     body?.systemInstruction ||
     "You are Kleva (Lizzy), SafetyLink's calm, reassuring Post-Emergency Care Companion. Check if the user is physically safe, keep responses concise and practical, and share emergency numbers (10111 SAPS, 112 Emergency, 10177 Ambulance) when needed.";
@@ -2319,6 +2356,58 @@ app.post('/api/gemini/chat', async (c) => {
     system_instruction: { parts: [{ text: fullSystem }] },
     contents: sanitizeWorkerChatContents(body?.history, message),
   };
+  if (body?.useSearch || body?.useMaps) {
+    reqPayload.tools = [{ google_search: {} }];
+  }
+
+  let usedModel = model;
+  let gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
+      body: JSON.stringify(reqPayload),
+    }
+  );
+  if (!gRes.ok && usedModel !== 'gemini-2.5-flash') {
+    usedModel = 'gemini-2.5-flash';
+    gRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
+        body: JSON.stringify(reqPayload),
+      }
+    );
+  }
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini error (${gRes.status})` }, gRes.status as any);
+  }
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => p?.text || '')
+    .join('')
+    .trim();
+  return c.json({ text, chunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [], model: usedModel });
+});
+
+app.post('/api/gemini/generate', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  const prompt = String(body?.prompt || body?.message || '').trim();
+  if (!prompt) return c.json({ error: 'prompt is required' }, 400 as any);
+
+  const model = body?.useFlashLite ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
+  const reqPayload: any = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+  };
+  if (body?.systemInstruction) {
+    reqPayload.system_instruction = { parts: [{ text: String(body.systemInstruction) }] };
+  }
+  if (body?.useSearch) {
+    reqPayload.tools = [{ google_search: {} }];
+  }
 
   const gRes = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -2330,13 +2419,96 @@ app.post('/api/gemini/chat', async (c) => {
   );
   const data: any = await gRes.json().catch(() => ({}));
   if (!gRes.ok) {
-    return c.json({ error: data?.error?.message || `Gemini error (${gRes.status})` }, gRes.status as any);
+    return c.json({ error: data?.error?.message || `Gemini generate error (${gRes.status})` }, gRes.status as any);
   }
   const text = (data?.candidates?.[0]?.content?.parts || [])
     .map((p: any) => p?.text || '')
     .join('')
     .trim();
   return c.json({ text, chunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [], model });
+});
+
+app.post('/api/gemini/analyze-image', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  if (!body?.imageBase64) return c.json({ error: 'imageBase64 is required' }, 400 as any);
+  const prompt = String(body?.prompt || 'Analyze this safety evidence photo for hazards, security threats, or emergency indicators. Be concise and factual.');
+
+  const gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              { inlineData: { data: String(body.imageBase64), mimeType: String(body.mimeType || 'image/jpeg') } },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini image analysis error (${gRes.status})` }, gRes.status as any);
+  }
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => p?.text || '')
+    .join('')
+    .trim();
+  return c.json({ text, model: 'gemini-2.5-flash' });
+});
+
+app.post('/api/gemini/safety-feed', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
+  const body = await c.req.json<any>().catch(() => ({}));
+  const locationName = String(body?.locationName || '').trim();
+  const lat = Number(body?.lat);
+  const lng = Number(body?.lng);
+  const areaLabel = locationName || (Number.isFinite(lat) && Number.isFinite(lng) ? `GPS ${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'South Africa');
+
+  const gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
+      body: JSON.stringify({
+        tools: [{ google_search: {} }],
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: `Provide a concise, practical real-time public safety, traffic, and severe weather advisory for ${areaLabel} (focus on actionable safety tips and nearby emergency facilities like SAPS stations and hospitals). Keep it under 180 words.`,
+              },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+  const data: any = await gRes.json().catch(() => ({}));
+  if (!gRes.ok) {
+    return c.json({ error: data?.error?.message || `Gemini safety-feed error (${gRes.status})` }, gRes.status as any);
+  }
+  const advisoryText = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => p?.text || '')
+    .join('')
+    .trim();
+  const searchChunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  return c.json({
+    advisoryText,
+    safeZonesText: '',
+    searchChunks,
+    mapsChunks: [],
+    model: 'gemini-2.5-flash',
+  });
 });
 
 app.post('/api/gemini/tts', async (c) => {
