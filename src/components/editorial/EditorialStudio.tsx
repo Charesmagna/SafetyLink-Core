@@ -1,11 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useEditorialStore } from '../../utils/editorialStore';
 import { EditorialPlatform } from '../../types/editorial';
 import { ASSETS } from '../../utils/cloudinary';
+import { ErrorBoundary } from '../ErrorBoundary';
+import { SceneErrorBoundary } from '../three/SceneErrorBoundary';
+
+// Actual live production interfaces & dashboards (zero mockups / zero fake simulations)
+const LandingPage = lazy(() => import('../LandingPage').then((m) => ({ default: m.LandingPage })));
+const PanicButton = lazy(() => import('../PanicButton').then((m) => ({ default: m.PanicButton })));
+const StatusIndicator = lazy(() => import('../StatusIndicator').then((m) => ({ default: m.StatusIndicator })));
+const OfflineMap = lazy(() => import('../OfflineMap').then((m) => ({ default: m.OfflineMap })));
+const BLEScanner = lazy(() => import('../BLEScanner').then((m) => ({ default: m.BLEScanner })));
+const DispatchChain = lazy(() => import('../DispatchChain').then((m) => ({ default: m.DispatchChain })));
+const Settings = lazy(() => import('../Settings').then((m) => ({ default: m.Settings })));
+const OrgWarRoom = lazy(() => import('../OrgWarRoom').then((m) => ({ default: m.OrgWarRoom })));
+const OrgDashboard = lazy(() => import('../OrgDashboard').then((m) => ({ default: m.OrgDashboard })));
+const ResponderDashboard = lazy(() => import('../ResponderDashboard').then((m) => ({ default: m.ResponderDashboard })));
+const CommandGlobe3DScene = lazy(() => import('../three/CommandGlobe3DScene'));
 
 interface EditorialStudioProps {
   onClose: () => void;
 }
+
+type WebSubPage = 'home' | 'platform' | 'hardware' | 'pricing' | 'store' | 'download' | 'enterprise';
+type ApkSubTab = 'sos' | 'map' | 'ble' | 'contacts' | 'settings';
+type ExeSubView = 'warroom' | 'org' | 'responder' | 'globe';
+
+interface EditableFieldSpec {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'image' | 'color';
+  hint: string;
+}
+
+const PLATFORM_FIELD_SPECS: Record<EditorialPlatform, EditableFieldSpec[]> = {
+  web: [
+    { key: 'heroBadge', label: 'Hero Badge Tagline', type: 'text', hint: 'Top pill above main headline on Home' },
+    { key: 'heroTitle1', label: 'Hero Headline Line 1', type: 'text', hint: 'Main display title on Landing Home' },
+    { key: 'heroTitle2', label: 'Hero Headline Line 2', type: 'text', hint: 'Secondary headline line on Landing Home' },
+    { key: 'heroSubtitle', label: 'Hero Subtitle', type: 'textarea', hint: 'Hero lead paragraph beneath headline' },
+    { key: 'heroCtaPrimary', label: 'Primary CTA Button', type: 'text', hint: 'Main signup button label' },
+    { key: 'heroCtaSecondary', label: 'Secondary CTA Button', type: 'text', hint: 'Organization registration CTA label' },
+    { key: 'armourTitle', label: 'How It Works Title', type: 'text', hint: 'Section heading for 3-step response flow' },
+    { key: 'armourSubtitle', label: 'How It Works Subtitle', type: 'textarea', hint: 'Supporting description under How It Works' },
+    { key: 'hotlinePhone', label: 'Emergency Hotline', type: 'text', hint: 'Shown in live landing footer' },
+    { key: 'hotlineEmail', label: 'Support Email', type: 'text', hint: 'Shown in live landing footer' },
+    { key: 'logoImage', label: 'Brand Logo URL', type: 'image', hint: 'Live logo rendered in Header' },
+    { key: 'primaryColor', label: 'Primary Brand Accent', type: 'color', hint: 'Primary accent color for CTA highlights' },
+  ],
+  apk: [
+    { key: 'appName', label: 'Mobile App Title', type: 'text', hint: 'Displayed in mobile workspace header' },
+    { key: 'statusTag', label: 'SOS Actuator Status Tag', type: 'text', hint: 'Live header label above PanicButton' },
+    { key: 'sosButtonText', label: 'Main SOS Button Label', type: 'text', hint: 'Live text on central SOS trigger' },
+    { key: 'sosHoldText', label: 'SOS Transmitting Text', type: 'text', hint: 'Shown while SOS is actively transmitting' },
+    { key: 'bleStatusText', label: 'BLE Hardware Perimeter Label', type: 'text', hint: 'Hardware badge inside PanicButton panel' },
+    { key: 'offlineFallbackNotice', label: 'SOS Instruction Notice', type: 'textarea', hint: 'Live helper text under SOS trigger' },
+    { key: 'duressCodePrompt', label: 'Silent Duress Prompt', type: 'text', hint: 'Prompt shown on disarm/duress entry' },
+    { key: 'shieldIconUrl', label: 'App Shield Logo URL', type: 'image', hint: 'Logo icon displayed in APK header' },
+    { key: 'hudThemeColor', label: 'SOS HUD Accent Color', type: 'color', hint: 'Primary actuator highlight color' },
+  ],
+  exe: [
+    { key: 'windowTitle', label: 'Desktop Window Title', type: 'text', hint: 'Desktop application title bar' },
+    { key: 'dispatchHeader', label: 'War Room Header', type: 'text', hint: 'Live title bar inside OrgWarRoom' },
+    { key: 'warRoomSubtitle', label: 'War Room Subtitle', type: 'text', hint: 'Subtitle below Commander Deck header' },
+    { key: 'threatLevelLabel', label: 'Threat Status Banner', type: 'text', hint: 'Live operational status strip' },
+    { key: 'satelliteFeedStatus', label: 'GIS Telemetry Badge', type: 'text', hint: 'Live green telemetry pill in War Room' },
+    { key: 'evidenceLedgerTitle', label: 'Live Stream / Vault Title', type: 'text', hint: 'Right-panel title in OrgWarRoom' },
+    { key: 'commandHotline', label: 'Command Desk Hotline', type: 'text', hint: 'Control-room emergency line' },
+  ],
+};
+
+const LoadingView: React.FC<{ label: string }> = ({ label }) => (
+  <div className="w-full h-full min-h-[420px] flex items-center justify-center bg-slate-950 text-xs font-mono text-emerald-400">
+    Loading live {label}...
+  </div>
+);
 
 export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => {
   const {
@@ -32,17 +101,13 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
   } = useEditorialStore();
 
   const [platformPickerOpen, setPlatformPickerOpen] = useState(false);
-  const [selectedField, setSelectedField] = useState<{
-    key: string;
-    label: string;
-    type: 'text' | 'textarea' | 'image' | 'color';
-    value: string;
-    platform: EditorialPlatform;
-  } | null>(null);
+  const [webPage, setWebPage] = useState<WebSubPage>('home');
+  const [apkTab, setApkTab] = useState<ApkSubTab>('sos');
+  const [exeView, setExeView] = useState<ExeSubView>('warroom');
 
+  const [focusedFieldKey, setFocusedFieldKey] = useState<string>('heroTitle1');
   const [activeTab, setActiveTab] = useState<'sections' | 'assets' | 'theme'>('sections');
   const [previewMode, setPreviewMode] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [releaseNotes, setReleaseNotes] = useState('');
   const [pushToGitHub, setPushToGitHub] = useState(true);
@@ -55,50 +120,51 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
     commitUrl?: string;
     workspaceFiles?: string[];
   } | null>(null);
-  const pendingChanges = getPendingChanges();
-  const hasChannelSelected = publishChannels.web || publishChannels.apk || publishChannels.exe || publishChannels.worker;
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const pendingChanges = getPendingChanges();
+  const hasChannelSelected = publishChannels.web || publishChannels.apk || publishChannels.exe || publishChannels.worker;
+
+  const activePlatformValues: Record<string, any> =
+    activePlatform === 'web' ? web : activePlatform === 'apk' ? apk : exe;
+  const fieldSpecs = PLATFORM_FIELD_SPECS[activePlatform];
+  const focusedSpec = fieldSpecs.find((f) => f.key === focusedFieldKey) || fieldSpecs[0];
+  const focusedValue = String(activePlatformValues[focusedSpec.key] ?? '');
+
+  // Keep focused field synced when switching environments
+  useEffect(() => {
+    const specs = PLATFORM_FIELD_SPECS[activePlatform];
+    if (!specs.some((s) => s.key === focusedFieldKey)) {
+      setFocusedFieldKey(specs[0].key);
+      setAiSuggestions([]);
+    }
+  }, [activePlatform, focusedFieldKey]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Sync state on mount
   useEffect(() => {
     useEditorialStore.getState().fetchRemoteState();
   }, []);
 
-  const handleSelectField = (key: string, label: string, type: 'text' | 'textarea' | 'image' | 'color', value: string) => {
-    if (previewMode) return;
-    setSelectedField({ key, label, type, value, platform: activePlatform });
-    setAiSuggestions([]);
-  };
-
-  const handleFieldValueChange = (val: string) => {
-    if (!selectedField) return;
-    setSelectedField(prev => (prev ? { ...prev, value: val } : null));
-    updateField(selectedField.platform, selectedField.key, val);
-  };
-
   const handleAiGenerate = async () => {
-    if (!selectedField) return;
     const suggestions = await requestAiCopy({
-      field: selectedField.label,
+      field: focusedSpec.label,
       prompt: aiPrompt || 'Authoritative South African emergency dispatch copy',
-      currentValue: selectedField.value,
-      platform: selectedField.platform,
+      currentValue: focusedValue,
+      platform: activePlatform,
     });
     setAiSuggestions(suggestions);
   };
 
   const handleApplyAiSuggestion = (text: string) => {
-    if (!selectedField) return;
-    handleFieldValueChange(text);
-    showToast(`Applied: "${text.substring(0, 30)}..."`);
+    updateField(activePlatform, focusedSpec.key, text);
+    showToast(`Applied to ${focusedSpec.label}`);
   };
 
   const handleSave = async () => {
@@ -124,30 +190,27 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
     }
   };
 
-  // Pre-configured asset library for 1-click swapping
   const MEDIA_PRESETS = [
-    { name: 'Official SafetyLink Logo', url: ASSETS.logo, category: 'Logo' },
-    { name: '3D Gold Shield Watermark', url: ASSETS.logo3d, category: 'Branding' },
-    { name: 'Emergency App Login Poster', url: ASSETS.appLogin, category: 'Mockup' },
-    { name: 'iTAG BLE Wearable Keyfobs', url: ASSETS.itagAll, category: 'Hardware' },
-    { name: 'Single iTAG Keyfob Unit', url: ASSETS.itagSingle, category: 'Hardware' },
-    { name: 'SOS Panic Button Hardware', url: '/panic-button.png', category: 'Hardware' },
-    { name: 'Tactical Shield Badge', url: '/safetylink-shield.jpg', category: 'Branding' },
+    { name: 'Official SafetyLink Logo', url: '/logos/Safety_Link_Logo_Transparent.png' },
+    { name: '3D Gold Shield Watermark', url: ASSETS.logo3d },
+    { name: 'Emergency App Login Poster', url: ASSETS.appLogin },
+    { name: 'iTAG BLE Wearable Keyfobs', url: ASSETS.itagAll },
+    { name: 'Single iTAG Keyfob Unit', url: ASSETS.itagSingle },
+    { name: 'SOS Panic Button Hardware', url: '/panic-button.png' },
+    { name: 'Tactical Shield Badge', url: '/safetylink-shield.jpg' },
   ];
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-slate-950 text-slate-100 flex flex-col font-sans select-none overflow-hidden animate-fadeIn">
-      
-      {/* ── TOP APP BAR (Wix-Style Header) ── */}
-      <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-20 shrink-0">
-        <div className="flex items-center gap-3">
-          {/* Logo & Platform Indicator */}
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-mono font-black tracking-widest text-white uppercase">
-              SafetyLink Studio
+    <div className="fixed inset-0 z-[99999] bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
+      {/* ── TOP STUDIO BAR ── */}
+      <header className="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3 sm:px-4 z-20 shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className="text-xs font-mono font-black tracking-widest text-white uppercase hidden sm:inline">
+              Live Environment Studio
             </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-600/30 text-red-300 border border-red-500/40">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-bold">
               v{version}
             </span>
             {pendingChanges.length > 0 && (
@@ -157,89 +220,63 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
             )}
           </div>
 
-          <div className="h-4 w-[1px] bg-slate-800" />
+          <div className="h-4 w-[1px] bg-slate-800 hidden sm:block" />
 
-          {/* Platform Selector Button */}
+          {/* Environment Switcher */}
           <button
+            type="button"
             onClick={() => setPlatformPickerOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono font-bold text-slate-200 border border-slate-700 transition-all"
-            title="Switch Target Environment"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono font-bold text-slate-100 border border-slate-700 transition-all truncate"
+            title="Switch Live Target Environment"
           >
-            <span>
-              {activePlatform === 'web' && '🌐 SafetyLink.online (Web)'}
-              {activePlatform === 'apk' && '📱 SafetyLink APK (Android)'}
-              {activePlatform === 'exe' && '💻 SafetyLink EXE (Desktop)'}
+            <span className="truncate">
+              {activePlatform === 'web' && '🌐 Web · Live Landing Site'}
+              {activePlatform === 'apk' && '📱 APK · Live User App'}
+              {activePlatform === 'exe' && '💻 EXE · Live Command Dashboards'}
             </span>
             <span className="text-[10px] text-slate-400">▼</span>
           </button>
         </div>
 
-        {/* Center Controls: Zoom & View Mode */}
+        {/* Center: Live View Toggle */}
         <div className="flex items-center gap-2">
-          {/* Zoom */}
-          <div className="hidden md:flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-[11px] font-mono">
-            <button
-              onClick={() => setZoomLevel(z => Math.max(60, z - 10))}
-              className="px-1.5 py-0.5 hover:text-white text-slate-400"
-              title="Zoom out"
-            >
-              −
-            </button>
-            <span className="w-10 text-center text-slate-300">{zoomLevel}%</span>
-            <button
-              onClick={() => setZoomLevel(z => Math.min(130, z + 10))}
-              className="px-1.5 py-0.5 hover:text-white text-slate-400"
-              title="Zoom in"
-            >
-              +
-            </button>
-            <button
-              onClick={() => setZoomLevel(100)}
-              className="text-[9px] px-1 text-slate-500 hover:text-slate-300"
-            >
-              RESET
-            </button>
-          </div>
-
-          {/* Preview Toggle */}
           <button
-            onClick={() => {
-              setPreviewMode(p => !p);
-              setSelectedField(null);
-            }}
+            type="button"
+            onClick={() => setPreviewMode((p) => !p)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all ${
               previewMode
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
             }`}
           >
-            <span>{previewMode ? '👁️ Live Preview Mode' : '✏️ Edit Mode'}</span>
+            <span>{previewMode ? '👁️ Fullscreen Live View' : '✏️ Split Editor'}</span>
           </button>
         </div>
 
-        {/* Right Actions: Save, Publish, Exit */}
-        <div className="flex items-center gap-2">
+        {/* Right Actions */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
+            type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-mono font-bold transition-all"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono font-bold transition-all"
           >
-            {isSaving ? 'Saving...' : '💾 Save Draft'}
+            {isSaving ? 'Saving...' : '💾 Save'}
           </button>
 
           <button
+            type="button"
             onClick={() => setPublishModalOpen(true)}
             disabled={isPublishing}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-mono font-bold text-xs shadow-lg shadow-red-950/40 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-mono font-bold text-xs shadow-lg transition-all"
           >
-            <span>🚀 Publish Live (OTA)</span>
+            <span>🚀 Publish</span>
           </button>
 
-          <div className="h-4 w-[1px] bg-slate-800" />
-
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/50 text-slate-400 hover:text-red-300 border border-slate-700 text-xs font-mono transition-all"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-950/60 text-slate-300 hover:text-red-300 border border-slate-700 text-xs font-mono transition-all"
             title="Exit Studio"
           >
             ✕
@@ -248,58 +285,40 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
       </header>
 
       {/* ── MAIN WORKSPACE ── */}
-      <div className="flex-1 flex overflow-hidden relative">
-
-        {/* ── LEFT SIDEBAR: Wix/Sitey Component Tree & Assets ── */}
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
+        {/* ── LEFT SIDEBAR: Structure, Media & Theme ── */}
         {!previewMode && (
-          <aside className="w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col z-10 shrink-0">
-            {/* Sidebar Tabs */}
+          <aside className="hidden xl:flex w-64 bg-slate-900/95 border-r border-slate-800 flex-col z-10 shrink-0">
             <div className="flex border-b border-slate-800 bg-slate-950">
-              <button
-                onClick={() => setActiveTab('sections')}
-                className={`flex-1 py-2.5 text-[11px] font-mono font-bold uppercase tracking-wider text-center transition-all ${
-                  activeTab === 'sections'
-                    ? 'text-amber-400 border-b-2 border-amber-500 bg-slate-900/50'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                📑 Sections
-              </button>
-              <button
-                onClick={() => setActiveTab('assets')}
-                className={`flex-1 py-2.5 text-[11px] font-mono font-bold uppercase tracking-wider text-center transition-all ${
-                  activeTab === 'assets'
-                    ? 'text-amber-400 border-b-2 border-amber-500 bg-slate-900/50'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🖼️ Media
-              </button>
-              <button
-                onClick={() => setActiveTab('theme')}
-                className={`flex-1 py-2.5 text-[11px] font-mono font-bold uppercase tracking-wider text-center transition-all ${
-                  activeTab === 'theme'
-                    ? 'text-amber-400 border-b-2 border-amber-500 bg-slate-900/50'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                🎨 Theme
-              </button>
+              {(['sections', 'assets', 'theme'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-2.5 text-[10px] font-mono font-bold uppercase tracking-wider text-center transition-all ${
+                    activeTab === tab
+                      ? 'text-amber-400 border-b-2 border-amber-500 bg-slate-900/50'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {tab === 'sections' ? '📑 Layout' : tab === 'assets' ? '🖼️ Media' : '🎨 Theme'}
+                </button>
+              ))}
             </div>
 
-            {/* Sidebar Content */}
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {activeTab === 'sections' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                      Re-order & Toggle Structure
+                      Live Sections ({activePlatform.toUpperCase()})
                     </span>
                     <button
+                      type="button"
                       onClick={() => resetToDefaults(activePlatform)}
                       className="text-[9px] font-mono text-slate-500 hover:text-red-400"
                     >
-                      Reset Order
+                      Reset
                     </button>
                   </div>
 
@@ -307,7 +326,7 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                     {sections[activePlatform].map((sec, idx) => (
                       <div
                         key={sec.id}
-                        className={`flex items-center justify-between p-2.5 rounded-lg border text-xs font-mono transition-all ${
+                        className={`flex items-center justify-between p-2 rounded-lg border text-xs font-mono transition-all ${
                           sec.visible
                             ? 'bg-slate-800/80 border-slate-700 text-slate-200'
                             : 'bg-slate-950/60 border-slate-800/60 text-slate-500 line-through'
@@ -317,10 +336,9 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                           <span className="text-sm">{sec.icon}</span>
                           <span className="truncate font-semibold text-[11px]">{sec.name}</span>
                         </div>
-
                         <div className="flex items-center gap-1 shrink-0">
-                          {/* Move Up */}
                           <button
+                            type="button"
                             disabled={idx === 0}
                             onClick={() => reorderSection(activePlatform, idx, idx - 1)}
                             className="p-1 hover:bg-slate-700 rounded text-slate-400 disabled:opacity-20"
@@ -328,8 +346,8 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                           >
                             ▲
                           </button>
-                          {/* Move Down */}
                           <button
+                            type="button"
                             disabled={idx === sections[activePlatform].length - 1}
                             onClick={() => reorderSection(activePlatform, idx, idx + 1)}
                             className="p-1 hover:bg-slate-700 rounded text-slate-400 disabled:opacity-20"
@@ -337,8 +355,8 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                           >
                             ▼
                           </button>
-                          {/* Visibility Toggle */}
                           <button
+                            type="button"
                             onClick={() => toggleSectionVisibility(activePlatform, sec.id)}
                             className={`p-1 hover:bg-slate-700 rounded ${sec.visible ? 'text-emerald-400' : 'text-slate-600'}`}
                             title={sec.visible ? 'Hide section' : 'Show section'}
@@ -350,67 +368,69 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                     ))}
                   </div>
 
-                  <div className="mt-4 p-3 rounded-lg bg-amber-950/20 border border-amber-500/20 text-[11px] text-amber-300 font-mono">
-                    💡 <strong>Pro Tip:</strong> Click any element in the live canvas on the right to edit its wording, image, or action directly!
+                  <div className="mt-4 p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[10px] text-emerald-300 font-mono leading-relaxed">
+                    <strong>LIVE INTERFACE MODE:</strong> The center viewport mounts the real production SafetyLink React interfaces &amp; dashboards — not static mockups. Every edit on the right updates live immediately.
                   </div>
                 </div>
               )}
 
               {activeTab === 'assets' && (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
                     SafetyLink Asset Library
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     {MEDIA_PRESETS.map((asset, i) => (
-                      <div
+                      <button
                         key={i}
+                        type="button"
                         onClick={() => {
-                          if (selectedField?.type === 'image') {
-                            handleFieldValueChange(asset.url);
-                            showToast(`Updated image to: ${asset.name}`);
-                          } else {
-                            // Default to updating hero poster or logo
-                            updateField(activePlatform, activePlatform === 'web' ? 'logoImage' : 'shieldIconUrl', asset.url);
-                            showToast(`Selected: ${asset.name}`);
-                          }
+                          const targetKey =
+                            focusedSpec.type === 'image'
+                              ? focusedSpec.key
+                              : activePlatform === 'web'
+                                ? 'logoImage'
+                                : 'shieldIconUrl';
+                          updateField(activePlatform, targetKey, asset.url);
+                          showToast(`Applied ${asset.name}`);
                         }}
                         className="p-2 rounded-lg bg-slate-800/80 border border-slate-700 hover:border-amber-500 cursor-pointer transition-all group flex flex-col items-center text-center"
                       >
-                        <div className="w-16 h-16 rounded bg-black/40 flex items-center justify-center p-1 mb-1.5 overflow-hidden">
+                        <div className="w-14 h-14 rounded bg-black/40 flex items-center justify-center p-1 mb-1.5 overflow-hidden">
                           <img src={asset.url} alt={asset.name} className="max-w-full max-h-full object-contain" />
                         </div>
                         <span className="text-[10px] font-mono text-slate-300 group-hover:text-amber-400 leading-tight">
                           {asset.name}
                         </span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
               )}
 
               {activeTab === 'theme' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
-                    Primary Tactical Accent
+                    Primary Accent Swatches
                   </span>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2">
                     {[
-                      { name: 'Tactical Red', color: '#e8321e' },
                       { name: 'Armed Emerald', color: '#10b981' },
+                      { name: 'Tactical Red', color: '#ef4444' },
                       { name: 'Warning Amber', color: '#f59e0b' },
-                      { name: 'Cyber Blue', color: '#0ea5e9' },
-                    ].map(t => (
+                      { name: 'Command Blue', color: '#0ea5e9' },
+                    ].map((t) => (
                       <button
                         key={t.color}
+                        type="button"
                         onClick={() => {
                           if (activePlatform === 'web') updateField('web', 'primaryColor', t.color);
                           if (activePlatform === 'apk') updateField('apk', 'hudThemeColor', t.color);
-                          showToast(`Accent set to ${t.name}`);
+                          showToast(`Accent updated to ${t.name}`);
                         }}
-                        className="p-3 rounded-lg bg-slate-800 border border-slate-700 flex items-center gap-2 text-xs font-mono text-left hover:border-slate-500 transition-all"
+                        className="p-2.5 rounded-lg bg-slate-800 border border-slate-700 flex items-center gap-2.5 text-xs font-mono text-left hover:border-slate-500 transition-all"
                       >
-                        <span className="w-4 h-4 rounded-full" style={{ backgroundColor: t.color }} />
+                        <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
                         <span className="text-slate-200">{t.name}</span>
                       </button>
                     ))}
@@ -421,662 +441,437 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
           </aside>
         )}
 
-        {/* ── CENTER CANVAS: Live Interactive Platform Device Simulator ── */}
-        <main className="flex-1 bg-slate-950/90 overflow-auto flex items-center justify-center p-6 relative">
-          <div
-            style={{
-              transform: `scale(${zoomLevel / 100})`,
-              transformOrigin: 'top center',
-              transition: 'transform 0.15s ease',
-            }}
-            className="w-full max-w-5xl flex justify-center py-6"
-          >
-            {/* 🌐 1. WEB PLATFORM SIMULATOR (safetylink.online) */}
-            {activePlatform === 'web' && (
-              <div className="w-full bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden text-slate-100 font-sans">
-                {/* Browser Top Bar */}
-                <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                    <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                  </div>
-                  <div className="flex-1 max-w-md mx-auto bg-slate-950 border border-slate-800 rounded-lg px-3 py-1 text-[11px] font-mono text-slate-400 flex items-center justify-center gap-2">
-                    <span className="text-emerald-400">🔒</span>
-                    <span>https://safetylink.online</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500">LIVE PRODUCTION WEB</span>
-                </div>
-
-                {/* Simulated Web Navigation */}
-                <div className="bg-slate-950/80 border-b border-slate-800/60 px-6 py-3 flex items-center justify-between backdrop-blur">
-                  <div
-                    onClick={() => handleSelectField('logoImage', 'Brand Logo URL', 'image', web.logoImage)}
-                    className={`flex items-center gap-2.5 cursor-pointer p-1 rounded transition-all ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
+        {/* ── CENTER STAGE: ACTUAL LIVE INTERFACES & DASHBOARDS ── */}
+        <main className="flex-1 bg-slate-950 flex flex-col min-w-0 overflow-hidden">
+          {/* Sub-Navigation Bar for Real Live Views */}
+          <div className="bg-slate-900/90 border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              {activePlatform === 'web' &&
+                ([
+                  { id: 'home', label: '🏠 Home' },
+                  { id: 'platform', label: '📱 Solutions (3D)' },
+                  { id: 'hardware', label: '📡 Hardware (3D)' },
+                  { id: 'pricing', label: '💎 Pricing' },
+                  { id: 'store', label: '🛒 Store' },
+                  { id: 'download', label: '⬇️ Downloads' },
+                  { id: 'enterprise', label: '🏢 Enterprise' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setWebPage(item.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase whitespace-nowrap border transition-all ${
+                      webPage === item.id
+                        ? 'bg-emerald-600 border-emerald-400 text-white'
+                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    <img src={web.logoImage} alt="Logo" className="h-8 w-16 object-contain" />
-                    <span className="font-black text-white tracking-wider text-sm uppercase font-mono">SafetyLink</span>
-                  </div>
+                    {item.label}
+                  </button>
+                ))}
 
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleSelectField('heroCtaSecondary', 'Sign In Button Label', 'text', web.heroCtaSecondary)}
-                      className={`text-xs font-mono text-slate-400 hover:text-white p-1 rounded ${
-                        !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                      }`}
-                    >
-                      {web.heroCtaSecondary}
-                    </button>
-                    <button
-                      onClick={() => handleSelectField('heroCtaPrimary', 'Primary Action Button Label', 'text', web.heroCtaPrimary)}
-                      className={`px-4 py-2 rounded-xl text-xs font-mono font-bold text-white uppercase transition-all ${
-                        !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                      }`}
-                      style={{ backgroundColor: web.primaryColor }}
-                    >
-                      {web.heroCtaPrimary}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Web Content Body */}
-                <div className="p-8 space-y-12">
-                  {/* Hero Section */}
-                  {sections.web.find(s => s.id === 'hero')?.visible && (
-                    <div className="relative text-center max-w-3xl mx-auto py-10">
-                      {/* Badge */}
-                      <div
-                        onClick={() => handleSelectField('heroBadge', 'Hero Eyebrow Badge', 'text', web.heroBadge)}
-                        className={`inline-block mb-3 px-3 py-1 rounded-full text-[11px] font-mono font-bold text-red-400 bg-red-950/40 border border-red-500/30 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.heroBadge}
-                      </div>
-
-                      {/* Main Titles */}
-                      <h1
-                        onClick={() => handleSelectField('heroTitle1', 'Hero Headline Line 1', 'text', web.heroTitle1)}
-                        className={`text-4xl md:text-5xl font-black tracking-tight cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.heroTitle1}
-                      </h1>
-                      <h2
-                        onClick={() => handleSelectField('heroTitle2', 'Hero Headline Line 2', 'text', web.heroTitle2)}
-                        className={`text-4xl md:text-5xl font-black tracking-tight text-slate-400 mb-6 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.heroTitle2}
-                      </h2>
-
-                      {/* Subtitle */}
-                      <p
-                        onClick={() => handleSelectField('heroSubtitle', 'Hero Descriptive Subtitle', 'textarea', web.heroSubtitle)}
-                        className={`text-base text-slate-300 leading-relaxed max-w-xl mx-auto mb-8 cursor-pointer p-2 rounded ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.heroSubtitle}
-                      </p>
-
-                      {/* Primary Buttons */}
-                      <div className="flex justify-center gap-4">
-                        <button
-                          onClick={() => handleSelectField('heroCtaPrimary', 'Primary Action Button Label', 'text', web.heroCtaPrimary)}
-                          className={`px-6 py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wider text-white shadow-xl ${
-                            !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                          }`}
-                          style={{ backgroundColor: web.primaryColor }}
-                        >
-                          {web.heroCtaPrimary}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status Ticker Section */}
-                  {sections.web.find(s => s.id === 'ticker')?.visible && (
-                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-4 overflow-hidden">
-                      <span className="text-[10px] font-mono text-red-500 font-bold shrink-0">● OPERATIONAL STATUS:</span>
-                      <div className="flex gap-4 text-[11px] font-mono text-slate-400">
-                        {web.statusTickerItems.slice(0, 4).map((item, i) => (
-                          <span key={i} className="whitespace-nowrap">{item}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Features Grid */}
-                  {sections.web.find(s => s.id === 'armour')?.visible && (
-                    <div>
-                      <h3
-                        onClick={() => handleSelectField('armourTitle', 'Capabilities Title', 'text', web.armourTitle)}
-                        className={`text-2xl font-black uppercase tracking-tight mb-2 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.armourTitle}
-                      </h3>
-                      <p
-                        onClick={() => handleSelectField('armourSubtitle', 'Capabilities Subtitle', 'textarea', web.armourSubtitle)}
-                        className={`text-xs text-slate-400 mb-6 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {web.armourSubtitle}
-                      </p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {web.features.map((f, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleSelectField(`features[${idx}].title`, `Feature ${idx + 1} Title`, 'text', f.title)}
-                            className={`p-4 rounded-xl bg-slate-900/70 border border-slate-800 flex gap-3 cursor-pointer ${
-                              !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                            }`}
-                          >
-                            <span className="text-2xl">{f.icon}</span>
-                            <div>
-                              <div className="font-bold text-sm text-white">{f.title}</div>
-                              <div className="text-xs text-slate-400">{f.desc}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Pricing Plans */}
-                  {sections.web.find(s => s.id === 'pricing')?.visible && (
-                    <div className="pt-6">
-                      <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-center">
-                        Simple Pricing & Subscriptions
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {web.pricingTiers.map((p, idx) => (
-                          <div
-                            key={p.name}
-                            className={`p-5 rounded-xl border flex flex-col justify-between ${
-                              p.popular ? 'bg-slate-900 border-emerald-500/50' : 'bg-slate-900/40 border-slate-800'
-                            }`}
-                          >
-                            <div>
-                              <div className="text-[10px] font-mono text-slate-400 uppercase">{p.name}</div>
-                              <div className="text-3xl font-black my-1 text-white">{p.monthly}</div>
-                              <div className="text-[10px] text-amber-400 mb-3">{p.onceOff}</div>
-                              <ul className="text-xs space-y-1 text-slate-300">
-                                {p.features.map((ft, fi) => (
-                                  <li key={fi}>✓ {ft}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            <button
-                              className="w-full mt-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold"
-                            >
-                              Subscribe {p.monthly}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 📱 2. APK MOBILE SIMULATOR (SafetyLink Android APK) */}
-            {activePlatform === 'apk' && (
-              <div className="w-[380px] bg-slate-950 rounded-[44px] border-[10px] border-slate-800 shadow-2xl overflow-hidden relative flex flex-col font-sans">
-                {/* Phone Notch & Dynamic Island */}
-                <div className="h-7 bg-black flex items-center justify-between px-6 text-[10px] font-mono text-slate-400">
-                  <span>07:46</span>
-                  <div className="w-20 h-4 bg-slate-900 rounded-full mx-auto" />
-                  <span>5G ● 98%</span>
-                </div>
-
-                {/* App Header */}
-                <div className="p-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
-                  <div
-                    onClick={() => handleSelectField('appName', 'Mobile App Name', 'text', apk.appName)}
-                    className={`flex items-center gap-2 cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
+              {activePlatform === 'apk' &&
+                ([
+                  { id: 'sos', label: '🚨 SOS Hub' },
+                  { id: 'map', label: '🗺️ Live Map + 3D' },
+                  { id: 'ble', label: '📡 BLE Scanner' },
+                  { id: 'contacts', label: '👥 Contacts' },
+                  { id: 'settings', label: '⚙️ Settings' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setApkTab(item.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase whitespace-nowrap border transition-all ${
+                      apkTab === item.id
+                        ? 'bg-red-600 border-red-400 text-white'
+                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    <img src={apk.shieldIconUrl} alt="Shield" className="w-6 h-6 object-contain" />
-                    <span className="font-mono font-black text-xs uppercase text-white">{apk.appName}</span>
-                  </div>
+                    {item.label}
+                  </button>
+                ))}
 
-                  <span
-                    onClick={() => handleSelectField('statusTag', 'Tactical Status Tag', 'text', apk.statusTag)}
-                    className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-500/40 cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
+              {activePlatform === 'exe' &&
+                ([
+                  { id: 'warroom', label: '🛡️ Org War Room' },
+                  { id: 'org', label: '🏢 Org Commander Deck' },
+                  { id: 'responder', label: '🚓 Responder Console' },
+                  { id: 'globe', label: '🌐 3D Global Command' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setExeView(item.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase whitespace-nowrap border transition-all ${
+                      exeView === item.id
+                        ? 'bg-indigo-600 border-indigo-400 text-white'
+                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white'
                     }`}
                   >
-                    {apk.statusTag}
-                  </span>
-                </div>
+                    {item.label}
+                  </button>
+                ))}
+            </div>
 
-                {/* Mobile App Canvas */}
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-6">
-                  {/* Central Big SOS Trigger */}
-                  <div className="flex flex-col items-center justify-center my-6">
-                    <div
-                      onClick={() => handleSelectField('sosButtonText', 'Main SOS Button Label', 'text', apk.sosButtonText)}
-                      className={`w-48 h-48 rounded-full flex flex-col items-center justify-center text-center p-4 cursor-pointer shadow-2xl transition-all ${
-                        !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                      }`}
-                      style={{
-                        background: `radial-gradient(circle, ${apk.hudThemeColor} 0%, #7f1d1d 100%)`,
-                        boxShadow: `0 0 40px ${apk.hudThemeColor}60`,
-                      }}
-                    >
-                      <span className="text-3xl mb-1">🚨</span>
-                      <span className="font-black text-lg tracking-wider text-white uppercase font-mono">
-                        {apk.sosButtonText}
+            <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold shrink-0">
+              ● REAL LIVE COMPONENT
+            </span>
+          </div>
+
+          {/* Real Mounted Production Interface Container */}
+          <div className="flex-1 overflow-auto min-h-0 relative bg-[#071124]">
+            <ErrorBoundary tabName={`Live ${activePlatform.toUpperCase()} Canvas`}>
+              {/* 🌐 1. ACTUAL WEB PLATFORM (LandingPage) */}
+              {activePlatform === 'web' && (
+                <Suspense fallback={<LoadingView label="Landing Website" />}>
+                  <LandingPage
+                    embedded
+                    controlledPage={webPage}
+                    onPageChange={(p) => {
+                      if (
+                        p === 'home' ||
+                        p === 'platform' ||
+                        p === 'hardware' ||
+                        p === 'pricing' ||
+                        p === 'store' ||
+                        p === 'download' ||
+                        p === 'enterprise'
+                      ) {
+                        setWebPage(p);
+                      }
+                    }}
+                    onLogin={() => showToast('Live preview: Sign-In action triggered')}
+                    onRegisterUser={() => showToast('Live preview: User Registration triggered')}
+                    onRegisterOrg={() => showToast('Live preview: Organization Registration triggered')}
+                  />
+                </Suspense>
+              )}
+
+              {/* 📱 2. ACTUAL MOBILE APK USER WORKSPACE */}
+              {activePlatform === 'apk' && (
+                <div className="min-h-full w-full flex justify-center p-4 sm:p-6 bg-slate-950">
+                  <div className="w-full max-w-[440px] bg-[#071124] border border-slate-800 rounded-[32px] shadow-2xl overflow-hidden flex flex-col min-h-[720px]">
+                    {/* Live App Top Bar */}
+                    <div className="px-4 py-3 bg-slate-900/95 border-b border-slate-800 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <img
+                          src={apk.shieldIconUrl || '/logos/Safety_Link_Logo_Transparent.png'}
+                          alt="SafetyLink"
+                          className="w-6 h-6 object-contain shrink-0"
+                        />
+                        <span className="font-mono font-black text-xs text-white uppercase truncate">
+                          {apk.appName || 'SafetyLink Mobile'}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 uppercase shrink-0">
+                        LIVE APK
                       </span>
                     </div>
 
-                    <div
-                      onClick={() => handleSelectField('sosHoldText', 'SOS Press & Hold Prompt', 'text', apk.sosHoldText)}
-                      className={`mt-4 text-[10px] font-mono text-slate-400 uppercase tracking-wider text-center cursor-pointer ${
-                        !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                      }`}
-                    >
-                      {apk.sosHoldText}
-                    </div>
-                  </div>
-
-                  {/* BLE Keyfob Status Card */}
-                  <div
-                    onClick={() => handleSelectField('bleStatusText', 'BLE Telemetry Status Text', 'text', apk.bleStatusText)}
-                    className={`p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">🔑</span>
-                      <div>
-                        <div className="text-[11px] font-bold text-white">iTAG Beacon Active</div>
-                        <div className="text-[9px] font-mono text-slate-400">{apk.bleStatusText}</div>
-                      </div>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  </div>
-
-                  {/* Offline GSM SMS Notice */}
-                  <div
-                    onClick={() => handleSelectField('offlineFallbackNotice', 'Offline Fallback Notice', 'text', apk.offlineFallbackNotice)}
-                    className={`p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-center text-[10px] font-mono text-slate-400 cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                    }`}
-                  >
-                    📡 {apk.offlineFallbackNotice}
-                  </div>
-
-                  {/* Duress Code Prompt */}
-                  <div
-                    onClick={() => handleSelectField('duressCodePrompt', 'Silent Duress Code Prompt', 'text', apk.duressCodePrompt)}
-                    className={`text-center text-[10px] font-mono text-slate-500 cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                    }`}
-                  >
-                    🔒 {apk.duressCodePrompt}
-                  </div>
-                </div>
-
-                {/* Android Bottom Navigation Bar */}
-                <div className="h-10 bg-black flex items-center justify-center pb-2">
-                  <div className="w-32 h-1 bg-slate-700 rounded-full" />
-                </div>
-              </div>
-            )}
-
-            {/* 💻 3. EXE DESKTOP SIMULATOR (SafetyLink Desktop EXE) */}
-            {activePlatform === 'exe' && (
-              <div className="w-full bg-slate-950 rounded-xl border border-slate-700 shadow-2xl overflow-hidden font-sans">
-                {/* Windows Window Header */}
-                <div className="bg-slate-900 border-b border-slate-800 px-3 py-2 flex items-center justify-between">
-                  <div
-                    onClick={() => handleSelectField('windowTitle', 'Desktop Window Title', 'text', exe.windowTitle)}
-                    className={`flex items-center gap-2 text-xs font-mono font-bold text-slate-300 cursor-pointer ${
-                      !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                    }`}
-                  >
-                    <span className="text-red-500">🛡️</span>
-                    <span>{exe.windowTitle}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded bg-slate-700 text-slate-300 flex items-center justify-center text-[9px]">_</span>
-                    <span className="w-3 h-3 rounded bg-slate-700 text-slate-300 flex items-center justify-center text-[9px]">□</span>
-                    <span className="w-3 h-3 rounded bg-red-600 text-white flex items-center justify-center text-[9px]">✕</span>
-                  </div>
-                </div>
-
-                {/* EXE Console Dashboard */}
-                <div className="p-6 space-y-6">
-                  {/* Header Banner */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div>
-                      <h2
-                        onClick={() => handleSelectField('dispatchHeader', 'Command Center Header', 'text', exe.dispatchHeader)}
-                        className={`text-2xl font-black font-mono uppercase text-white cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {exe.dispatchHeader}
-                      </h2>
-                      <p
-                        onClick={() => handleSelectField('warRoomSubtitle', 'War Room Subtitle', 'text', exe.warRoomSubtitle)}
-                        className={`text-xs font-mono text-slate-400 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {exe.warRoomSubtitle}
-                      </p>
+                    {/* Actual User App Content */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      <Suspense fallback={<LoadingView label="Mobile Workspace" />}>
+                        {apkTab === 'sos' && (
+                          <div className="space-y-4">
+                            <StatusIndicator />
+                            <PanicButton />
+                          </div>
+                        )}
+                        {apkTab === 'map' && <OfflineMap />}
+                        {apkTab === 'ble' && <BLEScanner />}
+                        {apkTab === 'contacts' && <DispatchChain />}
+                        {apkTab === 'settings' && <Settings />}
+                      </Suspense>
                     </div>
 
-                    <div
-                      onClick={() => handleSelectField('threatLevelLabel', 'Threat Level Tag', 'text', exe.threatLevelLabel)}
-                      className={`px-3 py-1 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold cursor-pointer ${
-                        !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                      }`}
-                    >
-                      {exe.threatLevelLabel}
-                    </div>
-                  </div>
-
-                  {/* Multi-Monitor GIS Grid */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-4 h-64 flex flex-col justify-between">
-                      <div className="flex items-center justify-between text-xs font-mono text-slate-400">
-                        <span>SATELLITE GIS RADAR (LIVE)</span>
-                        <span className="text-emerald-400">● 14 NODES CONNECTED</span>
-                      </div>
-                      <div className="flex-1 flex items-center justify-center text-slate-600 font-mono text-xs">
-                        [ HIGH-RESOLUTION SATELLITE TILES & INCIDENT CLUSTERS ]
-                      </div>
-                      <div
-                        onClick={() => handleSelectField('satelliteFeedStatus', 'GIS Telemetry Status', 'text', exe.satelliteFeedStatus)}
-                        className={`text-[10px] font-mono text-emerald-400/80 cursor-pointer ${
-                          !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
-                        }`}
-                      >
-                        {exe.satelliteFeedStatus}
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
-                      <div>
-                        <div
-                          onClick={() => handleSelectField('evidenceLedgerTitle', 'Evidence Vault Title', 'text', exe.evidenceLedgerTitle)}
-                          className={`text-xs font-mono font-bold text-white mb-2 cursor-pointer ${
-                            !previewMode ? 'hover:outline hover:outline-dashed hover:outline-amber-400' : ''
+                    {/* Live App Bottom Nav Bar */}
+                    <div className="grid grid-cols-5 bg-slate-900 border-t border-slate-800 p-1.5 gap-1 shrink-0">
+                      {([
+                        { id: 'sos', icon: '🚨', label: 'SOS' },
+                        { id: 'map', icon: '🗺️', label: 'Map' },
+                        { id: 'ble', icon: '📡', label: 'BLE' },
+                        { id: 'contacts', icon: '👥', label: 'Chain' },
+                        { id: 'settings', icon: '⚙️', label: 'Setup' },
+                      ] as const).map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setApkTab(t.id)}
+                          className={`py-1.5 rounded-xl flex flex-col items-center text-[9px] font-mono font-bold transition-all ${
+                            apkTab === t.id ? 'bg-emerald-600/25 text-emerald-300 border border-emerald-500/40' : 'text-slate-400 hover:text-white'
                           }`}
                         >
-                          {exe.evidenceLedgerTitle}
-                        </div>
-                        <div className="space-y-2 text-[10px] font-mono text-slate-400">
-                          <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            ✓ Block #49281 • Sealed
-                          </div>
-                          <div className="p-2 rounded bg-slate-950 border border-slate-800">
-                            ✓ Incident #082 • Audio Recorded
-                          </div>
-                        </div>
-                      </div>
-                      <button className="w-full py-2 bg-red-600 hover:bg-red-500 text-white font-mono text-xs font-bold rounded-lg">
-                        BROADCAST ALL RESPONDERS
-                      </button>
+                          <span className="text-sm">{t.icon}</span>
+                          <span>{t.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* 💻 3. ACTUAL DESKTOP EXE / COMMAND DASHBOARDS */}
+              {activePlatform === 'exe' && (
+                <div className="w-full h-full min-h-[600px] flex flex-col">
+                  <div className="px-4 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-[10px] font-mono text-slate-400 shrink-0">
+                    <span className="font-bold text-slate-200 truncate">🛡️ {exe.windowTitle}</span>
+                    <span className="text-emerald-400 shrink-0">HOTLINE: {exe.commandHotline || '+27 68 009 911'}</span>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-auto">
+                    <Suspense fallback={<LoadingView label="Command Dashboard" />}>
+                      {exeView === 'warroom' && <OrgWarRoom embedded />}
+                      {exeView === 'org' && <OrgDashboard />}
+                      {exeView === 'responder' && (
+                        <div className="h-[680px]">
+                          <ResponderDashboard />
+                        </div>
+                      )}
+                      {exeView === 'globe' && (
+                        <div className="h-[680px] p-3">
+                          <SceneErrorBoundary title="3D Command Globe" heightClass="h-full">
+                            <CommandGlobe3DScene heightClass="h-full" />
+                          </SceneErrorBoundary>
+                        </div>
+                      )}
+                    </Suspense>
+                  </div>
+                </div>
+              )}
+            </ErrorBoundary>
           </div>
         </main>
 
-        {/* ── RIGHT SIDEBAR: Wix/Sitey Property Inspector & AI Assistant ── */}
+        {/* ── RIGHT SIDEBAR: LIVE PROPERTY INSPECTOR & AI COPY ASSISTANT ── */}
         {!previewMode && (
-          <aside className="w-80 bg-slate-900/95 border-l border-slate-800 flex flex-col z-10 shrink-0">
+          <aside className="w-80 lg:w-96 bg-slate-900/95 border-l border-slate-800 flex flex-col z-10 shrink-0">
             <div className="p-3 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                ⚙️ Property Inspector
+                ⚙️ Live Property Inspector ({activePlatform.toUpperCase()})
               </span>
-              {selectedField && (
-                <button
-                  onClick={() => setSelectedField(null)}
-                  className="text-[10px] text-slate-400 hover:text-white font-mono"
-                >
-                  Deselect
-                </button>
-              )}
+              <span className="text-[9px] font-mono text-emerald-400 font-bold uppercase">Instant Sync</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-5">
-              {selectedField ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">
-                      Target Element
-                    </label>
-                    <div className="text-xs font-bold text-amber-400 font-mono bg-slate-950 p-2 rounded border border-slate-800">
-                      {selectedField.label}
-                    </div>
-                  </div>
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+              {/* All Live Editable Fields for Active Environment */}
+              <div className="space-y-3">
+                {fieldSpecs.map((spec) => {
+                  const val = String(activePlatformValues[spec.key] ?? '');
+                  const isFocused = focusedSpec.key === spec.key;
 
-                  {/* Text or Image Input */}
-                  {selectedField.type === 'textarea' ? (
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">
-                        Content Text
-                      </label>
-                      <textarea
-                        rows={4}
-                        value={selectedField.value}
-                        onChange={e => handleFieldValueChange(e.target.value)}
-                        className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-lg text-xs font-sans text-white focus:border-amber-500 outline-none leading-relaxed"
-                      />
-                    </div>
-                  ) : selectedField.type === 'image' ? (
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">
-                        Image Asset URL
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedField.value}
-                        onChange={e => handleFieldValueChange(e.target.value)}
-                        className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white focus:border-amber-500 outline-none"
-                      />
-                      <div className="w-full h-24 rounded-lg bg-black/50 border border-slate-800 flex items-center justify-center overflow-hidden">
-                        <img src={selectedField.value} alt="Preview" className="max-h-full object-contain" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-[10px] font-mono text-slate-400 uppercase block mb-1">
-                        Content Text
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedField.value}
-                        onChange={e => handleFieldValueChange(e.target.value)}
-                        className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-lg text-xs font-sans text-white focus:border-amber-500 outline-none"
-                      />
-                    </div>
-                  )}
-
-                  {/* ── AI COPY POLISHER (GEMINI) ── */}
-                  <div className="pt-3 border-t border-slate-800">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className="text-amber-400">✨</span>
-                      <span className="text-[11px] font-mono font-bold text-white uppercase">
-                        Gemini AI Assistant
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Context (e.g. 'More urgent', 'isiZulu translation')"
-                        value={aiPrompt}
-                        onChange={e => setAiPrompt(e.target.value)}
-                        className="w-full p-2 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-200 outline-none placeholder:text-slate-600"
-                      />
-                      <button
-                        onClick={handleAiGenerate}
-                        disabled={isAiGenerating}
-                        className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-mono font-bold text-xs shadow transition-all disabled:opacity-50"
-                      >
-                        {isAiGenerating ? 'Generating Suggestions...' : '✨ Generate AI Variations'}
-                      </button>
-
-                      {aiSuggestions.length > 0 && (
-                        <div className="space-y-1.5 pt-2">
-                          <span className="text-[9px] font-mono text-slate-400 uppercase block">
-                            Click to apply:
+                  return (
+                    <div
+                      key={spec.key}
+                      onClick={() => {
+                        setFocusedFieldKey(spec.key);
+                        setAiSuggestions([]);
+                      }}
+                      className={`p-2.5 rounded-xl border transition-all ${
+                        isFocused
+                          ? 'bg-slate-950 border-amber-500/70 ring-1 ring-amber-500/30'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <label
+                          htmlFor={`sl-edit-${activePlatform}-${spec.key}`}
+                          className="text-[10px] font-mono font-bold text-amber-300 uppercase"
+                        >
+                          {spec.label}
+                        </label>
+                        {isFocused && (
+                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold uppercase">
+                            AI Target
                           </span>
-                          {aiSuggestions.map((sug, si) => (
-                            <div
-                              key={si}
-                              onClick={() => handleApplyAiSuggestion(sug)}
-                              className="p-2 rounded bg-slate-950 border border-slate-800 hover:border-amber-500 cursor-pointer text-xs font-sans text-slate-300 hover:text-white transition-all"
-                            >
-                              "{sug}"
-                            </div>
-                          ))}
+                        )}
+                      </div>
+                      <p className="text-[9px] font-mono text-slate-500 mb-1.5">{spec.hint}</p>
+
+                      {spec.type === 'textarea' ? (
+                        <textarea
+                          id={`sl-edit-${activePlatform}-${spec.key}`}
+                          rows={3}
+                          value={val}
+                          onFocus={() => setFocusedFieldKey(spec.key)}
+                          onChange={(e) => updateField(activePlatform, spec.key, e.target.value)}
+                          className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-sans text-white focus:border-amber-500 outline-none leading-relaxed"
+                        />
+                      ) : spec.type === 'color' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            id={`sl-edit-${activePlatform}-${spec.key}`}
+                            type="color"
+                            value={val || '#10b981'}
+                            onFocus={() => setFocusedFieldKey(spec.key)}
+                            onChange={(e) => updateField(activePlatform, spec.key, e.target.value)}
+                            className="h-8 w-12 rounded cursor-pointer border border-slate-700 bg-slate-900"
+                          />
+                          <input
+                            type="text"
+                            value={val}
+                            onFocus={() => setFocusedFieldKey(spec.key)}
+                            onChange={(e) => updateField(activePlatform, spec.key, e.target.value)}
+                            className="flex-1 p-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white outline-none"
+                          />
                         </div>
+                      ) : spec.type === 'image' ? (
+                        <div className="space-y-1.5">
+                          <input
+                            id={`sl-edit-${activePlatform}-${spec.key}`}
+                            type="text"
+                            value={val}
+                            onFocus={() => setFocusedFieldKey(spec.key)}
+                            onChange={(e) => updateField(activePlatform, spec.key, e.target.value)}
+                            className="w-full p-1.5 bg-slate-900 border border-slate-700 rounded-lg text-[11px] font-mono text-white outline-none"
+                          />
+                          <div className="w-full h-14 rounded-lg bg-black/50 border border-slate-800 flex items-center justify-center overflow-hidden p-1">
+                            <img src={val} alt={spec.label} className="max-h-full object-contain" />
+                          </div>
+                        </div>
+                      ) : (
+                        <input
+                          id={`sl-edit-${activePlatform}-${spec.key}`}
+                          type="text"
+                          value={val}
+                          onFocus={() => setFocusedFieldKey(spec.key)}
+                          onChange={(e) => updateField(activePlatform, spec.key, e.target.value)}
+                          className="w-full p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs font-sans text-white focus:border-amber-500 outline-none"
+                        />
                       )}
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* ── AI COPY POLISHER ── */}
+              <div className="pt-3 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold text-amber-400 uppercase">
+                    ✨ AI Copy Assistant
+                  </span>
+                  <span className="text-[9px] font-mono text-slate-400 truncate max-w-[150px]">
+                    {focusedSpec.label}
+                  </span>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Instruction (e.g. 'Shorter', 'isiZulu', 'More urgent')"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  className="w-full p-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 outline-none placeholder:text-slate-600"
+                />
+                <button
+                  type="button"
+                  onClick={handleAiGenerate}
+                  disabled={isAiGenerating}
+                  className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-mono font-bold text-xs shadow transition-all disabled:opacity-50"
+                >
+                  {isAiGenerating ? 'Generating...' : `✨ Suggest Copy for ${focusedSpec.label}`}
+                </button>
+
+                {aiSuggestions.length > 0 && (
+                  <div className="space-y-1.5 pt-1">
+                    {aiSuggestions.map((sug, si) => (
+                      <button
+                        key={si}
+                        type="button"
+                        onClick={() => handleApplyAiSuggestion(sug)}
+                        className="w-full text-left p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500 text-xs font-sans text-slate-200 hover:text-white transition-all"
+                      >
+                        "{sug}"
+                      </button>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-500 font-mono text-xs space-y-2">
-                  <div className="text-2xl">👆</div>
-                  <div>Click any element in the live simulator to inspect and edit its wording or media.</div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </aside>
         )}
       </div>
 
-      {/* ── PLATFORM PICKER MODAL (Wix/Sitey Environment Switcher) ── */}
+      {/* ── ENVIRONMENT PICKER MODAL ── */}
       {platformPickerOpen && (
         <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tight text-white font-mono">
-                  Select Target Environment
+                <h3 className="text-lg font-black uppercase tracking-tight text-white font-mono">
+                  Select Live Target Environment
                 </h3>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  Which platform structure would you like to visually customize?
+                  Mounts the real production SafetyLink interface for live editing
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setPlatformPickerOpen(false)}
-                className="p-1 rounded bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1.5 rounded bg-slate-800 text-slate-400 hover:text-white"
               >
                 ✕
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Option 1: Web */}
-              <div
-                onClick={() => {
-                  setPlatform('web');
-                  setPlatformPickerOpen(false);
-                }}
-                className={`p-5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                  activePlatform === 'web'
-                    ? 'bg-amber-950/30 border-amber-500 text-amber-300 ring-2 ring-amber-500/20'
-                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  <div className="text-3xl mb-2">🌐</div>
-                  <div className="font-bold text-sm text-white mb-1">SafetyLink.online</div>
-                  <div className="text-xs text-slate-400 leading-relaxed">
-                    Live Web Platform, Hero Dispatch, Pricing Tiers, and Responder Portal.
+              {([
+                {
+                  id: 'web',
+                  icon: '🌐',
+                  title: 'SafetyLink.online',
+                  desc: 'Live production landing website, 3D hardware showcase, pricing & download hub.',
+                },
+                {
+                  id: 'apk',
+                  icon: '📱',
+                  title: 'SafetyLink APK',
+                  desc: 'Live user workspace: SOS PanicButton, Live Map (OSM/Google/3D/BigDataCloud), BLE Scanner & Settings.',
+                },
+                {
+                  id: 'exe',
+                  icon: '💻',
+                  title: 'SafetyLink EXE',
+                  desc: 'Live Org War Room, Org Commander Deck, Responder Console & 3D Command Globe.',
+                },
+              ] as const).map((env) => (
+                <button
+                  key={env.id}
+                  type="button"
+                  onClick={() => {
+                    setPlatform(env.id);
+                    setPlatformPickerOpen(false);
+                  }}
+                  className={`p-5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                    activePlatform === env.id
+                      ? 'bg-emerald-950/35 border-emerald-500 text-emerald-200 ring-2 ring-emerald-500/20'
+                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                  }`}
+                >
+                  <div>
+                    <div className="text-3xl mb-2">{env.icon}</div>
+                    <div className="font-bold text-sm text-white mb-1">{env.title}</div>
+                    <div className="text-xs text-slate-400 leading-relaxed">{env.desc}</div>
                   </div>
-                </div>
-                <div className="mt-4 text-[10px] font-mono text-amber-400 font-bold">
-                  {activePlatform === 'web' ? '● CURRENTLY ACTIVE' : 'SELECT WEB →'}
-                </div>
-              </div>
-
-              {/* Option 2: APK */}
-              <div
-                onClick={() => {
-                  setPlatform('apk');
-                  setPlatformPickerOpen(false);
-                }}
-                className={`p-5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                  activePlatform === 'apk'
-                    ? 'bg-amber-950/30 border-amber-500 text-amber-300 ring-2 ring-amber-500/20'
-                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  <div className="text-3xl mb-2">📱</div>
-                  <div className="font-bold text-sm text-white mb-1">SafetyLink APK</div>
-                  <div className="text-xs text-slate-400 leading-relaxed">
-                    Android Mobile Shell, Big SOS Button, BLE Keyfob radar, and GSM offline SMS.
+                  <div className="mt-4 text-[10px] font-mono text-emerald-400 font-bold">
+                    {activePlatform === env.id ? '● CURRENTLY MOUNTED' : `OPEN LIVE ${env.id.toUpperCase()} →`}
                   </div>
-                </div>
-                <div className="mt-4 text-[10px] font-mono text-amber-400 font-bold">
-                  {activePlatform === 'apk' ? '● CURRENTLY ACTIVE' : 'SELECT APK →'}
-                </div>
-              </div>
-
-              {/* Option 3: EXE */}
-              <div
-                onClick={() => {
-                  setPlatform('exe');
-                  setPlatformPickerOpen(false);
-                }}
-                className={`p-5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                  activePlatform === 'exe'
-                    ? 'bg-amber-950/30 border-amber-500 text-amber-300 ring-2 ring-amber-500/20'
-                    : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  <div className="text-3xl mb-2">💻</div>
-                  <div className="font-bold text-sm text-white mb-1">SafetyLink EXE</div>
-                  <div className="text-xs text-slate-400 leading-relaxed">
-                    Windows Desktop Console, Multi-Monitor War Room, Satellite GIS telemetry.
-                  </div>
-                </div>
-                <div className="mt-4 text-[10px] font-mono text-amber-400 font-bold">
-                  {activePlatform === 'exe' ? '● CURRENTLY ACTIVE' : 'SELECT EXE →'}
-                </div>
-              </div>
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── PUBLISH LIVE MODAL (OTA Broadcast) ── */}
+      {/* ── PUBLISH LIVE MODAL ── */}
       {publishModalOpen && (
         <div className="fixed inset-0 z-[999999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">🚀</span>
-                <h3 className="text-lg font-black uppercase text-white font-mono">
-                  Publish Platform Changes
-                </h3>
+                <h3 className="text-lg font-black uppercase text-white font-mono">Publish Platform Changes</h3>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setPublishModalOpen(false);
                   setPublishResult(null);
@@ -1144,7 +939,6 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   </div>
                 </div>
 
-                {/* Pending Config Diff Preview */}
                 {pendingChanges.length > 0 && (
                   <div className="p-2.5 rounded-lg bg-slate-950 border border-amber-500/30 space-y-1 max-h-28 overflow-y-auto text-[10px] font-mono">
                     <div className="text-amber-300 font-bold uppercase">
@@ -1166,7 +960,7 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                     type="text"
                     value={releaseNotes}
                     onChange={(e) => setReleaseNotes(e.target.value)}
-                    placeholder="e.g. Updated landing hero headline & accent color"
+                    placeholder="e.g. Updated landing hero headline & command deck copy"
                     className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-white outline-none focus:border-amber-500"
                   />
                 </div>
@@ -1186,12 +980,14 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
+                    type="button"
                     onClick={() => setPublishModalOpen(false)}
                     className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-mono font-bold"
                   >
                     Cancel
                   </button>
                   <button
+                    type="button"
                     onClick={handlePublish}
                     disabled={isPublishing || !hasChannelSelected}
                     className="px-5 py-2 rounded-lg bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 disabled:opacity-40 text-white text-xs font-mono font-bold shadow-lg"
@@ -1210,7 +1006,7 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   <a
                     href={publishResult.commitUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-block text-xs text-emerald-300 underline"
                   >
                     View GitHub Commit {publishResult.commitSha} →
@@ -1222,6 +1018,7 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
                   </p>
                 )}
                 <button
+                  type="button"
                   onClick={() => {
                     setPublishModalOpen(false);
                     setPublishResult(null);
@@ -1238,7 +1035,7 @@ export const EditorialStudio: React.FC<EditorialStudioProps> = ({ onClose }) => 
 
       {/* ── TOAST NOTIFICATION ── */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999999] bg-slate-900 border border-amber-500/50 text-white px-4 py-2 rounded-xl text-xs font-mono shadow-2xl flex items-center gap-2 animate-slideUp">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999999] bg-slate-900 border border-amber-500/50 text-white px-4 py-2 rounded-xl text-xs font-mono shadow-2xl flex items-center gap-2">
           <span className="text-amber-400">✓</span>
           <span>{toastMessage}</span>
         </div>

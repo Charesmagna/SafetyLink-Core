@@ -1,12 +1,12 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { APIProvider, Map as GoogleMap, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { useAppStore } from '../utils/store';
 import { useEditorialStore } from '../utils/editorialStore';
 import { SceneErrorBoundary } from './three/SceneErrorBoundary';
 
 const TacticalCampus3DScene = lazy(() => import('./three/TacticalCampus3DScene'));
 
-export const OrgWarRoom = () => {
+export const OrgWarRoom: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { meshNodes, panicEvents, currentOrg } = useAppStore();
   const editorialExe = useEditorialStore((s) => s.exe);
   const liveSOSStream = (panicEvents || []).map((p: any) => ({
@@ -32,17 +32,29 @@ export const OrgWarRoom = () => {
   }, []);
 
   return (
-    <div className="bg-[#020617] h-screen text-slate-200 flex flex-col font-sans">
+    <div className={`bg-[#020617] ${embedded ? 'h-full min-h-[580px]' : 'h-screen'} text-slate-200 flex flex-col font-sans`}>
       <div className="p-4 bg-slate-950 border-b border-slate-900 flex flex-wrap justify-between items-center gap-2">
         <div>
           <h1 className="text-xl font-bold text-slate-100 tracking-widest uppercase">
             {editorialExe.dispatchHeader || 'Live GIS Map — Commander Deck'}
           </h1>
-          {editorialExe.threatLevelLabel && (
-            <p className="text-[10px] font-mono text-amber-400 uppercase tracking-wider mt-0.5">
-              {editorialExe.threatLevelLabel}
+          {editorialExe.warRoomSubtitle && (
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {editorialExe.warRoomSubtitle}
             </p>
           )}
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            {editorialExe.threatLevelLabel && (
+              <span className="text-[10px] font-mono text-amber-400 uppercase tracking-wider">
+                {editorialExe.threatLevelLabel}
+              </span>
+            )}
+            {editorialExe.satelliteFeedStatus && (
+              <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded">
+                {editorialExe.satelliteFeedStatus}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="inline-flex rounded-md border border-slate-700 overflow-hidden">
@@ -109,9 +121,9 @@ export const OrgWarRoom = () => {
             </SceneErrorBoundary>
           ) : (
             <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''} language="en" region="ZA">
-              <Map
+              <GoogleMap
                 mapId="DEMO_MAP_ID"
-                internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio"]}
+                internalUsageAttributionIds={["gmp_mcp_codeassist_v1_aistudio", "gmp_git_agentskills_v1"]}
                 mapTypeId={mapTypeId}
                 defaultZoom={12}
                 defaultCenter={{ lat: targetLat, lng: targetLng }}
@@ -130,14 +142,16 @@ export const OrgWarRoom = () => {
                     </AdvancedMarker>
                   ) : null
                 )}
-              </Map>
+              </GoogleMap>
             </APIProvider>
           )}
         </div>
 
         <div className="w-full lg:w-80 bg-slate-950 border-l border-slate-900 flex flex-col max-h-[300px] lg:max-h-full">
           <div className="p-3 border-b border-slate-900">
-            <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Live Event Stream</h2>
+            <h2 className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+              {editorialExe.evidenceLedgerTitle || 'Live Event Stream'}
+            </h2>
           </div>
           <div className="flex-1 overflow-auto p-3 space-y-2">
             {messages.length === 0 && (

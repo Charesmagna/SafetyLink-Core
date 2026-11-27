@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../utils/store';
+import { useEditorialStore } from '../../utils/editorialStore';
 import { ChevronDown, Download, Menu, Moon, Sun, X, Phone, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -7,6 +8,7 @@ interface HeaderProps {
   onRegisterOrg?: () => void;
   onNavigate?: (page: string) => void;
   activePage?: string;
+  embedded?: boolean;
 }
 
 const NAV_LINKS = [
@@ -18,19 +20,21 @@ const NAV_LINKS = [
   { id: 'download', label: 'Downloads' },
 ];
 
-export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home' }: HeaderProps) {
+export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home', embedded = false }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { globalTheme, setDisplaySettings } = useAppStore();
+  const editorialLogo = useEditorialStore((s) => s.web.logoImage);
 
   const isDark = globalTheme === 'dark';
 
   useEffect(() => {
+    if (embedded) return;
     const handleScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [embedded]);
 
   const handleLinkClick = (e: React.MouseEvent, pageId: string) => {
     if (onNavigate) {
@@ -44,7 +48,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-[1000] transition-all border-b ${
+        className={`${embedded ? 'sticky top-0 z-30' : 'fixed top-0 left-0 right-0 z-[1000]'} transition-all border-b ${
           isDark
             ? 'bg-[#071124]/92 border-slate-800/80 text-slate-100'
             : 'bg-white/95 border-slate-200/80 text-slate-900'
@@ -58,7 +62,7 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
             className="flex items-center gap-2.5 shrink-0 no-underline group"
           >
             <img
-              src="/logos/Safety_Link_Logo_Transparent.png"
+              src={editorialLogo || '/logos/Safety_Link_Logo_Transparent.png'}
               alt="SafetyLink"
               className="h-9 w-auto object-contain"
               onError={(e) => {

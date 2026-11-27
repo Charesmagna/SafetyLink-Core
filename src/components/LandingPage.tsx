@@ -16,12 +16,17 @@ import { checkForUpdate, UpdateInfo } from '../services/UpdateService';
 import { MediaHub } from './MediaHub';
 import { FloatingDownloadPrompt } from './landing/FloatingDownloadPrompt';
 
+import { useEditorialStore } from '../utils/editorialStore';
+
 type Page = 'home' | 'hardware' | 'store' | 'download' | 'pricing' | 'platform' | 'usecases' | 'enterprise' | 'privacy' | 'payment-success';
 
 interface LandingPageProps {
   onLogin?: () => void;
   onRegisterUser?: () => void;
   onRegisterOrg?: () => void;
+  embedded?: boolean;
+  controlledPage?: Page;
+  onPageChange?: (page: Page) => void;
 }
 
 const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
@@ -35,24 +40,41 @@ const NAV_ITEMS: { id: Page; label: string; emoji: string }[] = [
   { id: 'enterprise', label: 'Enterprise',  emoji: '🏢' },
 ];
 
-export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingPageProps) {
+export function LandingPage({
+  onLogin,
+  onRegisterUser,
+  onRegisterOrg,
+  embedded = false,
+  controlledPage,
+  onPageChange,
+}: LandingPageProps) {
   const { globalTheme } = useAppStore();
-  const [page, setPage] = useState<Page>('home');
+  const editorialWeb = useEditorialStore((s) => s.web);
+  const [internalPage, setInternalPage] = useState<Page>(controlledPage || 'home');
+  const page = controlledPage || internalPage;
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showMediaVault, setShowMediaVault] = useState(false);
   const isLight = globalTheme !== 'dark';
 
+  useEffect(() => {
+    if (controlledPage) {
+      setInternalPage(controlledPage);
+    }
+  }, [controlledPage]);
+
   // Check for updates on mount (only renders banner inside native APK)
   useEffect(() => {
+    if (embedded) return;
     checkForUpdate().then((info) => {
       if (info && info.available) {
         setUpdateInfo(info);
       }
     }).catch(() => {});
-  }, []);
+  }, [embedded]);
 
   // Optional Cloudflare Web Analytics beacon (loads only when VITE_CF_ANALYTICS_TOKEN is configured)
   useEffect(() => {
+    if (embedded) return;
     const cfToken = import.meta.env.VITE_CF_ANALYTICS_TOKEN;
     if (!cfToken || document.getElementById('cf-web-analytics')) return;
     const script = document.createElement('script');
@@ -61,20 +83,24 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
     script.src = 'https://static.cloudflareinsights.com/beacon.min.js';
     script.setAttribute('data-cf-beacon', JSON.stringify({ token: cfToken }));
     document.body.appendChild(script);
-  }, []);
+  }, [embedded]);
 
   // Sync with browser hash for direct links
   useEffect(() => {
+    if (embedded) return;
     const hash = window.location.hash.replace('#', '') as Page;
     if (NAV_ITEMS.find(n => n.id === hash) || hash === 'privacy' || hash === 'payment-success') {
-      setPage(hash as Page);
+      setInternalPage(hash as Page);
     }
-  }, []);
+  }, [embedded]);
 
   const navigate = (p: Page) => {
-    setPage(p);
-    window.location.hash = p;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setInternalPage(p);
+    onPageChange?.(p);
+    if (!embedded) {
+      window.location.hash = p;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const sharedProps = {
@@ -92,37 +118,39 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       }`}
     >
       {/* ── Ambient Continuous 3D Logo-Video Backdrop (shines through frosted glass) ── */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
-        aria-hidden="true"
-        style={{ opacity: isLight ? 0.08 : 0.16 }}
-      >
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'cover',
-          }}
+      {!embedded && (
+        <div
+          className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
+          aria-hidden="true"
+          style={{ opacity: isLight ? 0.08 : 0.16 }}
         >
-          <source src="/splash-video.mp4" type="video/mp4" />
-          <source src="/media/videos/hero_background.mp4" type="video/mp4" />
-          <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
-        </video>
-      </div>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              minWidth: '100%',
+              minHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'cover',
+            }}
+          >
+            <source src="/splash-video.mp4" type="video/mp4" />
+            <source src="/media/videos/hero_background.mp4" type="video/mp4" />
+            <source src="/media/videos/SafetyLink 3D Animation Logo.mp4" type="video/mp4" />
+          </video>
+        </div>
+      )}
 
       {/* ── Over-the-Air Update Notification (Restricted to APK) ── */}
-      <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />
+      {!embedded && <UpdateBanner updateInfo={updateInfo} onDismiss={() => setUpdateInfo(null)} />}
 
       {/* ── Top Nav ── */}
       <Header
@@ -130,6 +158,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         onRegisterOrg={onRegisterOrg}
         onNavigate={(p: any) => navigate(p)}
         activePage={page}
+        embedded={embedded}
       />
 
       {/* ── Page Content ── */}
@@ -178,9 +207,13 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
         </div>
 
         <div className="flex flex-wrap justify-center gap-5 text-xs">
-          <a href="mailto:info@safetylink.online" className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold">info@safetylink.online</a>
+          <a href={`mailto:${editorialWeb.hotlineEmail || 'info@safetylink.online'}`} className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold">
+            {editorialWeb.hotlineEmail || 'info@safetylink.online'}
+          </a>
           <a href="tel:0816738186" className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold">Tel: 081 673 8186</a>
-          <a href="tel:+27680079911" className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold">WhatsApp: +27 68 007 9911</a>
+          <a href={`tel:${(editorialWeb.hotlinePhone || '+27 68 007 9911').replace(/\s+/g, '')}`} className="text-emerald-700 dark:text-emerald-400 hover:underline font-semibold">
+            Hotline: {editorialWeb.hotlinePhone || '+27 68 007 9911'}
+          </a>
           <button onClick={() => navigate('privacy')} className="hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold underline">
             Privacy Policy &amp; POPIA
           </button>
@@ -220,7 +253,7 @@ export function LandingPage({ onLogin, onRegisterUser, onRegisterOrg }: LandingP
       </footer>
 
       {/* Creative Floating Shield Download Peek-Tab / Pop-Out Drawer */}
-      {page !== 'download' && (
+      {!embedded && page !== 'download' && (
         <FloatingDownloadPrompt onOpenHub={() => navigate('download')} />
       )}
 
