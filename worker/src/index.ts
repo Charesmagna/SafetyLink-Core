@@ -1364,6 +1364,31 @@ app.post('/api/iot/telemetry', authMiddleware, async (c) => {
   }
 });
 
+// Admin-only upstream connectivity test; uses the separate SafetyLink admin session.
+app.post('/api/iot/test', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ ok: false, error: 'Super Admin authorisation required.' }, 401);
+  const integrationKey = String(c.env.THINGSBOARD_HTTP_INTEGRATION_KEY || '').trim();
+  if (!integrationKey) return c.json({ ok: false, error: 'ThingsBoard HTTP Integration is not configured on the SafetyLink backend.' }, 503);
+  const deviceName = 'SafetyLink-Admin-Integration-Test';
+  try {
+    const response = await fetch(`https://thingsboard.cloud/api/v1/integrations/http/${encodeURIComponent(integrationKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceName,
+        deviceType: 'SafetyLink Installation',
+        ts: Date.now(),
+        telemetry: { integrationTest: true, lastSeen: Date.now() },
+        attributes: { integration: 'SafetyLink Cloudflare Worker', purpose: 'admin-connectivity-test' },
+      }),
+    });
+    if (!response.ok) return c.json({ ok: false, error: `ThingsBoard rejected the test event (HTTP ${response.status}).` }, 502);
+    return c.json({ ok: true, deviceName, acceptedAt: new Date().toISOString(), upstreamStatus: response.status });
+  } catch {
+    return c.json({ ok: false, error: 'Unable to reach ThingsBoard Cloud.' }, 502);
+  }
+});
+
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
   const body = (await c.req.json()) as any;
