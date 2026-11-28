@@ -40,8 +40,6 @@ export const AdminPanel: React.FC = () => {
     deleteOrganization,
     resolvePanic,
     addAuditLog,
-    thingsBoardToken,
-    setThingsBoardToken,
     customBackendUrl,
     setCustomBackendUrl,
     approveOrganization,
@@ -112,7 +110,6 @@ export const AdminPanel: React.FC = () => {
     return () => clearInterval(timer);
   }, [adminSlides.length]);
 
-  const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
   
   // Server-Side Super Admin Session (in-memory only) + GitHub Publisher state
@@ -836,24 +833,12 @@ export const AdminPanel: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={tbTokenInput}
-                  onChange={(e) => setTbTokenInput(e.target.value)}
-                  placeholder="IoT Device Access Token"
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
-                />
+                <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono text-slate-400">ThingsBoard Cloud · Server-managed gateway</div>
                 <button
-                  onClick={() => setThingsBoardToken(tbTokenInput.trim())}
-                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
-                >
-                  SAVE
-                </button>
-                <button
-                  disabled={!thingsBoardToken || tbTestStatus === 'sending'}
+                  disabled={tbTestStatus === 'sending'}
                   onClick={async () => {
                     setTbTestStatus('sending');
-                    const ok = await sendTestEvent(thingsBoardToken);
+                    const ok = await sendTestEvent();
                     setTbTestStatus(ok ? 'ok' : 'fail');
                     addAuditLog('SYSTEM', ok ? 'INFO' : 'WARN', ok ? 'IoT test event sent' : 'IoT test event failed', '');
                   }}
@@ -862,8 +847,8 @@ export const AdminPanel: React.FC = () => {
                   {tbTestStatus === 'sending' ? 'SENDING...' : 'SEND TEST EVENT'}
                 </button>
               </div>
-              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your IoT Dashboard.</p>}
-              {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach IoT Dashboard. Check the token and your connection.</p>}
+              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Accepted by ThingsBoard Cloud -- check gateway device telemetry.</p>}
+              {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Not delivered. Check SafetyLink sign-in and backend ThingsBoard configuration.</p>}
             </div>
 
             {/* Secure Server-Side GitHub Publisher & OTA Release Management */}
@@ -2739,7 +2724,7 @@ export const AdminPanel: React.FC = () => {
                     }}
                     className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
                   >
-                    SAVE ROUTE
+                    SERVER CONFIG
                   </button>
                 </div>
               </div>
@@ -2754,30 +2739,23 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Paste IoT Device Access Token..."
-                  value={tbTokenInput}
-                  onChange={e => setTbTokenInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
-                />
-                
+                <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-xs text-slate-400 font-mono">ThingsBoard Cloud · Credentials managed securely by the SafetyLink backend</div>                
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      setThingsBoardToken(tbTokenInput);
+                      
                       addAuditLog('SYSTEM', 'INFO', 'ThingsBoard token saved');
                     }}
                     className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
                   >
-                    SAVE ROUTE
+                    SERVER CONFIG
                   </button>
 
                   <button
                     onClick={async () => {
-                      if (!tbTokenInput) return alert('Save a token first.');
+                      
                       setTbTestStatus('sending');
-                      const ok = await sendTestEvent(tbTokenInput);
+                      const ok = await sendTestEvent();
                       setTbTestStatus(ok ? 'ok' : 'fail');
                       setTimeout(() => setTbTestStatus('idle'), 3000);
                     }}
