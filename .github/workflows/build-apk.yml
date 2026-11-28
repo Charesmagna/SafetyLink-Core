@@ -72,8 +72,17 @@ jobs:
         }
         INNER_EOF
 
-    - name: Decode keystore
-      run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
+    - name: Decode keystore from GitHub Actions secret
+      env:
+        RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+      run: |
+        if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+          echo "::error::Missing RELEASE_KEYSTORE_BASE64 repository secret."
+          exit 1
+        fi
+        printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > android/app/safetylink-release.keystore
+        test -s android/app/safetylink-release.keystore
+        chmod 600 android/app/safetylink-release.keystore
 
     - name: Write signing properties
       env:
