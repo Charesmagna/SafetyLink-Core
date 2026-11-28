@@ -14,7 +14,7 @@ export interface SafetyLinkTelemetry { activeThreat?: boolean; drillMode?: boole
 /** ThingsBoard credentials remain exclusively in the SafetyLink Worker secret store. */
 export async function sendSafetyLinkTelemetry(payload: SafetyLinkTelemetry): Promise<boolean> {
   const state = useAppStore.getState();
-  const token = String((typeof localStorage !== 'undefined' && (localStorage.getItem('sl_token') || localStorage.getItem('sl_auth_token'))) || '').trim();
+  const token = String(state.token || (typeof localStorage !== 'undefined' && (localStorage.getItem('sl_token') || localStorage.getItem('sl_auth_token'))) || '').trim();
   if (!token) return false;
   const custom = String(state.customBackendUrl || '').trim().replace(/\/+$/, '');
   for (const base of [...new Set([custom, DEFAULT_BACKEND].filter(Boolean))]) {
