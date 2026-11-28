@@ -181,7 +181,7 @@ async function fetchGoogleRssForTerm(
           feedType: 'LIVE_NEWS' as const,
         };
       })
-      .filter((x): x is WorkerNewsItem => Boolean(x));
+      .filter(Boolean) as WorkerNewsItem[];
   } catch {
     return [];
   }
@@ -376,7 +376,7 @@ export async function handleWorkerLiveSafetyFeed(
           feedType: 'LIVE_NEWS' as const,
         };
       })
-      .filter((x): x is WorkerNewsItem => Boolean(x));
+      .filter(Boolean) as WorkerNewsItem[];
 
   const primaryLocalTerm = city || suburb || queryText || state;
   const provinceTerm = state && state.toLowerCase() !== primaryLocalTerm.toLowerCase() ? state : '';

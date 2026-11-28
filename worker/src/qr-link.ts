@@ -64,7 +64,7 @@ async function addContactToServerProfile(db: any, ownerPhone: string, ownerName:
   const existingProfile = await db
     .prepare('SELECT phone FROM sl_profiles WHERE phone = ?')
     .bind(ownerPhone)
-    .first<{ phone: string }>();
+    .first() as { phone: string } | null;
 
   if (!existingProfile) {
     await db
@@ -76,7 +76,7 @@ async function addContactToServerProfile(db: any, ownerPhone: string, ownerName:
   const existingContacts = await db
     .prepare('SELECT contact_phone, sort_order FROM sl_contacts WHERE owner_phone = ?')
     .bind(ownerPhone)
-    .all<{ contact_phone: string; sort_order: number }>();
+    .all() as { results?: { contact_phone: string; sort_order: number }[] };
 
   const rows = existingContacts?.results || [];
   const normalizedTarget = normalizeDevicePhone(contactPhone);
@@ -132,7 +132,7 @@ export async function resolveQrLink(db: any, rawCode: string) {
   const row = await db
     .prepare('SELECT code, owner_phone, owner_name, expires_at FROM sl_qr_links WHERE code = ?')
     .bind(cleanCode)
-    .first<{ code: string; owner_phone: string; owner_name: string; expires_at: number }>();
+    .first() as { code: string; owner_phone: string; owner_name: string; expires_at: number } | null;
 
   if (!row || Number(row.expires_at) < Date.now()) {
     return { status: 404, json: { ok: false, error: 'Pairing code expired or not found. Ask your contact to refresh their QR code.' } };
@@ -179,7 +179,7 @@ export async function claimQrLink(
     const row = await db
       .prepare('SELECT owner_phone, owner_name, expires_at FROM sl_qr_links WHERE code = ?')
       .bind(cleanCode)
-      .first<{ owner_phone: string; owner_name: string; expires_at: number }>();
+      .first() as { owner_phone: string; owner_name: string; expires_at: number } | null;
     if (row && Number(row.expires_at) >= Date.now()) {
       targetPhone = normalizeDevicePhone(row.owner_phone);
       targetName = row.owner_name || targetName;
@@ -241,7 +241,7 @@ export async function getIncomingMutualLinks(db: any, rawPhone: string, acknowle
        ORDER BY created_at DESC LIMIT 20`,
     )
     .bind(...variants)
-    .all<{ id: string; linked_phone: string; linked_name: string; mode: string; created_at: number }>();
+    .all() as { results?: { id: string; linked_phone: string; linked_name: string; mode: string; created_at: number }[] };
 
   const links = res?.results || [];
   if (acknowledge && links.length > 0) {

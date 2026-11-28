@@ -92,6 +92,7 @@ export interface Env {
   RAIN_GATEWAY_MSISDN?: string;
   RECAPTCHA_SECRET: string;
   GEMINI_API_KEY?: string;
+  GEMINI_DEFAULT_MODEL?: string;
 }
 
 export interface Variables {
@@ -2345,13 +2346,92 @@ const sanitizeWorkerChatContents = (history: unknown, message: string) => {
   return contents;
 };
 
+type GeminiModelInfo = {
+  name: string;
+  displayName?: string;
+  description?: string;
+  supportedGenerationMethods?: string[];
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
+};
+
+async function fetchGeminiModelCatalog(apiKey: string): Promise<{ models: GeminiModelInfo[]; error?: string; status?: number }> {
+  const models: GeminiModelInfo[] = [];
+  let pageToken = '';
+  try {
+    for (let page = 0; page < 5; page += 1) {
+      const url = new URL('https://generativelanguage.googleapis.com/v1beta/models');
+      url.searchParams.set('pageSize', '100');
+      url.searchParams.set('key', apiKey);
+      if (pageToken) url.searchParams.set('pageToken', pageToken);
+      const response = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+      const payload: any = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { models: [], error: payload?.error?.message || `Gemini model discovery failed (${response.status})`, status: response.status };
+      }
+      const pageModels = Array.isArray(payload?.models) ? payload.models : [];
+      for (const item of pageModels) {
+        if (!item || typeof item.name !== 'string') continue;
+        const methods = Array.isArray(item.supportedGenerationMethods) ? item.supportedGenerationMethods : [];
+        if (!methods.includes('generateContent')) continue;
+        models.push({
+          name: item.name.replace(/^models\//, ''),
+          displayName: typeof item.displayName === 'string' ? item.displayName : undefined,
+          description: typeof item.description === 'string' ? item.description : undefined,
+          supportedGenerationMethods: methods,
+          inputTokenLimit: Number.isFinite(item.inputTokenLimit) ? item.inputTokenLimit : undefined,
+          outputTokenLimit: Number.isFinite(item.outputTokenLimit) ? item.outputTokenLimit : undefined,
+        });
+      }
+      pageToken = typeof payload?.nextPageToken === 'string' ? payload.nextPageToken : '';
+      if (!pageToken) break;
+    }
+    return { models: Array.from(new Map(models.map((model) => [model.name, model])).values()) };
+  } catch (error: any) {
+    return { models: [], error: error?.message || 'Gemini model discovery unavailable', status: 502 };
+  }
+}
+
+function chooseGeminiModel(models: GeminiModelInfo[], configuredDefault?: string, requested?: string): { model?: string; defaultModel?: string; error?: string } {
+  if (!models.length) return { error: 'No Gemini models supporting generateContent are available for this API key.' };
+  const available = new Set(models.map((model) => model.name));
+  const preferred = String(configuredDefault || '').replace(/^models\//, '').trim();
+  const defaultModel = (preferred && available.has(preferred) ? preferred : '') ||
+    (available.has('gemini-2.5-flash') ? 'gemini-2.5-flash' : models[0].name);
+  const requestedModel = String(requested || '').replace(/^models\//, '').trim();
+  const legacyAliases = new Set(['gemini-4-hydrogen', 'gemini-3.1-flash-lite']);
+  if (requestedModel && !legacyAliases.has(requestedModel)) {
+    if (!available.has(requestedModel)) {
+      return { defaultModel, error: `Requested model "${requestedModel}" is not available to this API key. Refresh the model list and select an available model.` };
+    }
+    return { model: requestedModel, defaultModel };
+  }
+  return { model: defaultModel, defaultModel };
+}
+
 app.get('/api/gemini/health', (c) => {
   return c.json({
     ok: true,
     configured: Boolean(c.env.GEMINI_API_KEY),
-    defaultModel: 'gemini-2.5-flash',
-    endpoints: ['chat', 'generate', 'tts', 'transcribe', 'analyze-image', 'safety-feed'],
+    modelDiscovery: Boolean(c.env.GEMINI_API_KEY),
+    defaultModel: c.env.GEMINI_DEFAULT_MODEL || null,
+    endpoints: ['models', 'chat', 'generate', 'tts', 'transcribe', 'analyze-image', 'safety-feed'],
   });
+});
+
+app.get('/api/gemini/models', async (c) => {
+  const apiKey = c.env.GEMINI_API_KEY;
+  if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker', models: [] }, 503 as any);
+  const catalog = await fetchGeminiModelCatalog(apiKey);
+  if (catalog.error) return c.json({ error: catalog.error, models: [] }, (catalog.status || 502) as any);
+  const selection = chooseGeminiModel(catalog.models, c.env.GEMINI_DEFAULT_MODEL);
+  return c.json({
+    ok: true,
+    source: 'google-generative-language-api',
+    refreshedAt: new Date().toISOString(),
+    defaultModel: selection.defaultModel || null,
+    models: catalog.models,
+  }, 200, { 'Cache-Control': 'private, max-age=300' });
 });
 
 app.post('/api/gemini/chat', async (c) => {
@@ -2361,17 +2441,13 @@ app.post('/api/gemini/chat', async (c) => {
   const message = String(body?.message || '').trim();
   if (!message) return c.json({ error: 'message is required' }, 400 as any);
 
-  const allowedModels: Record<string, string> = {
-    'gemini-2.5-flash': 'gemini-2.5-flash',
-    'gemini-2.5-flash-lite': 'gemini-2.5-flash-lite',
-    'gemini-2.5-pro': 'gemini-2.5-pro',
-    // Backward-compatible aliases from earlier APK/web builds
-    'gemini-3.1-flash-lite': 'gemini-2.5-flash',
-    'gemini-4-hydrogen': 'gemini-2.5-flash',
-  };
-  const model = body?.useFlashLite
-    ? 'gemini-2.5-flash-lite'
-    : (allowedModels[String(body?.model || '')] || 'gemini-2.5-flash');
+  const catalog = await fetchGeminiModelCatalog(apiKey);
+  if (catalog.error) return c.json({ error: catalog.error }, (catalog.status || 502) as any);
+  const requestedModel = body?.useFlashLite ? 'gemini-2.5-flash-lite' : body?.model;
+  const selection = chooseGeminiModel(catalog.models, c.env.GEMINI_DEFAULT_MODEL, requestedModel);
+  if (selection.error) return c.json({ error: selection.error, defaultModel: selection.defaultModel }, 400 as any);
+  const model = selection.model!;
+  const defaultModel = selection.defaultModel!;
   const sysText =
     body?.systemInstruction ||
     "You are Kleva (Lizzy), SafetyLink's calm, reassuring Post-Emergency Care Companion. Check if the user is physically safe, keep responses concise and practical, and share emergency numbers (10111 SAPS, 112 Emergency, 10177 Ambulance) when needed.";
@@ -2394,8 +2470,8 @@ app.post('/api/gemini/chat', async (c) => {
       body: JSON.stringify(reqPayload),
     }
   );
-  if (!gRes.ok && usedModel !== 'gemini-2.5-flash') {
-    usedModel = 'gemini-2.5-flash';
+  if (!gRes.ok && usedModel !== defaultModel) {
+    usedModel = defaultModel;
     gRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
@@ -2423,7 +2499,12 @@ app.post('/api/gemini/generate', async (c) => {
   const prompt = String(body?.prompt || body?.message || '').trim();
   if (!prompt) return c.json({ error: 'prompt is required' }, 400 as any);
 
-  const model = body?.useFlashLite ? 'gemini-2.5-flash-lite' : 'gemini-2.5-flash';
+  const catalog = await fetchGeminiModelCatalog(apiKey);
+  if (catalog.error) return c.json({ error: catalog.error }, (catalog.status || 502) as any);
+  const requestedModel = body?.useFlashLite ? 'gemini-2.5-flash-lite' : body?.model;
+  const selection = chooseGeminiModel(catalog.models, c.env.GEMINI_DEFAULT_MODEL, requestedModel);
+  if (selection.error) return c.json({ error: selection.error, defaultModel: selection.defaultModel }, 400 as any);
+  const model = selection.model!;
   const reqPayload: any = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
   };
@@ -2434,14 +2515,26 @@ app.post('/api/gemini/generate', async (c) => {
     reqPayload.tools = [{ google_search: {} }];
   }
 
-  const gRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+  let usedModel = model;
+  let gRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
       body: JSON.stringify(reqPayload),
     }
   );
+  if (!gRes.ok && usedModel !== selection.defaultModel) {
+    usedModel = selection.defaultModel!;
+    gRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${usedModel}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'SafetyLink-Worker/1.0' },
+        body: JSON.stringify(reqPayload),
+      }
+    );
+  }
   const data: any = await gRes.json().catch(() => ({}));
   if (!gRes.ok) {
     return c.json({ error: data?.error?.message || `Gemini generate error (${gRes.status})` }, gRes.status as any);
@@ -2450,7 +2543,7 @@ app.post('/api/gemini/generate', async (c) => {
     .map((p: any) => p?.text || '')
     .join('')
     .trim();
-  return c.json({ text, chunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [], model });
+  return c.json({ text, chunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks || [], model: usedModel });
 });
 
 app.post('/api/gemini/analyze-image', async (c) => {
@@ -2535,6 +2628,25 @@ app.post('/api/gemini/safety-feed', async (c) => {
     model: 'gemini-2.5-flash',
   });
 });
+
+// Paid media-generation capabilities are explicitly unavailable until a billing-enabled provider is configured.
+app.post('/api/gemini/generate-image', (c) => c.json({
+  error: 'Image generation is not enabled for this deployment. Configure and verify a billing-enabled image-generation provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
+
+app.post('/api/gemini/generate-video', (c) => c.json({
+  error: 'Video generation is not enabled for this deployment. Configure and verify a billing-enabled Veo provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
+
+app.post('/api/gemini/generate-lyria', (c) => c.json({
+  error: 'Music generation is not enabled for this deployment. Configure and verify a billing-enabled Lyria provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
 
 app.post('/api/gemini/tts', async (c) => {
   const apiKey = c.env.GEMINI_API_KEY;
