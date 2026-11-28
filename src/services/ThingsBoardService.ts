@@ -27,4 +27,22 @@ export async function sendSafetyLinkTelemetry(payload: SafetyLinkTelemetry): Pro
   }
   return false;
 }
-export const sendTestEvent = async (): Promise<boolean> => sendSafetyLinkTelemetry({ integrationTest: true });
+export async function sendTestEvent(): Promise<boolean> {
+  const state = useAppStore.getState();
+  const token = String(state.token || '').trim();
+  if (!token) return false;
+  const custom = String(state.customBackendUrl || '').trim().replace(/\/+$/, '');
+  for (const base of [...new Set([custom, DEFAULT_BACKEND].filter(Boolean))]) {
+    try {
+      const response = await fetch(`${base}/api/iot/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      const result: any = await response.json().catch(() => ({}));
+      if (response.ok && result.ok === true) return true;
+      if ([400, 401, 403, 503].includes(response.status)) return false;
+    } catch { /* try fallback backend */ }
+  }
+  return false;
+}
