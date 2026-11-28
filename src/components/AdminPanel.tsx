@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useState, useEffect, useMemo } from 'react';
 import { useAppStore, ADMIN_ORG_CODE } from '../utils/store';
 import { UserProfile, Organization } from '../types';
-import { sendTestEvent } from '../services/ThingsBoardService';
+import { getThingsBoardStatus, sendTestEventDetailed, getInstallationDeviceId, ThingsBoardStatus } from '../services/ThingsBoardService';
 import { LogoSetPart } from './LogoSetPart';
 import { motion, AnimatePresence } from 'motion/react';
 import { ASSETS } from '../utils/cloudinary';
@@ -40,8 +40,6 @@ export const AdminPanel: React.FC = () => {
     deleteOrganization,
     resolvePanic,
     addAuditLog,
-    thingsBoardToken,
-    setThingsBoardToken,
     customBackendUrl,
     setCustomBackendUrl,
     approveOrganization,
@@ -112,8 +110,30 @@ export const AdminPanel: React.FC = () => {
     return () => clearInterval(timer);
   }, [adminSlides.length]);
 
-  const [tbTokenInput, setTbTokenInput] = useState(thingsBoardToken);
+  const [tbStatus, setTbStatus] = useState<ThingsBoardStatus | null>(null);
   const [tbTestStatus, setTbTestStatus] = useState<'idle' | 'sending' | 'ok' | 'fail'>('idle');
+  const [tbTestMessage, setTbTestMessage] = useState<string>('');
+  const tbInstallDeviceId = useMemo(() => `SL-${getInstallationDeviceId()}`, []);
+
+  useEffect(() => {
+    getThingsBoardStatus().then(setTbStatus).catch(() => {});
+  }, []);
+
+  const handleRunThingsBoardTest = async () => {
+    setTbTestStatus('sending');
+    setTbTestMessage('');
+    const res = await sendTestEventDetailed('SUPER_ADMIN_PANEL');
+    if (res.ok) {
+      setTbTestStatus('ok');
+      setTbTestMessage(`Delivered to ThingsBoard Cloud HTTP Integration as ${res.deviceName || tbInstallDeviceId} (HTTP ${res.upstreamStatus || 200}).`);
+      addAuditLog('SYSTEM', 'INFO', 'ThingsBoard Cloud HTTP test event delivered', `Device: ${res.deviceName || tbInstallDeviceId}`);
+    } else {
+      setTbTestStatus('fail');
+      setTbTestMessage(res.error || 'ThingsBoard Cloud delivery failed.');
+      addAuditLog('SYSTEM', 'WARN', 'ThingsBoard Cloud HTTP test event failed', res.error || res.status);
+    }
+    getThingsBoardStatus().then(setTbStatus).catch(() => {});
+  };
   
   // Server-Side Super Admin Session (in-memory only) + GitHub Publisher state
   const [adminBearerToken, setAdminBearerToken] = useState<string>(() =>
@@ -827,43 +847,37 @@ export const AdminPanel: React.FC = () => {
 
             {/* IoT Dashboard Integration */}
             <div className="glass-panel p-6 space-y-4 text-left">
-              <div>
-                <h3 className="text-sm font-bold text-slate-200">IoT Dashboard Integration</h3>
-                <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  Every real (non-drill) SOS trigger pushes incident telemetry to your IoT Dashboard,
-                  giving org-wide visibility on your dashboard. Paste your device access token below --
-                  it's stored only on this device, never committed to the repo.
-                </p>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-200">ThingsBoard Cloud HTTP Integration (Server-Side)</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                    Every real (non-drill) SOS trigger pushes per-installation telemetry (<span className="font-mono text-slate-200">{tbInstallDeviceId}</span>) through the SafetyLink backend proxy.
+                    Credentials are never stored in browser storage — configure <span className="font-mono text-emerald-300">THINGSBOARD_HTTP_INTEGRATION_KEY</span> exclusively as a server / Cloudflare Worker secret.
+                  </p>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                  tbStatus?.configured
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                }`}>
+                  {tbStatus?.configured ? 'Server Key Configured' : 'Awaiting Server Secret'}
+                </span>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={tbTokenInput}
-                  onChange={(e) => setTbTokenInput(e.target.value)}
-                  placeholder="IoT Device Access Token"
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-200 placeholder-slate-600"
-                />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+                <div className="text-[11px] font-mono text-slate-400 space-y-0.5">
+                  <div>Mode: <span className="text-slate-200">HTTP Integration · Per-Installation Identity</span></div>
+                  <div>Device ID: <span className="text-cyan-300">{tbInstallDeviceId}</span> · Host: <span className="text-slate-200">{tbStatus?.host || 'thingsboard.cloud'}</span></div>
+                </div>
                 <button
-                  onClick={() => setThingsBoardToken(tbTokenInput.trim())}
-                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+                  disabled={tbTestStatus === 'sending'}
+                  onClick={handleRunThingsBoardTest}
+                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-500 text-white transition-colors whitespace-nowrap"
                 >
-                  SAVE
-                </button>
-                <button
-                  disabled={!thingsBoardToken || tbTestStatus === 'sending'}
-                  onClick={async () => {
-                    setTbTestStatus('sending');
-                    const ok = await sendTestEvent(thingsBoardToken);
-                    setTbTestStatus(ok ? 'ok' : 'fail');
-                    addAuditLog('SYSTEM', ok ? 'INFO' : 'WARN', ok ? 'IoT test event sent' : 'IoT test event failed', '');
-                  }}
-                  className="px-4 py-2 text-[10px] font-mono font-bold rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-white transition-colors whitespace-nowrap"
-                >
-                  {tbTestStatus === 'sending' ? 'SENDING...' : 'SEND TEST EVENT'}
+                  {tbTestStatus === 'sending' ? 'VERIFYING...' : 'RUN LIVE SERVER TEST'}
                 </button>
               </div>
-              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Delivered -- check the Latest Telemetry tab on your IoT Dashboard.</p>}
-              {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Failed to reach IoT Dashboard. Check the token and your connection.</p>}
+              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ {tbTestMessage}</p>}
+              {tbTestStatus === 'fail' && <p className="text-[10px] text-amber-400 font-mono">✗ {tbTestMessage}</p>}
             </div>
 
             {/* Secure Server-Side GitHub Publisher & OTA Release Management */}
@@ -2746,52 +2760,44 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             <div className="glass-panel p-5 md:p-6 space-y-4">
-              <div className="space-y-1">
-                <h3 className="text-sm font-bold text-slate-200">IoT Edge Telemetry Route Configuration</h3>
-                <p className="text-xs text-slate-500">
-                  Bind this instance to your specific remote rule chain. Panics will automatically push device telemetries.
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Paste IoT Device Access Token..."
-                  value={tbTokenInput}
-                  onChange={e => setTbTokenInput(e.target.value)}
-                  className="flex-1 bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-500"
-                />
-                
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setThingsBoardToken(tbTokenInput);
-                      addAuditLog('SYSTEM', 'INFO', 'ThingsBoard token saved');
-                    }}
-                    className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
-                  >
-                    SAVE ROUTE
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      if (!tbTokenInput) return alert('Save a token first.');
-                      setTbTestStatus('sending');
-                      const ok = await sendTestEvent(tbTokenInput);
-                      setTbTestStatus(ok ? 'ok' : 'fail');
-                      setTimeout(() => setTbTestStatus('idle'), 3000);
-                    }}
-                    disabled={tbTestStatus === 'sending'}
-                    className={`px-4 py-3 border text-xs font-mono font-bold rounded-2xl transition-colors shrink-0 ${
-                      tbTestStatus === 'ok' ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-400' :
-                      tbTestStatus === 'fail' ? 'bg-red-950/20 border-red-500/40 text-red-400' :
-                      'border-slate-800 hover:bg-slate-850 text-slate-300'
-                    }`}
-                  >
-                    {tbTestStatus === 'sending' ? 'CONNECTING...' : tbTestStatus === 'ok' ? 'EVENT FIRED ✓' : tbTestStatus === 'fail' ? 'FAILED' : 'FIRE TEST EVENT'}
-                  </button>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-slate-200">ThingsBoard Cloud HTTP Integration Bridge</h3>
+                  <p className="text-xs text-slate-500">
+                    Server-managed per-installation IoT telemetry (<span className="font-mono text-slate-300">{tbInstallDeviceId}</span>). Browser token storage is disabled for security.
+                  </p>
                 </div>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase border ${
+                  tbStatus?.configured
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                }`}>
+                  {tbStatus?.configured ? 'BRIDGE ONLINE' : 'SECRET REQUIRED'}
+                </span>
               </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-950/70 border border-slate-800 rounded-2xl p-4">
+                <div className="text-xs font-mono text-slate-400 space-y-1">
+                  <div>Secret Key Var: <span className="text-emerald-300">THINGSBOARD_HTTP_INTEGRATION_KEY</span></div>
+                  <div>Endpoint Host: <span className="text-slate-200">{tbStatus?.host || 'thingsboard.cloud'}</span> · Identity: <span className="text-cyan-300">{tbInstallDeviceId}</span></div>
+                </div>
+                <button
+                  onClick={handleRunThingsBoardTest}
+                  disabled={tbTestStatus === 'sending'}
+                  className={`px-4 py-3 border text-xs font-mono font-bold rounded-2xl transition-colors shrink-0 ${
+                    tbTestStatus === 'ok' ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-400' :
+                    tbTestStatus === 'fail' ? 'bg-amber-950/30 border-amber-500/40 text-amber-300' :
+                    'border-slate-700 hover:bg-slate-800 text-slate-200'
+                  }`}
+                >
+                  {tbTestStatus === 'sending' ? 'VERIFYING...' : tbTestStatus === 'ok' ? 'LIVE EVENT DELIVERED ✓' : tbTestStatus === 'fail' ? 'DELIVERY FAILED' : 'TEST LIVE BRIDGE'}
+                </button>
+              </div>
+              {tbTestMessage && (
+                <p className={`text-[11px] font-mono ${tbTestStatus === 'ok' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {tbTestMessage}
+                </p>
+              )}
             </div>
 
             {/* Custom Tools Builder */}

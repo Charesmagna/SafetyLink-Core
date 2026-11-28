@@ -1,12 +1,18 @@
 {
-  "version": "1.1.994",
-  "buildTime": "2026-10-16T01:13:04Z",
-  "releaseName": "SafetyLink Core v1.1.994",
-  "apkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.994/SafetyLink-v1.1.994-Signed.apk",
+  "version": "1.1.1222",
+  "buildNumber": 1222,
+  "channel": "v1",
+  "testingVersion": "1.1.1222",
+  "testingBuildNumber": 1222,
+  "buildTime": "2026-11-27T14:14:16Z",
+  "releaseName": "SafetyLink Core v1.1.1222 (Official Stable v1)",
+  "apkUrl": "https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk",
+  "githubApkUrl": "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.1222/SafetyLink-v1.1.1222-Signed.apk",
   "liveWebUrl": "https://safetylink.online",
   "features": [
-    "Panic alerts: SMS, WhatsApp, AI voice calls",
-    "Works offline via Please Call Me (USSD)",
-    "Fixed screen scaling on all phones"
+    "Official Signed Version 1 Stable APK from main (v1.1.1222 · Build #1222)",
+    "Live Google Maps + 3D Campus Simulation with Autonomous Drones, LimX Robots & Dynamic IoT",
+    "Secure server-side ThingsBoard Cloud HTTP Integration proxy",
+    "Real-time Edit Environment live dashboards & GitHub OTA channel trail"
   ]
 }

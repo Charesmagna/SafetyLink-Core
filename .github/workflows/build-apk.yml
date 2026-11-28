@@ -27,17 +27,49 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Bump package.json version
-      run: npm version "1.1.${{ github.run_number }}" --no-git-tag-version
+    - name: Bump package.json version & stamp public/version.json
+      run: |
+        BUILD_VER="1.1.${{ github.run_number }}"
+        npm version "$BUILD_VER" --no-git-tag-version
+        node -e '
+          const fs = require("fs");
+          const ver = process.env.BUILD_VER;
+          const runNum = Number(process.env.RUN_NUM);
+          const now = new Date().toISOString();
+          const out = {
+            version: ver,
+            buildNumber: runNum,
+            channel: process.env.REF_NAME === "beta" ? "beta" : "v1",
+            buildTime: now,
+            releaseName: `SafetyLink Core v${ver} (Official Stable v1)`,
+            apkUrl: "https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk",
+            githubApkUrl: `https://github.com/Charesmagna/SafetyLink-Core/releases/download/v${ver}/SafetyLink-v${ver}-Signed.apk`,
+            liveWebUrl: "https://safetylink.online"
+          };
+          fs.writeFileSync("public/version.json", JSON.stringify(out, null, 2) + "\n");
+        '
+      env:
+        BUILD_VER: "1.1.${{ github.run_number }}"
+        RUN_NUM: "${{ github.run_number }}"
+        REF_NAME: "${{ github.ref_name }}"
 
     - name: Build Web App
       env:
         VITE_APP_VERSION: "1.1.${{ github.run_number }}"
-        VITE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: npm run build
 
     - name: Sync Capacitor
       run: npx cap sync android
+
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
 
     - name: Force Java 17 in all generated gradle files
       run: |
@@ -50,18 +82,28 @@ jobs:
         echo "=== Verification ==="
         grep -r "JavaVersion" android/ | grep -v ".git" || echo "No JavaVersion found (all good)"
 
-    - name: Patch plugins and create init script
+    - name: Patch plugins and configure Google Maven Central mirror
       run: |
         sed -i "s/classpath 'com.android.tools.build:gradle:8.13.0'/classpath 'com.android.tools.build:gradle:8.2.1'/g" android/capacitor-cordova-android-plugins/build.gradle || true
         cat << 'INNER_EOF' > init.gradle
         allprojects {
             buildscript {
+                repositories {
+                    maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
+                    google()
+                    mavenCentral()
+                }
                 configurations.all {
                     resolutionStrategy {
                         force 'org.bouncycastle:bcprov-jdk15to18:1.78.1'
                         force 'org.bouncycastle:bcprov-jdk18on:1.78.1'
                     }
                 }
+            }
+            repositories {
+                maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
+                google()
+                mavenCentral()
             }
             configurations.all {
                 resolutionStrategy {
@@ -94,8 +136,8 @@ jobs:
 
     - name: Set Android version (matches the release name)
       run: |
-        sed -i "s/versionName \"1.0\"/versionName \"1.1.${{ github.run_number }}\"/" android/app/build.gradle
-        sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
+        sed -i -E "s/versionName \"[^\"]+\"/versionName \"1.1.${{ github.run_number }}\"/" android/app/build.gradle
+        sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/" android/app/build.gradle
         grep -n "versionName\|versionCode" android/app/build.gradle | head -2
 
     - name: Create mock google-services.json (only if the real one is missing)
@@ -136,9 +178,6 @@ jobs:
     - name: Stop Daemons
       run: cd android && ./gradlew --stop || true
 
-    - name: Clean Gradle Cache
-      run: rm -rf ~/.gradle/caches
-
     - name: Build Release APK
       working-directory: ./android
       env:
@@ -155,7 +194,7 @@ jobs:
           -PKEY_ALIAS="${KS_ALIAS:-safetylink}" \
           -PKEY_PASSWORD="$KS_KEY_PASS" \
           --init-script ../init.gradle \
-          --no-daemon --no-parallel --no-build-cache
+          --no-daemon --no-parallel
         echo "=== Build output files ==="
         find . -name "*.apk" 2>/dev/null || echo "NO APK FOUND"
         find . -name "*.aab" 2>/dev/null || echo "NO AAB FOUND"
@@ -180,17 +219,19 @@ jobs:
       with:
         tag_name: v1.1.${{ github.run_number }}
         name: "SafetyLink Core v1.1.${{ github.run_number }}"
+        prerelease: ${{ github.ref_name == 'beta' }}
         files: release-output/*.apk
         body: |
           ## SafetyLink Core v1.1.${{ github.run_number }}
           **Released by TM Media Solutions · Reg: 2018/500191/07**
-          Download and install directly on Android 8.0+.
-          Enable "Install from unknown sources" in settings.
+          - Channel: ${{ github.ref_name == 'beta' && 'Testing / Experimental (beta)' || 'Official Stable Version 1 (main)' }}
+          - Download and install directly on Android 8.0+.
+          - Enable "Install from unknown sources" in settings.
         generate_release_notes: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Publish APK to R2 (v1 on main, v2 on v2 branch)
+    - name: Publish APK to R2 (v1 Official Stable on main, beta on beta branch)
       env:
         CF: ${{ secrets.CF_WORKERS_TOKEN }}
         ACC: d089bef8b0b58c5d9506b512ec2f63dc
@@ -203,21 +244,28 @@ jobs:
         DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         BASE="https://api.cloudflare.com/client/v4/accounts/$ACC/r2/buckets/safetylink-releases/objects"
         case "$BRANCH" in
-          main) LATEST=safetylink-latest.apk; DIR=versions ;;          # stable 2.0 + full-featured v1 legacy sync
-          beta) LATEST=safetylink-beta-latest.apk; DIR=versions-beta ;; # beta (testing)
-          version-1-archive) LATEST=safetylink-v1-latest.apk; DIR=versions-v1 ;; # legacy 1.x
+          main) LATEST=safetylink-latest.apk; DIR=versions ;;
+          beta) LATEST=safetylink-beta-latest.apk; DIR=versions-beta ;;
+          version-1-archive) LATEST=safetylink-v1-latest.apk; DIR=versions-v1 ;;
           *) LATEST=safetylink-dev-latest.apk; DIR=versions-dev ;;
         esac
         KEYS="$LATEST $DIR/$NAME"
         if [ "$BRANCH" = "main" ]; then
-          KEYS="$KEYS safetylink-v1-latest.apk"
+          KEYS="$KEYS safetylink-v1-latest.apk versions-v1/$NAME"
         fi
         for KEY in $KEYS; do
           curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" "$BASE/$KEY" > /dev/null
           echo "published $KEY"
         done
-        curl -s -H "Authorization: Bearer $CF" "$BASE/$DIR%2Findex.json" -o old.json || true
-        jq -e 'type=="array"' old.json > /dev/null 2>&1 || echo '[]' > old.json
-        jq --arg v "$VER" --arg f "$NAME" --argjson s "$SIZE" --arg d "$DATE" '[{version:$v,file:$f,size:$s,date:$d}] + (map(select(.file != $f))) | .[0:30]' old.json > index.json
-        curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/json" --data-binary @index.json "$BASE/$DIR%2Findex.json" > /dev/null
-        echo "version list updated: $DIR $VER"
+        update_index() {
+          local TARGET_DIR="$1"
+          curl -s -H "Authorization: Bearer $CF" "$BASE/$TARGET_DIR%2Findex.json" -o old.json || true
+          jq -e 'type=="array"' old.json > /dev/null 2>&1 || echo '[]' > old.json
+          jq --arg v "$VER" --arg f "$NAME" --argjson s "$SIZE" --arg d "$DATE" '[{version:$v,file:$f,size:$s,date:$d}] + (map(select(.file != $f))) | .[0:30]' old.json > index.json
+          curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/json" --data-binary @index.json "$BASE/$TARGET_DIR%2Findex.json" > /dev/null
+          echo "version list updated: $TARGET_DIR $VER"
+        }
+        update_index "$DIR"
+        if [ "$BRANCH" = "main" ]; then
+          update_index "versions-v1"
+        fi

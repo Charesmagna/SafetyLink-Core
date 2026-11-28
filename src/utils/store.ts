@@ -8,7 +8,7 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
-const pushIncidentTelemetry = async (..._args: any[]) => true;
+import { pushIncidentTelemetry as sendThingsBoardTelemetry } from '../services/ThingsBoardService';
 
 import { UpdateInfo } from '../services/UpdateService';
 import { generateOrganizationCode } from './orgCode';
@@ -894,7 +894,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   meshNodes: getStoredJSON<MeshNode[]>('sl_mesh_nodes', DEFAULT_MESH_NODES),
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
-  thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
+  thingsBoardToken: (() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('sl_thingsboard_token');
+      }
+    } catch {}
+    return '';
+  })(),
   customBackendUrl: (() => {
     const stored = getStoredJSON<string>('sl_custom_backend_url', '');
     const cleaned = sanitizeBackendUrl(stored);
@@ -3412,7 +3419,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'INFO', `Syncing ${queue.length} locally queued offline alerts`, 'Establishing connection...');
     
     const failedItems = [];
-    const tbToken = get().thingsBoardToken;
     const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
     const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL';
 
@@ -3446,8 +3452,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       try {
         let ok = false;
 
-        if (tbToken) {
-          ok = await pushIncidentTelemetry(tbToken, {
+        try {
+          const tbRes = await sendThingsBoardTelemetry({
             event: get().drillMode ? 'drill' : 'panic',
             incidentId: item.id,
             lat: item.lat,
@@ -3455,7 +3461,13 @@ export const useAppStore = create<AppState>((set, get) => ({
             description: item.description,
             orgId,
             triggeredBy: who,
+            source: 'OFFLINE_QUEUE_SYNC',
           });
+          if (tbRes.ok) {
+            ok = true;
+          }
+        } catch {
+          // Server-side ThingsBoard HTTP Integration may be unconfigured; continue to core incidents sync
         }
 
         try {
@@ -4354,10 +4366,19 @@ export const useAppStore = create<AppState>((set, get) => ({
     setStoredJSON("sl_aura_api_url", url);
   },
 
-  setThingsBoardToken: (token) => {
-    set({ thingsBoardToken: token });
-    setStoredJSON('sl_thingsboard_token', token);
-    get().addAuditLog('SYSTEM', 'INFO', 'IoT Dashboard Token Updated', token ? 'Token set (stored locally only, not in the repo).' : 'Token cleared.');
+  setThingsBoardToken: (_token) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('sl_thingsboard_token');
+      }
+    } catch {}
+    set({ thingsBoardToken: '' });
+    get().addAuditLog(
+      'SYSTEM',
+      'INFO',
+      'ThingsBoard credentials are managed server-side only',
+      'Configure THINGSBOARD_HTTP_INTEGRATION_KEY in Cloudflare Worker / server environment secrets.'
+    );
   },
 
   setLanguage: (lang) => {

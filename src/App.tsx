@@ -35,6 +35,7 @@ import { ASSETS } from './utils/cloudinary';
 import { UpdateBanner } from './components/UpdateBanner';
 import { startProfileSync } from './services/ProfileSync';
 import { unlockWebAudioAndSpeech } from './utils/localKlevaResponder';
+import { useReleaseChannels } from './hooks/useReleaseChannels';
 
 const SituationalAwareness = lazy(() => import('./components/SituationalAwareness'));
 const ResponderDashboard = lazy(() => import('./components/ResponderDashboard').then(m => ({ default: m.ResponderDashboard })));
@@ -156,6 +157,7 @@ const TrialReminderModal = () => {
 };
 
 const App: React.FC = () => {
+  const releaseChannels = useReleaseChannels();
   // If we're on the web platform, we always want to show the landing page initially. Otherwise, skip straight to app logic.
   // Check if running in a desktop EXE (Electron) environment
   const isDesktopExe = typeof navigator !== 'undefined' && navigator.userAgent.indexOf('Electron') >= 0;
@@ -1119,7 +1121,8 @@ const App: React.FC = () => {
           {/* Quick Download APK Button — hidden inside native Android/iOS APK since user already installed it */}
           {!Capacitor.isNativePlatform() && (
             <a
-              href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
+              href={releaseChannels.stable.apkUrl}
+              download={`SafetyLink-v1-${releaseChannels.stable.version}.apk`}
               target="_blank"
               rel="noopener noreferrer"
               className={`px-2 py-1.5 rounded-xl border text-[9px] font-mono font-bold uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 ${
@@ -1127,10 +1130,10 @@ const App: React.FC = () => {
                   ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700'
                   : 'bg-emerald-950/50 hover:bg-emerald-900/60 border-emerald-500/30 text-emerald-400'
               }`}
-              title="Download SafetyLink Version 1 APK"
+              title={`Download Official Stable v1 APK (${releaseChannels.stable.version}${releaseChannels.stable.buildNumber ? ` · Build #${releaseChannels.stable.buildNumber}` : ''}) — ${releaseChannels.parityNotice}`}
             >
               <span>⬇</span>
-              <span className="hidden sm:inline">Download</span>
+              <span className="hidden sm:inline">APK v1 · {releaseChannels.stable.version}</span>
             </a>
           )}
 

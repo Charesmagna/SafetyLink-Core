@@ -5,6 +5,7 @@ import { R2_MEDIA } from '../../utils/r2Assets';
 import { ACTION_VIDEOS, ASSETS, vid, vidPoster } from '../../utils/cloudinary';
 import { useEditorialStore } from '../../utils/editorialStore';
 import { SceneErrorBoundary } from '../three/SceneErrorBoundary';
+import { useReleaseChannels } from '../../hooks/useReleaseChannels';
 
 const HardwareTag3DScene = lazy(() => import('../three/HardwareTag3DScene'));
 import {
@@ -174,13 +175,18 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   const [bgIdx, setBgIdx] = useState(0);
   const [hwIdx, setHwIdx] = useState(0);
   const [lightboxItem, setLightboxItem] = useState<(typeof SHOWCASE_GALLERY)[number] | null>(null);
-  const betaApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk';
-  const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
-  const [exeDownloadUrl, setExeDownloadUrl] = useState('https://github.com/Charesmagna/SafetyLink-Core/releases/latest');
-  const [releaseVersion, setReleaseVersion] = useState('');
+  const channels = useReleaseChannels();
+  const betaApkUrl = channels.testing.apkUrl;
+  const v1ApkUrl = channels.stable.apkUrl;
+  const [exeDownloadUrl, setExeDownloadUrl] = useState(channels.desktopExe.url);
   const [hwViewMode, setHwViewMode] = useState<'3d' | 'photos'>('3d');
   const [hw3dFullscreen, setHw3dFullscreen] = useState(false);
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  const stableTag = channels.stable.version;
+  const stableBuildLabel = channels.stable.buildNumber ? `Build #${channels.stable.buildNumber}` : 'main';
+  const testingTag = channels.testing.version;
+  const testingBuildLabel = channels.testing.buildNumber ? `Build #${channels.testing.buildNumber}` : 'beta';
 
   const hardwareSectionRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: hwScroll } = useScroll({
@@ -219,30 +225,10 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
   }, []);
 
   useEffect(() => {
-    fetch('https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/latest')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((info) => {
-        if (info?.version) setReleaseVersion(`v${String(info.version).replace(/^v/i, '')}`);
-      })
-      .catch(() => {});
-
-    fetch('https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases?per_page=10', {
-      headers: { Accept: 'application/vnd.github.v3+json' },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((list) => {
-        if (!Array.isArray(list)) return;
-        for (const rel of list) {
-          if (!Array.isArray(rel?.assets)) continue;
-          const exe = rel.assets.find((a: { name?: string; browser_download_url?: string }) => a.name?.endsWith('.exe'));
-          if (exe?.browser_download_url) {
-            setExeDownloadUrl(exe.browser_download_url);
-            break;
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (channels.desktopExe.url) {
+      setExeDownloadUrl(channels.desktopExe.url);
+    }
+  }, [channels.desktopExe.url]);
 
   const currentBg = HERO_BG_SLIDES[bgIdx];
   const currentHw = HARDWARE_PHOTO_POOL[hwIdx];
@@ -1004,22 +990,27 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
                     <Smartphone size={20} />
                   </div>
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                    VERSION 1 · OFFICIAL STABLE
+                    VERSION 1 · OFFICIAL STABLE (MAIN)
                   </span>
                 </div>
-                <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                  SafetyLink APK
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
+                    SafetyLink APK — Version 1
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/35 text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                    {stableTag} · {stableBuildLabel}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
                   Version 1 official consumer &amp; responder Android build containing every tested feature: ZeroLink offline USSD + FCM alarm, native SMS &amp; voice dispatch, BLE iTag keyfobs, live Safety Feed, and POPIA vault.
                 </p>
               </div>
               <a
                 href={v1ApkUrl}
-                download="SafetyLink.apk"
+                download={`SafetyLink-v1-${stableTag}.apk`}
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-extrabold text-center no-underline transition-all shadow-md shadow-emerald-600/20"
               >
-                Download SafetyLink APK
+                Download Stable v1 APK ({stableTag} · {stableBuildLabel})
               </a>
             </div>
 
@@ -1070,20 +1061,23 @@ export function Home({ onLogin, onRegisterOrg, onRegisterUser, navigate }: HomeP
           <details className="mt-5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-100/60 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
             <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 hover:text-slate-700 dark:hover:text-slate-300">
               <span>
-                Internal Testing Sandbox · SafetyLink Beta (v1.1.1000+ rolling{releaseVersion.startsWith('v') ? ` · Current ${releaseVersion}` : ''} · Not recommended for daily protection)
+                Testing Track · SafetyLink Beta ({testingTag} · {testingBuildLabel}
+                {channels.sameBuildAsTesting ? ` · Matching Stable v1 ${stableTag}` : ` · Stable v1 on ${stableTag}`})
               </span>
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">Testers Only</span>
             </summary>
             <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
-                SafetyLink Beta progresses from v1.1.1000+{releaseVersion.startsWith('v') ? ` (currently ${releaseVersion})` : ''} for testing upcoming changes before they graduate to SafetyLink APK (Version 1). Everyday users should install SafetyLink APK above.
+                {channels.sameBuildAsTesting
+                  ? `Testing (${testingTag}) and Official Stable v1 (${stableTag}) currently share the same GitHub build following a fresh push to main. Install Official Stable v1 above for normal use.`
+                  : `SafetyLink Testing (${testingTag} · ${testingBuildLabel}) trials upcoming updates ahead of Official Stable v1 (${stableTag} · ${stableBuildLabel}). Everyday users should install Official Stable v1 above.`}
               </p>
               <a
                 href={betaApkUrl}
-                download={`SafetyLink-Beta-${releaseVersion.startsWith('v') ? releaseVersion : 'v1.1.1000'}.apk`}
+                download={`SafetyLink-Testing-${testingTag}.apk`}
                 className="shrink-0 font-mono text-[11px] underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
-                SafetyLink Beta ({releaseVersion.startsWith('v') ? releaseVersion : 'v1.1.1000+'}) · Testers Only
+                Download Testing ({testingTag}) · Testers Only
               </a>
             </div>
           </details>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../utils/store';
 import { useEditorialStore } from '../../utils/editorialStore';
 import { ChevronDown, Download, Menu, Moon, Sun, X, Phone, MessageCircle } from 'lucide-react';
+import { useReleaseChannels } from '../../hooks/useReleaseChannels';
 
 interface HeaderProps {
   onLogin?: () => void;
@@ -26,6 +27,9 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
   const [scrolled, setScrolled] = useState(false);
   const { globalTheme, setDisplaySettings } = useAppStore();
   const editorialLogo = useEditorialStore((s) => s.web.logoImage);
+  const channels = useReleaseChannels();
+  const stableTag = channels.stable.version;
+  const stableBuild = channels.stable.buildNumber ? `#${channels.stable.buildNumber}` : 'main';
 
   const isDark = globalTheme === 'dark';
 
@@ -117,16 +121,21 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
               {downloadMenuOpen && (
                 <div
                   onMouseLeave={() => setDownloadMenuOpen(false)}
-                  className="absolute right-0 top-full mt-2 w-60 p-2 rounded-xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-700 shadow-xl z-50 space-y-1"
+                  className="absolute right-0 top-full mt-2 w-72 p-2 rounded-xl bg-white dark:bg-[#0d1b34] border border-slate-200 dark:border-slate-700 shadow-xl z-50 space-y-1.5"
                 >
                   <a
-                    href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                    download="SafetyLink.apk"
+                    href={channels.stable.apkUrl}
+                    download={`SafetyLink-v1-${stableTag}.apk`}
                     onClick={() => setDownloadMenuOpen(false)}
                     className="block px-3 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 transition-colors no-underline"
                   >
-                    <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">SafetyLink APK</div>
-                    <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">Official Android download</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300">SafetyLink APK · v1 Stable</span>
+                      <span className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-300">{stableTag}</span>
+                    </div>
+                    <div className="text-[10.5px] font-mono text-emerald-700/85 dark:text-emerald-400/85 mt-0.5">
+                      Official main build ({stableBuild}) · Recommended
+                    </div>
                   </a>
                   <button
                     type="button"
@@ -202,11 +211,11 @@ export function Header({ onLogin, onRegisterOrg, onNavigate, activePage = 'home'
 
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 gap-2">
               <a
-                href="https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk"
-                download="SafetyLink.apk"
+                href={channels.stable.apkUrl}
+                download={`SafetyLink-v1-${stableTag}.apk`}
                 className="w-full py-2.5 px-3 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold text-center no-underline"
               >
-                Download SafetyLink APK
+                Download Stable v1 APK ({stableTag} · {stableBuild})
               </a>
               <button
                 type="button"

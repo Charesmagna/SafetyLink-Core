@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Building2, ChevronDown, ChevronUp, Layers, Radio, ShieldAlert } from 'lucide-react';
+import { Bot, Building2, ChevronDown, ChevronUp, Cpu, Layers, Navigation, Radio, ShieldAlert } from 'lucide-react';
 import { useAppStore } from '../../utils/store';
 import {
   createBrushedMetalRoughnessMap,
@@ -20,21 +20,23 @@ interface TacticalCampus3DSceneProps {
 }
 
 type FloorFilter = 'all' | 'explode' | 'f1' | 'f2' | 'f3' | 'roof';
-type CampusCameraPreset = 'iso' | 'alert' | 'gatehouse' | 'top';
+type CampusCameraPreset = 'iso' | 'alert' | 'drone' | 'robot' | 'gatehouse' | 'top';
 
 interface CampusTelemetryItem {
   id: string;
   title: string;
   zone: string;
   floorIndex: number;
-  status: 'DISTRESS' | 'PATROL' | 'RELAY' | 'MUSTER';
+  status: 'DISTRESS' | 'PATROL' | 'RELAY' | 'MUSTER' | 'DRONE' | 'ROBOT' | 'IOT';
   detail: string;
   pos: [number, number, number];
 }
 
 const CAMERA_PRESETS: Record<CampusCameraPreset, { label: string; pos: [number, number, number]; target: [number, number, number] }> = {
-  iso: { label: 'Isometric', pos: [14, 12.5, 14.5], target: [0, 2.2, 0] },
+  iso: { label: 'Isometric', pos: [14.5, 12.8, 15.0], target: [0, 2.4, 0] },
   alert: { label: 'Active Alert', pos: [5.5, 6.8, 6.2], target: [0.9, 3.6, 0.5] },
+  drone: { label: 'Drones', pos: [8.4, 11.4, 7.6], target: [1.2, 7.0, 0.6] },
+  robot: { label: 'LimX Robots', pos: [8.8, 3.4, 6.6], target: [4.8, 0.6, 2.0] },
   gatehouse: { label: 'Gatehouse', pos: [-9.2, 4.6, 11.2], target: [-4.6, 1.1, 5.2] },
   top: { label: 'Top-Down', pos: [0.1, 22, 2.5], target: [0, 1.0, 0] },
 };
@@ -114,6 +116,309 @@ function createPatrolVehicle(brushedMap: THREE.Texture): THREE.Group {
   return suv;
 }
 
+/**
+ * True-to-scale Autonomous Tactical Response Quadcopter (XJ3 / Drone-in-a-Box scale ~0.68 unit span)
+ */
+function createAutonomousDrone(brushedMap: THREE.Texture, accentHex: number): THREE.Group {
+  const drone = new THREE.Group();
+  const carbonMat = new THREE.MeshStandardMaterial({
+    color: 0x111827,
+    roughness: 0.36,
+    metalness: 0.65,
+    roughnessMap: brushedMap,
+  });
+  const shellMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    roughness: 0.28,
+    metalness: 0.5,
+  });
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: accentHex,
+    emissive: new THREE.Color(accentHex),
+    emissiveIntensity: 1.9,
+    roughness: 0.25,
+  });
+  const rotorDiscMat = new THREE.MeshBasicMaterial({
+    color: 0xbae6fd,
+    transparent: true,
+    opacity: 0.28,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const bladeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.4, metalness: 0.7 });
+
+  // Central carbon fuselage + top GNSS dome
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.34), shellMat);
+  body.castShadow = true;
+  const batteryPack = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.24), carbonMat);
+  batteryPack.position.y = 0.06;
+  const gpsDome = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.035, 14), accentMat);
+  gpsDome.position.set(0, 0.105, -0.02);
+  drone.add(body, batteryPack, gpsDome);
+
+  // Underslung 2-axis 4K thermal/optical camera gimbal
+  const gimbalYoke = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.06, 0.08), carbonMat);
+  gimbalYoke.position.set(0, -0.075, 0.08);
+  const cameraPod = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 12), carbonMat);
+  cameraPod.position.set(0, -0.105, 0.105);
+  const thermalLens = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.024, 0.024, 0.03, 12).rotateX(Math.PI / 2),
+    new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: new THREE.Color(0x38bdf8),
+      emissiveIntensity: 2.2,
+    })
+  );
+  thermalLens.position.set(0, -0.105, 0.145);
+  drone.add(gimbalYoke, cameraPod, thermalLens);
+
+  // Twin carbon landing skids
+  [-0.12, 0.12].forEach((sx) => {
+    const strutF = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), carbonMat);
+    strutF.position.set(sx, -0.1, 0.08);
+    const strutR = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), carbonMat);
+    strutR.position.set(sx, -0.1, -0.08);
+    const skid = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.34, 8).rotateX(Math.PI / 2), carbonMat);
+    skid.position.set(sx, -0.18, 0);
+    drone.add(strutF, strutR, skid);
+  });
+
+  // 4 diagonal arms, motor pods, spinning blades & navigation strobes
+  const rotors: THREE.Group[] = [];
+  const armAngles = [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
+  armAngles.forEach((angle, idx) => {
+    const armLen = 0.31;
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, armLen, 8), carbonMat);
+    arm.rotation.z = Math.PI / 2;
+    arm.rotation.y = -angle;
+    arm.position.set(Math.cos(angle) * (armLen * 0.5), 0.02, Math.sin(angle) * (armLen * 0.5));
+    drone.add(arm);
+
+    const mx = Math.cos(angle) * armLen;
+    const mz = Math.sin(angle) * armLen;
+    const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.036, 0.055, 12), carbonMat);
+    motor.position.set(mx, 0.04, mz);
+    drone.add(motor);
+
+    // Navigation strobe under each motor (green starboard, red port)
+    const navColor = idx === 0 || idx === 3 ? 0x10b981 : 0xef4444;
+    const strobe = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 8, 8),
+      new THREE.MeshBasicMaterial({ color: navColor })
+    );
+    strobe.position.set(mx, 0.005, mz);
+    drone.add(strobe);
+
+    // Rotor assembly (disc + twin blades)
+    const rotorPivot = new THREE.Group();
+    rotorPivot.position.set(mx, 0.075, mz);
+    const disc = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.165, 20).rotateX(-Math.PI / 2), rotorDiscMat);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.006, 0.028), bladeMat);
+    rotorPivot.add(disc, blade);
+    drone.add(rotorPivot);
+    rotors.push(rotorPivot);
+  });
+
+  // Downward translucent thermal/optical scan cone
+  const scanCone = new THREE.Mesh(
+    new THREE.ConeGeometry(1.15, 2.9, 20, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: accentHex,
+      transparent: true,
+      opacity: 0.11,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+  );
+  scanCone.position.set(0, -1.56, 0.06);
+  drone.add(scanCone);
+
+  drone.userData.rotors = rotors;
+  drone.userData.scanCone = scanCone;
+  return drone;
+}
+
+/**
+ * True-to-scale LimX Dynamics Modular TRON2 Patrol Robot (~0.74 units tall ≈ 1.85m next to campus floors & SUVs)
+ */
+function createLimxPatrolRobot(brushedMap: THREE.Texture, accentHex: number): THREE.Group {
+  const robot = new THREE.Group();
+  const armorWhiteMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    roughness: 0.34,
+    metalness: 0.35,
+  });
+  const chassisDarkMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    roughness: 0.4,
+    metalness: 0.72,
+    roughnessMap: brushedMap,
+  });
+  const accentMat = new THREE.MeshStandardMaterial({
+    color: accentHex,
+    emissive: new THREE.Color(accentHex),
+    emissiveIntensity: 1.9,
+    roughness: 0.25,
+  });
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.88, metalness: 0.08 });
+
+  // Articulated torso assembly (elevated above hip axle)
+  const torsoGroup = new THREE.Group();
+  torsoGroup.position.y = 0.46;
+
+  const coreTorso = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.24, 0.22), chassisDarkMat);
+  coreTorso.castShadow = true;
+  const chestPlate = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.17, 0.24), armorWhiteMat);
+  chestPlate.position.y = 0.03;
+  chestPlate.castShadow = true;
+  const visorBar = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.045, 0.025), accentMat);
+  visorBar.position.set(0, 0.05, 0.125);
+  const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.18, 0.1), chassisDarkMat);
+  backpack.position.set(0, 0.02, -0.14);
+
+  // Top 360° spinning LiDAR & optical dome turret
+  const lidarGroup = new THREE.Group();
+  lidarGroup.position.set(0, 0.18, 0.01);
+  const lidarBase = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.08, 0.05, 14), chassisDarkMat);
+  const lidarLens = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.062, 0.062, 0.042, 14),
+    new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: new THREE.Color(0x0ea5e9),
+      emissiveIntensity: 1.8,
+      roughness: 0.15,
+      metalness: 0.7,
+    })
+  );
+  lidarLens.position.y = 0.045;
+  const lidarCap = new THREE.Mesh(new THREE.CylinderGeometry(0.066, 0.066, 0.02, 14), armorWhiteMat);
+  lidarCap.position.y = 0.075;
+  const lidarSweep = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.03, 0.08), accentMat);
+  lidarSweep.position.set(0, 0.045, 0.035);
+  lidarGroup.add(lidarBase, lidarLens, lidarCap, lidarSweep);
+
+  // Rear BLE mesh antenna whip
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.22, 6), chassisDarkMat);
+  ant.position.set(-0.08, 0.2, -0.13);
+  const antTip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 8), accentMat);
+  antTip.position.set(-0.08, 0.315, -0.13);
+
+  torsoGroup.add(coreTorso, chestPlate, visorBar, backpack, lidarGroup, ant, antTip);
+  robot.add(torsoGroup);
+
+  // Dual articulated bipedal-wheeled legs (LimX TRON2 hybrid gait)
+  const buildLeg = (side: -1 | 1): THREE.Group => {
+    const hip = new THREE.Group();
+    hip.position.set(side * 0.155, 0.38, 0);
+
+    const hipJoint = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.07, 12).rotateZ(Math.PI / 2), chassisDarkMat);
+    const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.068, 0.19, 0.08), armorWhiteMat);
+    thigh.position.set(0, -0.09, 0.02);
+    thigh.rotation.x = 0.22;
+    thigh.castShadow = true;
+
+    const knee = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.075, 10).rotateZ(Math.PI / 2), chassisDarkMat);
+    knee.position.set(0, -0.18, 0.045);
+
+    const shin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.07), chassisDarkMat);
+    shin.position.set(0, -0.26, 0.01);
+    shin.rotation.x = -0.24;
+    shin.castShadow = true;
+
+    // Hybrid powered wheel-foot grounded cleanly at y = 0 (offset -0.38 from hip)
+    const wheelFoot = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.055, 16).rotateZ(Math.PI / 2), tireMat);
+    wheelFoot.position.set(0, -0.298, -0.01);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.062, 12).rotateZ(Math.PI / 2), accentMat);
+    hub.position.set(0, -0.298, -0.01);
+
+    hip.add(hipJoint, thigh, knee, shin, wheelFoot, hub);
+    return hip;
+  };
+
+  const leftLeg = buildLeg(-1);
+  const rightLeg = buildLeg(1);
+  robot.add(leftLeg, rightLeg);
+
+  // Ground-projected mobile BLE Mesh Repeater halo
+  const meshHalo = new THREE.Mesh(
+    new THREE.RingGeometry(0.32, 0.42, 24).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({
+      color: accentHex,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  meshHalo.position.y = 0.03;
+  robot.add(meshHalo);
+
+  robot.userData.leftLeg = leftLeg;
+  robot.userData.rightLeg = rightLeg;
+  robot.userData.lidar = lidarGroup;
+  robot.userData.torso = torsoGroup;
+  robot.userData.meshHalo = meshHalo;
+  return robot;
+}
+
+/**
+ * Automatic Dynamic IoT Smart Sensor Pole (NB-IoT / Hikvision Optical-Acoustic Perimeter Unit)
+ */
+function createDynamicIotPole(brushedMap: THREE.Texture): THREE.Group {
+  const pole = new THREE.Group();
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85, metalness: 0.1 });
+  const mastMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8,
+    roughness: 0.3,
+    metalness: 0.85,
+    roughnessMap: brushedMap,
+  });
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.42, metalness: 0.55 });
+  const solarMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.22, metalness: 0.6 });
+  const beaconMat = new THREE.MeshStandardMaterial({
+    color: 0x22d3ee,
+    emissive: new THREE.Color(0x06b6d4),
+    emissiveIntensity: 2.0,
+    roughness: 0.2,
+  });
+
+  // Ground plinth
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.18, 12), baseMat);
+  plinth.position.y = 0.09;
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.058, 1.48, 12), mastMat);
+  mast.position.y = 0.82;
+  mast.castShadow = true;
+
+  // Armored NB-IoT / ThingsBoard telemetry box
+  const ctrlBox = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.16), boxMat);
+  ctrlBox.position.set(0, 0.85, 0.08);
+  const statusLed = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.025, 0.02), beaconMat);
+  statusLed.position.set(0, 0.94, 0.165);
+
+  // 360° optical/acoustic dome + angled solar charging panel + NB-IoT antenna
+  const sensorRing = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.018, 8, 20).rotateX(Math.PI / 2), beaconMat);
+  sensorRing.position.y = 1.48;
+  const opticDome = new THREE.Mesh(
+    new THREE.SphereGeometry(0.095, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.6),
+    new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.1, metalness: 0.9 })
+  );
+  opticDome.position.y = 1.5;
+
+  const solarPanel = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.022, 0.24), solarMat);
+  solarPanel.position.set(0, 1.66, -0.02);
+  solarPanel.rotation.x = 0.26;
+
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.34, 6), mastMat);
+  antenna.position.set(0.12, 1.76, -0.04);
+  const antGlow = new THREE.Mesh(new THREE.SphereGeometry(0.024, 8, 8), beaconMat);
+  antGlow.position.set(0.12, 1.94, -0.04);
+
+  pole.add(plinth, mast, ctrlBox, statusLed, sensorRing, opticDome, solarPanel, antenna, antGlow);
+  pole.userData.sensorRing = sensorRing;
+  return pole;
+}
+
 export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
   heightClass = 'h-[540px]',
   orgName,
@@ -125,6 +430,10 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
   const [floorFilter, setFloorFilter] = useState<FloorFilter>('all');
   const [showMeshLinks, setShowMeshLinks] = useState(true);
   const [showPatrols, setShowPatrols] = useState(true);
+  const [showDrones, setShowDrones] = useState(true);
+  const [showRobots, setShowRobots] = useState(true);
+  const [showIotGrid, setShowIotGrid] = useState(true);
+  const [droneDispatched, setDroneDispatched] = useState(false);
   const [dockCollapsed, setDockCollapsed] = useState(false);
   const [activePreset, setActivePreset] = useState<CampusCameraPreset>('iso');
   const [webglSupported] = useState(() => isWebGLAvailable());
@@ -154,7 +463,7 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
         zone: 'Main Tower · Floor 2',
         floorIndex: 2,
         status: 'DISTRESS' as const,
-        detail: 'BLE iTag Indoor Triangulation · RSSI -54 dBm · 2 Patrol Units En Route',
+        detail: 'BLE iTag Indoor Triangulation · RSSI -54 dBm · Drones, LimX Robots & Patrols Armed',
         pos: [1.15, 3.15, 0.55] as [number, number, number],
       },
     ];
@@ -162,17 +471,21 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
 
   const [selectedItem, setSelectedItem] = useState<CampusTelemetryItem>(() => ({
     id: 'CAMPUS-HQ',
-    title: orgName ? `${orgName} — 3D Tactical Twin` : 'SafetyLink 3D Tactical Campus Twin',
-    zone: `${meshNodes.length || 6} BLE Relays · ${activeAlerts.length} Active Beacon(s)`,
+    title: orgName ? `${orgName} — 3D Autonomous Campus Twin` : 'SafetyLink 3D Autonomous Campus Twin',
+    zone: `2 Drones · 2 LimX TRON2 Robots · 6 Dynamic IoT Poles · ${meshNodes.length || 6} BLE Relays`,
     floorIndex: 0,
     status: 'RELAY',
-    detail: 'Click any floor, beacon, or patrol SUV to glide camera & inspect vertical telemetry',
+    detail: 'Click any Drone, LimX Robot, Dynamic IoT Pole, Floor, or Patrol SUV to glide camera & inspect telemetry',
     pos: [0, 2, 0],
   }));
 
   const floorFilterRef = useRef<FloorFilter>(floorFilter);
   const showMeshLinksRef = useRef(showMeshLinks);
   const showPatrolsRef = useRef(showPatrols);
+  const showDronesRef = useRef(showDrones);
+  const showRobotsRef = useRef(showRobots);
+  const showIotGridRef = useRef(showIotGrid);
+  const droneDispatchedRef = useRef(droneDispatched);
   const cameraGoalRef = useRef<{ pos: THREE.Vector3; target: THREE.Vector3 } | null>(null);
 
   useEffect(() => {
@@ -186,6 +499,22 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
   useEffect(() => {
     showPatrolsRef.current = showPatrols;
   }, [showPatrols]);
+
+  useEffect(() => {
+    showDronesRef.current = showDrones;
+  }, [showDrones]);
+
+  useEffect(() => {
+    showRobotsRef.current = showRobots;
+  }, [showRobots]);
+
+  useEffect(() => {
+    showIotGridRef.current = showIotGrid;
+  }, [showIotGrid]);
+
+  useEffect(() => {
+    droneDispatchedRef.current = droneDispatched;
+  }, [droneDispatched]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -207,6 +536,27 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
       setSelectedItem(activeAlerts[0]);
       setFloorFilter('explode');
       return;
+    }
+    if (presetId === 'drone') {
+      setSelectedItem({
+        id: 'DRN-01',
+        title: 'Autonomous Interceptor Drone — DRN-01',
+        zone: 'Rooftop Drone-in-a-Box · Airspace Sector A',
+        floorIndex: 4,
+        status: 'DRONE',
+        detail: '4K Dual Thermal/Optical Gimbal · Pre-programmed SOS Intercept · Auto-Return Charging Dock',
+        pos: [1.8, 7.6, 0.9],
+      });
+    } else if (presetId === 'robot') {
+      setSelectedItem({
+        id: 'LIMX-TRON2-01',
+        title: 'LimX Dynamics TRON2 Patrol Robot — Unit 01',
+        zone: 'Inner Courtyard Walkway · Autonomous Loop',
+        floorIndex: 0,
+        status: 'ROBOT',
+        detail: 'Hybrid Wheeled-Bipedal Gait · 360° LiDAR SLAM · Mobile BLE Mesh Repeater Active',
+        pos: [5.2, 0.5, 0],
+      });
     }
     const p = CAMERA_PRESETS[presetId];
     cameraGoalRef.current = {
@@ -653,6 +1003,171 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
     patrolGroup.add(patrol1, patrol2);
     scene.add(patrolGroup);
 
+    // =========================================================================
+    // ROOFTOP DRONE-IN-A-BOX PAD + 2 AUTONOMOUS TACTICAL RESPONSE DRONES
+    // =========================================================================
+    const droneDockGroup = new THREE.Group();
+    droneDockGroup.position.set(1.75, 0.24, 0.72);
+    const dockBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.76, 0.84, 0.14, 8),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.65 })
+    );
+    const dockRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.62, 0.026, 10, 32).rotateX(Math.PI / 2),
+      new THREE.MeshStandardMaterial({
+        color: 0x38bdf8,
+        emissive: new THREE.Color(0x0ea5e9),
+        emissiveIntensity: 1.8,
+      })
+    );
+    dockRing.position.y = 0.08;
+    const dockPadH1 = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.012, 0.42),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+    );
+    dockPadH1.position.set(-0.15, 0.08, 0);
+    const dockPadH2 = dockPadH1.clone();
+    dockPadH2.position.x = 0.15;
+    const dockPadHBar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.012, 0.06),
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+    );
+    dockPadHBar.position.set(0, 0.08, 0);
+    droneDockGroup.add(dockBase, dockRing, dockPadH1, dockPadH2, dockPadHBar);
+    registerClickable(droneDockGroup, {
+      id: 'DRONE-BOX-ROOF',
+      title: 'Automated Drone-in-a-Box Docking Station',
+      zone: 'Main Tower Rooftop · Launch Bay 01',
+      floorIndex: 4,
+      status: 'DRONE',
+      detail: 'Inductive Fast-Charge Pad · Weatherproof Clamshell · Auto-Launches on SOS Trigger',
+      pos: [1.75, roofBaseY + 0.5, 0.72],
+    });
+    roofGroup.add(droneDockGroup);
+
+    const dronesGroup = new THREE.Group();
+    const drone1 = createAutonomousDrone(brushedMap, 0x38bdf8);
+    const drone2 = createAutonomousDrone(brushedMap, 0x10b981);
+    registerClickable(drone1, {
+      id: 'DRN-01',
+      title: 'Autonomous Tactical Drone — DRN-01 (Interceptor)',
+      zone: 'Airspace Sector A · 4K Thermal/Optical',
+      floorIndex: 4,
+      status: 'DRONE',
+      detail: 'Linked to Rooftop Drone-in-a-Box · Pre-programmed SOS Intercept · Battery 94% · RTB Armed',
+      pos: [1.8, 7.8, 1.0],
+    });
+    registerClickable(drone2, {
+      id: 'DRN-02',
+      title: 'Autonomous Perimeter Recon Drone — DRN-02',
+      zone: 'Outer Perimeter Airspace · Thermal Sweep',
+      floorIndex: 4,
+      status: 'DRONE',
+      detail: 'Autonomous Corridor Patrol · Night-Vision Optical Flow · Live RTSP Feed to War Room',
+      pos: [-6.0, 9.2, 4.0],
+    });
+    dronesGroup.add(drone1, drone2);
+    scene.add(dronesGroup);
+
+    // =========================================================================
+    // LIMX DYNAMICS MODULAR TRON2 AUTONOMOUS PATROL ROBOTS (TRUE CAMPUS SCALE)
+    // =========================================================================
+    const robotsGroup = new THREE.Group();
+    const robot1 = createLimxPatrolRobot(brushedMap, 0x38bdf8);
+    const robot2 = createLimxPatrolRobot(brushedMap, 0x10b981);
+    registerClickable(robot1, {
+      id: 'LIMX-TRON2-01',
+      title: 'LimX Dynamics TRON2 Patrol Robot — Unit 01',
+      zone: 'Inner Courtyard Walkway · Sector North-West',
+      floorIndex: 0,
+      status: 'ROBOT',
+      detail: 'Hybrid Wheeled-Bipedal Terrain Gait · 360° LiDAR SLAM · Mobile BLE Mesh Repeater (RSSI -42 dBm)',
+      pos: [5.2, 0.5, 0],
+    });
+    registerClickable(robot2, {
+      id: 'LIMX-TRON2-02',
+      title: 'LimX Dynamics TRON2 Patrol Robot — Unit 02',
+      zone: 'East Muster & Gatehouse Corridor',
+      floorIndex: 0,
+      status: 'ROBOT',
+      detail: 'Autonomous Night-Watch Thermal Verification · Acoustic Anomaly Detector · Battery 88%',
+      pos: [-5.2, 0.5, 0],
+    });
+    robotsGroup.add(robot1, robot2);
+    scene.add(robotsGroup);
+
+    // =========================================================================
+    // AUTOMATIC DYNAMIC IOT PERIMETER SMART POLES + REAL-TIME DATA PACKET LINKS
+    // =========================================================================
+    const iotGridGroup = new THREE.Group();
+    const iotPoles: Array<{ mesh: THREE.Group; topPos: THREE.Vector3 }> = [];
+    const iotPacketCurves: THREE.CatmullRomCurve3[] = [];
+    const iotPackets: THREE.Mesh[] = [];
+    const iotPoleCount = 6;
+    const iotRadius = 6.15;
+    const iotArcMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.34,
+    });
+    const iotPacketMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+    const iotPacketGeo = new THREE.SphereGeometry(0.065, 8, 8);
+
+    const iotZones = [
+      'North Access NB-IoT Pole',
+      'North-East Solar Optical Node',
+      'South-East Muster Sensor Mast',
+      'South Driveway Acoustic Radar',
+      'South-West Gatehouse AX PRO Link',
+      'West Perimeter Thermal Pole',
+    ];
+
+    for (let i = 0; i < iotPoleCount; i++) {
+      const angle = (i / iotPoleCount) * Math.PI * 2 + Math.PI / 6;
+      const px = Math.cos(angle) * iotRadius;
+      const pz = Math.sin(angle) * iotRadius;
+      const pole = createDynamicIotPole(brushedMap);
+      pole.position.set(px, 0, pz);
+      pole.rotation.y = -angle + Math.PI;
+      registerClickable(pole, {
+        id: `IOT-NODE-0${i + 1}`,
+        title: `Dynamic IoT Smart Pole — NODE-0${i + 1}`,
+        zone: iotZones[i],
+        floorIndex: 0,
+        status: 'IOT',
+        detail: 'NB-IoT + Hikvision AX PRO Bridge · Solar Backed · Real-Time ThingsBoard Cloud HTTP Telemetry',
+        pos: [px, 1.4, pz],
+      });
+      iotGridGroup.add(pole);
+
+      const topPos = new THREE.Vector3(px, 1.94, pz);
+      iotPoles.push({ mesh: pole, topPos });
+
+      // Curved dynamic telemetry arc from each IoT pole up to rooftop command uplink
+      const mid = topPos.clone().lerp(linkOrigin, 0.5);
+      mid.y += 1.35;
+      const curve = new THREE.CatmullRomCurve3([topPos, mid, linkOrigin]);
+      iotPacketCurves.push(curve);
+      const arcTube = new THREE.Mesh(new THREE.TubeGeometry(curve, 22, 0.018, 6, false), iotArcMat);
+      iotGridGroup.add(arcTube);
+
+      // Animated data packet orb sliding along the IoT arc
+      const pkt = new THREE.Mesh(iotPacketGeo, iotPacketMat);
+      iotGridGroup.add(pkt);
+      iotPackets.push(pkt);
+    }
+
+    // Dynamic real-time link lines connecting moving Drones & LimX Robots to Rooftop Uplink & Active Alert
+    const dynamicLinkPositions = new Float32Array(5 * 2 * 3); // 5 dynamic segments (2 drones->roof, 2 robots->nearest IoT, 1 drone1->SOS)
+    const dynamicLinkGeo = new THREE.BufferGeometry();
+    dynamicLinkGeo.setAttribute('position', new THREE.BufferAttribute(dynamicLinkPositions, 3));
+    const dynamicLinkLines = new THREE.LineSegments(
+      dynamicLinkGeo,
+      new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.62 })
+    );
+    iotGridGroup.add(dynamicLinkLines);
+    scene.add(iotGridGroup);
+
     // Raycasting on layer 1
     const raycaster = new THREE.Raycaster();
     raycaster.layers.set(1);
@@ -737,6 +1252,9 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
       // Toggle overlays
       meshLinksGroup.visible = showMeshLinksRef.current;
       patrolGroup.visible = showPatrolsRef.current;
+      dronesGroup.visible = showDronesRef.current;
+      robotsGroup.visible = showRobotsRef.current;
+      iotGridGroup.visible = showIotGridRef.current;
 
       // Smoothly move patrol SUVs around perimeter ring road (radius 7.45)
       if (patrolGroup.visible) {
@@ -748,6 +1266,126 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
         const a2 = elapsed * 0.24 + Math.PI;
         patrol2.position.set(Math.cos(a2) * r, 0.03, Math.sin(a2) * r);
         patrol2.rotation.y = -a2;
+      }
+
+      // Animate Autonomous Drones (high-RPM rotors, banking turns, SOS intercept hover)
+      const primaryAlertPos = beaconEntries[0]
+        ? beaconEntries[0].group.position
+        : new THREE.Vector3(1.15, 3.15, 0.55);
+
+      if (dronesGroup.visible) {
+        const spin = elapsed * 24;
+        [drone1, drone2].forEach((d) => {
+          const rotors = d.userData.rotors as THREE.Group[] | undefined;
+          rotors?.forEach((rot, rIdx) => {
+            rot.rotation.y = rIdx % 2 === 0 ? spin : -spin;
+          });
+        });
+
+        // DRN-01: either hovers directly above active SOS beacon (when Dispatched) or patrols tactical orbit
+        const d1TargetX = droneDispatchedRef.current
+          ? primaryAlertPos.x + Math.cos(elapsed * 1.1) * 0.65
+          : Math.cos(elapsed * 0.52) * 4.4;
+        const d1TargetY = droneDispatchedRef.current
+          ? Math.max(roofGroup.position.y + 1.85, primaryAlertPos.y + 3.0) + Math.sin(elapsed * 2.2) * 0.14
+          : roofGroup.position.y + 2.1 + Math.sin(elapsed * 1.3) * 0.35;
+        const d1TargetZ = droneDispatchedRef.current
+          ? primaryAlertPos.z + Math.sin(elapsed * 1.1) * 0.65
+          : Math.sin(elapsed * 0.52) * 3.8;
+
+        drone1.position.x = THREE.MathUtils.damp(drone1.position.x, d1TargetX, 3.5, delta);
+        drone1.position.y = THREE.MathUtils.damp(drone1.position.y, d1TargetY, 3.5, delta);
+        drone1.position.z = THREE.MathUtils.damp(drone1.position.z, d1TargetZ, 3.5, delta);
+        drone1.rotation.y = droneDispatchedRef.current ? -elapsed * 1.1 : -elapsed * 0.52;
+        drone1.rotation.z = droneDispatchedRef.current ? 0.05 : -0.11;
+
+        const d1Cone = drone1.userData.scanCone as THREE.Mesh | undefined;
+        if (d1Cone) {
+          const mat = d1Cone.material as THREE.MeshBasicMaterial;
+          mat.color.setHex(droneDispatchedRef.current ? 0xef4444 : 0x38bdf8);
+          mat.opacity = droneDispatchedRef.current ? 0.22 : 0.11;
+        }
+
+        // DRN-02: high-altitude outer perimeter thermal patrol
+        const d2Angle = -elapsed * 0.36 + 1.4;
+        drone2.position.set(
+          Math.cos(d2Angle) * 8.6,
+          roofGroup.position.y + 3.1 + Math.sin(elapsed * 0.9) * 0.3,
+          Math.sin(d2Angle) * 8.1
+        );
+        drone2.rotation.y = -d2Angle + Math.PI;
+        drone2.rotation.z = 0.09;
+      }
+
+      // Animate LimX Dynamics TRON2 Patrol Robots (inner courtyard loop r=5.15, hybrid stride + spinning LiDAR)
+      if (robotsGroup.visible) {
+        const rr = 5.15;
+        const moveRobot = (rob: THREE.Group, angle: number, stridePhase: number) => {
+          rob.position.set(Math.cos(angle) * rr, 0.01, Math.sin(angle) * rr);
+          rob.rotation.y = -angle;
+          const leftLeg = rob.userData.leftLeg as THREE.Group | undefined;
+          const rightLeg = rob.userData.rightLeg as THREE.Group | undefined;
+          const lidar = rob.userData.lidar as THREE.Group | undefined;
+          const torso = rob.userData.torso as THREE.Group | undefined;
+          const stride = Math.sin(stridePhase) * 0.26;
+          if (leftLeg) leftLeg.rotation.x = stride;
+          if (rightLeg) rightLeg.rotation.x = -stride;
+          if (torso) torso.position.y = 0.46 + Math.abs(Math.sin(stridePhase)) * 0.025;
+          if (lidar) lidar.rotation.y = elapsed * 4.2;
+        };
+        moveRobot(robot1, elapsed * 0.32, elapsed * 5.2);
+        moveRobot(robot2, elapsed * 0.32 + Math.PI, elapsed * 5.2 + Math.PI);
+      }
+
+      // Animate Dynamic IoT Grid packets & real-time telemetry links (Drones + Robots <-> IoT <-> Roof Uplink)
+      if (iotGridGroup.visible) {
+        iotPackets.forEach((pkt, idx) => {
+          const t = (elapsed * 0.45 + idx * 0.17) % 1;
+          iotPacketCurves[idx].getPointAt(t, pkt.position);
+        });
+
+        const posAttr = dynamicLinkGeo.getAttribute('position') as THREE.BufferAttribute;
+        const arr = posAttr.array as Float32Array;
+        const setSeg = (segIdx: number, a: THREE.Vector3, b: THREE.Vector3) => {
+          const off = segIdx * 6;
+          arr[off] = a.x;
+          arr[off + 1] = a.y;
+          arr[off + 2] = a.z;
+          arr[off + 3] = b.x;
+          arr[off + 4] = b.y;
+          arr[off + 5] = b.z;
+        };
+
+        const roofUplink = new THREE.Vector3(-1.1, roofGroup.position.y + 3.2, -0.4);
+        // Seg 0 & 1: Drones -> Rooftop Command Uplink
+        setSeg(0, drone1.position, roofUplink);
+        setSeg(1, drone2.position, roofUplink);
+
+        // Seg 2 & 3: LimX Robots -> Nearest Dynamic IoT Pole
+        const findNearestPoleTop = (p: THREE.Vector3): THREE.Vector3 => {
+          let best = iotPoles[0].topPos;
+          let bestD = p.distanceToSquared(best);
+          for (let i = 1; i < iotPoles.length; i++) {
+            const d = p.distanceToSquared(iotPoles[i].topPos);
+            if (d < bestD) {
+              bestD = d;
+              best = iotPoles[i].topPos;
+            }
+          }
+          return best;
+        };
+        const r1Head = new THREE.Vector3(robot1.position.x, 0.72, robot1.position.z);
+        const r2Head = new THREE.Vector3(robot2.position.x, 0.72, robot2.position.z);
+        setSeg(2, r1Head, findNearestPoleTop(r1Head));
+        setSeg(3, r2Head, findNearestPoleTop(r2Head));
+
+        // Seg 4: Drone 1 optical lock line down to active SOS alert (when dispatched)
+        if (droneDispatchedRef.current && dronesGroup.visible) {
+          setSeg(4, drone1.position, primaryAlertPos);
+        } else {
+          setSeg(4, drone1.position, drone1.position);
+        }
+        posAttr.needsUpdate = true;
       }
 
       // Smooth camera preset gliding
@@ -804,8 +1442,10 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
               backgroundColor:
                 selectedItem.status === 'DISTRESS'
                   ? '#ef4444'
-                  : selectedItem.status === 'PATROL'
+                  : selectedItem.status === 'PATROL' || selectedItem.status === 'DRONE'
                   ? '#38bdf8'
+                  : selectedItem.status === 'IOT'
+                  ? '#22d3ee'
                   : '#10b981',
             }}
           />
@@ -818,7 +1458,7 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
       </div>
 
       {/* Collapsible Unified Bottom Control Dock */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 w-[94%] max-w-[880px] flex flex-col items-center pointer-events-none">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 w-[96%] max-w-[1040px] flex flex-col items-center pointer-events-none">
         <button
           type="button"
           onClick={() => setDockCollapsed((c) => !c)}
@@ -831,12 +1471,12 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
 
         {!dockCollapsed && (
           <div
-            className="pointer-events-auto w-full rounded-xl border border-slate-700/80 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2.5"
+            className="pointer-events-auto w-full rounded-xl border border-slate-700/80 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2"
             style={{ backgroundColor: 'rgba(5, 11, 22, 0.94)' }}
           >
             {/* Floor Isolation Controls */}
             <div className="flex items-center gap-1 flex-wrap">
-              <Layers className="w-3.5 h-3.5 text-emerald-400 mr-1" />
+              <Layers className="w-3.5 h-3.5 text-emerald-400 mr-0.5" />
               {(
                 [
                   ['all', 'All'],
@@ -864,7 +1504,7 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
 
             {/* Camera Views */}
             <div className="flex items-center gap-1 flex-wrap">
-              <Building2 className="w-3.5 h-3.5 text-sky-400 mr-1" />
+              <Building2 className="w-3.5 h-3.5 text-sky-400 mr-0.5" />
               {(Object.keys(CAMERA_PRESETS) as CampusCameraPreset[]).map((k) => (
                 <button
                   key={k}
@@ -883,31 +1523,98 @@ export const TacticalCampus3DScene: React.FC<TacticalCampus3DSceneProps> = ({
               ))}
             </div>
 
-            {/* Layer Toggles */}
-            <div className="flex items-center gap-1.5">
+            {/* Autonomous Fleet & Dynamic IoT Layer Controls */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !droneDispatched;
+                  setDroneDispatched(next);
+                  if (next) {
+                    setShowDrones(true);
+                    setSelectedItem({
+                      id: 'DRN-01-INTERCEPT',
+                      title: 'DRN-01 Dispatched — Thermal SOS Lock',
+                      zone: 'Intercepting Active Alert Beacon',
+                      floorIndex: 4,
+                      status: 'DRONE',
+                      detail: 'Autonomous Drone-in-a-Box intercept active · 4K thermal cone locked onto distress coordinates',
+                      pos: activeAlerts[0]?.pos || [1.15, 3.15, 0.55],
+                    });
+                  }
+                }}
+                className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 transition-colors ${
+                  droneDispatched
+                    ? 'bg-red-600 text-white border border-red-400/60'
+                    : 'bg-sky-700 hover:bg-sky-600 text-white'
+                }`}
+              >
+                <Navigation className="w-3 h-3" />
+                <span>{droneDispatched ? 'Recall Drone' : 'Dispatch Drone'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDrones((v) => !v)}
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase ${
+                  showDrones
+                    ? 'bg-sky-900/70 border border-sky-500/50 text-sky-300'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                Drones
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowRobots((v) => !v)}
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
+                  showRobots
+                    ? 'bg-emerald-900/70 border border-emerald-500/50 text-emerald-300'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                <Bot className="w-3 h-3" />
+                <span>Robots</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowIotGrid((v) => !v)}
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
+                  showIotGrid
+                    ? 'bg-cyan-900/70 border border-cyan-500/50 text-cyan-300'
+                    : 'bg-slate-800 text-slate-400'
+                }`}
+              >
+                <Cpu className="w-3 h-3" />
+                <span>IoT Grid</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setShowMeshLinks((v) => !v)}
-                className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
                   showMeshLinks
                     ? 'bg-emerald-900/70 border border-emerald-500/50 text-emerald-300'
                     : 'bg-slate-800 text-slate-400'
                 }`}
               >
                 <Radio className="w-3 h-3" />
-                <span>BLE Mesh</span>
+                <span>Mesh</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => setShowPatrols((v) => !v)}
-                className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold uppercase flex items-center gap-1 ${
                   showPatrols
                     ? 'bg-sky-900/70 border border-sky-500/50 text-sky-300'
                     : 'bg-slate-800 text-slate-400'
                 }`}
               >
                 <ShieldAlert className="w-3 h-3" />
-                <span>Patrols</span>
+                <span>SUVs</span>
               </button>
             </div>
           </div>

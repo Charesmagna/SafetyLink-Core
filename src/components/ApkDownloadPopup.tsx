@@ -10,7 +10,11 @@ import {
   PackageOpen,
   RefreshCw
 } from 'lucide-react';
+import { useReleaseChannels } from '../hooks/useReleaseChannels';
 export const ApkDownloadPopup: React.FC = () => {
+  const channels = useReleaseChannels();
+  const stableTag = channels.stable.version;
+  const stableBuild = channels.stable.buildNumber ? `Build #${channels.stable.buildNumber}` : 'main';
   const [isOpen, setIsOpen] = useState(false);
   const [downloadState, setDownloadState] = useState<'idle' | 'compiling' | 'signing' | 'downloading' | 'complete'>('idle');
   const [progress, setProgress] = useState(0);
@@ -50,8 +54,8 @@ export const ApkDownloadPopup: React.FC = () => {
           setStatusText('APK package download complete! safetylink-release.apk');
           
           const link = document.createElement('a');
-          link.href = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
-          link.setAttribute('download', 'SafetyLink-v1.apk');
+          link.href = channels.stable.apkUrl;
+          link.setAttribute('download', `SafetyLink-v1-${stableTag}.apk`);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -72,8 +76,7 @@ export const ApkDownloadPopup: React.FC = () => {
         id="apk-portal-trigger"
       >
         <Smartphone className="w-4 h-4 animate-bounce" />
-        <span>APK BUILD ACTIVE</span>
-        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span>APK v1 · {stableTag}</span>
       </motion.button>
     );
   }
@@ -110,12 +113,11 @@ export const ApkDownloadPopup: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    STABLE RELEASE
+                    VERSION 1 · OFFICIAL STABLE (MAIN)
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-xs text-emerald-400 font-mono">Version 1.1 · Official Stable</span>
-                  </div>
+                  <span className="text-xs text-emerald-400 font-mono">
+                    {stableTag} · {stableBuild}
+                  </span>
                 </div>
                 <h2 className="text-2xl font-mono font-bold text-white tracking-tight mt-1">
                   SafetyLink Sideload Package
@@ -192,8 +194,12 @@ export const ApkDownloadPopup: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <PackageOpen className="w-6 h-6 text-emerald-400 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">Package Ready for Deployment</p>
-                      <p className="text-xs text-slate-400 font-sans mt-0.5">Optimized production build bundle.</p>
+                      <p className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                        Stable v1 ({stableTag} · {stableBuild}) Ready
+                      </p>
+                      <p className="text-xs text-slate-400 font-sans mt-0.5">
+                        Official production-signed Android release from main.
+                      </p>
                     </div>
                   </div>
                   <button
@@ -201,7 +207,7 @@ export const ApkDownloadPopup: React.FC = () => {
                     className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-xs font-bold uppercase tracking-wider px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/40 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    <span>Download APK Bundle</span>
+                    <span>Download Stable v1 ({stableTag})</span>
                   </button>
                 </div>
               )}

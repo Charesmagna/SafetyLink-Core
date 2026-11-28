@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Check, Download, Globe, Monitor, Package, Search, Smartphone } from 'lucide-react';
 import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
+import { useReleaseChannels } from '../../hooks/useReleaseChannels';
 
 interface Props {
   onLogin?: () => void;
@@ -20,6 +21,7 @@ interface ReleaseItem {
 }
 
 export function DownloadPage({ onLogin }: Props) {
+  const channels = useReleaseChannels();
   const [releases, setReleases] = useState<ReleaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [latestRelease, setLatestRelease] = useState<ReleaseItem | null>(null);
@@ -93,9 +95,13 @@ export function DownloadPage({ onLogin }: Props) {
       r.name.toLowerCase().includes(searchFilter.toLowerCase())
   );
 
-  const v1ApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
-  const betaApkUrl = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk';
-  const desktopExeUrl = latestRelease?.exeUrl || 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest';
+  const v1ApkUrl = channels.stable.apkUrl;
+  const betaApkUrl = channels.testing.apkUrl;
+  const desktopExeUrl = latestRelease?.exeUrl || channels.desktopExe.url;
+  const stableTag = channels.stable.version;
+  const stableBuildLabel = channels.stable.buildNumber ? `Build #${channels.stable.buildNumber}` : 'main';
+  const testingTag = channels.testing.version;
+  const testingBuildLabel = channels.testing.buildNumber ? `Build #${channels.testing.buildNumber}` : 'beta';
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#071124] text-slate-900 dark:text-slate-100 transition-colors">
@@ -110,7 +116,7 @@ export function DownloadPage({ onLogin }: Props) {
                 className="h-10 w-auto object-contain drop-shadow-[0_4px_12px_rgba(16,185,129,0.3)]"
               />
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                Official Download Hub · Version 1 Stable
+                Official Download Hub · Version 1 Stable ({stableTag} · {stableBuildLabel})
               </span>
             </div>
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight mb-4">
@@ -168,17 +174,23 @@ export function DownloadPage({ onLogin }: Props) {
                     <Smartphone size={24} />
                   </div>
                   <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-mono">
-                    RECOMMENDED · OFFICIAL STABLE
+                    RECOMMENDED · VERSION 1 STABLE (MAIN)
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white">
-                    SafetyLink APK
-                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-display text-2xl font-extrabold text-slate-900 dark:text-white">
+                      SafetyLink APK — Version 1
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-600/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-bold">
+                      {stableTag} · {stableBuildLabel}
+                    </span>
+                  </div>
                   <p className="text-xs font-mono text-emerald-700 dark:text-emerald-400 mt-1">
-                    Version 1 · Production-Signed Android Build · All Features Shipped
+                    Latest Production-Signed Release ({stableTag} · {stableBuildLabel}) · All Verified Features Shipped
                   </p>
                 </div>
+
                 <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                   Our official Version 1 consumer &amp; responder Android app. Includes every promoted upgrade thoroughly tested for daily protection:
                 </p>
@@ -201,14 +213,14 @@ export function DownloadPage({ onLogin }: Props) {
               <div className="space-y-2">
                 <a
                   href={v1ApkUrl}
-                  download="SafetyLink.apk"
+                  download={`SafetyLink-v1-${stableTag}.apk`}
                   className="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 no-underline transition-all"
                 >
                   <Download size={17} />
-                  <span>Download SafetyLink APK</span>
+                  <span>Download Stable v1 APK ({stableTag})</span>
                 </a>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center font-mono">
-                  Version 1 · Android 8.0+ · Signed Production Release · Direct Cloudflare R2 Delivery
+                  Version 1 Official Stable · {stableTag} ({stableBuildLabel}) · Android 8.0+ · Signed Production Build
                 </p>
               </div>
             </div>
@@ -281,13 +293,16 @@ export function DownloadPage({ onLogin }: Props) {
             </div>
           </div>
 
-          {/* ── DEMOTED SAFETYLINK TEST / BETA DISCLOSURE (ROLLING FROM v1.1.1000+ ONWARD) ── */}
+          {/* ── DEMOTED SAFETYLINK TEST / BETA DISCLOSURE WITH LIVE VERSION COMPARISON ── */}
           <details className="mt-7 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-slate-100/70 dark:bg-slate-900/45 px-4 py-3 text-slate-600 dark:text-slate-400">
             <summary className="cursor-pointer select-none flex flex-wrap items-center justify-between gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
               <span className="inline-flex items-center gap-2">
                 <AlertTriangle size={13} className="text-amber-600/80 dark:text-amber-500/80 shrink-0" />
                 <span>
-                  Internal Testing Sandbox — SafetyLink Beta (v1.1.1000+ rolling{latestRelease?.version ? ` · Current ${latestRelease.version}` : ''} · Not recommended for daily protection)
+                  Testing Track — SafetyLink Beta ({testingTag} · {testingBuildLabel})
+                  {channels.sameBuildAsTesting
+                    ? ` · Currently matching Stable v1 (${stableTag} — fresh push)`
+                    : ` · Stable v1 is on ${stableTag} (${stableBuildLabel})`}
                 </span>
               </span>
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
@@ -296,14 +311,17 @@ export function DownloadPage({ onLogin }: Props) {
             </summary>
             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                <strong className="text-amber-700 dark:text-amber-400">Not for everyday use:</strong> SafetyLink Beta (rolling progressively from <code className="font-mono">v1.1.1000+</code>{latestRelease?.version ? <> · currently <code className="font-mono">{latestRelease.version}</code></> : null}) is our experimental test track where upcoming changes are trialed before graduating to <strong>SafetyLink APK (Version 1)</strong>. For reliable daily emergency protection, always install <strong>SafetyLink APK</strong> above.
+                <strong className="text-amber-700 dark:text-amber-400">Testing Channel ({testingTag} · {testingBuildLabel}):</strong>{' '}
+                {channels.sameBuildAsTesting
+                  ? `Both Testing and Stable v1 currently point to GitHub build ${stableTag} (${stableBuildLabel}) because the latest main push has just been published. Everyday users should still install Official Stable v1 above.`
+                  : `Testing is currently on ${testingTag} (${testingBuildLabel}) ahead of Official Stable v1 (${stableTag} · ${stableBuildLabel}). For verified daily emergency protection, install Official Stable v1 above.`}
               </p>
               <a
                 href={betaApkUrl}
-                download={`SafetyLink-Beta-${latestRelease?.version || 'v1.1.1000'}.apk`}
+                download={`SafetyLink-Testing-${testingTag}.apk`}
                 className="shrink-0 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-[11px] font-mono no-underline text-center transition-colors"
               >
-                SafetyLink Beta ({latestRelease?.version || 'v1.1.1000+'}) · Testers Only
+                Download Testing APK ({testingTag})
               </a>
             </div>
           </details>

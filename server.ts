@@ -375,7 +375,7 @@ app.use(cors({
 
   // --- Dynamic Public APK Download Route (Resolves latest signed asset from GitHub Releases) ---
   const handleApkDownload = async (_req: express.Request, res: express.Response) => {
-    const FALLBACK = "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.965/SafetyLink-v1.1.965-Signed.apk";
+    const FALLBACK = "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.1222/SafetyLink-v1.1.1222-Signed.apk";
     let target = FALLBACK;
     try {
       const ghRes = await fetch("https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases/latest", {
@@ -410,6 +410,338 @@ app.use(cors({
   app.get("/SafetyLink.apk", handleApkDownload);
   app.get("/download/apk", handleApkDownload);
   app.get("/api/download/apk", handleApkDownload);
+
+  // --- Live Release Channels & Version Trail (Official Stable v1 vs Testing Track) ---
+  let releaseChannelsCache: { expiresAt: number; payload: any } | null = null;
+  const extractBuildCode = (tagOrVer?: string | null): number | null => {
+    const clean = String(tagOrVer || "").replace(/^v/i, "").trim();
+    const parts = clean.split(".");
+    if (parts.length >= 3) {
+      const n = parseInt(parts[2].replace(/\D.*$/, ""), 10);
+      if (Number.isFinite(n)) return n;
+    }
+    const m = clean.match(/(\d{3,6})/);
+    return m ? parseInt(m[1], 10) : null;
+  };
+  const normalizeTag = (tagOrVer?: string | null, fallback = "v1.1.1222"): string => {
+    const raw = String(tagOrVer || "").trim();
+    if (!raw) return fallback;
+    return raw.startsWith("v") || raw.startsWith("V") ? `v${raw.slice(1)}` : `v${raw}`;
+  };
+
+  app.get("/api/releases/channels", async (_req, res) => {
+    res.setHeader("Cache-Control", "public, max-age=60");
+    const now = Date.now();
+    if (releaseChannelsCache && releaseChannelsCache.expiresAt > now) {
+      return res.json(releaseChannelsCache.payload);
+    }
+
+    // Read local public/version.json as baseline fallback
+    let localVersion = "v1.1.1222";
+    let localBuildTime = new Date().toISOString();
+    let localApkUrl = "https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk";
+    try {
+      const vf = path.join(process.cwd(), "public", "version.json");
+      if (fs.existsSync(vf)) {
+        const parsed = JSON.parse(fs.readFileSync(vf, "utf-8"));
+        if (parsed?.version) localVersion = normalizeTag(parsed.version, localVersion);
+        if (parsed?.buildTime) localBuildTime = String(parsed.buildTime);
+      }
+    } catch {}
+
+    let stableTag = localVersion;
+    let stablePublishedAt = localBuildTime;
+    let stableSizeMb = 96;
+    let stableGithubUrl = `https://github.com/Charesmagna/SafetyLink-Core/releases/download/${localVersion}/SafetyLink-${localVersion}-Signed.apk`;
+    let testingTag = localVersion;
+    let testingPublishedAt = localBuildTime;
+    let testingGithubUrl = stableGithubUrl;
+    let exeTag = "v1.1.740";
+    let exeUrl = "https://github.com/Charesmagna/SafetyLink-Core/releases/download/v1.1.740/SafetyLink.Setup.1.1.740.exe";
+    let recentReleases: Array<{ tag: string; buildNumber: number | null; channel: string; publishedAt: string; sizeMb: number | null; apkUrl: string; prerelease: boolean }> = [];
+
+    const ghToken = String(process.env.GITHUB_TOKEN || process.env.GITHUB_PAT || "").trim();
+    const ghHeaders: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "SafetyLink-Release-Channels",
+    };
+    if (ghToken) ghHeaders.Authorization = `Bearer ${ghToken}`;
+
+    const [ghResult, workerResult] = await Promise.allSettled([
+      fetch("https://api.github.com/repos/Charesmagna/SafetyLink-Core/releases?per_page=15", {
+        headers: ghHeaders,
+        signal: AbortSignal.timeout(7000),
+      }).then((r) => (r.ok ? r.json() : null)),
+      fetch("https://safetylink-api.tshilidzi-mukwevho54.workers.dev/api/app/versions", {
+        signal: AbortSignal.timeout(5000),
+      }).then((r) => (r.ok ? r.json() : null)),
+    ]);
+
+    if (ghResult.status === "fulfilled" && Array.isArray(ghResult.value)) {
+      const releases = ghResult.value as any[];
+      let foundStable = false;
+      let foundTesting = false;
+      let foundExe = false;
+
+      for (const rel of releases) {
+        if (!rel || rel.draft || !Array.isArray(rel.assets)) continue;
+        const apk = rel.assets.find(
+          (a: any) => typeof a?.name === "string" && a.name.toLowerCase().endsWith(".apk")
+        );
+        const exe = rel.assets.find(
+          (a: any) => typeof a?.name === "string" && a.name.toLowerCase().endsWith(".exe")
+        );
+
+        if (exe?.browser_download_url && !foundExe) {
+          foundExe = true;
+          exeTag = normalizeTag(rel.tag_name, exeTag);
+          exeUrl = String(exe.browser_download_url);
+        }
+
+        if (apk?.browser_download_url) {
+          const tag = normalizeTag(rel.tag_name, localVersion);
+          const buildNumber = extractBuildCode(tag);
+          const sizeMb = typeof apk.size === "number" ? Math.round((apk.size / (1024 * 1024)) * 10) / 10 : null;
+          const isPre = Boolean(rel.prerelease) || /beta|rc|alpha|test/i.test(tag);
+
+          recentReleases.push({
+            tag,
+            buildNumber,
+            channel: isPre ? "testing" : "stable",
+            publishedAt: String(rel.published_at || rel.created_at || ""),
+            sizeMb,
+            apkUrl: String(apk.browser_download_url),
+            prerelease: isPre,
+          });
+
+          if (!isPre && !foundStable) {
+            foundStable = true;
+            stableTag = tag;
+            stablePublishedAt = String(rel.published_at || stablePublishedAt);
+            if (sizeMb) stableSizeMb = sizeMb;
+            stableGithubUrl = String(apk.browser_download_url);
+          }
+          if (!foundTesting && (isPre || !foundStable)) {
+            foundTesting = true;
+            testingTag = tag;
+            testingPublishedAt = String(rel.published_at || testingPublishedAt);
+            testingGithubUrl = String(apk.browser_download_url);
+          }
+        }
+      }
+      if (!foundTesting) {
+        testingTag = stableTag;
+        testingPublishedAt = stablePublishedAt;
+        testingGithubUrl = stableGithubUrl;
+      }
+    }
+
+    if (workerResult.status === "fulfilled" && workerResult.value && typeof workerResult.value === "object") {
+      const wv = workerResult.value as any;
+      if (wv?.v1?.version) {
+        const wStable = normalizeTag(wv.v1.version, stableTag);
+        const wBuild = extractBuildCode(wStable) || 0;
+        const gBuild = extractBuildCode(stableTag) || 0;
+        if (wBuild >= gBuild) {
+          stableTag = wStable;
+          if (wv.v1.updatedAt) stablePublishedAt = String(wv.v1.updatedAt);
+        }
+      }
+      if (wv?.beta?.version) {
+        const wBeta = normalizeTag(wv.beta.version, testingTag);
+        const wbBuild = extractBuildCode(wBeta) || 0;
+        const tbBuild = extractBuildCode(testingTag) || 0;
+        if (wbBuild >= tbBuild) {
+          testingTag = wBeta;
+          if (wv.beta.updatedAt) testingPublishedAt = String(wv.beta.updatedAt);
+        }
+      }
+    }
+
+    const stableBuild = extractBuildCode(stableTag);
+    const testingBuild = extractBuildCode(testingTag);
+    const sameBuildAsTesting =
+      (stableBuild !== null && testingBuild !== null && stableBuild === testingBuild) ||
+      stableTag.toLowerCase() === testingTag.toLowerCase();
+
+    const testingAhead =
+      !sameBuildAsTesting &&
+      stableBuild !== null &&
+      testingBuild !== null &&
+      testingBuild > stableBuild;
+
+    const parityNotice = sameBuildAsTesting
+      ? `Same build as Testing (${stableTag}${stableBuild ? ` · Build #${stableBuild}` : ""}) — fresh push to main, testing in progress`
+      : testingAhead
+        ? `Verified Stable on ${stableTag} (Build #${stableBuild}) · Testing track ahead on ${testingTag} (Build #${testingBuild})`
+        : `Official Stable Release ${stableTag}${stableBuild ? ` (Build #${stableBuild})` : ""} from main`;
+
+    const payload = {
+      ok: true,
+      syncedAt: new Date().toISOString(),
+      stable: {
+        channel: "v1",
+        label: "Version 1 — Official Stable (main)",
+        version: stableTag,
+        buildNumber: stableBuild,
+        apkUrl: localApkUrl,
+        githubAssetUrl: stableGithubUrl,
+        sizeMb: stableSizeMb,
+        publishedAt: stablePublishedAt,
+        branch: "main",
+      },
+      testing: {
+        channel: "beta",
+        label: "Testing / Beta Track",
+        version: testingTag,
+        buildNumber: testingBuild,
+        apkUrl: "https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/beta/safetylink.apk",
+        githubAssetUrl: testingGithubUrl,
+        publishedAt: testingPublishedAt,
+      },
+      sameBuildAsTesting,
+      testingAhead,
+      parityNotice,
+      desktopExe: {
+        version: exeTag,
+        buildNumber: extractBuildCode(exeTag),
+        url: exeUrl,
+      },
+      recentReleases: recentReleases.slice(0, 6),
+    };
+
+    releaseChannelsCache = { expiresAt: now + 180_000, payload };
+    return res.json(payload);
+  });
+
+  // --- Secure Server-Side ThingsBoard Cloud HTTP Integration Proxy ---
+  // Credentials live ONLY in server-side env vars (THINGSBOARD_HTTP_INTEGRATION_KEY).
+  // One ThingsBoard device identity per SafetyLink installation (deviceName = installationId).
+  const resolveThingsBoardEndpoint = (): { configured: boolean; endpoint: string | null; host: string } => {
+    const rawKey = String(process.env.THINGSBOARD_HTTP_INTEGRATION_KEY || "").trim();
+    const rawUrl = String(process.env.THINGSBOARD_HTTP_INTEGRATION_URL || "").trim();
+
+    if (rawUrl) {
+      try {
+        const parsed = new URL(rawUrl);
+        const allowedHost =
+          parsed.protocol === "https:" &&
+          (parsed.hostname === "thingsboard.cloud" ||
+            parsed.hostname === "eu.thingsboard.cloud" ||
+            parsed.hostname.endsWith(".thingsboard.cloud"));
+        if (allowedHost) {
+          return { configured: true, endpoint: parsed.toString(), host: parsed.hostname };
+        }
+      } catch {
+        return { configured: false, endpoint: null, host: "invalid-url" };
+      }
+      return { configured: false, endpoint: null, host: "disallowed-host" };
+    }
+
+    if (!rawKey) {
+      return { configured: false, endpoint: null, host: "thingsboard.cloud" };
+    }
+
+    const safeKey = encodeURIComponent(rawKey);
+    return {
+      configured: true,
+      endpoint: `https://thingsboard.cloud/api/v1/integrations/http/${safeKey}`,
+      host: "thingsboard.cloud",
+    };
+  };
+
+  app.get("/api/iot/thingsboard/status", (_req, res) => {
+    const tb = resolveThingsBoardEndpoint();
+    return res.json({
+      configured: tb.configured,
+      integrationMode: "THINGSBOARD_CLOUD_HTTP_INTEGRATION",
+      deviceIdentityModel: "per-installation",
+      host: tb.host,
+      secretEnvVar: "THINGSBOARD_HTTP_INTEGRATION_KEY",
+      browserStorageAllowed: false,
+    });
+  });
+
+  const forwardThingsBoardEvent = async (
+    req: express.Request,
+    res: express.Response,
+    isTestEvent: boolean
+  ) => {
+    const tb = resolveThingsBoardEndpoint();
+    if (!tb.configured || !tb.endpoint) {
+      return res.status(503).json({
+        ok: false,
+        configured: false,
+        status: "UNCONFIGURED",
+        error:
+          "ThingsBoard Cloud HTTP Integration is not configured on the server. Set THINGSBOARD_HTTP_INTEGRATION_KEY in Cloudflare Worker / server environment secrets.",
+      });
+    }
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const rawInstallId = String(body.installationId || body.deviceId || body.nodeKey || "safetylink-web-node")
+      .replace(/[^a-zA-Z0-9._-]/g, "")
+      .slice(0, 64);
+    const deviceName = rawInstallId ? `SL-${rawInstallId}` : "SL-installation-default";
+
+    const payload = {
+      deviceName,
+      deviceType: "SafetyLinkInstallation",
+      ts: Date.now(),
+      event: isTestEvent ? "connectivity_test" : String(body.event || "panic").slice(0, 48),
+      incidentId: body.incidentId ? String(body.incidentId).slice(0, 80) : undefined,
+      orgId: String(body.orgId || "INDIVIDUAL").slice(0, 64),
+      triggeredBy: String(body.triggeredBy || "SafetyLink Operator").slice(0, 80),
+      latitude: typeof body.lat === "number" && Number.isFinite(body.lat) ? body.lat : undefined,
+      longitude: typeof body.lng === "number" && Number.isFinite(body.lng) ? body.lng : undefined,
+      description: String(body.description || (isTestEvent ? "SafetyLink server-side ThingsBoard HTTP verification event" : "SafetyLink emergency telemetry")).slice(0, 240),
+      source: String(body.source || "SAFETYLINK_BACKEND_PROXY").slice(0, 64),
+      isTest: isTestEvent,
+    };
+
+    try {
+      const upstream = await fetch(tb.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "SafetyLink-Core-ThingsBoard-Bridge/1.1",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!upstream.ok) {
+        return res.status(502).json({
+          ok: false,
+          configured: true,
+          status: "UPSTREAM_REJECTED",
+          upstreamStatus: upstream.status,
+          deviceName,
+          error: `ThingsBoard Cloud HTTP Integration rejected event (HTTP ${upstream.status}).`,
+        });
+      }
+
+      return res.json({
+        ok: true,
+        configured: true,
+        status: "DELIVERED",
+        upstreamStatus: upstream.status,
+        deviceName,
+        deliveredAt: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      return res.status(502).json({
+        ok: false,
+        configured: true,
+        status: "NETWORK_ERROR",
+        deviceName,
+        error: err?.message || "Failed reaching ThingsBoard Cloud HTTP Integration.",
+      });
+    }
+  };
+
+  app.post("/api/iot/thingsboard/telemetry", (req, res) => forwardThingsBoardEvent(req, res, false));
+  app.post("/api/iot/thingsboard/test", (req, res) => forwardThingsBoardEvent(req, res, true));
 
   // --- External Credentials Live Verification Endpoint ---
   app.get("/api/system/credentials-status", async (_req, res) => {
