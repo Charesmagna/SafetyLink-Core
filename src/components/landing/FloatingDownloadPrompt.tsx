@@ -1,4 +1,3 @@
-import { ApkBuildInfo } from '../ApkBuildInfo';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Download, Smartphone, X, ChevronLeft } from 'lucide-react';
@@ -98,12 +97,11 @@ export const FloatingDownloadPrompt: React.FC<FloatingDownloadPromptProps> = ({ 
                 <span className="flex items-center gap-2 min-w-0">
                   <Smartphone size={16} className="shrink-0" />
                   <span className="truncate text-xs font-extrabold leading-tight">
-                    Download Stable APK · V1
+                    Download SafetyLink APK
                   </span>
                 </span>
                 <Download size={15} className="shrink-0" />
               </a>
-              <ApkBuildInfo variant="compact" className="text-center" />
 
               {onOpenHub && (
                 <button

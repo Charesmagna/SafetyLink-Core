@@ -1,8 +1,7 @@
-import { ApkBuildInfo } from './ApkBuildInfo';
 import React, { useState, useEffect } from 'react';
 import { Shield, Smartphone, Monitor, MapPin, Bell, Users, ChevronDown, Download, ArrowRight, Zap, Lock, Radio } from 'lucide-react';
 
-const APK_URL = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev/download/v1/safetylink.apk';
+const APK_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink.apk';
 const APK_DEBUG_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-debug.apk';
 const EXE_URL = 'https://github.com/Charesmagna/SafetyLink-Core/releases/latest/download/SafetyLink-OrgConsole-Setup-1.0.0.exe';
 
@@ -96,8 +95,7 @@ export default function LandingPage({ onOrgLogin, onOrgSignup }: Props) {
               <Smartphone className="w-5 h-5" />
               <div className="text-left">
                 <div className="text-xs opacity-75">Download for</div>
-                <div className="text-base">Android APK · Stable V1</div>
-                <ApkBuildInfo variant="tiny" />
+                <div className="text-base">Android APK</div>
               </div>
               <Download className="w-4 h-4 ml-2 group-hover:translate-y-0.5 transition-transform" />
             </a>
@@ -181,7 +179,7 @@ export default function LandingPage({ onOrgLogin, onOrgSignup }: Props) {
                 ))}
               </div>
               <a href={APK_URL} className="inline-flex items-center gap-2 mt-6 bg-sl-red hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
-                <Download className="w-4 h-4" /> Download Stable APK <ApkBuildInfo variant="tiny" />
+                <Download className="w-4 h-4" /> Download APK
               </a>
             </div>
 
@@ -249,7 +247,7 @@ export default function LandingPage({ onOrgLogin, onOrgSignup }: Props) {
           <div className="flex items-center gap-6 text-slate-600 text-xs">
             <span>Vlakfontein, Gauteng, South Africa</span>
             <button onClick={onOrgLogin} className="hover:text-white transition-colors">Org Login</button>
-            <a href={APK_URL} className="hover:text-white transition-colors">Download APK (Stable V1)</a>
+            <a href={APK_URL} className="hover:text-white transition-colors">Download APK</a>
             <a href={EXE_URL} className="hover:text-white transition-colors">Download EXE</a>
           </div>
         </div>

@@ -1,4 +1,3 @@
-import { ApkBuildInfo } from '../ApkBuildInfo';
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Check, Download, Globe, Monitor, Package, Search, Smartphone } from 'lucide-react';
 import { ASSETS, ACTION_VIDEOS, vid, vidPoster } from '../../utils/cloudinary';
@@ -208,7 +207,6 @@ export function DownloadPage({ onLogin }: Props) {
                   <Download size={17} />
                   <span>Download SafetyLink APK</span>
                 </a>
-<ApkBuildInfo className="mt-2" />
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center font-mono">
                   Version 1 · Android 8.0+ · Signed Production Release · Direct Cloudflare R2 Delivery
                 </p>

@@ -1,4 +1,3 @@
-import { ApkBuildInfo } from './ApkBuildInfo';
 import React, { useState, useEffect } from 'react';
 
 interface Props { onClose: () => void; }
@@ -63,9 +62,8 @@ export const DownloadHub: React.FC<Props> = ({ onClose }) => {
           ) : (
             <div className="space-y-3">
               <a href={v1ApkUrl} download="SafetyLink.apk" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
-                🛡️ Download Stable APK · V1
+                🛡️ Download SafetyLink APK
               </a>
-              <ApkBuildInfo tone="dark" className="text-center" />
 
               <a href={exeUrl} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-5 py-3.5 rounded-xl font-bold font-mono uppercase tracking-wider text-sm transition-all shadow-lg">
                 💻 Download Windows EXE

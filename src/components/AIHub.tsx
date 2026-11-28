@@ -33,23 +33,6 @@ const VOICE_OPTIONS: LiveVoiceName[] = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fen
 export const AIHub: React.FC = () => {
   const { addAuditLog, triggerPanic, userLocation } = useAppStore();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('chat');
-  const [geminiModelLabel, setGeminiModelLabel] = useState('Checking model availability…');
-
-  useEffect(() => {
-    let active = true;
-    fetchGeminiApi('/api/gemini/models')
-      .then(async (response) => {
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data?.error || `Model discovery failed (${response.status})`);
-        const defaultModel = String(data?.defaultModel || '').trim();
-        if (!defaultModel) throw new Error('No default model is available for this API key.');
-        if (active) setGeminiModelLabel(defaultModel);
-      })
-      .catch(() => {
-        if (active) setGeminiModelLabel('AI model unavailable');
-      });
-    return () => { active = false; };
-  }, []);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -423,23 +406,23 @@ export const AIHub: React.FC = () => {
   };
 
   const handleCheckPaidImage = async () => {
-    const res = await fetchGeminiApi('/api/gemini/generate-image', {
+    const res = await fetch('/api/gemini/generate-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: imagePrompt }),
     });
-    const data = await res.json().catch(() => ({}));
-    setImageNotice(data.error || `Image generation is unavailable (HTTP ${res.status}).`);
+    const data = await res.json();
+    setImageNotice(data.error || 'Requires a billing-enabled Gemini API key.');
   };
 
   const handleCheckPaidVideo = async () => {
-    const res = await fetchGeminiApi('/api/gemini/generate-video', {
+    const res = await fetch('/api/gemini/generate-video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: veoPrompt }),
     });
-    const data = await res.json().catch(() => ({}));
-    setVeoNotice(data.error || `Video generation is unavailable (HTTP ${res.status}).`);
+    const data = await res.json();
+    setVeoNotice(data.error || 'Requires a billing-enabled Gemini API key.');
   };
 
   return (
@@ -452,7 +435,7 @@ export const AIHub: React.FC = () => {
           </h2>
         </div>
         <span className="text-[8px] font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded uppercase tracking-wider">
-          {geminiModelLabel}
+          gemini-4-hydrogen
         </span>
       </div>
 

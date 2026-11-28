@@ -1,5 +1,4 @@
-import React from 'react';
-import { ApkBuildInfo, useApkChannels } from '../ApkBuildInfo';
+import React, { useEffect, useState } from 'react';
 
 const WORKER = 'https://safetylink-api.tshilidzi-mukwevho54.workers.dev';
 
@@ -7,8 +6,14 @@ type Entry = { version: string; size?: number; date?: string };
 
 /** Download hub: SafetyLink Version 1 (Official Stable Release) prominently featured, with SafetyLink Beta (v1.1.1218+) tucked into a muted testing disclosure. */
 export const DownloadHubVersions: React.FC = () => {
-  const channels = useApkChannels();
-  const testingVersion = channels?.testing?.version || null;
+  const [v1, setV1] = useState<Entry | null>(null);
+
+  useEffect(() => {
+    fetch(WORKER + '/api/app/versions')
+      .then((r) => r.json())
+      .then((j) => setV1((j.versions || [])[0] || null))
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="my-6 space-y-3">
@@ -31,30 +36,29 @@ export const DownloadHubVersions: React.FC = () => {
             href={WORKER + '/download/v1/safetylink.apk'}
             download="SafetyLink.apk"
           >
-            Download SafetyLink APK · Stable V1
+            Download SafetyLink APK
           </a>
           <span className="text-xs text-slate-500 dark:text-slate-400">
             Version 1 · Android 8.0+ · Signed Production Build
           </span>
         </div>
-        <ApkBuildInfo className="mt-4" />
       </div>
 
       {/* Demoted SafetyLink Beta Disclosure — Rolling Test Track (v1.1.1000+) */}
       <details className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 px-4 py-2.5 text-xs text-slate-500 dark:text-slate-400">
         <summary className="cursor-pointer select-none font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300">
-          Internal Testing Sandbox · SafetyLink Beta (v1.1.1000+ rolling{testingVersion ? ` · Current v${testingVersion}` : ''} — not recommended for daily use)
+          Internal Testing Sandbox · SafetyLink Beta (v1.1.1000+ rolling{v1 ? ` · Current v${v1.version}` : ''} — not recommended for daily use)
         </summary>
         <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400/90">
-            Warning: SafetyLink Beta (progressing from v1.1.1000+{testingVersion ? `, currently v${testingVersion}` : ''}) is our internal testing channel before updates graduate to SafetyLink APK (Version 1). Everyday users should install SafetyLink APK above.
+            Warning: SafetyLink Beta (progressing from v1.1.1000+{v1 ? `, currently v${v1.version}` : ''}) is our internal testing channel before updates graduate to SafetyLink APK (Version 1). Everyday users should install SafetyLink APK above.
           </p>
           <a
             className="shrink-0 text-[11px] font-mono underline text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             href={WORKER + '/download/beta/safetylink.apk'}
-            download={`SafetyLink-Beta-${testingVersion ? `v${testingVersion}` : 'v1.1.1000'}.apk`}
+            download={`SafetyLink-Beta-${v1 ? `v${v1.version}` : 'v1.1.1000'}.apk`}
           >
-            SafetyLink Beta ({testingVersion ? `v${testingVersion}` : 'v1.1.1000+'}) · Testers Only
+            SafetyLink Beta ({v1 ? `v${v1.version}` : 'v1.1.1000+'}) · Testers Only
           </a>
         </div>
       </details>
