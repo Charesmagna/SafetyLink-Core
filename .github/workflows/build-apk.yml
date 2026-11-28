@@ -151,7 +151,7 @@ jobs:
       shell: bash
       run: |
         set +x
-        KS_PASS="$(sed -n "s/.*storepass '\\([^']*\\)'.*/\\1/p" .github/workflows/show-sha1.yml)"
+        KS_PASS="$(sed -n "s/.*storepass '\\([^']*\\)'.*/\\1/p" ../.github/workflows/show-sha1.yml)"
         KS_ALIAS="safetylink"
         KS_KEY_PASS="$KS_PASS"
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
