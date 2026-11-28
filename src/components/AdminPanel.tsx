@@ -827,13 +827,11 @@ export const AdminPanel: React.FC = () => {
               <div>
                 <h3 className="text-sm font-bold text-slate-200">IoT Dashboard Integration</h3>
                 <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  Every real (non-drill) SOS trigger pushes incident telemetry to your IoT Dashboard,
-                  giving org-wide visibility on your dashboard. Paste your device access token below --
-                  it's stored only on this device, never committed to the repo.
+                  SafetyLink sends authenticated installation telemetry through the backend to ThingsBoard Cloud. Credentials remain server-side; use the test action to verify upstream delivery.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono text-slate-400">ThingsBoard Cloud · Server-managed gateway</div>
+                <div className="flex-1 rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-mono text-slate-400">ThingsBoard Cloud · Server-managed HTTP Integration</div>
                 <button
                   disabled={tbTestStatus === 'sending'}
                   onClick={async () => {
@@ -847,7 +845,7 @@ export const AdminPanel: React.FC = () => {
                   {tbTestStatus === 'sending' ? 'SENDING...' : 'SEND TEST EVENT'}
                 </button>
               </div>
-              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Accepted by ThingsBoard Cloud -- check gateway device telemetry.</p>}
+              {tbTestStatus === 'ok' && <p className="text-[10px] text-emerald-400 font-mono">✓ Accepted by ThingsBoard Cloud -- check the installation device telemetry.</p>}
               {tbTestStatus === 'fail' && <p className="text-[10px] text-red-400 font-mono">✗ Not delivered. Check SafetyLink sign-in and backend ThingsBoard configuration.</p>}
             </div>
 
@@ -2734,7 +2732,7 @@ export const AdminPanel: React.FC = () => {
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-slate-200">IoT Edge Telemetry Route Configuration</h3>
                 <p className="text-xs text-slate-500">
-                  Bind this instance to your specific remote rule chain. Panics will automatically push device telemetries.
+                  Telemetry is forwarded to the configured ThingsBoard HTTP Integration. Each SafetyLink installation is represented by its own device.
                 </p>
               </div>
 
