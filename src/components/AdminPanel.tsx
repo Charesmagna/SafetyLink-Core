@@ -2739,15 +2739,7 @@ export const AdminPanel: React.FC = () => {
               <div className="flex flex-col md:flex-row gap-3">
                 <div className="flex-1 rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-xs text-slate-400 font-mono">ThingsBoard Cloud · Credentials managed securely by the SafetyLink backend</div>                
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      
-                      addAuditLog('SYSTEM', 'INFO', 'ThingsBoard token saved');
-                    }}
-                    className="px-5 py-3 bg-amber-600 hover:bg-amber-500 text-white text-xs font-mono font-bold rounded-2xl transition-colors shrink-0"
-                  >
-                    SERVER CONFIG
-                  </button>
+
 
                   <button
                     onClick={async () => {
