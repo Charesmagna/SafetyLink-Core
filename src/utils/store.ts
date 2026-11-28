@@ -8,7 +8,6 @@ import { scanForNearbyDevices, stopScan, discoverAndBindTrigger, subscribeToKnow
 import { LocalNotificationService } from '../services/LocalNotificationService';
 import { NativeDispatchService, SimCardInfo } from '../services/NativeDispatchService';
 import { firePleaseCallMe, postPanicLocation } from '../services/pcmTrigger';
-const pushIncidentTelemetry = async (..._args: any[]) => true;
 
 import { UpdateInfo } from '../services/UpdateService';
 import { generateOrganizationCode } from './orgCode';
@@ -44,7 +43,6 @@ interface AppState {
   syncEvidenceToOwnCloud: () => Promise<void>;
   bleDevices: BleDevice[];
   discoveredDevices: DiscoveredDevice[];
-  thingsBoardToken: string;
   customBackendUrl: string;
   connectyCubeConfig: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null;
   setConnectyCubeConfig: (config: { appId: number; authKey: string; authSecret: string; apiEndpoint: string; chatEndpoint: string; } | null) => void;
@@ -234,7 +232,6 @@ interface AppState {
   connectBleDevice: (mac: string) => void;
   disconnectBleDevice: (mac: string) => void;
   removeDevice: (mac: string) => void;
-  setThingsBoardToken: (token: string) => void;
   setCustomBackendUrl: (url: string) => void;
 
   // Language & Localization State
@@ -894,7 +891,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   meshNodes: getStoredJSON<MeshNode[]>('sl_mesh_nodes', DEFAULT_MESH_NODES),
   bleDevices: getStoredJSON<BleDevice[]>('sl_ble_devices', DEFAULT_BLE_DEVICES),
   discoveredDevices: [],
-  thingsBoardToken: getStoredJSON<string>('sl_thingsboard_token', import.meta.env.VITE_THINGSBOARD_TOKEN ?? ''),
   customBackendUrl: (() => {
     const stored = getStoredJSON<string>('sl_custom_backend_url', '');
     const cleaned = sanitizeBackendUrl(stored);
@@ -3412,7 +3408,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().addAuditLog('DISPATCH', 'INFO', `Syncing ${queue.length} locally queued offline alerts`, 'Establishing connection...');
     
     const failedItems = [];
-    const tbToken = get().thingsBoardToken;
     const who = get().currentUser?.username || get().currentOrg?.name || 'Unknown';
     const orgId = get().currentUser?.orgCode || get().currentOrg?.id || 'INDIVIDUAL';
 
@@ -3445,18 +3440,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     for (const item of queue) {
       try {
         let ok = false;
-
-        if (tbToken) {
-          ok = await pushIncidentTelemetry(tbToken, {
-            event: get().drillMode ? 'drill' : 'panic',
-            incidentId: item.id,
-            lat: item.lat,
-            lng: item.lng,
-            description: item.description,
-            orgId,
-            triggeredBy: who,
-          });
-        }
 
         try {
           const { response: res } = await fetchBackendApi('/api/incidents', {
@@ -4352,12 +4335,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setAuraApiUrl: (url) => {
     set({ auraApiUrl: url });
     setStoredJSON("sl_aura_api_url", url);
-  },
-
-  setThingsBoardToken: (token) => {
-    set({ thingsBoardToken: token });
-    setStoredJSON('sl_thingsboard_token', token);
-    get().addAuditLog('SYSTEM', 'INFO', 'IoT Dashboard Token Updated', token ? 'Token set (stored locally only, not in the repo).' : 'Token cleared.');
   },
 
   setLanguage: (lang) => {
