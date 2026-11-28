@@ -75,21 +75,27 @@ jobs:
     - name: Decode keystore
       run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
 
-    - name: Write signing properties
-      env:
-        KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-        KS_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+    - name: Verify legacy signing key (test branch only)
+      if: github.ref_name == 'testing/legacy-signing-recovery'
+      shell: bash
       run: |
-        if [ -z "$KS_PASS" ] || [ -z "$KS_KEY_PASS" ]; then
-          echo "::error::Missing KEYSTORE_PASSWORD or KEY_PASSWORD GitHub repository secrets."
-          exit 1
-        fi
+        set +x
+        KS_PASS="$(sed -n "s/.*storepass '\\([^']*\\)'.*/\\1/p" .github/workflows/show-sha1.yml)"
+        test -n "$KS_PASS"
+        keytool -list -keystore android/app/safetylink-release.keystore -alias safetylink -storepass "$KS_PASS" >/dev/null
+        echo "Legacy keystore and alias verified."
+
+    - name: Write signing properties
+      if: github.ref_name == 'testing/legacy-signing-recovery'
+      shell: bash
+      run: |
+        set +x
+        KS_PASS="$(sed -n "s/.*storepass '\\([^']*\\)'.*/\\1/p" .github/workflows/show-sha1.yml)"
         cat > android/signing.properties << PROPS
         storeFile=safetylink-release.keystore
         storePassword=${KS_PASS}
-        keyAlias=${KS_ALIAS:-safetylink}
-        keyPassword=${KS_KEY_PASS}
+        keyAlias=safetylink
+        keyPassword=${KS_PASS}
         PROPS
 
     - name: Set Android version (matches the release name)
@@ -141,11 +147,13 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
-      env:
-        KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-        KS_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KS_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+      if: github.ref_name == 'testing/legacy-signing-recovery'
+      shell: bash
       run: |
+        set +x
+        KS_PASS="$(sed -n "s/.*storepass '\\([^']*\\)'.*/\\1/p" .github/workflows/show-sha1.yml)"
+        KS_ALIAS="safetylink"
+        KS_KEY_PASS="$KS_PASS"
         KEYSTORE_ABS="${GITHUB_WORKSPACE}/android/app/safetylink-release.keystore"
         echo "Keystore path: $KEYSTORE_ABS"
         ls -la "$KEYSTORE_ABS"
@@ -176,6 +184,7 @@ jobs:
         cp "$APK" release-output/SafetyLink-v1.1.${{ github.run_number }}-Signed.apk
 
     - name: Create GitHub Release
+      if: github.ref_name == 'main'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v1.1.${{ github.run_number }}
@@ -191,6 +200,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish APK to R2 (v1 on main, v2 on v2 branch)
+      if: github.ref_name == 'main'
       env:
         CF: ${{ secrets.CF_WORKERS_TOKEN }}
         ACC: d089bef8b0b58c5d9506b512ec2f63dc
@@ -221,3 +231,12 @@ jobs:
         jq --arg v "$VER" --arg f "$NAME" --argjson s "$SIZE" --arg d "$DATE" '[{version:$v,file:$f,size:$s,date:$d}] + (map(select(.file != $f))) | .[0:30]' old.json > index.json
         curl -sS -f -X PUT -H "Authorization: Bearer $CF" -H "Content-Type: application/json" --data-binary @index.json "$BASE/$DIR%2Findex.json" > /dev/null
         echo "version list updated: $DIR $VER"
+
+    - name: Upload test APK artifact (legacy signing recovery)
+      if: github.ref_name == 'testing/legacy-signing-recovery'
+      uses: actions/upload-artifact@v4
+      with:
+        name: SafetyLink-legacy-signing-test-${{ github.run_number }}
+        path: release-output/*.apk
+        if-no-files-found: error
+        retention-days: 7
