@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "master", "main", "beta", "testing/legacy-signing-recovery" ]
+    branches: [ "master", "main", "beta", "testing/legacy-signing-recovery", "feature/thingsboard-cloud-integration" ]
   workflow_dispatch:
 
 jobs:
@@ -76,7 +76,7 @@ jobs:
       run: base64 -d .github/secrets/release-keystore.b64 > android/app/safetylink-release.keystore
 
     - name: Verify legacy signing key (test branch only)
-      if: github.ref_name == 'testing/legacy-signing-recovery'
+      if: github.ref_name == 'testing/legacy-signing-recovery' || github.ref_name == 'feature/thingsboard-cloud-integration'
       shell: bash
       run: |
         set +x
@@ -86,7 +86,7 @@ jobs:
         echo "Legacy keystore and alias verified."
 
     - name: Write signing properties
-      if: github.ref_name == 'testing/legacy-signing-recovery'
+      if: github.ref_name == 'testing/legacy-signing-recovery' || github.ref_name == 'feature/thingsboard-cloud-integration'
       shell: bash
       run: |
         set +x
@@ -147,7 +147,7 @@ jobs:
 
     - name: Build Release APK
       working-directory: ./android
-      if: github.ref_name == 'testing/legacy-signing-recovery'
+      if: github.ref_name == 'testing/legacy-signing-recovery' || github.ref_name == 'feature/thingsboard-cloud-integration'
       shell: bash
       run: |
         set +x
@@ -233,7 +233,7 @@ jobs:
         echo "version list updated: $DIR $VER"
 
     - name: Upload test APK artifact (legacy signing recovery)
-      if: github.ref_name == 'testing/legacy-signing-recovery'
+      if: github.ref_name == 'testing/legacy-signing-recovery' || github.ref_name == 'feature/thingsboard-cloud-integration'
       uses: actions/upload-artifact@v4
       with:
         name: SafetyLink-legacy-signing-test-${{ github.run_number }}
