@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ "master", "main", "beta" ]
+    branches: [ "master", "main", "beta", "testing/legacy-signing-recovery" ]
   workflow_dispatch:
 
 jobs:
