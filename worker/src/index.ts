@@ -45,6 +45,7 @@ export interface Env {
   FREENEWSAPI_KEY?: string;
   BIGDATACLOUD_API_KEY?: string;
   IOT_WEBHOOK_SECRET?: string;
+  THINGSBOARD_GATEWAY_TOKEN?: string; // Cloudflare Worker secret only
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
@@ -1312,6 +1313,36 @@ const handleLogin = async (c: any) => {
 
 app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
+
+// ── THINGSBOARD CLOUD DEVICE TELEMETRY ────────────────────────────────────────
+app.post('/api/iot/telemetry', authMiddleware, async (c) => {
+  const gatewayToken = String(c.env.THINGSBOARD_GATEWAY_TOKEN || '').trim();
+  if (!gatewayToken) return c.json({ ok: false, error: 'ThingsBoard gateway is not configured on the SafetyLink backend.' }, 503);
+  const userId = String(c.get('userId') || '').trim();
+  if (!userId) return c.json({ ok: false, error: 'A signed-in SafetyLink user is required.' }, 401);
+  const body: any = await c.req.json().catch(() => ({}));
+  const installationId = String(body.installationId || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
+  if (!/^[a-zA-Z0-9-]{12,64}$/.test(installationId)) return c.json({ ok: false, error: 'A valid installation ID is required.' }, 400);
+  const values: Record<string, string | number | boolean> = {
+    safetyLinkUserId: userId, orgId: String(c.get('orgId') || 'INDIVIDUAL').slice(0, 80),
+    accountStatus: 'ACTIVE', lastSeen: Date.now(),
+  };
+  if (typeof body.activeThreat === 'boolean') values.activeThreat = body.activeThreat;
+  if (typeof body.drillMode === 'boolean') values.drillMode = body.drillMode;
+  if (typeof body.integrationTest === 'boolean') values.integrationTest = body.integrationTest;
+  if (typeof body.batteryLevel === 'number' && Number.isFinite(body.batteryLevel) && body.batteryLevel >= 0 && body.batteryLevel <= 100) values.batteryLevel = Math.round(body.batteryLevel);
+  const lat = Number(body.latitude), lng = Number(body.longitude);
+  if (body.latitude !== undefined && body.longitude !== undefined && Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) { values.latitude = lat; values.longitude = lng; }
+  const deviceName = `SafetyLink-${installationId}`;
+  const apiBase = 'https://thingsboard.cloud/api/v1/' + encodeURIComponent(gatewayToken) + '/gateway';
+  try {
+    const connect = await fetch(`${apiBase}/connect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device: { name: deviceName, type: 'SafetyLink Installation' } }) });
+    if (!connect.ok) return c.json({ ok: false, error: `ThingsBoard gateway connection failed (HTTP ${connect.status}).` }, 502);
+    const telemetry = await fetch(`${apiBase}/telemetry`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [deviceName]: [{ ts: Date.now(), values }] }) });
+    if (!telemetry.ok) return c.json({ ok: false, error: `ThingsBoard rejected telemetry (HTTP ${telemetry.status}).` }, 502);
+    return c.json({ ok: true, deviceName, acceptedAt: new Date().toISOString() });
+  } catch { return c.json({ ok: false, error: 'Unable to reach ThingsBoard Cloud.' }, 502); }
+});
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {
