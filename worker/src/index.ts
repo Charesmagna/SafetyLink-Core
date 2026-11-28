@@ -2629,6 +2629,25 @@ app.post('/api/gemini/safety-feed', async (c) => {
   });
 });
 
+// Paid media-generation capabilities are explicitly unavailable until a billing-enabled provider is configured.
+app.post('/api/gemini/generate-image', (c) => c.json({
+  error: 'Image generation is not enabled for this deployment. Configure and verify a billing-enabled image-generation provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
+
+app.post('/api/gemini/generate-video', (c) => c.json({
+  error: 'Video generation is not enabled for this deployment. Configure and verify a billing-enabled Veo provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
+
+app.post('/api/gemini/generate-lyria', (c) => c.json({
+  error: 'Music generation is not enabled for this deployment. Configure and verify a billing-enabled Lyria provider before enabling this feature.',
+  requiresPaidKey: true,
+  available: false,
+}, 402 as any));
+
 app.post('/api/gemini/tts', async (c) => {
   const apiKey = c.env.GEMINI_API_KEY;
   if (!apiKey) return c.json({ error: 'Gemini AI key not configured on worker' }, 503 as any);
