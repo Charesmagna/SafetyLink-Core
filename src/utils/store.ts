@@ -389,6 +389,7 @@ export const DEFAULT_BLE_BUTTON_CONFIG: BleButtonConfig = {
 
 let webButtonPressCount = 0;
 let webButtonPressTimer: any = null;
+let lastThingsBoardLocationAt = 0;
 
 // Initial Demo Data
 const DEFAULT_CONTACTS: Contact[] = [
@@ -2779,6 +2780,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     // Push geo-location to Firestore if authenticated and sync is on
     const state = get();
+    if (!state.demoMode && (state.currentUser || state.currentOrg) && Date.now() - lastThingsBoardLocationAt >= 60000) {
+      lastThingsBoardLocationAt = Date.now();
+      void import('../services/ThingsBoardService').then(({ sendSafetyLinkTelemetry }) =>
+        sendSafetyLinkTelemetry({
+          latitude: lat,
+          longitude: lng,
+          activeThreat: state.activeSOSState !== 'IDLE',
+          drillMode: state.drillMode,
+        })
+      ).catch(() => {});
+    }
     if (state.currentUser && state.currentUser.id && state.firestoreSync) {
       try {
         updateDoc(doc(db, 'users', state.currentUser.id), {
@@ -3147,6 +3159,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     const incidentId = `INC-${Date.now()}`;
 
     set({ activeSOSState: 'ACQUIRING_GPS', panicCountdown: null });
+    if (!isDemo && (user || get().currentOrg)) {
+      void import('../services/ThingsBoardService').then(({ sendSafetyLinkTelemetry }) =>
+        sendSafetyLinkTelemetry({ activeThreat: true, drillMode: get().drillMode, latitude: coords.lat, longitude: coords.lng })
+      ).catch(() => {});
+    }
     get().addAuditLog('SECURITY', 'SEVERE', isDemo ? 'Demo Panic Triggered [SIMULATED]' : 'Panic Triggered', description || '');
 
     // 1. Canonical Native Android Path: delegate execution exclusively to PanicService -> EmergencyService.
@@ -3573,6 +3590,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       },
     }));
     setStoredJSON('sl_panic_events', get().panicEvents);
+    const resolvedState = get();
+    if (!resolvedState.demoMode && (resolvedState.currentUser || resolvedState.currentOrg)) {
+      void import('../services/ThingsBoardService').then(({ sendSafetyLinkTelemetry }) =>
+        sendSafetyLinkTelemetry({
+          activeThreat: false,
+          drillMode: resolvedState.drillMode,
+          latitude: resolvedState.userLocation?.lat,
+          longitude: resolvedState.userLocation?.lng,
+        })
+      ).catch(() => {});
+    }
     get().addAuditLog('SYSTEM', 'INFO', `Incident ${id} marked as RESOLVED`, 'The tactical situation has been stabilized and closed.');
     
     if (get().currentOrg?.sensorStream?.enabled) {
