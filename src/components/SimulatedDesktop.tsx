@@ -20,7 +20,6 @@ export const SimulatedDesktop: React.FC = () => {
     backgroundServiceTick,
     userLocation,
     bleDevices,
-    thingsBoardToken,
     addAuditLog,
     setMinimized
   } = useAppStore();
@@ -42,7 +41,6 @@ export const SimulatedDesktop: React.FC = () => {
 
   const hasBleConnection = bleDevices.some(d => d.connectionState === 'CONNECTED');
   const hasGps = !!userLocation;
-  const hasGateway = !!thingsBoardToken;
 
   // Manual Ping simulation
   const handlePingGateway = () => {
@@ -104,7 +102,7 @@ export const SimulatedDesktop: React.FC = () => {
 
     setTimeout(() => {
       setDiagStep(4);
-      setDiagnosticLogs(prev => [...prev, `[1.8s] ☁️ PINGING THINGSBOARD MQTT BROKER... Token: ${hasGateway ? 'VALID' : 'MISSING'}`]);
+      setDiagnosticLogs(prev => [...prev, `[1.8s] ☁️ THINGSBOARD HTTP INTEGRATION: NOT VERIFIED — run the server-side test in Admin.`]);
     }, 1800);
 
     setTimeout(() => {

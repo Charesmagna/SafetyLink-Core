@@ -45,6 +45,7 @@ export interface Env {
   FREENEWSAPI_KEY?: string;
   BIGDATACLOUD_API_KEY?: string;
   IOT_WEBHOOK_SECRET?: string;
+  THINGSBOARD_HTTP_INTEGRATION_KEY?: string; // Cloudflare Worker secret only
   // Auth
   JWT_SECRET: string;
   INTERNAL_API_SECRET: string;
@@ -1312,6 +1313,81 @@ const handleLogin = async (c: any) => {
 
 app.post('/api/auth/login', handleLogin);
 app.post('/api/login', handleLogin);
+
+// ── THINGSBOARD CLOUD DEVICE TELEMETRY ────────────────────────────────────────
+// HTTP Integration supports per-installation device mapping. Its integration key
+// is held only as a Cloudflare Worker secret, never in the browser or APK.
+app.post('/api/iot/telemetry', authMiddleware, async (c) => {
+  const integrationKey = String(c.env.THINGSBOARD_HTTP_INTEGRATION_KEY || '').trim();
+  if (!integrationKey) return c.json({ ok: false, error: 'ThingsBoard HTTP Integration is not configured on the SafetyLink backend.' }, 503);
+  const userId = String(c.get('userId') || '').trim();
+  if (!userId) return c.json({ ok: false, error: 'A signed-in SafetyLink user is required.' }, 401);
+  const body: any = await c.req.json().catch(() => ({}));
+  const installationId = String(body.installationId || '').replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
+  if (!/^[a-zA-Z0-9-]{12,64}$/.test(installationId)) return c.json({ ok: false, error: 'A valid installation ID is required.' }, 400);
+  const telemetry: Record<string, string | number | boolean> = {
+    safetyLinkUserId: userId,
+    orgId: String(c.get('orgId') || 'INDIVIDUAL').slice(0, 80),
+    accountStatus: 'ACTIVE',
+    lastSeen: Date.now(),
+  };
+  if (typeof body.activeThreat === 'boolean') telemetry.activeThreat = body.activeThreat;
+  if (typeof body.drillMode === 'boolean') telemetry.drillMode = body.drillMode;
+  if (typeof body.integrationTest === 'boolean') telemetry.integrationTest = body.integrationTest;
+  if (typeof body.batteryLevel === 'number' && Number.isFinite(body.batteryLevel) && body.batteryLevel >= 0 && body.batteryLevel <= 100) telemetry.batteryLevel = Math.round(body.batteryLevel);
+  const lat = Number(body.latitude), lng = Number(body.longitude);
+  if (body.latitude !== undefined && body.longitude !== undefined && Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+    telemetry.latitude = lat;
+    telemetry.longitude = lng;
+  }
+  const payload = {
+    deviceName: `SafetyLink-${installationId}`,
+    deviceType: 'SafetyLink Installation',
+    ts: Date.now(),
+    telemetry,
+    attributes: {
+      safetyLinkUserId: userId,
+      orgId: String(c.get('orgId') || 'INDIVIDUAL').slice(0, 80),
+      accountStatus: 'ACTIVE',
+    },
+  };
+  try {
+    const response = await fetch(`https://thingsboard.cloud/api/v1/integrations/http/${encodeURIComponent(integrationKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) return c.json({ ok: false, error: `ThingsBoard rejected telemetry (HTTP ${response.status}).` }, 502);
+    return c.json({ ok: true, deviceName: payload.deviceName, acceptedAt: new Date().toISOString(), upstreamStatus: response.status });
+  } catch {
+    return c.json({ ok: false, error: 'Unable to reach ThingsBoard Cloud.' }, 502);
+  }
+});
+
+// Admin-only upstream connectivity test; uses the separate SafetyLink admin session.
+app.post('/api/iot/test', async (c) => {
+  if (!(await adminAuthorised(c.env, c.req.raw))) return c.json({ ok: false, error: 'Super Admin authorisation required.' }, 401);
+  const integrationKey = String(c.env.THINGSBOARD_HTTP_INTEGRATION_KEY || '').trim();
+  if (!integrationKey) return c.json({ ok: false, error: 'ThingsBoard HTTP Integration is not configured on the SafetyLink backend.' }, 503);
+  const deviceName = 'SafetyLink-Admin-Integration-Test';
+  try {
+    const response = await fetch(`https://thingsboard.cloud/api/v1/integrations/http/${encodeURIComponent(integrationKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceName,
+        deviceType: 'SafetyLink Installation',
+        ts: Date.now(),
+        telemetry: { integrationTest: true, lastSeen: Date.now() },
+        attributes: { integration: 'SafetyLink Cloudflare Worker', purpose: 'admin-connectivity-test' },
+      }),
+    });
+    if (!response.ok) return c.json({ ok: false, error: `ThingsBoard rejected the test event (HTTP ${response.status}).` }, 502);
+    return c.json({ ok: true, deviceName, acceptedAt: new Date().toISOString(), upstreamStatus: response.status });
+  } catch {
+    return c.json({ ok: false, error: 'Unable to reach ThingsBoard Cloud.' }, 502);
+  }
+});
 
 // ── PANIC / SOS ───────────────────────────────────────────────────────────────
 app.post('/api/panic', async (c) => {

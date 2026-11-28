@@ -9,7 +9,6 @@ export const BackgroundNotificationPanel: React.FC = () => {
     incrementBackgroundServiceTick,
     userLocation,
     bleDevices,
-    thingsBoardToken,
     activeSOSState,
     triggerPanic,
     addAuditLog,
@@ -68,7 +67,7 @@ export const BackgroundNotificationPanel: React.FC = () => {
 
   const isBleConnected = bleDevices.some(d => d.connectionState === 'CONNECTED');
   const isGpsLocked = !!userLocation;
-  const isServerConnected = !!thingsBoardToken;
+  const isServerConnected = false; // Do not display a connection until a real backend test confirms it.
 
   // Format background thread execution time
   const formatTickTime = (ticks: number) => {
@@ -119,7 +118,7 @@ export const BackgroundNotificationPanel: React.FC = () => {
             🛰️ {isGpsLocked ? 'GPS' : 'SEARCH'}
           </span>
           {/* ThingsBoard icon */}
-          <span className={`flex items-center ${isServerConnected ? 'text-emerald-400' : 'text-slate-600'}`} title="ThingsBoard Cloud Token">
+          <span className={`flex items-center ${isServerConnected ? 'text-emerald-400' : 'text-slate-600'}`} title="ThingsBoard Cloud · connection not yet verified">
             ☁️ {isServerConnected ? 'TB' : 'OFF'}
           </span>
           <span className="text-slate-600">|</span>
