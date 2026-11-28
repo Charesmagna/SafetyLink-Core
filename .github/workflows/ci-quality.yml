@@ -33,6 +33,12 @@ jobs:
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
+      - name: Install Cloudflare Worker dependencies
+        run: npm ci --prefix worker
+
+      - name: Typecheck Cloudflare Worker
+        run: cd worker && npx tsc --noEmit -p tsconfig.json
+
       - name: Run core dispatch & Worker PCM unit tests
         run: npx tsx --test src/utils/dispatchEngine.test.ts worker/tests/pcm-auth.test.ts
 
